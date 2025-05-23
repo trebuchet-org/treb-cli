@@ -14,6 +14,9 @@ broadcast/
 *.out
 go.work
 
+# Binaries
+bin/
+
 # Registry (should be committed)
 !deployments.json
 !deployments/
