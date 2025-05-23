@@ -27,8 +27,20 @@ deterministic addresses based on salt components before deployment.`,
 }
 
 func init() {
-	predictCmd.Flags().StringVar(&env, "env", "staging", "Deployment environment (staging/prod)")
-	predictCmd.Flags().StringVar(&networkName, "network", "alfajores", "Network to predict for (defined in foundry.toml)")
+	// Get configured defaults (empty if no config file)
+	defaultEnv, defaultNetwork, _, _ := GetConfiguredDefaults()
+	
+	// Create flags with defaults (empty if no config)
+	predictCmd.Flags().StringVar(&env, "env", defaultEnv, "Deployment environment (staging/prod)")
+	predictCmd.Flags().StringVar(&networkName, "network", defaultNetwork, "Network to predict for (defined in foundry.toml)")
+	
+	// Mark flags as required if they don't have defaults
+	if defaultEnv == "" {
+		predictCmd.MarkFlagRequired("env")
+	}
+	if defaultNetwork == "" {
+		predictCmd.MarkFlagRequired("network")
+	}
 }
 
 func predictAddress(contract string) error {
@@ -63,7 +75,13 @@ func predictAddress(contract string) error {
 	fmt.Printf("🌐 Network: %s (Chain ID: %d)\n", networkInfo.Name, networkInfo.ChainID)
 	fmt.Printf("📍 Predicted Address: %s\n", result.Address.Hex())
 	fmt.Printf("🧂 Salt: %x\n", result.Salt)
-	fmt.Printf("🔧 Init Code Hash: %x\n", result.InitCodeHash)
+	
+	// For CREATE3, init code hash is not used in address calculation
+	if result.InitCodeHash == ([32]byte{}) {
+		fmt.Printf("🔧 Init Code Hash: N/A (CREATE3)\n")
+	} else {
+		fmt.Printf("🔧 Init Code Hash: %x\n", result.InitCodeHash)
+	}
 
 	return nil
 }

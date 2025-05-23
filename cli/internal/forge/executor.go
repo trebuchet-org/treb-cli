@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/bogdan/fdeploy/cli/pkg/broadcast"
 	"github.com/bogdan/fdeploy/cli/pkg/types"
@@ -58,7 +59,7 @@ func (se *ScriptExecutor) Deploy(contract string, env string, args DeployArgs) (
 	// 3. Execute forge script
 	scriptPath := fmt.Sprintf("script/Deploy%s.s.sol", contract)
 	
-	cmdArgs := []string{"script", scriptPath}
+	cmdArgs := []string{"script", scriptPath, "-vvvv"} // High verbosity for better error messages
 	
 	if args.RpcUrl != "" {
 		cmdArgs = append(cmdArgs, "--rpc-url", args.RpcUrl)
@@ -73,6 +74,8 @@ func (se *ScriptExecutor) Deploy(contract string, env string, args DeployArgs) (
 		}
 	}
 
+	fmt.Printf("🚀 Executing: forge %s\n", strings.Join(cmdArgs, " "))
+	
 	cmd := exec.Command("forge", cmdArgs...)
 	cmd.Dir = se.projectRoot
 
@@ -87,8 +90,15 @@ func (se *ScriptExecutor) Deploy(contract string, env string, args DeployArgs) (
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("forge script failed: %w\nOutput: %s", err, output)
+		fmt.Printf("❌ Script execution failed:\n")
+		fmt.Printf("Command: forge %s\n", strings.Join(cmdArgs, " "))
+		fmt.Printf("Error: %v\n", err)
+		fmt.Printf("Full output:\n%s\n", string(output))
+		return nil, fmt.Errorf("forge script failed: %w", err)
 	}
+	
+	// Parse output for key information
+	se.parseScriptOutput(string(output))
 
 	// 4. Parse broadcast file
 	scriptName := fmt.Sprintf("Deploy%s.s.sol", contract)
@@ -106,16 +116,47 @@ func (se *ScriptExecutor) Deploy(contract string, env string, args DeployArgs) (
 	return result, nil
 }
 
+// parseScriptOutput extracts key information from forge script output
+func (se *ScriptExecutor) parseScriptOutput(output string) {
+	lines := strings.Split(output, "\n")
+	
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		
+		// Look for transaction hash
+		if strings.Contains(line, "Transaction hash:") {
+			fmt.Printf("🔍 %s\n", line)
+		}
+		
+		// Look for contract address
+		if strings.Contains(line, "Contract Address:") {
+			fmt.Printf("📍 %s\n", line)
+		}
+		
+		// Look for gas used
+		if strings.Contains(line, "Gas used:") {
+			fmt.Printf("⛽ %s\n", line)
+		}
+		
+		// Look for block number
+		if strings.Contains(line, "Block:") {
+			fmt.Printf("📊 %s\n", line)
+		}
+	}
+}
+
 func (se *ScriptExecutor) PredictAddress(contract string, env string, args DeployArgs) (*types.PredictResult, error) {
 	// Use the library's PredictAddress script 
 	scriptPath := "lib/forge-deploy/script/PredictAddress.s.sol:PredictAddress"
 	
-	cmdArgs := []string{"script", scriptPath, "--sig", "predict(string,string)", contract, env}
+	cmdArgs := []string{"script", scriptPath, "--sig", "predict(string,string)", contract, env, "-vvvv"}
 	
 	// Add RPC URL if provided to ensure prediction uses same chain as deployment
 	if args.RpcUrl != "" {
 		cmdArgs = append(cmdArgs, "--rpc-url", args.RpcUrl)
 	}
+	
+	fmt.Printf("🔮 Predicting address: forge %s\n", strings.Join(cmdArgs, " "))
 	
 	cmd := exec.Command("forge", cmdArgs...)
 	cmd.Dir = se.projectRoot
@@ -127,7 +168,11 @@ func (se *ScriptExecutor) PredictAddress(contract string, env string, args Deplo
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("forge script failed: %w\nOutput: %s", err, output)
+		fmt.Printf("❌ Address prediction failed:\n")
+		fmt.Printf("Command: forge %s\n", strings.Join(cmdArgs, " "))
+		fmt.Printf("Error: %v\n", err)
+		fmt.Printf("Full output:\n%s\n", string(output))
+		return nil, fmt.Errorf("forge script failed: %w", err)
 	}
 
 	// Parse output for predicted address

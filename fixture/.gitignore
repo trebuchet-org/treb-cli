@@ -1,0 +1,11 @@
+# fdeploy configuration (project-specific settings)
+.fdeploy
+
+# Foundry artifacts
+out/
+cache/
+broadcast/
+
+# Environment files
+.env
+.env.local

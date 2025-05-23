@@ -2,10 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/bogdan/fdeploy/cli/internal/forge"
 	"github.com/bogdan/fdeploy/cli/internal/registry"
+	"github.com/bogdan/fdeploy/cli/pkg/contracts"
 	"github.com/bogdan/fdeploy/cli/pkg/network"
+	forgeExec "github.com/bogdan/fdeploy/cli/pkg/forge"
 	"github.com/spf13/cobra"
 )
 
@@ -39,29 +42,87 @@ This command:
 }
 
 func init() {
-	deployCmd.Flags().StringVar(&env, "env", "staging", "Deployment environment (staging/prod)")
-	deployCmd.Flags().BoolVar(&verify, "verify", false, "Verify contract after deployment")
-	deployCmd.Flags().StringVar(&networkName, "network", "alfajores", "Network to deploy to (defined in foundry.toml)")
+	// Get configured defaults (empty if no config file)
+	defaultEnv, defaultNetwork, defaultVerify, _ := GetConfiguredDefaults()
+	
+	// Create flags with defaults (empty if no config)
+	deployCmd.Flags().StringVar(&env, "env", defaultEnv, "Deployment environment (staging/prod)")
+	deployCmd.Flags().StringVar(&networkName, "network", defaultNetwork, "Network to deploy to (defined in foundry.toml)")
+	deployCmd.Flags().BoolVar(&verify, "verify", defaultVerify, "Verify contract after deployment")
+	
+	// Mark flags as required if they don't have defaults
+	if defaultEnv == "" {
+		deployCmd.MarkFlagRequired("env")
+	}
+	if defaultNetwork == "" {
+		deployCmd.MarkFlagRequired("network")
+	}
 }
 
 func deployContract(contract string) error {
-	// Resolve network configuration
+	// Step 0: Initialize forge executor and check installation
+	forgeExecutor := forgeExec.NewExecutor(".")
+	if err := forgeExecutor.CheckForgeInstallation(); err != nil {
+		return fmt.Errorf("forge check failed: %w", err)
+	}
+
+	// Step 1: Build contracts to ensure artifacts are up to date
+	if err := forgeExecutor.Build(); err != nil {
+		return fmt.Errorf("build failed: %w", err)
+	}
+
+	// Step 2: Contract strategy will be determined by existing script or generation prompt
+
+	// Step 3: Validate contract exists in src/
+	validator := contracts.NewValidator(".")
+	contractInfo, err := validator.ValidateContract(contract)
+	if err != nil {
+		return fmt.Errorf("contract validation failed: %w", err)
+	}
+
+	if !contractInfo.Exists {
+		return fmt.Errorf("contract %s not found in src/ directory", contract)
+	}
+
+	fmt.Printf("✅ Found contract: %s at %s\n", contract, contractInfo.SolidityFile)
+
+	// Step 4: Check if deploy script exists, generate if needed
+	if !validator.DeployScriptExists(contract) {
+		fmt.Printf("📋 Deploy script not found for %s\n", contract)
+		
+		// Ask if user wants to generate the script
+		fmt.Printf("❓ Would you like to generate a deploy script? (Y/n): ")
+		var response string
+		fmt.Scanln(&response)
+		response = strings.ToLower(strings.TrimSpace(response))
+		
+		if response == "n" || response == "no" {
+			return fmt.Errorf("deploy script required but not found: script/Deploy%s.s.sol", contract)
+		}
+		
+		fmt.Printf("🚀 Use 'fdeploy generate deploy' for interactive script generation with strategy selection\n")
+		return fmt.Errorf("deploy script required but not found. Please generate one first using: fdeploy generate deploy")
+	} else {
+		fmt.Printf("📋 Using existing deploy script: Deploy%s.s.sol\n", contract)
+	}
+
+	// Step 5: Resolve network configuration
 	resolver := network.NewResolver(".")
 	networkInfo, err := resolver.ResolveNetwork(networkName)
 	if err != nil {
 		return fmt.Errorf("failed to resolve network: %w", err)
 	}
 
-	// Initialize registry manager
+	// Step 6: Initialize registry manager
 	registryManager, err := registry.NewManager("deployments.json")
 	if err != nil {
 		return fmt.Errorf("failed to initialize registry: %w", err)
 	}
 
-	// Initialize forge executor
+	// Step 7: Initialize forge script executor
 	executor := forge.NewScriptExecutor("", ".", registryManager)
 
-	// Deploy contract
+	// Step 8: Deploy contract
 	result, err := executor.Deploy(contract, env, forge.DeployArgs{
 		RpcUrl:  networkInfo.RpcUrl,
 		Verify:  verify,
@@ -71,6 +132,7 @@ func deployContract(contract string) error {
 		return fmt.Errorf("deployment failed: %w", err)
 	}
 
+	// Step 9: Display results
 	fmt.Printf("📝 Contract: %s\n", contract)
 	fmt.Printf("🏷️  Environment: %s\n", env)
 	fmt.Printf("🌐 Network: %s (Chain ID: %d)\n", networkInfo.Name, networkInfo.ChainID)

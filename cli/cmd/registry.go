@@ -51,8 +51,17 @@ func init() {
 	registryCmd.AddCommand(registryShowCmd)
 	registryCmd.AddCommand(registrySyncCmd)
 	
-	registryShowCmd.Flags().StringVar(&env, "env", "staging", "Environment to show")
+	// Get configured defaults (empty if no config file)
+	defaultEnv, _, _, _ := GetConfiguredDefaults()
+	
+	// Create flags with defaults (empty if no config)
+	registryShowCmd.Flags().StringVar(&env, "env", defaultEnv, "Environment to show")
 	registrySyncCmd.Flags().BoolVar(&fromBroadcast, "from-broadcast", true, "Sync from broadcast files")
+	
+	// Mark flag as required if it doesn't have a default
+	if defaultEnv == "" {
+		registryShowCmd.MarkFlagRequired("env")
+	}
 }
 
 func showDeployment(contract string) error {
