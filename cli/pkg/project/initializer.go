@@ -110,10 +110,9 @@ func (i *Initializer) setupFdeployLibrary() error {
 	fmt.Println("📦 Installing forge-deploy-lib...")
 	
 	// Install forge-deploy-lib
-	// In real usage, this would be from a GitHub repo
-	if err := i.runCommand("forge", "install", "your-org/forge-deploy-lib", "--no-deps"); err != nil {
+	if err := i.runCommand("forge", "install", "fdeploy-org/forge-deploy", "--no-deps"); err != nil {
 		fmt.Println("⚠️  Could not install forge-deploy-lib automatically")
-		fmt.Println("   Please install manually with: forge install your-org/forge-deploy-lib")
+		fmt.Println("   Please install manually with: forge install fdeploy-org/forge-deploy")
 		return nil // Don't fail the init process
 	}
 
@@ -198,7 +197,7 @@ func (i *Initializer) printNextSteps() {
 	fmt.Println("1. Copy .env.example to .env and configure your values")
 	if !i.fileExists("forge-deploy-lib") {
 		fmt.Println("2. Install forge-deploy-lib:")
-		fmt.Println("   forge install your-org/forge-deploy-lib")
+		fmt.Println("   forge install fdeploy-org/forge-deploy")
 	}
 	fmt.Println("3. Create your first deployment script in script/")
 	fmt.Println("   Example: script/DeployMyContract.s.sol")

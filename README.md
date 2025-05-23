@@ -56,7 +56,7 @@ fdeploy init my-protocol
 
 ```bash
 # Install the deployment library
-forge install your-org/forge-deploy-lib
+forge install fdeploy-org/forge-deploy
 ```
 
 ### 4. Set up environment

@@ -58,7 +58,7 @@ forge init my-project && cd my-project
 fdeploy init my-project  
 
 # 3. Install forge-deploy-lib
-forge install your-org/forge-deploy-lib
+forge install fdeploy-org/forge-deploy
 
 # 4. Configure environment
 cp .env.example .env && edit .env
