@@ -22,12 +22,11 @@ type ScriptExecutor struct {
 }
 
 type DeployArgs struct {
-	RpcUrl           string
-	EtherscanApiKey  string
-	DeployerPK       string
-	ChainID          uint64
-	Verify           bool
-	Networks         []string
+	RpcUrl          string
+	EtherscanApiKey string
+	DeployerPK      string
+	ChainID         uint64
+	Verify          bool
 }
 
 func NewScriptExecutor(foundryProfile, projectRoot string, registry RegistryManager) *ScriptExecutor {
@@ -108,16 +107,22 @@ func (se *ScriptExecutor) Deploy(contract string, env string, args DeployArgs) (
 }
 
 func (se *ScriptExecutor) PredictAddress(contract string, env string, args DeployArgs) (*types.PredictResult, error) {
-	scriptPath := "script/PredictAddress.s.sol"
+	// Use the library's PredictAddress script 
+	scriptPath := "lib/forge-deploy/script/PredictAddress.s.sol:PredictAddress"
 	
-	cmd := exec.Command("forge", "script", scriptPath,
-		"--sig", fmt.Sprintf("predict(string,string)"),
-		contract, env,
-	)
+	cmdArgs := []string{"script", scriptPath, "--sig", "predict(string,string)", contract, env}
+	
+	// Add RPC URL if provided to ensure prediction uses same chain as deployment
+	if args.RpcUrl != "" {
+		cmdArgs = append(cmdArgs, "--rpc-url", args.RpcUrl)
+	}
+	
+	cmd := exec.Command("forge", cmdArgs...)
 	cmd.Dir = se.projectRoot
 
 	cmd.Env = append(os.Environ(),
 		fmt.Sprintf("DEPLOYMENT_ENV=%s", env),
+		fmt.Sprintf("CONTRACT_VERSION=%s", "v1.0.0"), // TODO: Get from config
 	)
 
 	output, err := cmd.CombinedOutput()

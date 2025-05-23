@@ -5,14 +5,14 @@ import (
 
 	"github.com/bogdan/fdeploy/cli/internal/forge"
 	"github.com/bogdan/fdeploy/cli/internal/registry"
+	"github.com/bogdan/fdeploy/cli/pkg/network"
 	"github.com/spf13/cobra"
 )
 
 var (
-	env      string
-	verify   bool
-	networks []string
-	rpcUrl   string
+	env         string
+	verify      bool
+	networkName string
 )
 
 var deployCmd = &cobra.Command{
@@ -41,11 +41,17 @@ This command:
 func init() {
 	deployCmd.Flags().StringVar(&env, "env", "staging", "Deployment environment (staging/prod)")
 	deployCmd.Flags().BoolVar(&verify, "verify", false, "Verify contract after deployment")
-	deployCmd.Flags().StringSliceVar(&networks, "networks", []string{}, "Deploy to multiple networks")
-	deployCmd.Flags().StringVar(&rpcUrl, "rpc-url", "", "RPC URL (overrides foundry.toml)")
+	deployCmd.Flags().StringVar(&networkName, "network", "alfajores", "Network to deploy to (defined in foundry.toml)")
 }
 
 func deployContract(contract string) error {
+	// Resolve network configuration
+	resolver := network.NewResolver(".")
+	networkInfo, err := resolver.ResolveNetwork(networkName)
+	if err != nil {
+		return fmt.Errorf("failed to resolve network: %w", err)
+	}
+
 	// Initialize registry manager
 	registryManager, err := registry.NewManager("deployments.json")
 	if err != nil {
@@ -57,10 +63,9 @@ func deployContract(contract string) error {
 
 	// Deploy contract
 	result, err := executor.Deploy(contract, env, forge.DeployArgs{
-		RpcUrl:    rpcUrl,
-		Verify:    verify,
-		Networks:  networks,
-		ChainID:   11155111, // TODO: Get from RPC or config
+		RpcUrl:  networkInfo.RpcUrl,
+		Verify:  verify,
+		ChainID: networkInfo.ChainID,
 	})
 	if err != nil {
 		return fmt.Errorf("deployment failed: %w", err)
@@ -68,6 +73,7 @@ func deployContract(contract string) error {
 
 	fmt.Printf("📝 Contract: %s\n", contract)
 	fmt.Printf("🏷️  Environment: %s\n", env)
+	fmt.Printf("🌐 Network: %s (Chain ID: %d)\n", networkInfo.Name, networkInfo.ChainID)
 	fmt.Printf("📍 Address: %s\n", result.Address.Hex())
 	fmt.Printf("🧂 Salt: %x\n", result.Salt)
 	fmt.Printf("🔍 Tx Hash: %s\n", result.TxHash.Hex())

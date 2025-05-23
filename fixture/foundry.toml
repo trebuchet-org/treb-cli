@@ -2,5 +2,15 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+script = "script"
+test = "test"
+cache_path = "cache"
+broadcast = "broadcast"
+fs_permissions = [{ access = "read-write", path = "./deployments" }]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+
+[rpc_endpoints]
+alfajores = "https://alfajores-forno.celo-testnet.org"
+mainnet = "https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_API_KEY}"
+polygon = "https://polygon-rpc.com"
