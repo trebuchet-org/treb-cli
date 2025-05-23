@@ -135,7 +135,7 @@ func (g *Generator) getSameVersionTemplate() string {
 	return `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "forge-deploy/base/CreateXDeployment.sol";
+import "forge-deploy/CreateXDeployment.sol";
 import "{{.ImportPath}}";
 
 /**
@@ -170,7 +170,7 @@ func (g *Generator) getCrossVersionTemplate() string {
 	return `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "forge-deploy/base/CreateXDeployment.sol";
+import "forge-deploy/CreateXDeployment.sol";
 // Target contract uses Solidity {{.TargetVersion}}, which is incompatible with this deployment script (0.8)
 // Import commented out to avoid version conflicts. Using artifact-based deployment instead.
 // import "{{.ImportPath}}";

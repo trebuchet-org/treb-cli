@@ -6,6 +6,62 @@
     "timestamp": "2025-05-23T18:58:39.685406+02:00"
   },
   "networks": {
+    "11155111": {
+      "name": "sepolia",
+      "deployments": {
+        "0x3ee04e2688d7a0ecae2eb1f348da2494fed84c9e": {
+          "address": "0x3ee04e2688d7a0ecae2eb1f348da2494fed84c9e",
+          "contract_name": "SampleToken",
+          "environment": "staging",
+          "type": "implementation",
+          "salt": "2b3542429c2dc29d1ed25947b3099bd9cb3e7401f3c1578df10a78c33d5c976e",
+          "init_code_hash": "f084e5ea3d82edd6896f29d0a9518bdbed48b18c9c5eaa8405f6addb246cb6e1",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "safe_tx_hash": "0x5539f1d1dd0dcb0986e72fdda1dc5c97a70adeffcb3e21b7fb8577f808dedafb",
+            "block_number": 8392136,
+            "broadcast_file": "",
+            "timestamp": "2025-05-24T00:01:15.011822+02:00",
+            "status": "pending_safe",
+            "safe_address": "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
+          },
+          "metadata": {
+            "source_commit": "54bbc6c61780137bc8dd37148c3de70512c88ab0",
+            "compiler": "0.8.22",
+            "source_hash": "7e055f374634b71faea61a17c12a0d171432a04bb71872f45fb4d386e24f42fc",
+            "contract_path": "./src/SampleToken.sol:SampleToken"
+          }
+        },
+        "0xbb9ec39f404f93a2b137ae814f54d99390a6bdc1": {
+          "address": "0xbb9ec39f404f93a2b137ae814f54d99390a6bdc1",
+          "contract_name": "SampleToken",
+          "environment": "staging",
+          "type": "",
+          "salt": "0000000000000000000000000000000000000000000000000000000000000000",
+          "init_code_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x250cf29bddee99c182eff31c718d37a4c1d1493ce1ebc60394bfa6fe2cd17fb8",
+            "block_number": 8391649,
+            "broadcast_file": "broadcast/DeploySampleToken.s.sol/11155111/run-latest.json",
+            "timestamp": "2025-05-24T01:36:05.962972+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "54bbc6c61780137bc8dd37148c3de70512c88ab0",
+            "compiler": "0.8.22",
+            "source_hash": "7e055f374634b71faea61a17c12a0d171432a04bb71872f45fb4d386e24f42fc",
+            "contract_path": "./src/SampleToken.sol:SampleToken"
+          }
+        }
+      }
+    },
     "44787": {
       "name": "alfajores",
       "deployments": {
@@ -152,6 +208,30 @@
             "compiler": "0.8.22",
             "source_hash": "cf1c221a8953ed9ea4942718353f05d4d60339bdae708468d6345c5c89a8d446",
             "contract_path": "./src/TestDeploy.sol:TestDeploy"
+          }
+        },
+        "0xbb9ec39f404f93a2b137ae814f54d99390a6bdc1": {
+          "address": "0xbb9ec39f404f93a2b137ae814f54d99390a6bdc1",
+          "contract_name": "SampleToken",
+          "environment": "test",
+          "type": "implementation",
+          "salt": "7009c2bb5f5abcec0bc7bbafd01496dceaa7ce90fa48f498b0c1db13d4cc2e24",
+          "init_code_hash": "81dd2f2f3c451e4c7c378cf8b0a811c50d29c95a5ac786c25fe4769fe49ae9a3",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47076213,
+            "broadcast_file": "",
+            "timestamp": "2025-05-23T22:19:07.190373+02:00",
+            "status": "deployed"
+          },
+          "metadata": {
+            "source_commit": "54bbc6c61780137bc8dd37148c3de70512c88ab0",
+            "compiler": "0.8.22",
+            "source_hash": "7e055f374634b71faea61a17c12a0d171432a04bb71872f45fb4d386e24f42fc",
+            "contract_path": "./src/SampleToken.sol:SampleToken"
           }
         },
         "0xbd4f16f380fb92c236bb99ceb525e45513e4d3ea": {

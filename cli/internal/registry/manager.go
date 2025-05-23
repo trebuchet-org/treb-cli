@@ -147,7 +147,9 @@ func (m *Manager) RecordDeployment(contract, env string, result *types.Deploymen
 			BlockNumber:   result.BlockNumber,
 			BroadcastFile: result.BroadcastFile,
 			Timestamp:     time.Now(),
-			Status:        "deployed",
+			Status:        m.getDeploymentStatus(result),
+			SafeAddress:   result.SafeAddress.String(),
+			SafeTxHash:    m.getSafeTxHash(result),
 		},
 		
 		Metadata: types.ContractMetadata{
@@ -177,6 +179,27 @@ func (m *Manager) GetDeployment(contract, env string, chainID uint64) *types.Dep
 		// Search through deployments to find matching contract and env
 		for _, deployment := range network.Deployments {
 			if deployment.ContractName == contract && deployment.Environment == env {
+				return deployment
+			}
+		}
+	}
+	
+	return nil
+}
+
+// GetDeploymentWithLabel gets a deployment by contract, env, and label
+func (m *Manager) GetDeploymentWithLabel(contract, env, label string, chainID uint64) *types.DeploymentEntry {
+	chainIDStr := fmt.Sprintf("%d", chainID)
+	
+	// Default environment to "default" if not provided
+	if env == "" {
+		env = "default"
+	}
+	
+	if network := m.registry.Networks[chainIDStr]; network != nil {
+		// Search through deployments to find matching contract, env, and label
+		for _, deployment := range network.Deployments {
+			if deployment.ContractName == contract && deployment.Environment == env && deployment.Label == label {
 				return deployment
 			}
 		}
@@ -614,5 +637,21 @@ func (m *Manager) migrateFromOldFormat(data []byte) error {
 		m.registry.Networks[chainID] = newNetwork
 	}
 	
+	return nil
+}
+
+// getDeploymentStatus determines the status based on deployment result
+func (m *Manager) getDeploymentStatus(result *types.DeploymentResult) string {
+	if result.SafeTxHash != (common.Hash{}) {
+		return "pending_safe"
+	}
+	return "deployed"
+}
+
+// getSafeTxHash returns the safe tx hash if it exists
+func (m *Manager) getSafeTxHash(result *types.DeploymentResult) *common.Hash {
+	if result.SafeTxHash != (common.Hash{}) {
+		return &result.SafeTxHash
+	}
 	return nil
 }

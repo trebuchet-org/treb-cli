@@ -21,6 +21,10 @@ type DeploymentResult struct {
 	ProxyLabel      string         `json:"proxy_label,omitempty"`
 	Label           string         `json:"label,omitempty"`  // For implementation deployments
 	Tags            []string       `json:"tags,omitempty"`
+	
+	// Safe deployment information
+	SafeTxHash      common.Hash    `json:"safe_tx_hash,omitempty"`
+	SafeAddress     common.Address `json:"safe_address,omitempty"`
 }
 
 type PredictResult struct {

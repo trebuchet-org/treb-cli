@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "forge-deploy/base/CreateXDeployment.sol";
+import "forge-deploy/CreateXDeployment.sol";
 import "../../src/Counter.sol";
 
 /**

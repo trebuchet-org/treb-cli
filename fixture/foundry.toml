@@ -6,8 +6,9 @@ script = "script"
 test = "test"
 cache_path = "cache"
 broadcast = "broadcast"
+ffi = true
 fs_permissions = [
-    { access = "read-write", path = "./deployments" },
+    { access = "read-write", path = "./deployments.json" },
     { access = "read", path = "./out" }
 ]
 
@@ -18,6 +19,7 @@ alfajores = "https://alfajores-forno.celo-testnet.org"
 mainnet = "https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_API_KEY}"
 polygon = "https://polygon-rpc.com"
 celo = "https://forno.celo.org"
+sepolia = "https://sepolia.infura.io/v3/${INFURA_API_KEY}"
 
 [profile.default.deployer]
 type = "private_key"

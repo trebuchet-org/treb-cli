@@ -224,6 +224,8 @@ func (p *Parser) ParseDeploymentOutput(output []byte) (*types.DeploymentResult, 
 			result.ProxyLabel = value
 		case "LABEL":
 			result.Label = value
+		case "SAFE_TX_HASH":
+			result.SafeTxHash = common.HexToHash(value)
 		}
 	}
 	

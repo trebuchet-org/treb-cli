@@ -9,10 +9,12 @@ import (
 
 	"github.com/bogdan/fdeploy/cli/pkg/broadcast"
 	"github.com/bogdan/fdeploy/cli/pkg/types"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type RegistryManager interface {
 	GetDeployment(contract, env string, chainID uint64) *types.DeploymentEntry
+	GetDeploymentWithLabel(contract, env, label string, chainID uint64) *types.DeploymentEntry
 	RecordDeployment(contract, env string, result *types.DeploymentResult, chainID uint64) error
 }
 
@@ -48,10 +50,27 @@ func (se *ScriptExecutor) Deploy(contract string, env string, args DeployArgs) (
 	if err != nil {
 		return nil, fmt.Errorf("address prediction failed: %w", err)
 	}
+	fmt.Printf("Predicted address: %s\n", predictResult.Address.Hex())
 
 	// 2. Check if already deployed
-	existing := se.registry.GetDeployment(contract, env, args.ChainID)
+	existing := se.registry.GetDeploymentWithLabel(contract, env, args.Label, args.ChainID)
+	fmt.Printf("Existing deployment: %v\n", existing.Address.Hex())
+	fmt.Printf("PredictResult: %v\n", predictResult.Address.Hex())
 	if existing != nil && existing.Address == predictResult.Address {
+		// Check deployment status
+		if existing.Deployment.Status == "pending_safe" {
+			fmt.Printf("Contract deployment is pending Safe execution\n")
+			fmt.Printf("Address: %s\n", existing.Address.Hex())
+			fmt.Printf("Safe: %s\n", existing.Deployment.SafeAddress)
+			if existing.Deployment.SafeTxHash != nil {
+				fmt.Printf("Safe Tx Hash: %s\n", existing.Deployment.SafeTxHash.Hex())
+			}
+			fmt.Printf("\nPlease execute the pending Safe transaction before attempting to redeploy\n")
+			
+			// Return error to prevent proceeding
+			return nil, fmt.Errorf("deployment pending Safe execution")
+		}
+		
 		fmt.Printf("Contract already deployed at predicted address\n")
 		
 		// Convert hex strings back to byte arrays
@@ -136,6 +155,29 @@ func (se *ScriptExecutor) Deploy(contract string, env string, args DeployArgs) (
 		result, err = se.parser.ParseLatestBroadcast(scriptName, args.ChainID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse deployment: %w", err)
+		}
+	}
+	
+	// 4a. If Safe deployment, capture Safe address from environment variables
+	if result.SafeTxHash != (common.Hash{}) {
+		// First try args.EnvVars which contains the actual deployment environment
+		if args.EnvVars != nil {
+			if safeAddr, ok := args.EnvVars["DEPLOYER_SAFE_ADDRESS"]; ok && safeAddr != "" {
+				result.SafeAddress = common.HexToAddress(safeAddr)
+				fmt.Printf("Captured Safe address from deployment: %s\n", safeAddr)
+			}
+		}
+		
+		// Fallback to OS environment (shouldn't normally be needed)
+		if result.SafeAddress == (common.Address{}) {
+			if safeAddr := os.Getenv("DEPLOYER_SAFE_ADDRESS"); safeAddr != "" {
+				result.SafeAddress = common.HexToAddress(safeAddr)
+				fmt.Printf("Captured Safe address from OS env: %s\n", safeAddr)
+			}
+		}
+		
+		if result.SafeAddress == (common.Address{}) {
+			fmt.Printf("Warning: Could not capture Safe address for Safe deployment\n")
 		}
 	}
 

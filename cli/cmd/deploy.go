@@ -124,15 +124,7 @@ func deployContract(contract string) (*types.DeploymentResult, error) {
 		if err := generator.GenerateDeployScriptForContract(contract); err != nil {
 			return nil, fmt.Errorf("script generation failed: %w", err)
 		}
-		
-		// Check if script was created
-		if !validator.DeployScriptExists(contract) {
-			return nil, fmt.Errorf("deploy script was not created for %s. Please ensure you selected the correct contract", contract)
-		}
-		
-		fmt.Printf("\nDeploy script generated successfully! Continuing with deployment...\n")
-	} else {
-		fmt.Printf("Using existing deploy script: Deploy%s.s.sol\n", contract)
+		return nil, nil
 	}
 
 	// Step 5: Resolve network configuration
