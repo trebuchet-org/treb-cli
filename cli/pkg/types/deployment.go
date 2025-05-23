@@ -71,7 +71,6 @@ type DeploymentInfo struct {
 }
 
 type ContractMetadata struct {
-	ContractVersion string `json:"contract_version"`
 	SourceCommit    string `json:"source_commit"`
 	Compiler        string `json:"compiler"`
 	SourceHash      string `json:"source_hash"`

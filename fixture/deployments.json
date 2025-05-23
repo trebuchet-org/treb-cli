@@ -1,9 +1,184 @@
 {
   "project": {
-    "name": "fixture-project",
+    "name": "fdeploy-project",
     "version": "0.1.0",
     "commit": "",
-    "timestamp": "2025-05-23T10:00:00Z"
+    "timestamp": "2025-05-23T18:58:39.685406+02:00"
   },
-  "networks": {}
+  "networks": {
+    "44787": {
+      "name": "alfajores",
+      "deployments": {
+        "0x1efee20b1a08e3c61adf07d485e92056d534dc6f": {
+          "address": "0x1efee20b1a08e3c61adf07d485e92056d534dc6f",
+          "contract_name": "MyToken",
+          "environment": "staging",
+          "type": "implementation",
+          "salt": "9ef7b2fce8012c9ea7bd14a34c00dbcd16124fc713e9ec5fffc9775a6bb35ac2",
+          "init_code_hash": "6d704f4c080479794f03a33e9f0a6af6f0b8f60d7a0782a8c74f7bd4a813331b",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47064960,
+            "broadcast_file": "",
+            "timestamp": "2025-05-23T19:11:34.880687+02:00",
+            "status": ""
+          },
+          "metadata": {
+            "source_commit": "34115a56c34b0847d29072e2d33c1602131164f0",
+            "compiler": "0.8.22",
+            "source_hash": "17b7e6202bb554b208c8c19c656d3e3febced78b747b5ea4ec89cebe2fdf5ce2",
+            "contract_path": "./src/tokens/MyToken.sol:MyToken"
+          }
+        },
+        "0x2759a2480fef838b621aee525d94bb0a49738979": {
+          "address": "0x2759a2480fef838b621aee525d94bb0a49738979",
+          "contract_name": "Counter",
+          "environment": "default",
+          "type": "implementation",
+          "salt": "2d72be8f9c7e18558778d525e4e6fedfdee42de23d9078783025b94296d4993e",
+          "init_code_hash": "c9576aa78a5240d02596c3d3942862c40f22793c79f1961213e357c35eee9d3d",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47075852,
+            "broadcast_file": "",
+            "timestamp": "2025-05-23T22:13:08.183291+02:00",
+            "status": "deployed"
+          },
+          "metadata": {
+            "source_commit": "8a9709d7c89eaf65c317d23f38eca5d689928f29",
+            "compiler": "0.8.22",
+            "source_hash": "4b5eaa107784609cabdbd23e34e479cc957ee69bd4c4de2881625b884e6bbacc",
+            "contract_path": "./src/Counter.sol:Counter"
+          }
+        },
+        "0x5a98afae647ecfb82cf57cf61fe624763dea2623": {
+          "address": "0x5a98afae647ecfb82cf57cf61fe624763dea2623",
+          "contract_name": "SimpleTokenV07",
+          "environment": "staging",
+          "type": "implementation",
+          "salt": "c4bcb1b2de245753f57ee8274579a691d148082cd97065dcf92cbf6ec798fc08",
+          "init_code_hash": "9bb568069ec25c7483d2587edcb31ab4be1f33475b5cc05b63671e45862f7721",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47065922,
+            "broadcast_file": "",
+            "timestamp": "2025-05-23T19:27:37.31083+02:00",
+            "status": ""
+          },
+          "metadata": {
+            "source_commit": "34115a56c34b0847d29072e2d33c1602131164f0",
+            "compiler": "0.8.22",
+            "source_hash": "20cc5e0bc190eaa2175c3a2e9aa514b84f49f296f0796da7fddacb067a55e9c3",
+            "contract_path": "./src/SimpleTokenV07.sol:SimpleTokenV07"
+          }
+        },
+        "0x5b6effadf1172132b31727c39477ea736a95640b": {
+          "address": "0x5b6effadf1172132b31727c39477ea736a95640b",
+          "contract_name": "Counter",
+          "environment": "staging",
+          "type": "implementation",
+          "salt": "49a30f5fa8827056d1bb186959c85e6192d7312a4165fa47508958bc575a3604",
+          "init_code_hash": "bee551f013aa5c7bb4cead171b96e909313dd348714ed2dde3d91e0daa7fac07",
+          "label": "v2",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47064329,
+            "broadcast_file": "",
+            "timestamp": "2025-05-23T19:01:01.527791+02:00",
+            "status": ""
+          },
+          "metadata": {
+            "source_commit": "34115a56c34b0847d29072e2d33c1602131164f0",
+            "compiler": "0.8.22",
+            "source_hash": "4b5eaa107784609cabdbd23e34e479cc957ee69bd4c4de2881625b884e6bbacc",
+            "contract_path": ""
+          }
+        },
+        "0x5cd08e0790e37853e08f842134d7a983bcf59f3a": {
+          "address": "0x5cd08e0790e37853e08f842134d7a983bcf59f3a",
+          "contract_name": "Counter",
+          "environment": "prod",
+          "type": "implementation",
+          "salt": "39c17d4d1e32308de4527f12aa7c856b490cd1608f77c05f0f1dedf3ceced98f",
+          "init_code_hash": "bee551f013aa5c7bb4cead171b96e909313dd348714ed2dde3d91e0daa7fac07",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47064292,
+            "broadcast_file": "",
+            "timestamp": "2025-05-23T19:00:27.587436+02:00",
+            "status": ""
+          },
+          "metadata": {
+            "source_commit": "34115a56c34b0847d29072e2d33c1602131164f0",
+            "compiler": "0.8.22",
+            "source_hash": "4b5eaa107784609cabdbd23e34e479cc957ee69bd4c4de2881625b884e6bbacc",
+            "contract_path": ""
+          }
+        },
+        "0x9eeb86889fa938582b075047490a4c51a8d1d5ff": {
+          "address": "0x9eeb86889fa938582b075047490a4c51a8d1d5ff",
+          "contract_name": "TestDeploy",
+          "environment": "default",
+          "type": "implementation",
+          "salt": "6b25278ca0b6cb014f5a7b2f7d519669b14798c96a1d86ba550ac4a10bd98527",
+          "init_code_hash": "10018ea62441d560a5e6c959e9b8ac05f1c605b4774bb1b7509f2031313dccd9",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47075560,
+            "broadcast_file": "",
+            "timestamp": "2025-05-23T22:08:14.761991+02:00",
+            "status": "deployed"
+          },
+          "metadata": {
+            "source_commit": "8a9709d7c89eaf65c317d23f38eca5d689928f29",
+            "compiler": "0.8.22",
+            "source_hash": "cf1c221a8953ed9ea4942718353f05d4d60339bdae708468d6345c5c89a8d446",
+            "contract_path": "./src/TestDeploy.sol:TestDeploy"
+          }
+        },
+        "0xbd4f16f380fb92c236bb99ceb525e45513e4d3ea": {
+          "address": "0xbd4f16f380fb92c236bb99ceb525e45513e4d3ea",
+          "contract_name": "Counter",
+          "environment": "staging",
+          "type": "implementation",
+          "salt": "d43941f77b2881645de9097cde3e9a78a2258a0df165f36e3d8c91c674f3c2e0",
+          "init_code_hash": "bee551f013aa5c7bb4cead171b96e909313dd348714ed2dde3d91e0daa7fac07",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47064206,
+            "broadcast_file": "",
+            "timestamp": "2025-05-23T18:59:00.031436+02:00",
+            "status": ""
+          },
+          "metadata": {
+            "source_commit": "34115a56c34b0847d29072e2d33c1602131164f0",
+            "compiler": "0.8.22",
+            "source_hash": "4b5eaa107784609cabdbd23e34e479cc957ee69bd4c4de2881625b884e6bbacc",
+            "contract_path": ""
+          }
+        }
+      }
+    }
+  }
 }

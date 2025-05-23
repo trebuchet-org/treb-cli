@@ -6,7 +6,10 @@ script = "script"
 test = "test"
 cache_path = "cache"
 broadcast = "broadcast"
-fs_permissions = [{ access = "read-write", path = "./deployments" }]
+fs_permissions = [
+    { access = "read-write", path = "./deployments" },
+    { access = "read", path = "./out" }
+]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
 
@@ -14,3 +17,22 @@ fs_permissions = [{ access = "read-write", path = "./deployments" }]
 alfajores = "https://alfajores-forno.celo-testnet.org"
 mainnet = "https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_API_KEY}"
 polygon = "https://polygon-rpc.com"
+celo = "https://forno.celo.org"
+
+[profile.default.deployer]
+type = "private_key"
+private_key = "${DEPLOYER_PRIVATE_KEY}"
+
+[profile.test.deployer]
+type = "private_key"
+private_key = "${DEPLOYER_PRIVATE_KEY}"
+
+[profile.staging.deployer]
+type = "safe"
+safe = "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
+proposer = { type = "private_key", private_key = "${DEPLOYER_PRIVATE_KEY}" }
+
+[profile.production.deployer]
+type = "safe"
+safe = "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
+proposer = { type = "ledger", derivation_path = "${PROD_PROPOSER_DERIVATION_PATH}" }

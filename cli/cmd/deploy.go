@@ -8,6 +8,7 @@ import (
 	"github.com/bogdan/fdeploy/cli/internal/registry"
 	"github.com/bogdan/fdeploy/cli/pkg/config"
 	"github.com/bogdan/fdeploy/cli/pkg/contracts"
+	"github.com/bogdan/fdeploy/cli/pkg/interactive"
 	"github.com/bogdan/fdeploy/cli/pkg/network"
 	"github.com/bogdan/fdeploy/cli/pkg/types"
 	forgeExec "github.com/bogdan/fdeploy/cli/pkg/forge"
@@ -114,11 +115,22 @@ func deployContract(contract string) (*types.DeploymentResult, error) {
 		response = strings.ToLower(strings.TrimSpace(response))
 		
 		if response == "n" || response == "no" {
-			return nil, fmt.Errorf("deploy script required but not found: script/Deploy%s.s.sol", contract)
+			return nil, fmt.Errorf("deploy script required but not found: script/deploy/Deploy%s.s.sol", contract)
 		}
 		
-		fmt.Printf("Use 'fdeploy generate deploy' for interactive script generation with strategy selection\n")
-		return nil, fmt.Errorf("deploy script required but not found. Please generate one first using: fdeploy generate deploy")
+		// Generate the script interactively
+		fmt.Printf("Starting interactive script generation...\n\n")
+		generator := interactive.NewGenerator(".")
+		if err := generator.GenerateDeployScriptForContract(contract); err != nil {
+			return nil, fmt.Errorf("script generation failed: %w", err)
+		}
+		
+		// Check if script was created
+		if !validator.DeployScriptExists(contract) {
+			return nil, fmt.Errorf("deploy script was not created for %s. Please ensure you selected the correct contract", contract)
+		}
+		
+		fmt.Printf("\nDeploy script generated successfully! Continuing with deployment...\n")
 	} else {
 		fmt.Printf("Using existing deploy script: Deploy%s.s.sol\n", contract)
 	}

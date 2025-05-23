@@ -60,8 +60,16 @@ func (g *Generator) promptString(prompt, defaultValue string) string {
 
 // GenerateDeployScript interactively generates a deploy script
 func (g *Generator) GenerateDeployScript() error {
-	fmt.Println("🚀 Interactive Deploy Script Generator")
-	fmt.Println("=====================================")
+	return g.GenerateDeployScriptForContract("")
+}
+
+// GenerateDeployScriptForContract generates a deploy script for a specific contract
+func (g *Generator) GenerateDeployScriptForContract(contractName string) error {
+	fmt.Println("Interactive Deploy Script Generator")
+	fmt.Println("===================================")
+	
+	var selectedContract contracts.ContractDiscovery
+	var contractFound bool
 	
 	// Step 1: Discover all contracts in src directory
 	discovery := contracts.NewDiscovery(g.projectRoot)
@@ -74,16 +82,35 @@ func (g *Generator) GenerateDeployScript() error {
 		return fmt.Errorf("no contracts found in src/ directory")
 	}
 	
-	// Step 2: Select contract using fzf-like interface
-	fmt.Printf("Found %d contract(s) in src/\n\n", len(discoveredContracts))
-	
-	contractOptions := discovery.GetFormattedOptions(discoveredContracts)
-	_, selectedIndex, err := g.selector.SimpleSelect("Select contract to deploy:", contractOptions, 0)
-	if err != nil {
-		return fmt.Errorf("contract selection failed: %w", err)
+	// Step 2: Select contract (or use specified contract)
+	if contractName != "" {
+		// Find the specific contract
+		for _, contract := range discoveredContracts {
+			if contract.Name == contractName {
+				selectedContract = contract
+				contractFound = true
+				break
+			}
+		}
+		
+		if !contractFound {
+			return fmt.Errorf("contract %s not found in src/ directory", contractName)
+		}
+		
+		fmt.Printf("Generating deploy script for: %s\n\n", contractName)
+	} else {
+		// Interactive selection
+		fmt.Printf("Found %d contract(s) in src/\n\n", len(discoveredContracts))
+		
+		contractOptions := discovery.GetFormattedOptions(discoveredContracts)
+		_, selectedIndex, err := g.selector.SimpleSelect("Select contract to deploy:", contractOptions, 0)
+		if err != nil {
+			return fmt.Errorf("contract selection failed: %w", err)
+		}
+		
+		selectedContract = discoveredContracts[selectedIndex]
+		contractFound = true
 	}
-	
-	selectedContract := discoveredContracts[selectedIndex]
 	
 	// Step 3: Validate the selected contract
 	validator := contracts.NewValidator(g.projectRoot)
@@ -92,7 +119,7 @@ func (g *Generator) GenerateDeployScript() error {
 		return fmt.Errorf("contract validation failed: %w", err)
 	}
 	
-	fmt.Printf("\n✅ Selected: %s\n", discovery.FormatContractOption(selectedContract))
+	fmt.Printf("\nSelected: %s\n", discovery.FormatContractOption(selectedContract))
 	
 	// Step 4: Choose deployment strategy
 	strategies := []string{"CREATE2", "CREATE3"}
@@ -106,32 +133,30 @@ func (g *Generator) GenerateDeployScript() error {
 		return fmt.Errorf("invalid strategy: %w", err)
 	}
 	
-	// Step 5: Version settings
-	version := g.promptString("Contract version", "v1.0.0")
+	// Step 5: Version settings removed - using tags instead
 	
 	// Step 6: Generate the script
-	fmt.Printf("\n🔨 Generating deploy script for %s...\n", contractInfo.Name)
+	fmt.Printf("\nGenerating deploy script for %s...\n", contractInfo.Name)
 	
 	generator := contracts.NewGenerator(g.projectRoot)
 	if err := generator.GenerateDeployScript(contractInfo, strategy); err != nil {
 		return fmt.Errorf("script generation failed: %w", err)
 	}
 	
-	fmt.Printf("✨ Deploy script generated successfully!\n")
-	fmt.Printf("📋 Strategy: %s\n", strategy)
-	fmt.Printf("🏷️  Version: %s\n", version)
+	fmt.Printf("Deploy script generated successfully!\n")
+	fmt.Printf("Strategy: %s\n", strategy)
 	
 	// Show constructor info
-	fmt.Printf("\n📝 Constructor Arguments:\n")
+	fmt.Printf("\nConstructor Arguments:\n")
 	if contractInfo != nil {
 		// Try to parse ABI to show constructor info
 		abiParser := abi.NewParser(g.projectRoot)
 		if contractABI, err := abiParser.ParseContractABI(contractInfo.Name); err == nil {
 			if contractABI.HasConstructor {
-				fmt.Printf("✅ Constructor arguments automatically detected and configured\n")
-				fmt.Printf("💡 You can customize the values in getConstructorArgs() method\n")
+				fmt.Printf("Constructor arguments automatically detected and configured\n")
+				fmt.Printf("You can customize the values in getConstructorArgs() method\n")
 			} else {
-				fmt.Printf("✅ No constructor arguments required\n")
+				fmt.Printf("No constructor arguments required\n")
 			}
 		}
 	}

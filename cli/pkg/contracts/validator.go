@@ -93,7 +93,7 @@ func (v *Validator) ValidateContract(contractName string) (*ContractInfo, error)
 
 // GetDeployScriptPath returns the expected path for a deploy script
 func (v *Validator) GetDeployScriptPath(contractName string) string {
-	return filepath.Join(v.projectRoot, "script", fmt.Sprintf("Deploy%s.s.sol", contractName))
+	return filepath.Join(v.projectRoot, "script", "deploy", fmt.Sprintf("Deploy%s.s.sol", contractName))
 }
 
 // DeployScriptExists checks if a deploy script already exists

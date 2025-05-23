@@ -151,7 +151,6 @@ func (m *Manager) RecordDeployment(contract, env string, result *types.Deploymen
 		},
 		
 		Metadata: types.ContractMetadata{
-			ContractVersion: m.getContractVersion(contract),
 			SourceCommit:    m.getGitCommit(),
 			Compiler:        m.getCompilerVersion(),
 			SourceHash:      m.calculateSourceHash(contract),
@@ -212,31 +211,6 @@ func (m *Manager) UpdateDeployment(key string, deployment *types.DeploymentEntry
 	return fmt.Errorf("network not found")
 }
 
-func (m *Manager) getContractVersion(contract string) string {
-	// Try to extract version from the project first
-	if m.registry.Project.Version != "" && m.registry.Project.Version != "0.1.0" {
-		return m.registry.Project.Version
-	}
-	
-	// Try to extract from foundry.toml
-	if version := m.getVersionFromFoundryToml(); version != "" {
-		return version
-	}
-	
-	// Try to extract from package.json if it exists
-	if version := m.getVersionFromPackageJson(); version != "" {
-		return version
-	}
-	
-	// Fallback to git tag
-	if version := m.getVersionFromGitTag(); version != "" {
-		return version
-	}
-	
-	// Final fallback
-	return "1.0.0"
-}
-
 func (m *Manager) getGitCommit() string {
 	cmd := exec.Command("git", "rev-parse", "HEAD")
 	output, err := cmd.Output()
@@ -282,52 +256,6 @@ func (m *Manager) getContractPath(contract string) string {
 	
 	// Format as ./src/Contract.sol:Contract
 	return fmt.Sprintf("./%s:%s", contractPath, contract)
-}
-
-func (m *Manager) getVersionFromFoundryToml() string {
-	content, err := os.ReadFile("foundry.toml")
-	if err != nil {
-		return ""
-	}
-	
-	lines := strings.Split(string(content), "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "version") && strings.Contains(line, "=") {
-			parts := strings.Split(line, "=")
-			if len(parts) == 2 {
-				version := strings.Trim(strings.TrimSpace(parts[1]), "\"'")
-				return version
-			}
-		}
-	}
-	return ""
-}
-
-func (m *Manager) getVersionFromPackageJson() string {
-	content, err := os.ReadFile("package.json")
-	if err != nil {
-		return ""
-	}
-	
-	var pkg map[string]interface{}
-	if err := json.Unmarshal(content, &pkg); err != nil {
-		return ""
-	}
-	
-	if version, ok := pkg["version"].(string); ok {
-		return version
-	}
-	return ""
-}
-
-func (m *Manager) getVersionFromGitTag() string {
-	cmd := exec.Command("git", "describe", "--tags", "--abbrev=0")
-	output, err := cmd.Output()
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(string(output))
 }
 
 func (m *Manager) getCompilerFromFoundryToml() string {
@@ -445,6 +373,52 @@ func (m *Manager) GetAllDeployments() []*DeploymentInfo {
 	}
 	
 	return deployments
+}
+
+// AddTag adds a tag to a deployment by address
+func (m *Manager) AddTag(address common.Address, tag string) error {
+	// Find deployment by address across all networks
+	addressLower := strings.ToLower(address.Hex())
+	
+	for _, network := range m.registry.Networks {
+		if deployment, exists := network.Deployments[addressLower]; exists {
+			// Check if tag already exists
+			for _, existingTag := range deployment.Tags {
+				if existingTag == tag {
+					return nil // Tag already exists, no error
+				}
+			}
+			
+			// Add the tag
+			deployment.Tags = append(deployment.Tags, tag)
+			return nil
+		}
+	}
+	
+	return fmt.Errorf("deployment not found for address %s", address.Hex())
+}
+
+// RemoveTag removes a tag from a deployment by address
+func (m *Manager) RemoveTag(address common.Address, tag string) error {
+	// Find deployment by address across all networks
+	addressLower := strings.ToLower(address.Hex())
+	
+	for _, network := range m.registry.Networks {
+		if deployment, exists := network.Deployments[addressLower]; exists {
+			// Find and remove the tag
+			for i, existingTag := range deployment.Tags {
+				if existingTag == tag {
+					// Remove the tag by slicing
+					deployment.Tags = append(deployment.Tags[:i], deployment.Tags[i+1:]...)
+					return nil
+				}
+			}
+			// Tag not found, but deployment exists - not an error
+			return nil
+		}
+	}
+	
+	return fmt.Errorf("deployment not found for address %s", address.Hex())
 }
 
 // GetNetworkSummary returns network summary information

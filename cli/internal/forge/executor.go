@@ -75,7 +75,7 @@ func (se *ScriptExecutor) Deploy(contract string, env string, args DeployArgs) (
 	}
 
 	// 3. Execute forge script
-	scriptPath := fmt.Sprintf("script/Deploy%s.s.sol", contract)
+	scriptPath := fmt.Sprintf("script/deploy/Deploy%s.s.sol", contract)
 	
 	cmdArgs := []string{"script", scriptPath, "-vvvv"} // High verbosity for better error messages
 	

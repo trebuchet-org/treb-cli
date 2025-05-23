@@ -101,6 +101,35 @@ var deploymentsCleanCmd = &cobra.Command{
 	},
 }
 
+var deploymentsTagCmd = &cobra.Command{
+	Use:   "tag [identifier] --tag <tag>",
+	Short: "Add or remove tags from deployments",
+	Long: `Add or remove tags from deployments for versioning and organization.
+
+The identifier can be:
+- A contract address (0x...)
+- A display name (e.g., "Counter" or "Counter:v2")
+- Part of a display name (will show matches)
+
+Use --all to tag all deployments that match the identifier.
+Use --remove to remove tags instead of adding them.`,
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		identifier := args[0]
+		tag, _ := cmd.Flags().GetString("tag")
+		all, _ := cmd.Flags().GetBool("all")
+		remove, _ := cmd.Flags().GetBool("remove")
+		
+		if tag == "" {
+			checkError(fmt.Errorf("--tag flag is required"))
+		}
+		
+		if err := tagDeployments(identifier, tag, all, remove); err != nil {
+			checkError(err)
+		}
+	},
+}
+
 func init() {
 	deploymentsCmd.AddCommand(deploymentsShowCmd)
 	deploymentsCmd.AddCommand(deploymentsSyncCmd)
@@ -108,19 +137,16 @@ func init() {
 	deploymentsCmd.AddCommand(deploymentsNetworksCmd)
 	deploymentsCmd.AddCommand(deploymentsStatusCmd)
 	deploymentsCmd.AddCommand(deploymentsCleanCmd)
+	deploymentsCmd.AddCommand(deploymentsTagCmd)
 	
-	// Get configured defaults (empty if no config file)
-	_, defaultNetwork, _, _ := GetConfiguredDefaults()
-	
-	// Create flags with defaults - env always defaults to "default"
-	deploymentsShowCmd.Flags().StringVar(&env, "env", "default", "Environment to show")
-	deploymentsShowCmd.Flags().StringVar(&networkName, "network", defaultNetwork, "Network to show deployments for")
+	// Create flags for sync command
 	deploymentsSyncCmd.Flags().BoolVar(&fromBroadcast, "from-broadcast", true, "Sync from broadcast files")
 	
-	// Mark network flag as required if it doesn't have a default
-	if defaultNetwork == "" {
-		deploymentsShowCmd.MarkFlagRequired("network")
-	}
+	// Add flags for tag command
+	deploymentsTagCmd.Flags().String("tag", "", "Tag to add or remove from deployments")
+	deploymentsTagCmd.Flags().Bool("all", false, "Tag all deployments that match the identifier")
+	deploymentsTagCmd.Flags().Bool("remove", false, "Remove the tag instead of adding it")
+	deploymentsTagCmd.MarkFlagRequired("tag")
 }
 
 func showDeploymentByIdentifier(identifier string) error {
@@ -202,11 +228,11 @@ func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
 	
 	// Display deployment information
 	displayName := deployment.Entry.GetDisplayName()
-	fmt.Printf("📝 Deployment: %s\n", displayName)
-	fmt.Printf("   Environment: %s\n\n", deployment.Entry.Environment)
+	fmt.Printf("Deployment: %s\n", displayName)
+	fmt.Printf("Environment: %s\n\n", deployment.Entry.Environment)
 	
 	// Basic deployment info
-	fmt.Printf("🚀 Contract Information:\n")
+	fmt.Printf("Contract Information:\n")
 	fmt.Printf("   Address: %s\n", deployment.Address.Hex())
 	fmt.Printf("   Type: %s\n", deployment.Entry.Type)
 	fmt.Printf("   Salt: %s\n", deployment.Entry.Salt)
@@ -216,7 +242,7 @@ func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
 	fmt.Println()
 	
 	// Deployment details
-	fmt.Printf("📊 Deployment Details:\n")
+	fmt.Printf("Deployment Details:\n")
 	
 	// Show deployment status
 	status := deployment.Entry.Deployment.Status
@@ -236,7 +262,7 @@ func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
 		if deployment.Entry.Deployment.SafeTxHash != nil {
 			fmt.Printf("   Safe Tx Hash: %s\n", deployment.Entry.Deployment.SafeTxHash.Hex())
 		}
-		fmt.Printf("   ⏳ This deployment is pending execution in the Safe UI\n")
+		fmt.Printf("   This deployment is pending execution in the Safe UI\n")
 	} else {
 		// Regular deployment info
 		if deployment.Entry.Deployment.TxHash != nil && deployment.Entry.Deployment.TxHash.Hex() != "0x0000000000000000000000000000000000000000000000000000000000000000" {
@@ -255,11 +281,10 @@ func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
 	fmt.Println()
 	
 	// Metadata
-	fmt.Printf("📋 Contract Metadata:\n")
+	fmt.Printf("Contract Metadata:\n")
 	if deployment.Entry.Metadata.ContractPath != "" {
 		fmt.Printf("   Path: %s\n", deployment.Entry.Metadata.ContractPath)
 	}
-	fmt.Printf("   Version: %s\n", deployment.Entry.Metadata.ContractVersion)
 	fmt.Printf("   Compiler: %s\n", deployment.Entry.Metadata.Compiler)
 	if deployment.Entry.Metadata.SourceCommit != "" {
 		fmt.Printf("   Source Commit: %s\n", deployment.Entry.Metadata.SourceCommit)
@@ -267,10 +292,13 @@ func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
 	if deployment.Entry.Metadata.SourceHash != "" {
 		fmt.Printf("   Source Hash: %s\n", deployment.Entry.Metadata.SourceHash)
 	}
+	if len(deployment.Entry.Tags) > 0 {
+		fmt.Printf("   Tags: %s\n", strings.Join(deployment.Entry.Tags, ", "))
+	}
 	fmt.Println()
 	
 	// Verification status
-	fmt.Printf("🔍 Verification:\n")
+	fmt.Printf("Verification:\n")
 	fmt.Printf("   Status: %s\n", deployment.Entry.Verification.Status)
 	if deployment.Entry.Verification.ExplorerUrl != "" {
 		fmt.Printf("   Explorer: %s\n", deployment.Entry.Verification.ExplorerUrl)
@@ -303,11 +331,11 @@ func showDeployment(contract string) error {
 
 	// Display deployment information in a readable format
 	displayName := deployment.GetDisplayName()
-	fmt.Printf("📝 Deployment: %s\n", displayName)
-	fmt.Printf("   Environment: %s\n\n", deployment.Environment)
+	fmt.Printf("Deployment: %s\n", displayName)
+	fmt.Printf("Environment: %s\n\n", deployment.Environment)
 	
 	// Basic deployment info
-	fmt.Printf("🚀 Contract Information:\n")
+	fmt.Printf("Contract Information:\n")
 	fmt.Printf("   Address: %s\n", deployment.Address.Hex())
 	fmt.Printf("   Type: %s\n", deployment.Type)
 	fmt.Printf("   Salt: %s\n", deployment.Salt)
@@ -317,7 +345,7 @@ func showDeployment(contract string) error {
 	fmt.Println()
 	
 	// Deployment details
-	fmt.Printf("📊 Deployment Details:\n")
+	fmt.Printf("Deployment Details:\n")
 	if deployment.Deployment.TxHash != nil && deployment.Deployment.TxHash.Hex() != "0x0000000000000000000000000000000000000000000000000000000000000000" {
 		fmt.Printf("   Transaction: %s\n", deployment.Deployment.TxHash.Hex())
 	}
@@ -332,11 +360,10 @@ func showDeployment(contract string) error {
 	fmt.Println()
 	
 	// Metadata
-	fmt.Printf("📋 Contract Metadata:\n")
+	fmt.Printf("Contract Metadata:\n")
 	if deployment.Metadata.ContractPath != "" {
 		fmt.Printf("   Path: %s\n", deployment.Metadata.ContractPath)
 	}
-	fmt.Printf("   Version: %s\n", deployment.Metadata.ContractVersion)
 	fmt.Printf("   Compiler: %s\n", deployment.Metadata.Compiler)
 	if deployment.Metadata.SourceCommit != "" {
 		fmt.Printf("   Source Commit: %s\n", deployment.Metadata.SourceCommit)
@@ -344,10 +371,13 @@ func showDeployment(contract string) error {
 	if deployment.Metadata.SourceHash != "" {
 		fmt.Printf("   Source Hash: %s\n", deployment.Metadata.SourceHash)
 	}
+	if len(deployment.Tags) > 0 {
+		fmt.Printf("   Tags: %s\n", strings.Join(deployment.Tags, ", "))
+	}
 	fmt.Println()
 	
 	// Verification status
-	fmt.Printf("🔍 Verification:\n")
+	fmt.Printf("Verification:\n")
 	fmt.Printf("   Status: %s\n", deployment.Verification.Status)
 	if deployment.Verification.ExplorerUrl != "" {
 		fmt.Printf("   Explorer: %s\n", deployment.Verification.ExplorerUrl)
@@ -463,7 +493,13 @@ func listDeployments() error {
 				statusIndicator = " ⏳"
 			}
 			
-			fmt.Printf("  %-*s  %s  %s%s\n", maxNameLen, displayName, deployment.Address.Hex(), timestamp, statusIndicator)
+			// Add tags if present
+			tagsDisplay := ""
+			if len(deployment.Entry.Tags) > 0 {
+				tagsDisplay = fmt.Sprintf(" [%s]", strings.Join(deployment.Entry.Tags, ", "))
+			}
+			
+			fmt.Printf("  %-*s  %s  %s%s%s\n", maxNameLen, displayName, deployment.Address.Hex(), timestamp, statusIndicator, tagsDisplay)
 		}
 		fmt.Println()
 	}
@@ -496,7 +532,7 @@ func showNetworks() error {
 	totalDeployments := 0
 	for _, chainID := range chainIDs {
 		networkInfo := networks[chainID]
-		fmt.Printf("📡 %s (Chain ID: %s)\n", networkInfo.Name, chainID)
+		fmt.Printf("%s (Chain ID: %s)\n", networkInfo.Name, chainID)
 		fmt.Printf("   Deployments: %d\n", networkInfo.DeploymentCount)
 		
 		if len(networkInfo.Contracts) > 0 {
@@ -525,14 +561,14 @@ func showRegistryStatus() error {
 	fmt.Println("Deployments Status:\n")
 	
 	// Project info
-	fmt.Printf("📋 Project: %s (v%s)\n", status.ProjectName, status.ProjectVersion)
+	fmt.Printf("Project: %s (v%s)\n", status.ProjectName, status.ProjectVersion)
 	if status.LastUpdated != "" {
-		fmt.Printf("🕒 Last Updated: %s\n", status.LastUpdated)
+		fmt.Printf("Last Updated: %s\n", status.LastUpdated)
 	}
 	fmt.Println()
 	
 	// Statistics
-	fmt.Printf("📊 Statistics:\n")
+	fmt.Printf("Statistics:\n")
 	fmt.Printf("   Networks: %d\n", status.NetworkCount)
 	fmt.Printf("   Total Deployments: %d\n", status.TotalDeployments)
 	fmt.Printf("   Verified: %d\n", status.VerifiedCount)
@@ -541,7 +577,7 @@ func showRegistryStatus() error {
 	
 	// Recent deployments
 	if len(status.RecentDeployments) > 0 {
-		fmt.Printf("🕒 Recent Deployments:\n")
+		fmt.Printf("Recent Deployments:\n")
 		for _, recent := range status.RecentDeployments {
 			// Build display name
 			displayName := recent.Contract

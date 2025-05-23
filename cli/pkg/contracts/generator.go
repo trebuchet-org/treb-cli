@@ -48,10 +48,10 @@ func NewGenerator(projectRoot string) *Generator {
 
 // GenerateDeployScript creates a new deploy script from template
 func (g *Generator) GenerateDeployScript(contractInfo *ContractInfo, strategy DeployStrategy) error {
-	// Ensure script directory exists
-	scriptDir := filepath.Join(g.projectRoot, "script")
+	// Ensure script/deploy directory exists
+	scriptDir := filepath.Join(g.projectRoot, "script", "deploy")
 	if err := os.MkdirAll(scriptDir, 0755); err != nil {
-		return fmt.Errorf("failed to create script directory: %w", err)
+		return fmt.Errorf("failed to create script/deploy directory: %w", err)
 	}
 
 	// Parse target contract version
@@ -81,8 +81,8 @@ func (g *Generator) GenerateDeployScript(contractInfo *ContractInfo, strategy De
 		ContractName:        contractInfo.Name,
 		SolidityFile:        contractInfo.SolidityFile,
 		Strategy:            strategy,
-		Version:             "v1.0.0", // Default version, could be configurable
-		ImportPath:          fmt.Sprintf("../src/%s", contractInfo.SolidityFile),
+		// Version removed - using tags instead
+		ImportPath:          fmt.Sprintf("../../src/%s", contractInfo.SolidityFile),
 		TargetVersion:       targetVersion,
 		VersionMismatch:     versionMismatch,
 		UseTypeCreationCode: useTypeCreationCode,
@@ -100,8 +100,13 @@ func (g *Generator) GenerateDeployScript(contractInfo *ContractInfo, strategy De
 		return fmt.Errorf("failed to parse template: %w", err)
 	}
 
-	// Create output file
+	// Check if deploy script already exists
 	outputPath := filepath.Join(scriptDir, fmt.Sprintf("Deploy%s.s.sol", contractInfo.Name))
+	if _, err := os.Stat(outputPath); err == nil {
+		return fmt.Errorf("deploy script already exists: %s\nUse a different contract name or remove the existing script", outputPath)
+	}
+
+	// Create output file
 	file, err := os.Create(outputPath)
 	if err != nil {
 		return fmt.Errorf("failed to create deploy script: %w", err)
@@ -113,7 +118,7 @@ func (g *Generator) GenerateDeployScript(contractInfo *ContractInfo, strategy De
 		return fmt.Errorf("failed to execute template: %w", err)
 	}
 
-	fmt.Printf("✨ Generated deploy script: %s\n", outputPath)
+	fmt.Printf("Generated deploy script: %s\n", outputPath)
 	return nil
 }
 
@@ -141,28 +146,22 @@ import "{{.ImportPath}}";
 contract Deploy{{.ContractName}} is CreateXDeployment {
     constructor() CreateXDeployment(
         "{{.ContractName}}",
-        "{{.Version}}",
+        DeploymentType.IMPLEMENTATION,
         DeployStrategy.{{.Strategy}}
     ) {}
 
-    /// @notice Get contract init code
-    function getInitCode() internal override returns (bytes memory) {
-{{if .UseTypeCreationCode}}        // Using type().creationCode for same version deployment
-        return abi.encodePacked(type({{.ContractName}}).creationCode, getConstructorArgs());
-{{else}}        // Using artifact-based deployment for cross-version compatibility
-        bytes memory artifactInitCode = getInitCodeFromArtifacts("{{.ContractName}}");
-        require(artifactInitCode.length > 0, "Failed to load contract artifacts. Ensure contract is compiled.");
-        return abi.encodePacked(artifactInitCode, getConstructorArgs());
-{{end}}    }
-
-    /// @notice Get constructor arguments
-    function getConstructorArgs() internal pure virtual returns (bytes memory) {
-{{if .HasConstructor}}        // Constructor arguments detected from ABI
+{{if .UseTypeCreationCode}}    /// @notice Get contract bytecode using type().creationCode
+    function getContractBytecode() internal pure override returns (bytes memory) {
+        return type({{.ContractName}}).creationCode;
+    }
+{{end}}
+{{if .HasConstructor}}    /// @notice Get constructor arguments
+    function getConstructorArgs() internal pure override returns (bytes memory) {
+        // Constructor arguments detected from ABI
 {{.ConstructorVars}}
         {{.ConstructorEncode}}
-{{else}}        // No constructor arguments required
-        return "";
-{{end}}    }
+    }
+{{end}}
 }`
 }
 
@@ -185,26 +184,17 @@ import "forge-deploy/base/CreateXDeployment.sol";
 contract Deploy{{.ContractName}} is CreateXDeployment {
     constructor() CreateXDeployment(
         "{{.ContractName}}",
-        "{{.Version}}",
+        DeploymentType.IMPLEMENTATION,
         DeployStrategy.{{.Strategy}}
     ) {}
 
-    /// @notice Get contract init code
-    function getInitCode() internal override returns (bytes memory) {
-        // Cross-version deployment - using artifact-based deployment only
-        bytes memory artifactInitCode = getInitCodeFromArtifacts("{{.ContractName}}");
-        require(artifactInitCode.length > 0, "Failed to load contract artifacts. Ensure contract is compiled.");
-        return abi.encodePacked(artifactInitCode, getConstructorArgs());
-    }
-
-    /// @notice Get constructor arguments
-    function getConstructorArgs() internal pure virtual returns (bytes memory) {
-{{if .HasConstructor}}        // Constructor arguments detected from ABI
+{{if .HasConstructor}}    /// @notice Get constructor arguments
+    function getConstructorArgs() internal pure override returns (bytes memory) {
+        // Constructor arguments detected from ABI
 {{.ConstructorVars}}
         {{.ConstructorEncode}}
-{{else}}        // No constructor arguments required
-        return "";
-{{end}}    }
+    }
+{{end}}
 }`
 }
 
