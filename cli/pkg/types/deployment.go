@@ -7,12 +7,20 @@ import (
 )
 
 type DeploymentResult struct {
-	Address       common.Address `json:"address"`
-	TxHash        common.Hash    `json:"transaction_hash"`
-	BlockNumber   uint64         `json:"block_number"`
-	BroadcastFile string         `json:"broadcast_file"`
-	Salt          [32]byte       `json:"salt"`
-	InitCodeHash  [32]byte       `json:"init_code_hash"`
+	Address         common.Address `json:"address"`
+	TxHash          common.Hash    `json:"transaction_hash"`
+	BlockNumber     uint64         `json:"block_number"`
+	BroadcastFile   string         `json:"broadcast_file"`
+	Salt            [32]byte       `json:"salt"`            // Keep as bytes for internal use
+	InitCodeHash    [32]byte       `json:"init_code_hash"`  // Keep as bytes for internal use
+	AlreadyDeployed bool           `json:"already_deployed"`
+	
+	// New deployment type information
+	DeploymentType  string         `json:"deployment_type"`  // "implementation" or "proxy"
+	TargetContract  string         `json:"target_contract,omitempty"`
+	ProxyLabel      string         `json:"proxy_label,omitempty"`
+	Label           string         `json:"label,omitempty"`  // For implementation deployments
+	Tags            []string       `json:"tags,omitempty"`
 }
 
 type PredictResult struct {
@@ -23,10 +31,22 @@ type PredictResult struct {
 
 type DeploymentEntry struct {
 	Address       common.Address   `json:"address"`
+	ContractName  string           `json:"contract_name"`
+	Environment   string           `json:"environment"`
 	Type          string           `json:"type"` // implementation/proxy
-	Salt          [32]byte         `json:"salt"`
-	InitCodeHash  [32]byte         `json:"init_code_hash"`
+	Salt          string           `json:"salt"`           // hex string
+	InitCodeHash  string           `json:"init_code_hash"` // hex string
 	Constructor   []interface{}    `json:"constructor_args,omitempty"`
+	
+	// Label for all deployments (optional for implementations, required for proxies)
+	Label         string           `json:"label,omitempty"`
+	
+	// Proxy-specific fields
+	TargetContract string           `json:"target_contract,omitempty"` // For proxy deployments
+	ProxyLabel     string           `json:"proxy_label,omitempty"`     // DEPRECATED: use Label instead
+	
+	// Version tags (metadata only, not part of salt)
+	Tags          []string         `json:"tags,omitempty"`
 	
 	Verification  Verification     `json:"verification"`
 	Deployment    DeploymentInfo   `json:"deployment"`
@@ -52,4 +72,23 @@ type ContractMetadata struct {
 	SourceCommit    string `json:"source_commit"`
 	Compiler        string `json:"compiler"`
 	SourceHash      string `json:"source_hash"`
+	ContractPath    string `json:"contract_path"`  // Full path like ./src/Contract.sol:Contract
+}
+
+// GetDisplayName returns a human-friendly name for the deployment
+func (d *DeploymentEntry) GetDisplayName() string {
+	if d.Type == "proxy" {
+		// For proxies: targetContractProxy or targetContractProxy:label
+		baseName := d.TargetContract + "Proxy"
+		if d.Label != "" {
+			return baseName + ":" + d.Label
+		}
+		return baseName
+	}
+	
+	// For implementations: contractName or contractName:label
+	if d.Label != "" {
+		return d.ContractName + ":" + d.Label
+	}
+	return d.ContractName
 }

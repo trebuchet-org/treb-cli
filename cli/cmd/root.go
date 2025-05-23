@@ -26,7 +26,7 @@ func init() {
 	rootCmd.AddCommand(deployCmd)
 	rootCmd.AddCommand(predictCmd)
 	rootCmd.AddCommand(verifyCmd)
-	rootCmd.AddCommand(registryCmd)
+	rootCmd.AddCommand(deploymentsCmd)
 }
 
 func checkError(err error) {

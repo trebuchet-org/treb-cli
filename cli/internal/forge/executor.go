@@ -1,6 +1,7 @@
 package forge
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 	"os/exec"
@@ -11,8 +12,8 @@ import (
 )
 
 type RegistryManager interface {
-	GetDeployment(contract, env string) *types.DeploymentEntry
-	RecordDeployment(contract, env string, result *types.DeploymentResult) error
+	GetDeployment(contract, env string, chainID uint64) *types.DeploymentEntry
+	RecordDeployment(contract, env string, result *types.DeploymentResult, chainID uint64) error
 }
 
 type ScriptExecutor struct {
@@ -28,6 +29,7 @@ type DeployArgs struct {
 	DeployerPK      string
 	ChainID         uint64
 	Verify          bool
+	Label           string
 }
 
 func NewScriptExecutor(foundryProfile, projectRoot string, registry RegistryManager) *ScriptExecutor {
@@ -47,12 +49,27 @@ func (se *ScriptExecutor) Deploy(contract string, env string, args DeployArgs) (
 	}
 
 	// 2. Check if already deployed
-	existing := se.registry.GetDeployment(contract, env)
+	existing := se.registry.GetDeployment(contract, env, args.ChainID)
 	if existing != nil && existing.Address == predictResult.Address {
+		fmt.Printf("Contract already deployed at predicted address\n")
+		
+		// Convert hex strings back to byte arrays
+		var salt [32]byte
+		var initCodeHash [32]byte
+		
+		if saltBytes, err := hex.DecodeString(existing.Salt); err == nil && len(saltBytes) == 32 {
+			copy(salt[:], saltBytes)
+		}
+		
+		if hashBytes, err := hex.DecodeString(existing.InitCodeHash); err == nil && len(hashBytes) == 32 {
+			copy(initCodeHash[:], hashBytes)
+		}
+		
 		return &types.DeploymentResult{
-			Address:      existing.Address,
-			Salt:         existing.Salt,
-			InitCodeHash: existing.InitCodeHash,
+			Address:         existing.Address,
+			Salt:            salt,
+			InitCodeHash:    initCodeHash,
+			AlreadyDeployed: true,
 		}, nil
 	}
 
@@ -74,7 +91,7 @@ func (se *ScriptExecutor) Deploy(contract string, env string, args DeployArgs) (
 		}
 	}
 
-	fmt.Printf("🚀 Executing: forge %s\n", strings.Join(cmdArgs, " "))
+	fmt.Printf("Executing deployment: forge %s\n", strings.Join(cmdArgs, " "))
 	
 	cmd := exec.Command("forge", cmdArgs...)
 	cmd.Dir = se.projectRoot
@@ -84,13 +101,17 @@ func (se *ScriptExecutor) Deploy(contract string, env string, args DeployArgs) (
 		fmt.Sprintf("DEPLOYMENT_ENV=%s", env),
 	)
 	
+	if args.Label != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("DEPLOYMENT_LABEL=%s", args.Label))
+	}
+	
 	if args.DeployerPK != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("DEPLOYER_PRIVATE_KEY=%s", args.DeployerPK))
 	}
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Printf("❌ Script execution failed:\n")
+		fmt.Printf("Script execution failed:\n")
 		fmt.Printf("Command: forge %s\n", strings.Join(cmdArgs, " "))
 		fmt.Printf("Error: %v\n", err)
 		fmt.Printf("Full output:\n%s\n", string(output))
@@ -100,15 +121,19 @@ func (se *ScriptExecutor) Deploy(contract string, env string, args DeployArgs) (
 	// Parse output for key information
 	se.parseScriptOutput(string(output))
 
-	// 4. Parse broadcast file
-	scriptName := fmt.Sprintf("Deploy%s.s.sol", contract)
-	result, err := se.parser.ParseLatestBroadcast(scriptName, args.ChainID)
+	// 4. Try to parse structured output first
+	result, err := se.parser.ParseDeploymentOutput(output)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse broadcast: %w", err)
+		// Fallback to parsing broadcast file
+		scriptName := fmt.Sprintf("Deploy%s.s.sol", contract)
+		result, err = se.parser.ParseLatestBroadcast(scriptName, args.ChainID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse deployment: %w", err)
+		}
 	}
 
 	// 5. Update registry
-	err = se.registry.RecordDeployment(contract, env, result)
+	err = se.registry.RecordDeployment(contract, env, result, args.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to record deployment: %w", err)
 	}
@@ -123,24 +148,12 @@ func (se *ScriptExecutor) parseScriptOutput(output string) {
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		
-		// Look for transaction hash
-		if strings.Contains(line, "Transaction hash:") {
-			fmt.Printf("🔍 %s\n", line)
-		}
-		
-		// Look for contract address
-		if strings.Contains(line, "Contract Address:") {
-			fmt.Printf("📍 %s\n", line)
-		}
-		
-		// Look for gas used
-		if strings.Contains(line, "Gas used:") {
-			fmt.Printf("⛽ %s\n", line)
-		}
-		
-		// Look for block number
-		if strings.Contains(line, "Block:") {
-			fmt.Printf("📊 %s\n", line)
+		// Look for key deployment information
+		if strings.Contains(line, "Transaction hash:") ||
+		   strings.Contains(line, "Contract Address:") ||
+		   strings.Contains(line, "Gas used:") ||
+		   strings.Contains(line, "Block:") {
+			fmt.Printf("%s\n", line)
 		}
 	}
 }
@@ -156,7 +169,7 @@ func (se *ScriptExecutor) PredictAddress(contract string, env string, args Deplo
 		cmdArgs = append(cmdArgs, "--rpc-url", args.RpcUrl)
 	}
 	
-	fmt.Printf("🔮 Predicting address: forge %s\n", strings.Join(cmdArgs, " "))
+	fmt.Printf("Predicting address: forge %s\n", strings.Join(cmdArgs, " "))
 	
 	cmd := exec.Command("forge", cmdArgs...)
 	cmd.Dir = se.projectRoot
@@ -168,7 +181,7 @@ func (se *ScriptExecutor) PredictAddress(contract string, env string, args Deplo
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Printf("❌ Address prediction failed:\n")
+		fmt.Printf("Address prediction failed:\n")
 		fmt.Printf("Command: forge %s\n", strings.Join(cmdArgs, " "))
 		fmt.Printf("Error: %v\n", err)
 		fmt.Printf("Full output:\n%s\n", string(output))

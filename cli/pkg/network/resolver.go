@@ -52,6 +52,48 @@ func (r *Resolver) ResolveNetwork(network string) (*NetworkInfo, error) {
 	}, nil
 }
 
+// ResolveNetworkByChainID resolves network information by chain ID
+func (r *Resolver) ResolveNetworkByChainID(chainIDStr string) (*NetworkInfo, error) {
+	// Parse chain ID
+	chainID, err := strconv.ParseUint(chainIDStr, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid chain ID: %w", err)
+	}
+	
+	// Known chain IDs to network names
+	chainIDMap := map[uint64]string{
+		1:        "mainnet",
+		11155111: "sepolia",
+		421614:   "arbitrum_sepolia",
+		44787:    "alfajores",
+		42220:    "celo",
+		// Add more as needed
+	}
+	
+	networkName, ok := chainIDMap[chainID]
+	if !ok {
+		// Return a generic network info
+		return &NetworkInfo{
+			Name:    fmt.Sprintf("chain-%d", chainID),
+			RpcUrl:  "",
+			ChainID: chainID,
+		}, nil
+	}
+	
+	// Try to get full network info
+	info, err := r.ResolveNetwork(networkName)
+	if err != nil {
+		// Return basic info
+		return &NetworkInfo{
+			Name:    networkName,
+			RpcUrl:  "",
+			ChainID: chainID,
+		}, nil
+	}
+	
+	return info, nil
+}
+
 // getRpcUrlFromFoundry extracts RPC URL from foundry.toml
 func (r *Resolver) getRpcUrlFromFoundry(network string) (string, error) {
 	// For now, use a simple approach - in production, you'd want to parse foundry.toml properly
