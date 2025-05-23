@@ -182,8 +182,7 @@ your-project/
 ├── script/                 # Deployment scripts  
 ├── test/                   # Tests
 ├── lib/
-│   ├── forge-std/          # Foundry standard library
-│   └── forge-deploy-lib/   # fdeploy library
+│   └── forge-std/          # Foundry standard library
 ├── deployments/            # Per-chain deployment files
 ├── deployments.json        # Central registry
 ├── foundry.toml           # Foundry config

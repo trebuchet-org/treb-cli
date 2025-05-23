@@ -39,14 +39,14 @@ make example
 
 ### Foundry Library (forge-deploy-lib)
 ```bash
-# Build library (in lib/forge-deploy-lib)
-forge build
+# Build library (in forge-deploy-lib/)
+cd forge-deploy-lib && forge build
 
 # Run library tests
-forge test
+cd forge-deploy-lib && forge test
 
 # Test address prediction
-forge script script/PredictAddress.s.sol --sig "predict(string,string)" "MyContract" "staging"
+cd forge-deploy-lib && forge script script/PredictAddress.s.sol --sig "predict(string,string)" "MyContract" "staging"
 ```
 
 ### Project Setup Workflow

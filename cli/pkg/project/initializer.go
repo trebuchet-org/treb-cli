@@ -80,7 +80,7 @@ func (i *Initializer) updateRemappings() error {
 	}
 
 	// Add forge-deploy-lib remapping if not present
-	fdeployRemapping := "forge-deploy-lib/=lib/forge-deploy-lib/src/"
+	fdeployRemapping := "forge-deploy-lib/=forge-deploy-lib/src/"
 	if !contains(existingContent, "forge-deploy-lib/") {
 		if existingContent != "" && !strings.HasSuffix(existingContent, "\n") {
 			existingContent += "\n"
@@ -102,7 +102,7 @@ func contains(s, substr string) bool {
 
 func (i *Initializer) setupFdeployLibrary() error {
 	// Check if forge-deploy-lib is already installed
-	if _, err := os.Stat("lib/forge-deploy-lib"); err == nil {
+	if _, err := os.Stat("forge-deploy-lib"); err == nil {
 		fmt.Println("📦 forge-deploy-lib already installed")
 		return nil
 	}
@@ -196,7 +196,7 @@ func (i *Initializer) printNextSteps() {
 	fmt.Println("")
 	fmt.Println("📋 Next steps:")
 	fmt.Println("1. Copy .env.example to .env and configure your values")
-	if !i.fileExists("lib/forge-deploy-lib") {
+	if !i.fileExists("forge-deploy-lib") {
 		fmt.Println("2. Install forge-deploy-lib:")
 		fmt.Println("   forge install your-org/forge-deploy-lib")
 	}

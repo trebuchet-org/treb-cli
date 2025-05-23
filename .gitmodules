@@ -1,3 +1,3 @@
-[submodule "lib/forge-deploy-lib"]
-	path = lib/forge-deploy-lib
+[submodule "forge-deploy-lib"]
+	path = forge-deploy-lib
 	url = ../forge-deploy-lib
