@@ -1,0 +1,29 @@
+# Foundry
+cache/
+out/
+broadcast/
+.env
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+
+# Registry (should be committed)
+!deployments.json
+!deployments/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

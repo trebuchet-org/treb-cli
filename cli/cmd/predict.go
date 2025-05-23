@@ -36,7 +36,9 @@ func predictAddress(contract string) error {
 	executor := forge.NewScriptExecutor("", ".", registryManager)
 
 	// Predict address
-	result, err := executor.PredictAddress(contract, env, forge.DeployArgs{})
+	result, err := executor.PredictAddress(contract, env, forge.DeployArgs{
+		ChainID: 11155111, // TODO: Get from RPC or config
+	})
 	if err != nil {
 		return fmt.Errorf("address prediction failed: %w", err)
 	}

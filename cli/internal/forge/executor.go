@@ -1,14 +1,12 @@
 package forge
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 
+	"github.com/bogdan/fdeploy/cli/pkg/broadcast"
 	"github.com/bogdan/fdeploy/cli/pkg/types"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 type RegistryManager interface {
@@ -20,6 +18,7 @@ type ScriptExecutor struct {
 	foundryProfile string
 	projectRoot    string
 	registry       RegistryManager
+	parser         *broadcast.Parser
 }
 
 type DeployArgs struct {
@@ -36,6 +35,7 @@ func NewScriptExecutor(foundryProfile, projectRoot string, registry RegistryMana
 		foundryProfile: foundryProfile,
 		projectRoot:    projectRoot,
 		registry:       registry,
+		parser:         broadcast.NewParser(projectRoot),
 	}
 }
 
@@ -92,7 +92,8 @@ func (se *ScriptExecutor) Deploy(contract string, env string, args DeployArgs) (
 	}
 
 	// 4. Parse broadcast file
-	result, err := se.parseBroadcastFile(contract, args.ChainID)
+	scriptName := fmt.Sprintf("Deploy%s.s.sol", contract)
+	result, err := se.parser.ParseLatestBroadcast(scriptName, args.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse broadcast: %w", err)
 	}
@@ -125,70 +126,6 @@ func (se *ScriptExecutor) PredictAddress(contract string, env string, args Deplo
 	}
 
 	// Parse output for predicted address
-	return se.parseAddressPrediction(output)
+	return se.parser.ParsePredictionOutput(output)
 }
 
-func (se *ScriptExecutor) parseBroadcastFile(contract string, chainID uint64) (*types.DeploymentResult, error) {
-	// Find the latest broadcast file
-	broadcastDir := filepath.Join(se.projectRoot, "broadcast", fmt.Sprintf("Deploy%s.s.sol", contract), fmt.Sprintf("%d", chainID))
-	
-	// Look for run-latest.json
-	broadcastFile := filepath.Join(broadcastDir, "run-latest.json")
-	
-	if _, err := os.Stat(broadcastFile); os.IsNotExist(err) {
-		return nil, fmt.Errorf("broadcast file not found: %s", broadcastFile)
-	}
-
-	// Parse the broadcast file
-	data, err := os.ReadFile(broadcastFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read broadcast file: %w", err)
-	}
-
-	var broadcast struct {
-		Transactions []struct {
-			Hash             string `json:"hash"`
-			TransactionType  string `json:"transactionType"`
-			ContractAddress  string `json:"contractAddress"`
-		} `json:"transactions"`
-		Receipts []struct {
-			BlockNumber string `json:"blockNumber"`
-		} `json:"receipts"`
-	}
-
-	if err := json.Unmarshal(data, &broadcast); err != nil {
-		return nil, fmt.Errorf("failed to parse broadcast file: %w", err)
-	}
-
-	// Find CREATE transaction
-	for i, tx := range broadcast.Transactions {
-		if tx.TransactionType == "CREATE" || tx.TransactionType == "CREATE2" {
-			result := &types.DeploymentResult{
-				Address:       common.HexToAddress(tx.ContractAddress),
-				TxHash:        common.HexToHash(tx.Hash),
-				BroadcastFile: broadcastFile,
-			}
-			
-			if i < len(broadcast.Receipts) {
-				// Parse block number (it's a hex string)
-				// TODO: Proper hex parsing
-				result.BlockNumber = 0 // Placeholder
-			}
-			
-			return result, nil
-		}
-	}
-
-	return nil, fmt.Errorf("no CREATE transaction found in broadcast file")
-}
-
-func (se *ScriptExecutor) parseAddressPrediction(output []byte) (*types.PredictResult, error) {
-	// TODO: Parse forge script output for predicted address
-	// This would need to parse console.log output from the script
-	
-	return &types.PredictResult{
-		Address:      common.Address{},
-		Salt:         [32]byte{},
-		InitCodeHash: [32]byte{},
-	}, fmt.Errorf("address prediction parsing not implemented")
-}

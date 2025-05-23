@@ -60,6 +60,7 @@ func deployContract(contract string) error {
 		RpcUrl:    rpcUrl,
 		Verify:    verify,
 		Networks:  networks,
+		ChainID:   11155111, // TODO: Get from RPC or config
 	})
 	if err != nil {
 		return fmt.Errorf("deployment failed: %w", err)
