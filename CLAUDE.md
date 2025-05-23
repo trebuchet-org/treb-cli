@@ -22,17 +22,46 @@ This is **fdeploy** (Forge Deploy) - a Go CLI tool that orchestrates Foundry scr
 
 ## Development Commands
 
-Since this is a planning/design phase project with only a plan.md file, there are no build/test commands yet. When implemented, expect:
-
+### Go CLI Development
 ```bash
-# Go CLI commands
-go build -o fdeploy ./cli/cmd
-go test ./...
+# Build fdeploy CLI
+make build
 
-# Foundry library commands (in lib/ subdirectory)
+# Run tests
+make test
+
+# Install globally  
+make install
+
+# Create example project
+make example
+```
+
+### Foundry Library (forge-deploy-lib)
+```bash
+# Build library (in lib/forge-deploy-lib)
 forge build
+
+# Run library tests
 forge test
-forge script script/PredictAddress.s.sol
+
+# Test address prediction
+forge script script/PredictAddress.s.sol --sig "predict(string,string)" "MyContract" "staging"
+```
+
+### Project Setup Workflow
+```bash
+# 1. Create Foundry project
+forge init my-project && cd my-project
+
+# 2. Initialize fdeploy
+fdeploy init my-project  
+
+# 3. Install forge-deploy-lib
+forge install your-org/forge-deploy-lib
+
+# 4. Configure environment
+cp .env.example .env && edit .env
 ```
 
 ## Key Design Decisions

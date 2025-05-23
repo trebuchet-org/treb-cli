@@ -39,32 +39,35 @@ make install
 
 ## Quick Start
 
-### 1. Initialize a new project
+### 1. Initialize Foundry project
 
 ```bash
-fdeploy init my-protocol --createx
+forge init my-protocol
 cd my-protocol
 ```
 
-### 2. Set up environment
+### 2. Initialize fdeploy
+
+```bash
+fdeploy init my-protocol
+```
+
+### 3. Install forge-deploy-lib
+
+```bash
+# Install the deployment library
+forge install your-org/forge-deploy-lib
+```
+
+### 4. Set up environment
 
 ```bash
 # Copy and configure environment
 cp .env.example .env
 # Edit .env with your RPC URLs, private keys, and API keys
-
-# Install Foundry dependencies
-forge install
 ```
 
-### 3. Add forge-deploy-lib
-
-```bash
-# Add the library as a submodule (when available)
-git submodule add <forge-deploy-lib-repo> lib/forge-deploy-lib
-```
-
-### 4. Create deployment script
+### 5. Create deployment script
 
 ```solidity
 // script/DeployMyToken.s.sol
@@ -101,7 +104,7 @@ contract DeployMyToken is CreateXDeployment {
 }
 ```
 
-### 5. Deploy contracts
+### 6. Deploy contracts
 
 ```bash
 # Predict address
@@ -118,7 +121,7 @@ fdeploy deploy MyToken --env prod --networks mainnet,polygon,arbitrum --verify
 
 ### Project Management
 ```bash
-fdeploy init <project-name>     # Initialize new project
+fdeploy init <project-name>     # Initialize fdeploy in existing Foundry project
 ```
 
 ### Deployment
@@ -179,9 +182,12 @@ your-project/
 ├── script/                 # Deployment scripts  
 ├── test/                   # Tests
 ├── lib/
-│   └── forge-deploy-lib/   # fdeploy library (submodule)
-├── deployments.json        # Registry
+│   ├── forge-std/          # Foundry standard library
+│   └── forge-deploy-lib/   # fdeploy library
+├── deployments/            # Per-chain deployment files
+├── deployments.json        # Central registry
 ├── foundry.toml           # Foundry config
+├── remappings.txt         # Import remappings
 └── .env                   # Environment variables
 ```
 
