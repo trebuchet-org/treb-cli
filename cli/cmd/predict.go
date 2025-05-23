@@ -5,6 +5,7 @@ import (
 
 	"github.com/bogdan/fdeploy/cli/internal/forge"
 	"github.com/bogdan/fdeploy/cli/internal/registry"
+	"github.com/bogdan/fdeploy/cli/pkg/config"
 	"github.com/bogdan/fdeploy/cli/pkg/network"
 	"github.com/spf13/cobra"
 )
@@ -28,22 +29,35 @@ deterministic addresses based on salt components before deployment.`,
 
 func init() {
 	// Get configured defaults (empty if no config file)
-	defaultEnv, defaultNetwork, _, _ := GetConfiguredDefaults()
+	_, defaultNetwork, _, _ := GetConfiguredDefaults()
 	
-	// Create flags with defaults (empty if no config)
-	predictCmd.Flags().StringVar(&env, "env", defaultEnv, "Deployment environment (staging/prod)")
+	// Create flags with defaults - env always defaults to "default"
+	predictCmd.Flags().StringVar(&env, "env", "default", "Deployment environment")
 	predictCmd.Flags().StringVar(&networkName, "network", defaultNetwork, "Network to predict for (defined in foundry.toml)")
 	
-	// Mark flags as required if they don't have defaults
-	if defaultEnv == "" {
-		predictCmd.MarkFlagRequired("env")
-	}
+	// Mark network flag as required if it doesn't have a default
 	if defaultNetwork == "" {
 		predictCmd.MarkFlagRequired("network")
 	}
 }
 
 func predictAddress(contract string) error {
+	// Load and validate deploy configuration
+	deployConfig, err := config.LoadDeployConfig(".")
+	if err != nil {
+		return fmt.Errorf("failed to load deploy configuration: %w", err)
+	}
+
+	if err := deployConfig.Validate(env); err != nil {
+		return fmt.Errorf("invalid deploy configuration for environment '%s': %w", env, err)
+	}
+
+	// Generate environment variables for prediction
+	envVars, err := deployConfig.GenerateEnvVars(env)
+	if err != nil {
+		return fmt.Errorf("failed to generate environment variables: %w", err)
+	}
+
 	// Resolve network configuration
 	resolver := network.NewResolver(".")
 	networkInfo, err := resolver.ResolveNetwork(networkName)
@@ -64,6 +78,7 @@ func predictAddress(contract string) error {
 	result, err := executor.PredictAddress(contract, env, forge.DeployArgs{
 		RpcUrl:  networkInfo.RpcUrl,
 		ChainID: networkInfo.ChainID,
+		EnvVars: envVars,
 	})
 	if err != nil {
 		return fmt.Errorf("address prediction failed: %w", err)

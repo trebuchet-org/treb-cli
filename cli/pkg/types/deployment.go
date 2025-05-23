@@ -65,6 +65,9 @@ type DeploymentInfo struct {
 	BlockNumber   uint64       `json:"block_number,omitempty"`
 	BroadcastFile string       `json:"broadcast_file"`
 	Timestamp     time.Time    `json:"timestamp"`
+	Status        string       `json:"status"` // "deployed", "pending_safe"
+	SafeAddress   string       `json:"safe_address,omitempty"`
+	SafeNonce     uint64       `json:"safe_nonce,omitempty"`
 }
 
 type ContractMetadata struct {

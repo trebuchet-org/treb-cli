@@ -110,17 +110,14 @@ func init() {
 	deploymentsCmd.AddCommand(deploymentsCleanCmd)
 	
 	// Get configured defaults (empty if no config file)
-	defaultEnv, defaultNetwork, _, _ := GetConfiguredDefaults()
+	_, defaultNetwork, _, _ := GetConfiguredDefaults()
 	
-	// Create flags with defaults (empty if no config)
-	deploymentsShowCmd.Flags().StringVar(&env, "env", defaultEnv, "Environment to show")
+	// Create flags with defaults - env always defaults to "default"
+	deploymentsShowCmd.Flags().StringVar(&env, "env", "default", "Environment to show")
 	deploymentsShowCmd.Flags().StringVar(&networkName, "network", defaultNetwork, "Network to show deployments for")
 	deploymentsSyncCmd.Flags().BoolVar(&fromBroadcast, "from-broadcast", true, "Sync from broadcast files")
 	
-	// Mark flags as required if they don't have defaults
-	if defaultEnv == "" {
-		deploymentsShowCmd.MarkFlagRequired("env")
-	}
+	// Mark network flag as required if it doesn't have a default
 	if defaultNetwork == "" {
 		deploymentsShowCmd.MarkFlagRequired("network")
 	}
@@ -220,14 +217,38 @@ func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
 	
 	// Deployment details
 	fmt.Printf("📊 Deployment Details:\n")
-	if deployment.Entry.Deployment.TxHash != nil && deployment.Entry.Deployment.TxHash.Hex() != "0x0000000000000000000000000000000000000000000000000000000000000000" {
-		fmt.Printf("   Transaction: %s\n", deployment.Entry.Deployment.TxHash.Hex())
+	
+	// Show deployment status
+	status := deployment.Entry.Deployment.Status
+	if status == "" {
+		status = "deployed"
 	}
-	if deployment.Entry.Deployment.BlockNumber > 0 {
-		fmt.Printf("   Block: %d\n", deployment.Entry.Deployment.BlockNumber)
+	fmt.Printf("   Status: %s\n", status)
+	
+	// Safe-specific information for pending deployments
+	if status == "pending_safe" {
+		if deployment.Entry.Deployment.SafeAddress != "" {
+			fmt.Printf("   Safe Address: %s\n", deployment.Entry.Deployment.SafeAddress)
+		}
+		if deployment.Entry.Deployment.SafeNonce > 0 {
+			fmt.Printf("   Safe Nonce: %d\n", deployment.Entry.Deployment.SafeNonce)
+		}
+		if deployment.Entry.Deployment.SafeTxHash != nil {
+			fmt.Printf("   Safe Tx Hash: %s\n", deployment.Entry.Deployment.SafeTxHash.Hex())
+		}
+		fmt.Printf("   ⏳ This deployment is pending execution in the Safe UI\n")
+	} else {
+		// Regular deployment info
+		if deployment.Entry.Deployment.TxHash != nil && deployment.Entry.Deployment.TxHash.Hex() != "0x0000000000000000000000000000000000000000000000000000000000000000" {
+			fmt.Printf("   Transaction: %s\n", deployment.Entry.Deployment.TxHash.Hex())
+		}
+		if deployment.Entry.Deployment.BlockNumber > 0 {
+			fmt.Printf("   Block: %d\n", deployment.Entry.Deployment.BlockNumber)
+		}
 	}
+	
 	fmt.Printf("   Network: %s (Chain ID: %s)\n", networkInfo.Name, deployment.ChainID)
-	fmt.Printf("   Deployed: %s\n", deployment.Entry.Deployment.Timestamp.Format("2006-01-02 15:04:05"))
+	fmt.Printf("   Timestamp: %s\n", deployment.Entry.Deployment.Timestamp.Format("2006-01-02 15:04:05"))
 	if deployment.Entry.Deployment.BroadcastFile != "" {
 		fmt.Printf("   Broadcast File: %s\n", deployment.Entry.Deployment.BroadcastFile)
 	}
@@ -435,7 +456,14 @@ func listDeployments() error {
 		for _, deployment := range deploymentList {
 			displayName := deployment.Entry.GetDisplayName()
 			timestamp := deployment.Entry.Deployment.Timestamp.Format("2006-01-02 15:04:05")
-			fmt.Printf("  %-*s  %s  %s\n", maxNameLen, displayName, deployment.Address.Hex(), timestamp)
+			
+			// Add status indicator for pending Safe deployments
+			statusIndicator := ""
+			if deployment.Entry.Deployment.Status == "pending_safe" {
+				statusIndicator = " ⏳"
+			}
+			
+			fmt.Printf("  %-*s  %s  %s%s\n", maxNameLen, displayName, deployment.Address.Hex(), timestamp, statusIndicator)
 		}
 		fmt.Println()
 	}

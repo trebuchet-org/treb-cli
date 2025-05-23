@@ -147,6 +147,7 @@ func (m *Manager) RecordDeployment(contract, env string, result *types.Deploymen
 			BlockNumber:   result.BlockNumber,
 			BroadcastFile: result.BroadcastFile,
 			Timestamp:     time.Now(),
+			Status:        "deployed",
 		},
 		
 		Metadata: types.ContractMetadata{

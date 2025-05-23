@@ -6,6 +6,7 @@ import (
 
 	"github.com/bogdan/fdeploy/cli/internal/forge"
 	"github.com/bogdan/fdeploy/cli/internal/registry"
+	"github.com/bogdan/fdeploy/cli/pkg/config"
 	"github.com/bogdan/fdeploy/cli/pkg/contracts"
 	"github.com/bogdan/fdeploy/cli/pkg/network"
 	"github.com/bogdan/fdeploy/cli/pkg/types"
@@ -51,36 +52,43 @@ This command:
 
 func init() {
 	// Get configured defaults (empty if no config file)
-	defaultEnv, defaultNetwork, defaultVerify, _ := GetConfiguredDefaults()
+	_, defaultNetwork, defaultVerify, _ := GetConfiguredDefaults()
 	
-	// Create flags with defaults (empty if no config)
-	deployCmd.Flags().StringVar(&env, "env", defaultEnv, "Deployment environment (staging/prod)")
+	// Create flags with defaults - env always defaults to "default"
+	deployCmd.Flags().StringVar(&env, "env", "default", "Deployment environment")
 	deployCmd.Flags().StringVar(&networkName, "network", defaultNetwork, "Network to deploy to (defined in foundry.toml)")
 	deployCmd.Flags().BoolVar(&verify, "verify", defaultVerify, "Verify contract after deployment")
 	deployCmd.Flags().StringVar(&label, "label", "", "Optional label for the deployment (included in salt)")
 	
-	// Mark flags as required if they don't have defaults
-	if defaultEnv == "" {
-		deployCmd.MarkFlagRequired("env")
-	}
+	// Mark network flag as required if it doesn't have a default
 	if defaultNetwork == "" {
 		deployCmd.MarkFlagRequired("network")
 	}
 }
 
 func deployContract(contract string) (*types.DeploymentResult, error) {
-	// Step 0: Initialize forge executor and check installation
+	// Step 0: Load and validate deploy configuration
+	deployConfig, err := config.LoadDeployConfig(".")
+	if err != nil {
+		return nil, fmt.Errorf("failed to load deploy configuration: %w", err)
+	}
+
+	if err := deployConfig.Validate(env); err != nil {
+		return nil, fmt.Errorf("invalid deploy configuration for environment '%s': %w", env, err)
+	}
+
+	fmt.Printf("✓ Validated deploy configuration for environment: %s\n", env)
+
+	// Step 1: Initialize forge executor and check installation
 	forgeExecutor := forgeExec.NewExecutor(".")
 	if err := forgeExecutor.CheckForgeInstallation(); err != nil {
 		return nil, fmt.Errorf("forge check failed: %w", err)
 	}
 
-	// Step 1: Build contracts to ensure artifacts are up to date
+	// Step 2: Build contracts to ensure artifacts are up to date
 	if err := forgeExecutor.Build(); err != nil {
 		return nil, fmt.Errorf("build failed: %w", err)
 	}
-
-	// Step 2: Contract strategy will be determined by existing script or generation prompt
 
 	// Step 3: Validate contract exists in src/
 	validator := contracts.NewValidator(".")
@@ -128,21 +136,28 @@ func deployContract(contract string) (*types.DeploymentResult, error) {
 		return nil, fmt.Errorf("failed to initialize registry: %w", err)
 	}
 
-	// Step 7: Initialize forge script executor
+	// Step 7: Generate environment variables for deployment
+	envVars, err := deployConfig.GenerateEnvVars(env)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate environment variables: %w", err)
+	}
+
+	// Step 8: Initialize forge script executor
 	executor := forge.NewScriptExecutor("", ".", registryManager)
 
-	// Step 8: Deploy contract
+	// Step 9: Deploy contract
 	result, err := executor.Deploy(contract, env, forge.DeployArgs{
 		RpcUrl:  networkInfo.RpcUrl,
 		Verify:  verify,
 		ChainID: networkInfo.ChainID,
 		Label:   label,
+		EnvVars: envVars,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("deployment failed: %w", err)
 	}
 
-	// Step 9: Display results
+	// Step 10: Display results
 	fmt.Printf("\nDeployment Summary:\n")
 	fmt.Printf("  Contract: %s\n", contract)
 	fmt.Printf("  Environment: %s\n", env)

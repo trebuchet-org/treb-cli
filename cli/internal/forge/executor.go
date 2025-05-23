@@ -30,6 +30,7 @@ type DeployArgs struct {
 	ChainID         uint64
 	Verify          bool
 	Label           string
+	EnvVars         map[string]string
 }
 
 func NewScriptExecutor(foundryProfile, projectRoot string, registry RegistryManager) *ScriptExecutor {
@@ -97,14 +98,20 @@ func (se *ScriptExecutor) Deploy(contract string, env string, args DeployArgs) (
 	cmd.Dir = se.projectRoot
 
 	// Set environment variables
-	cmd.Env = append(os.Environ(),
-		fmt.Sprintf("DEPLOYMENT_ENV=%s", env),
-	)
+	cmd.Env = os.Environ()
 	
+	// Add deployment-specific environment variables
+	if args.EnvVars != nil {
+		for key, value := range args.EnvVars {
+			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
+		}
+	}
+	
+	// Legacy environment variables for backwards compatibility
+	cmd.Env = append(cmd.Env, fmt.Sprintf("DEPLOYMENT_ENV=%s", env))
 	if args.Label != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("DEPLOYMENT_LABEL=%s", args.Label))
 	}
-	
 	if args.DeployerPK != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("DEPLOYER_PRIVATE_KEY=%s", args.DeployerPK))
 	}
@@ -174,7 +181,18 @@ func (se *ScriptExecutor) PredictAddress(contract string, env string, args Deplo
 	cmd := exec.Command("forge", cmdArgs...)
 	cmd.Dir = se.projectRoot
 
-	cmd.Env = append(os.Environ(),
+	// Set environment variables
+	cmd.Env = os.Environ()
+	
+	// Add deployment-specific environment variables
+	if args.EnvVars != nil {
+		for key, value := range args.EnvVars {
+			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
+		}
+	}
+	
+	// Legacy environment variables for backwards compatibility
+	cmd.Env = append(cmd.Env, 
 		fmt.Sprintf("DEPLOYMENT_ENV=%s", env),
 		fmt.Sprintf("CONTRACT_VERSION=%s", "v1.0.0"), // TODO: Get from config
 	)
