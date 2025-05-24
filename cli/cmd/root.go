@@ -34,7 +34,7 @@ func init() {
 	listCmd.GroupID = "main"
 	showCmd.GroupID = "main"
 	verifyCmd.GroupID = "main"
-	generateCmd.GroupID = "main"
+	genCmd.GroupID = "main"
 	initCmd.GroupID = "main"
 	
 	// Management commands
@@ -50,7 +50,7 @@ func init() {
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(showCmd)
 	rootCmd.AddCommand(verifyCmd)
-	rootCmd.AddCommand(generateCmd)
+	rootCmd.AddCommand(genCmd)
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(tagCmd)
 	rootCmd.AddCommand(syncCmd)

@@ -2,8 +2,8 @@ package interactive
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
+
+	"github.com/manifoldco/promptui"
 )
 
 // Selector handles interactive selection with fzf-like interface
@@ -14,105 +14,92 @@ func NewSelector() *Selector {
 	return &Selector{}
 }
 
-// SelectOption provides an fzf-like selection interface
+// SelectOption provides an interactive selection interface using promptui
 func (s *Selector) SelectOption(prompt string, options []string, defaultIndex int) (string, int, error) {
 	if len(options) == 0 {
 		return "", -1, fmt.Errorf("no options provided")
 	}
 
-	currentIndex := defaultIndex
-	if currentIndex < 0 || currentIndex >= len(options) {
-		currentIndex = 0
+	// Ensure default index is valid
+	if defaultIndex < 0 || defaultIndex >= len(options) {
+		defaultIndex = 0
 	}
 
-	for {
-		// Clear screen and show options
-		fmt.Print("\033[2J\033[H") // Clear screen and move cursor to top
-		fmt.Printf("%s\n", prompt)
-		fmt.Println("Use ↑/↓ arrow keys (k/j) to navigate, Enter to select, 'q' to quit")
-		fmt.Println("Or type a number to select directly:")
-		fmt.Println()
-
-		// Display options with current selection highlighted
-		for i, option := range options {
-			if i == currentIndex {
-				fmt.Printf("  \033[7m► %d) %s\033[0m\n", i+1, option) // Highlighted
-			} else {
-				fmt.Printf("    %d) %s\n", i+1, option)
-			}
-		}
-
-		fmt.Printf("\nSelection [%d]: ", currentIndex+1)
-
-		// Read single character or line input
-		var input string
-		if _, err := fmt.Scanln(&input); err != nil {
-			input = ""
-		}
-		input = strings.TrimSpace(input)
-
-		switch input {
-		case "":
-			// Enter pressed - select current option
-			return options[currentIndex], currentIndex, nil
-		case "q", "quit":
-			return "", -1, fmt.Errorf("selection cancelled")
-		case "k", "up":
-			// Move up
-			if currentIndex > 0 {
-				currentIndex--
-			} else {
-				currentIndex = len(options) - 1 // Wrap to bottom
-			}
-		case "j", "down":
-			// Move down
-			if currentIndex < len(options)-1 {
-				currentIndex++
-			} else {
-				currentIndex = 0 // Wrap to top
-			}
-		default:
-			// Try to parse as number
-			if num, err := strconv.Atoi(input); err == nil && num >= 1 && num <= len(options) {
-				return options[num-1], num-1, nil
-			}
-			// Invalid input, continue loop
-		}
+	promptSelect := promptui.Select{
+		Label:     prompt,
+		Items:     options,
+		CursorPos: defaultIndex,
+		Size:      10,
+		Templates: &promptui.SelectTemplates{
+			Label:    "{{ . }}?",
+			Active:   "\U0001F449 {{ . | cyan }}",
+			Inactive: "  {{ . | faint }}",
+			Selected: "\U0001F44D {{ . | green }}",
+		},
 	}
+
+	selectedIndex, selectedValue, err := promptSelect.Run()
+	if err != nil {
+		return "", -1, fmt.Errorf("selection cancelled: %w", err)
+	}
+
+	return selectedValue, selectedIndex, nil
 }
 
-// SimpleSelect provides a simple numbered selection (fallback for environments without terminal control)
+// SimpleSelect provides the same interface as SelectOption (both use promptui now)
 func (s *Selector) SimpleSelect(prompt string, options []string, defaultIndex int) (string, int, error) {
-	if len(options) == 0 {
-		return "", -1, fmt.Errorf("no options provided")
+	// Just use the same implementation as SelectOption since promptui handles terminal detection
+	return s.SelectOption(prompt, options, defaultIndex)
+}
+
+// PromptString provides an interactive text input prompt
+func (s *Selector) PromptString(prompt string, defaultValue string) (string, error) {
+	promptInput := promptui.Prompt{
+		Label:     prompt,
+		Default:   defaultValue,
+		Templates: &promptui.PromptTemplates{
+			Prompt:  "{{ . | bold }}{{ if .Default }} ({{ .Default }}){{ end }}: ",
+			Valid:   "{{ . | green }} ✓ ",
+			Invalid: "{{ . | red }} ✗ ",
+			Success: "{{ . | bold }}{{ if .Default }} ({{ .Default }}){{ end }}: {{ . | faint }}",
+		},
 	}
 
-	fmt.Printf("%s\n", prompt)
-	for i, option := range options {
-		marker := " "
-		if i == defaultIndex {
-			marker = "*"
+	result, err := promptInput.Run()
+	if err != nil {
+		return "", fmt.Errorf("input cancelled: %w", err)
+	}
+
+	return result, nil
+}
+
+// PromptConfirm provides a yes/no confirmation prompt
+func (s *Selector) PromptConfirm(prompt string, defaultValue bool) (bool, error) {
+	label := prompt
+	if defaultValue {
+		label += " (Y/n)"
+	} else {
+		label += " (y/N)"
+	}
+
+	promptConfirm := promptui.Prompt{
+		Label:     label,
+		IsConfirm: true,
+		Templates: &promptui.PromptTemplates{
+			Prompt:  "{{ . | bold }}: ",
+			Success: "{{ . | faint }}: {{ if .Result }}{{ \"Yes\" | green }}{{ else }}{{ \"No\" | red }}{{ end }}",
+		},
+	}
+
+	result, err := promptConfirm.Run()
+	if err != nil {
+		// If user pressed Enter without input, use default
+		if err == promptui.ErrAbort {
+			return defaultValue, nil
 		}
-		fmt.Printf("  %s %d) %s\n", marker, i+1, option)
+		return false, fmt.Errorf("confirmation cancelled: %w", err)
 	}
 
-	fmt.Printf("Enter choice [%d]: ", defaultIndex+1)
-	
-	var input string
-	if _, err := fmt.Scanln(&input); err != nil {
-		// If no input, use default
-		input = ""
-	}
-	input = strings.TrimSpace(input)
-	
-	if input == "" {
-		return options[defaultIndex], defaultIndex, nil
-	}
-
-	choice, err := strconv.Atoi(input)
-	if err != nil || choice < 1 || choice > len(options) {
-		return "", -1, fmt.Errorf("invalid choice: %s", input)
-	}
-
-	return options[choice-1], choice-1, nil
+	// promptui.IsConfirm returns "y" for yes, "" for no
+	return result == "y", nil
 }

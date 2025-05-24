@@ -1,13 +1,15 @@
 package cmd
 
 import (
-	"github.com/trebuchet-org/treb-cli/cli/pkg/interactive"
+	"fmt"
+
 	"github.com/spf13/cobra"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/interactive"
 )
 
-// generateCmd represents the generate command
-var generateCmd = &cobra.Command{
-	Use:   "generate",
+// genCmd represents the gen command
+var genCmd = &cobra.Command{
+	Use:   "gen",
 	Short: "Generate deployment scripts",
 	Long: `Interactive generator for creating deployment scripts.
 
@@ -16,37 +18,43 @@ Available types:
   proxy  - Proxy deployment scripts`,
 }
 
-var generateDeployCmd = &cobra.Command{
-	Use:   "deploy <contract>",
+var genDeployCmd = &cobra.Command{
+	Use:   "deploy [contract]",
 	Short: "Generate deploy script for a contract",
 	Long:  `Generate a deployment script for a specific contract.`,
 	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		fmt.Println("🧙 Interactive Contract Deploy Script Generator")
 		generator := interactive.NewGenerator(".")
+
+		var contractName string
 		if len(args) > 0 {
-			return generator.GenerateDeployScriptForContract(args[0])
+			contractName = args[0]
 		}
-		return generator.GenerateDeployScript()
+
+		return generator.GenerateDeployScript(contractName)
 	},
 }
 
-var generateProxyCmd = &cobra.Command{
-	Use:   "proxy <contract>",
+var genProxyCmd = &cobra.Command{
+	Use:   "proxy [contract]",
 	Short: "Generate proxy deploy script for a contract",
 	Long:  `Generate a proxy deployment script for a specific contract.`,
 	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		fmt.Println("🧙 Interactive Proxy Deploy Script Generator")
 		generator := interactive.NewGenerator(".")
+
+		var contractName string
 		if len(args) > 0 {
-			return generator.GenerateProxyDeployScriptForContract(args[0])
+			contractName = args[0]
 		}
-		return generator.GenerateProxyDeployScript()
+
+		return generator.GenerateProxyDeployScript(contractName)
 	},
 }
 
 func init() {
-	generateCmd.AddCommand(generateDeployCmd)
-	generateCmd.AddCommand(generateProxyCmd)
+	genCmd.AddCommand(genDeployCmd)
+	genCmd.AddCommand(genProxyCmd)
 }
-
-

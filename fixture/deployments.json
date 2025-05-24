@@ -321,6 +321,58 @@
             "contract_path": ""
           }
         },
+        "0xe8891d08cc831dc4e42fb56f8dfb84b7cd25301e": {
+          "address": "0xe8891d08cc831dc4e42fb56f8dfb84b7cd25301e",
+          "contract_name": "Counter",
+          "environment": "default",
+          "type": "contract",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c009addcd72c952afc484d9af",
+          "init_code_hash": "82b985e9bef239bbf1c9e6256f184a8bd64be7fa2afa7e6a608f5f880dc7dab7",
+          "label": "v3",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47156859,
+            "broadcast_file": "",
+            "timestamp": "2025-05-24T20:43:13.085033+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "04717c6e0dba5993305ea961ffb57a62b553c299",
+            "compiler": "0.8.22",
+            "source_hash": "4b5eaa107784609cabdbd23e34e479cc957ee69bd4c4de2881625b884e6bbacc",
+            "contract_path": "./src/Counter.sol:Counter"
+          }
+        },
+        "0xefa46f6f17acc685167e811057d799cd3dbd669e": {
+          "address": "0xefa46f6f17acc685167e811057d799cd3dbd669e",
+          "contract_name": "Counter",
+          "environment": "default",
+          "type": "contract",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c0014d4e3c0d9c396ac10c968",
+          "init_code_hash": "82b985e9bef239bbf1c9e6256f184a8bd64be7fa2afa7e6a608f5f880dc7dab7",
+          "label": "v4",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47156984,
+            "broadcast_file": "",
+            "timestamp": "2025-05-24T20:45:19.052207+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "04717c6e0dba5993305ea961ffb57a62b553c299",
+            "compiler": "0.8.22",
+            "source_hash": "4b5eaa107784609cabdbd23e34e479cc957ee69bd4c4de2881625b884e6bbacc",
+            "contract_path": "./src/Counter.sol:Counter"
+          }
+        },
         "0xff128c7a9ab882cb3e506993573c3378b7b52365": {
           "address": "0xff128c7a9ab882cb3e506993573c3378b7b52365",
           "contract_name": "UpgradeableCounterProxy",

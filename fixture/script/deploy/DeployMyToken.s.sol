@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {ContractDeployment, DeployStrategy} from "treb-sol/ContractDeployment.sol";
-import {MyToken} from "../../src/tokens/MyToken.sol";
+import { MyToken } from "../../src/tokens/MyToken.sol";
 
 /**
  * @title DeployMyToken
@@ -28,4 +28,5 @@ contract DeployMyToken is ContractDeployment {
         uint256 _totalSupply = 0;
         return abi.encode(_name, _symbol, _totalSupply);
     }
+
 }

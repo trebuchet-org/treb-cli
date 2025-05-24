@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/trebuchet-org/treb-cli/cli/internal/forge"
 	"github.com/trebuchet-org/treb-cli/cli/internal/registry"
@@ -174,19 +173,16 @@ func deployContract(contract string) (*types.DeploymentResult, error) {
 		fmt.Printf("Deploy script not found for %s\n", contract)
 		
 		// Ask if user wants to generate the script
-		fmt.Printf("Would you like to generate a deploy script? (Y/n): ")
-		var response string
-		fmt.Scanln(&response)
-		response = strings.ToLower(strings.TrimSpace(response))
-		
-		if response == "n" || response == "no" {
+		selector := interactive.NewSelector()
+		shouldGenerate, err := selector.PromptConfirm("Would you like to generate a deploy script?", true)
+		if err != nil || !shouldGenerate {
 			return nil, fmt.Errorf("deploy script required but not found: script/deploy/Deploy%s.s.sol", contract)
 		}
 		
 		// Generate the script interactively
 		fmt.Printf("Starting interactive script generation...\n\n")
 		generator := interactive.NewGenerator(".")
-		if err := generator.GenerateDeployScriptForContract(contract); err != nil {
+		if err := generator.GenerateDeployScript(contract); err != nil {
 			return nil, fmt.Errorf("script generation failed: %w", err)
 		}
 		return nil, nil

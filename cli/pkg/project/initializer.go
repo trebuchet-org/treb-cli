@@ -138,7 +138,7 @@ func (i *Initializer) printNextSteps() {
 	fmt.Println("   • See documentation for Safe multisig and hardware wallet support")
 	fmt.Println("")
 	fmt.Println("3. Generate your first deployment script:")
-	fmt.Println("   treb generate deploy Counter")
+	fmt.Println("   treb gen deploy Counter")
 	fmt.Println("")
 	fmt.Println("4. Predict and deploy:")
 	fmt.Println("   treb deploy predict Counter --network sepolia")

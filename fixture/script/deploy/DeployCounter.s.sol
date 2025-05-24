@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {ContractDeployment, DeployStrategy} from "treb-sol/ContractDeployment.sol";
-import {Counter} from "../../src/Counter.sol";
+import { Counter } from "../../src/Counter.sol";
 
 /**
  * @title DeployCounter
@@ -19,4 +19,6 @@ contract DeployCounter is ContractDeployment {
     function _getContractBytecode() internal pure override returns (bytes memory) {
         return type(Counter).creationCode;
     }
+
+
 }
