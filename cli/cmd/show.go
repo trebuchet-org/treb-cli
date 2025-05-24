@@ -2,14 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/cli/internal/registry"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/interactive"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/safe"
 )
@@ -45,78 +43,13 @@ func showDeploymentByIdentifier(identifier string) error {
 		return fmt.Errorf("failed to initialize registry: %w", err)
 	}
 
-	// Get all deployments
-	allDeployments := registryManager.GetAllDeployments()
-
-	// Find matching deployments
-	var matches []*registry.DeploymentInfo
-	identifierLower := strings.ToLower(identifier)
-
-	for _, deployment := range allDeployments {
-		// Check if identifier is an address
-		if strings.ToLower(deployment.Address.Hex()) == identifierLower {
-			matches = append(matches, deployment)
-			continue
-		}
-
-		// Check if identifier matches or is contained in display name
-		displayName := deployment.Entry.GetDisplayName()
-		if strings.EqualFold(displayName, identifier) || strings.Contains(strings.ToLower(displayName), identifierLower) {
-			matches = append(matches, deployment)
-		}
-	}
-
-	if len(matches) == 0 {
-		return fmt.Errorf("no deployment found matching '%s'", identifier)
-	}
-
-	// If single match, show it
-	if len(matches) == 1 {
-		return showDeploymentInfo(matches[0])
-	}
-
-	// Multiple matches - use interactive selector
-	// Sort matches by network, then env, then contract name
-	sort.Slice(matches, func(i, j int) bool {
-		if matches[i].NetworkName != matches[j].NetworkName {
-			return matches[i].NetworkName < matches[j].NetworkName
-		}
-		if matches[i].Entry.Environment != matches[j].Entry.Environment {
-			return matches[i].Entry.Environment < matches[j].Entry.Environment
-		}
-		return matches[i].Entry.ContractName < matches[j].Entry.ContractName
-	})
-
-	// Find max identifier length for alignment
-	maxIdLen := 0
-	for _, match := range matches {
-		displayName := match.Entry.GetDisplayName()
-		fullId := fmt.Sprintf("%s/%s/%s", match.NetworkName, match.Entry.Environment, displayName)
-		if len(fullId) > maxIdLen {
-			maxIdLen = len(fullId)
-		}
-	}
-
-	// Create options with aligned addresses
-	options := make([]string, len(matches))
-	for i, match := range matches {
-		displayName := match.Entry.GetDisplayName()
-		fullId := fmt.Sprintf("%s/%s/%s", match.NetworkName, match.Entry.Environment, displayName)
-		padding := strings.Repeat(" ", maxIdLen-len(fullId))
-		options[i] = fmt.Sprintf("%s%s  %s", fullId, padding, match.Address.Hex())
-	}
-
-	selector := interactive.NewSelector()
-	_, selectedIndex, err := selector.SelectOption(
-		fmt.Sprintf("Multiple deployments found matching '%s'", identifier),
-		options,
-		0,
-	)
+	// Use shared picker
+	deployment, err := pickDeployment(identifier, registryManager)
 	if err != nil {
-		return fmt.Errorf("selection cancelled")
+		return err
 	}
 
-	return showDeploymentInfo(matches[selectedIndex])
+	return showDeploymentInfo(deployment)
 }
 
 func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
@@ -149,13 +82,30 @@ func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
 	addressStyle.Println(deployment.Address.Hex())
 	labelStyle.Print("Type:         ")
 	fmt.Println(deployment.Entry.Type)
-	if deployment.Entry.Salt != "" {
-		labelStyle.Print("Salt:         ")
-		fmt.Println(deployment.Entry.Salt)
+	if deployment.Entry.Metadata.ContractPath != "" {
+		labelStyle.Print("Path:         ")
+		fmt.Println(deployment.Entry.Metadata.ContractPath)
 	}
-	if deployment.Entry.InitCodeHash != "" {
-		labelStyle.Print("Init Code:    ")
-		fmt.Println(deployment.Entry.InitCodeHash)
+	
+	// Show proxy implementation details
+	if deployment.Entry.Type == "proxy" && deployment.Entry.TargetContract != "" {
+		labelStyle.Print("Implementation:")
+		fmt.Println()
+		
+		// Find the implementation deployment
+		registryManager, _ := registry.NewManager("deployments.json")
+		chainIDUint, _ := strconv.ParseUint(deployment.ChainID, 10, 64)
+		if impl := registryManager.GetDeployment(deployment.Entry.TargetContract, deployment.Entry.Environment, chainIDUint); impl != nil {
+			labelStyle.Print("  Contract:   ")
+			fmt.Println(deployment.Entry.TargetContract)
+			labelStyle.Print("  Address:    ")
+			addressStyle.Println(impl.Address.Hex())
+			labelStyle.Print("  Identifier: ")
+			fmt.Printf("%s/%s/%s\n", networkInfo.Name, deployment.Entry.Environment, deployment.Entry.TargetContract)
+		} else {
+			labelStyle.Print("  Contract:   ")
+			fmt.Printf("%s (not found in registry)\n", deployment.Entry.TargetContract)
+		}
 	}
 	
 	// Network section
@@ -169,6 +119,22 @@ func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
 	// Deployment section
 	fmt.Println()
 	sectionStyle.Println("DEPLOYMENT")
+	
+	// Add salt and init code here
+	if deployment.Entry.Salt != "" {
+		labelStyle.Print("Salt:         ")
+		fmt.Println(deployment.Entry.Salt)
+	}
+	if deployment.Entry.InitCodeHash != "" {
+		labelStyle.Print("Init Code:    ")
+		fmt.Println(deployment.Entry.InitCodeHash)
+	}
+	
+	// Show deployer
+	if deployment.Entry.Deployment.Deployer != "" {
+		labelStyle.Print("Deployer:     ")
+		addressStyle.Println(deployment.Entry.Deployment.Deployer)
+	}
 	
 	// Show deployment status
 	status := deployment.Entry.Deployment.Status
@@ -230,14 +196,10 @@ func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
 	labelStyle.Print("Timestamp:    ")
 	fmt.Println(deployment.Entry.Deployment.Timestamp.Format("2006-01-02 15:04:05"))
 	
-	// Metadata section
-	if deployment.Entry.Metadata.ContractPath != "" || deployment.Entry.Metadata.Compiler != "" {
+	// Metadata section (only show if there's compiler or commit info)
+	if deployment.Entry.Metadata.Compiler != "" || deployment.Entry.Metadata.SourceCommit != "" || len(deployment.Entry.Tags) > 0 {
 		fmt.Println()
 		sectionStyle.Println("METADATA")
-		if deployment.Entry.Metadata.ContractPath != "" {
-			labelStyle.Print("Path:         ")
-			fmt.Println(deployment.Entry.Metadata.ContractPath)
-		}
 		if deployment.Entry.Metadata.Compiler != "" {
 			labelStyle.Print("Compiler:     ")
 			fmt.Println(deployment.Entry.Metadata.Compiler)

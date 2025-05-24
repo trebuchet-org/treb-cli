@@ -149,11 +149,13 @@ func (m *Manager) RecordDeployment(contract, env string, result *types.Deploymen
 			Status:        m.getDeploymentStatus(result),
 			SafeAddress:   result.SafeAddress.String(),
 			SafeTxHash:    m.getSafeTxHash(result),
+			SafeNonce:     m.getSafeNonce(result),
+			Deployer:      m.getDeployerFromBroadcast(result.BroadcastFile),
 		},
 		
 		Metadata: types.ContractMetadata{
 			SourceCommit:    m.getGitCommit(),
-			Compiler:        m.getCompilerVersion(),
+			Compiler:        m.getCompilerVersion(contract),
 			SourceHash:      m.calculateSourceHash(contract),
 			ContractPath:    m.getContractPath(contract),
 		},
@@ -242,14 +244,14 @@ func (m *Manager) getGitCommit() string {
 	return strings.TrimSpace(string(output))
 }
 
-func (m *Manager) getCompilerVersion() string {
-	// Try to extract from foundry.toml
-	if version := m.getCompilerFromFoundryToml(); version != "" {
+func (m *Manager) getCompilerVersion(contract string) string {
+	// Try to extract from foundry artifact
+	if version := m.getCompilerFromArtifact(contract); version != "" {
 		return version
 	}
 	
-	// Fallback to default
-	return "0.8.22"
+	// Return unknown if artifact not found
+	return "unknown"
 }
 
 func (m *Manager) calculateSourceHash(contract string) string {
@@ -338,6 +340,72 @@ func (m *Manager) getNetworkName(chainID uint64) string {
 	default:
 		return fmt.Sprintf("chain-%d", chainID)
 	}
+}
+
+func (m *Manager) getCompilerFromArtifact(contract string) string {
+	// Look for the foundry artifact in out/ directory
+	artifactPath := fmt.Sprintf("out/%s.sol/%s.json", contract, contract)
+	
+	// Try common artifact paths
+	possiblePaths := []string{
+		artifactPath,
+		fmt.Sprintf("out/%s.sol/%s.json", contract, contract),
+	}
+	
+	// Also search for the contract in different files
+	contractPath := m.findContractSourceFile(contract)
+	if contractPath != "" {
+		// Extract file name from path (e.g., "src/tokens/MyToken.sol" -> "MyToken.sol")
+		fileName := filepath.Base(contractPath)
+		possiblePaths = append(possiblePaths, fmt.Sprintf("out/%s/%s.json", fileName, contract))
+	}
+	
+	for _, path := range possiblePaths {
+		if content, err := os.ReadFile(path); err == nil {
+			var artifact struct {
+				Metadata struct {
+					Compiler struct {
+						Version string `json:"version"`
+					} `json:"compiler"`
+				} `json:"metadata"`
+			}
+			
+			if err := json.Unmarshal(content, &artifact); err == nil {
+				if artifact.Metadata.Compiler.Version != "" {
+					return artifact.Metadata.Compiler.Version
+				}
+			}
+		}
+	}
+	
+	return ""
+}
+
+func (m *Manager) getDeployerFromBroadcast(broadcastFile string) string {
+	if broadcastFile == "" {
+		return ""
+	}
+	
+	content, err := os.ReadFile(broadcastFile)
+	if err != nil {
+		return ""
+	}
+	
+	var broadcast struct {
+		Transactions []struct {
+			Transaction struct {
+				From string `json:"from"`
+			} `json:"transaction"`
+		} `json:"transactions"`
+	}
+	
+	if err := json.Unmarshal(content, &broadcast); err == nil {
+		if len(broadcast.Transactions) > 0 {
+			return broadcast.Transactions[0].Transaction.From
+		}
+	}
+	
+	return ""
 }
 
 // DeploymentInfo represents deployment information for listing
@@ -651,4 +719,10 @@ func (m *Manager) getSafeTxHash(result *types.DeploymentResult) *common.Hash {
 		return &result.SafeTxHash
 	}
 	return nil
+}
+
+// getSafeNonce returns the safe nonce (currently not available in result)
+func (m *Manager) getSafeNonce(result *types.DeploymentResult) uint64 {
+	// TODO: Extract nonce from Safe transaction if available
+	return 0
 }

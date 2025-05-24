@@ -75,6 +75,7 @@ type DeploymentInfo struct {
 	Status        string       `json:"status"` // "deployed", "pending_safe"
 	SafeAddress   string       `json:"safe_address,omitempty"`
 	SafeNonce     uint64       `json:"safe_nonce,omitempty"`
+	Deployer      string       `json:"deployer,omitempty"` // Address that deployed the contract
 }
 
 type ContractMetadata struct {
