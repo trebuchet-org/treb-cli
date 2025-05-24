@@ -85,6 +85,58 @@
             "source_hash": "65649cad4aff3ac5cef9be53aea2d4df288f83154897ce2ae695e8dea18e09e9",
             "contract_path": "./src/SimpleTokenV07.sol:SimpleTokenV07"
           }
+        },
+        "0x4ac73812120a1985325a9b448179353e48d0cd91": {
+          "address": "0x4ac73812120a1985325a9b448179353e48d0cd91",
+          "contract_name": "UpgradeableCounter",
+          "environment": "default",
+          "type": "contract",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00701499a9cf8c0699aaaa67",
+          "init_code_hash": "0ac6b36512481b422cc8cb28b4e681e54eaf566bc5fc853af72b0e355d6fbdcf",
+          "label": "v2",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 8397320,
+            "broadcast_file": "",
+            "timestamp": "2025-05-24T17:46:11.837936+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "978e9e9c9e42a03daa9112a7b4ccb0c2872b8eca",
+            "compiler": "0.8.22",
+            "source_hash": "c825bab40f4fbc6abf72d758e3f001161ea5ac069f7e4b80ceba7f04295d670e",
+            "contract_path": "./src/UpgradeableCounter.sol:UpgradeableCounter"
+          }
+        },
+        "0xb7a577c5c11f50beacb7aa83ff0835ce4bf3eb34": {
+          "address": "0xb7a577c5c11f50beacb7aa83ff0835ce4bf3eb34",
+          "contract_name": "UpgradeableCounterProxy",
+          "environment": "default",
+          "type": "proxy",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c008c972e380118a99f460996",
+          "init_code_hash": "471d31a19c65fb880cc0552a2c1c18f017d1e446220936e6dedbad346b6dcc6b",
+          "target_contract": "UpgradeableCounter",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 8397323,
+            "broadcast_file": "",
+            "timestamp": "2025-05-24T17:47:03.489598+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "978e9e9c9e42a03daa9112a7b4ccb0c2872b8eca",
+            "compiler": "0.8.22",
+            "source_hash": "",
+            "contract_path": ""
+          }
         }
       }
     },
@@ -142,6 +194,31 @@
             "contract_path": "./src/SimpleTokenV07.sol:SimpleTokenV07"
           }
         },
+        "0x4ac73812120a1985325a9b448179353e48d0cd91": {
+          "address": "0x4ac73812120a1985325a9b448179353e48d0cd91",
+          "contract_name": "UpgradeableCounter",
+          "environment": "default",
+          "type": "contract",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00701499a9cf8c0699aaaa67",
+          "init_code_hash": "0ac6b36512481b422cc8cb28b4e681e54eaf566bc5fc853af72b0e355d6fbdcf",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47145642,
+            "broadcast_file": "",
+            "timestamp": "2025-05-24T17:36:32.895915+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "978e9e9c9e42a03daa9112a7b4ccb0c2872b8eca",
+            "compiler": "0.8.22",
+            "source_hash": "c825bab40f4fbc6abf72d758e3f001161ea5ac069f7e4b80ceba7f04295d670e",
+            "contract_path": "./src/UpgradeableCounter.sol:UpgradeableCounter"
+          }
+        },
         "0x8c3e67fcbd82107ae1f1722e8782f5fcd7f0b01c": {
           "address": "0x8c3e67fcbd82107ae1f1722e8782f5fcd7f0b01c",
           "contract_name": "SimpleTokenV07",
@@ -191,6 +268,31 @@
             "compiler": "0.8.22",
             "source_hash": "7e055f374634b71faea61a17c12a0d171432a04bb71872f45fb4d386e24f42fc",
             "contract_path": "./src/SampleToken.sol:SampleToken"
+          }
+        },
+        "0xcf0248811f98babaa01d308961a61d9574d09e73": {
+          "address": "0xcf0248811f98babaa01d308961a61d9574d09e73",
+          "contract_name": "UpgradeableCounterProxy",
+          "environment": "default",
+          "type": "proxy",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00a2d2c3fe22101450e42130",
+          "init_code_hash": "471d31a19c65fb880cc0552a2c1c18f017d1e446220936e6dedbad346b6dcc6b",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47145902,
+            "broadcast_file": "",
+            "timestamp": "2025-05-24T17:41:00.81448+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "978e9e9c9e42a03daa9112a7b4ccb0c2872b8eca",
+            "compiler": "0.8.22",
+            "source_hash": "",
+            "contract_path": ""
           }
         }
       }

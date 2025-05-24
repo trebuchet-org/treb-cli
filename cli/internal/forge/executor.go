@@ -308,3 +308,138 @@ func (se *ScriptExecutor) parseScriptPredictionOutput(output string) (*types.Pre
 	return nil, fmt.Errorf("failed to parse prediction output: 'Predicted Address:' not found in output")
 }
 
+// DeployProxy deploys a proxy contract with special handling for proxy-specific data
+func (se *ScriptExecutor) DeployProxy(proxyContract, implementationContract string, env string, args DeployArgs) (*types.DeploymentResult, error) {
+	// 1. Setup deployment configuration
+	setup, err := se.setupDeployment(proxyContract, env, args)
+	if err != nil {
+		return nil, fmt.Errorf("proxy deployment setup failed: %w", err)
+	}
+
+	// 2. Check for existing proxy deployment
+	var existingDeployment *types.DeploymentEntry
+	if args.Label != "" {
+		existingDeployment = se.registry.GetDeploymentWithLabel(proxyContract, env, args.Label, args.ChainID)
+	} else {
+		existingDeployment = se.registry.GetDeployment(proxyContract, env, args.ChainID)
+	}
+
+	if existingDeployment != nil {
+		fmt.Printf("\n⚠️  Proxy already deployed at %s\n", existingDeployment.Address.Hex())
+		
+		// Convert hex strings back to byte arrays
+		var salt [32]byte
+		var initCodeHash [32]byte
+		
+		if saltBytes, err := hex.DecodeString(existingDeployment.Salt); err == nil && len(saltBytes) == 32 {
+			copy(salt[:], saltBytes)
+		}
+		
+		if hashBytes, err := hex.DecodeString(existingDeployment.InitCodeHash); err == nil && len(hashBytes) == 32 {
+			copy(initCodeHash[:], hashBytes)
+		}
+		
+		return &types.DeploymentResult{
+			Address:         existingDeployment.Address,
+			Salt:            salt,
+			InitCodeHash:    initCodeHash,
+			AlreadyDeployed: true,
+		}, nil
+	}
+
+	// 3. Execute deployment script  
+	fmt.Printf("\nDeploying proxy %s...\n", proxyContract)
+	
+	// Execute forge script for deployment
+	cmdArgs := []string{"script", setup.ScriptPath, "-vvvv"} // High verbosity for better error messages
+	
+	if args.RpcUrl != "" {
+		cmdArgs = append(cmdArgs, "--rpc-url", args.RpcUrl)
+	}
+	
+	cmdArgs = append(cmdArgs, "--broadcast")
+	
+	if args.Verify {
+		cmdArgs = append(cmdArgs, "--verify")
+		if args.EtherscanApiKey != "" {
+			cmdArgs = append(cmdArgs, fmt.Sprintf("--etherscan-api-key=%s", args.EtherscanApiKey))
+		}
+	}
+
+	fmt.Printf("[%s] Executing deployment...\n", setup.ScriptPath)
+	
+	cmd := exec.Command("forge", cmdArgs...)
+	cmd.Dir = setup.ProjectRoot
+	cmd.Env = setup.EnvVars
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("Script execution failed:\n")
+		fmt.Printf("Command: forge %s\n", strings.Join(cmdArgs, " "))
+		fmt.Printf("Error: %v\n", err)
+		fmt.Printf("Full output:\n%s\n", string(output))
+		return nil, fmt.Errorf("forge script failed: %w", err)
+	}
+	
+	// Show full output if debug is enabled
+	if args.Debug {
+		fmt.Printf("\n=== Full Foundry Script Output ===\n")
+		fmt.Printf("%s\n", string(output))
+		fmt.Printf("=== End of Output ===\n\n")
+	} else {
+		// Parse output for key information
+		se.parseScriptOutput(string(output))
+	}
+
+	// Try to parse structured output first
+	result, err := se.parser.ParseDeploymentOutput(output)
+	if err != nil {
+		// Fallback to parsing broadcast file
+		scriptName := fmt.Sprintf("Deploy%s.s.sol", proxyContract)
+		result, err = se.parser.ParseLatestBroadcast(scriptName, args.ChainID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse deployment: %w", err)
+		}
+	}
+
+	// 4. Get implementation address from registry
+	var implDeployment *types.DeploymentEntry
+	if implLabel, ok := args.EnvVars["IMPLEMENTATION_LABEL"]; ok && implLabel != "" {
+		implDeployment = se.registry.GetDeploymentWithLabel(implementationContract, env, implLabel, args.ChainID)
+	} else {
+		implDeployment = se.registry.GetDeployment(implementationContract, env, args.ChainID)
+	}
+
+	// 5. Update result with proxy-specific metadata
+	if result.Metadata == nil {
+		result.Metadata = &types.ContractMetadata{}
+	}
+	
+	// Set the deployment script path as contract path for proxies
+	result.Metadata.ContractPath = fmt.Sprintf("script/deploy/Deploy%s.s.sol", proxyContract)
+	
+	// Add proxy-specific metadata
+	if result.Metadata.Extra == nil {
+		result.Metadata.Extra = make(map[string]interface{})
+	}
+	result.Metadata.Extra["proxyType"] = result.Type // Should be "PROXY" from the script output
+	if implDeployment != nil {
+		result.Metadata.Extra["implementation"] = implDeployment.Address.Hex()
+	}
+
+	// 6. Record deployment with proxy type
+	result.Type = "proxy" // Ensure type is set correctly
+	result.TargetContract = implementationContract // Set the implementation reference
+	if err := se.registry.RecordDeployment(proxyContract, env, result, args.ChainID); err != nil {
+		return nil, fmt.Errorf("failed to record proxy deployment: %w", err)
+	}
+
+	// 7. Verify if requested (using proxy-specific verification)
+	if args.Verify && result.TxHash != (common.Hash{}) {
+		fmt.Printf("\nVerifying proxy on Etherscan...\n")
+		// TODO: Implement proxy-specific verification
+	}
+
+	return result, nil
+}
+

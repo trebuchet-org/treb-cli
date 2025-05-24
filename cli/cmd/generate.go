@@ -15,12 +15,14 @@ var generateCmd = &cobra.Command{
 	Long: `Interactive generation of deployment scripts, migrations, and other resources.
 
 Available generation types:
-  deploy     - Generate deployment scripts for contracts
-  migration  - Generate migration scripts (coming soon)
-  upgrade    - Generate upgrade scripts (coming soon)
+  deploy       - Generate deployment scripts for contracts
+  deploy-proxy - Generate deployment scripts for proxy contracts
+  migration    - Generate migration scripts (coming soon)
+  upgrade      - Generate upgrade scripts (coming soon)
 
 Examples:
   treb generate deploy
+  treb generate deploy-proxy
   treb generate migration
   treb generate upgrade
   treb generate  # Interactive type selection`,
@@ -58,12 +60,14 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		switch requestedType {
 		case "deploy", "deployment":
 			generationType = interactive.GenerateTypeDeploy
+		case "deploy-proxy", "proxy":
+			generationType = interactive.GenerateTypeDeployProxy
 		case "migration", "migrate":
 			generationType = interactive.GenerateTypeMigration
 		case "upgrade":
 			generationType = interactive.GenerateTypeUpgrade
 		default:
-			return fmt.Errorf("unknown generation type: %s. Available types: deploy, migration, upgrade", args[0])
+			return fmt.Errorf("unknown generation type: %s. Available types: deploy, deploy-proxy, migration, upgrade", args[0])
 		}
 	}
 	
@@ -71,6 +75,8 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	switch generationType {
 	case interactive.GenerateTypeDeploy:
 		return generator.GenerateDeployScript()
+	case interactive.GenerateTypeDeployProxy:
+		return generator.GenerateProxyDeployScript()
 	case interactive.GenerateTypeMigration:
 		return generator.GenerateMigrationScript()
 	case interactive.GenerateTypeUpgrade:

@@ -7,24 +7,28 @@ import (
 )
 
 type DeploymentResult struct {
-	Address         common.Address `json:"address"`
-	TxHash          common.Hash    `json:"transaction_hash"`
-	BlockNumber     uint64         `json:"block_number"`
-	BroadcastFile   string         `json:"broadcast_file"`
-	Salt            [32]byte       `json:"salt"`            // Keep as bytes for internal use
-	InitCodeHash    [32]byte       `json:"init_code_hash"`  // Keep as bytes for internal use
-	AlreadyDeployed bool           `json:"already_deployed"`
+	Address         common.Address    `json:"address"`
+	TxHash          common.Hash       `json:"transaction_hash"`
+	BlockNumber     uint64            `json:"block_number"`
+	BroadcastFile   string            `json:"broadcast_file"`
+	Salt            [32]byte          `json:"salt"`            // Keep as bytes for internal use
+	InitCodeHash    [32]byte          `json:"init_code_hash"`  // Keep as bytes for internal use
+	AlreadyDeployed bool              `json:"already_deployed"`
 	
 	// New deployment type information
-	DeploymentType  string         `json:"deployment_type"`  // "implementation" or "proxy"
-	TargetContract  string         `json:"target_contract,omitempty"`
-	Label           string         `json:"label,omitempty"`  // For implementation deployments
-	Tags            []string       `json:"tags,omitempty"`
-	Env             string         `json:"env,omitempty"`
+	Type            string            `json:"type"`            // "implementation" or "proxy" 
+	DeploymentType  string            `json:"deployment_type"`  // "implementation" or "proxy"
+	TargetContract  string            `json:"target_contract,omitempty"`
+	Label           string            `json:"label,omitempty"`  // For implementation deployments
+	Tags            []string          `json:"tags,omitempty"`
+	Env             string            `json:"env,omitempty"`
 	
 	// Safe deployment information
-	SafeTxHash      common.Hash    `json:"safe_tx_hash,omitempty"`
-	SafeAddress     common.Address `json:"safe_address,omitempty"`
+	SafeTxHash      common.Hash       `json:"safe_tx_hash,omitempty"`
+	SafeAddress     common.Address    `json:"safe_address,omitempty"`
+	
+	// Metadata
+	Metadata        *ContractMetadata `json:"metadata,omitempty"`
 }
 
 type PredictResult struct {
@@ -74,10 +78,11 @@ type DeploymentInfo struct {
 }
 
 type ContractMetadata struct {
-	SourceCommit    string `json:"source_commit"`
-	Compiler        string `json:"compiler"`
-	SourceHash      string `json:"source_hash"`
-	ContractPath    string `json:"contract_path"`  // Full path like ./src/Contract.sol:Contract
+	SourceCommit    string                 `json:"source_commit"`
+	Compiler        string                 `json:"compiler"`
+	SourceHash      string                 `json:"source_hash"`
+	ContractPath    string                 `json:"contract_path"`  // Full path like ./src/Contract.sol:Contract
+	Extra           map[string]interface{} `json:"extra,omitempty"` // Additional metadata (e.g., proxy type, implementation address)
 }
 
 // GetDisplayName returns a human-friendly name for the deployment

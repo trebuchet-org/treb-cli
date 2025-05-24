@@ -27,6 +27,7 @@ type GenerateType string
 
 const (
 	GenerateTypeDeploy GenerateType = "deploy"
+	GenerateTypeDeployProxy GenerateType = "deploy-proxy"
 	GenerateTypeMigration GenerateType = "migration"
 	GenerateTypeUpgrade GenerateType = "upgrade"
 )
@@ -35,6 +36,7 @@ const (
 func GetAvailableTypes() []GenerateType {
 	return []GenerateType{
 		GenerateTypeDeploy,
+		GenerateTypeDeployProxy,
 		GenerateTypeMigration,
 		GenerateTypeUpgrade,
 	}
@@ -190,4 +192,104 @@ func (g *Generator) GenerateUpgradeScript() error {
 	fmt.Println("    - Multi-signature upgrade processes")
 	
 	return fmt.Errorf("upgrade script generation not yet implemented")
+}
+
+// GenerateProxyDeployScript interactively generates a proxy deploy script
+func (g *Generator) GenerateProxyDeployScript() error {
+	fmt.Println("Interactive Proxy Deploy Script Generator")
+	fmt.Println("=========================================")
+	
+	// Step 1: Discover all contracts in src directory
+	discovery := contracts.NewDiscovery(g.projectRoot)
+	discoveredContracts, err := discovery.DiscoverContracts()
+	if err != nil {
+		return fmt.Errorf("failed to discover contracts: %w", err)
+	}
+	
+	if len(discoveredContracts) == 0 {
+		return fmt.Errorf("no contracts found in src/ directory")
+	}
+	
+	// Step 2: Select implementation contract
+	fmt.Printf("Found %d contract(s) in src/\n\n", len(discoveredContracts))
+	
+	contractOptions := discovery.GetFormattedOptions(discoveredContracts)
+	_, selectedIndex, err := g.selector.SimpleSelect("Select implementation contract:", contractOptions, 0)
+	if err != nil {
+		return fmt.Errorf("contract selection failed: %w", err)
+	}
+	
+	selectedContract := discoveredContracts[selectedIndex]
+	
+	// Step 3: Validate the selected contract
+	validator := contracts.NewValidator(g.projectRoot)
+	contractInfo, err := validator.ValidateContract(selectedContract.Name)
+	if err != nil {
+		return fmt.Errorf("contract validation failed: %w", err)
+	}
+	
+	fmt.Printf("\nSelected: %s\n", discovery.FormatContractOption(selectedContract))
+	
+	// Step 4: Select proxy type
+	proxyTypes := []string{
+		"OZ-TransparentUpgradeable - OpenZeppelin Transparent Upgradeable Proxy",
+		"OZ-UUPSUpgradeable - OpenZeppelin UUPS Upgradeable Proxy", 
+		"Custom - Custom proxy implementation",
+	}
+	
+	proxyTypeStr, proxyTypeIndex, err := g.selector.SimpleSelect("Select proxy type:", proxyTypes, 0)
+	if err != nil {
+		return fmt.Errorf("proxy type selection failed: %w", err)
+	}
+	
+	var proxyType contracts.ProxyType
+	switch proxyTypeIndex {
+	case 0:
+		proxyType = contracts.ProxyTypeTransparent
+	case 1:
+		proxyType = contracts.ProxyTypeUUPS
+	case 2:
+		proxyType = contracts.ProxyTypeCustom
+	}
+	
+	fmt.Printf("Selected proxy type: %s\n", proxyTypeStr)
+	
+	// Step 5: Choose deployment strategy
+	strategies := []string{"CREATE2", "CREATE3"}
+	strategyStr, _, err := g.selector.SimpleSelect("Select deployment strategy:", strategies, 1) // Default to CREATE3
+	if err != nil {
+		return fmt.Errorf("strategy selection failed: %w", err)
+	}
+	
+	strategy, err := contracts.ValidateStrategy(strategyStr)
+	if err != nil {
+		return fmt.Errorf("invalid strategy: %w", err)
+	}
+	
+	// Step 6: Generate the script
+	fmt.Printf("\nGenerating proxy deploy script for %s...\n", contractInfo.Name)
+	
+	generator := contracts.NewGenerator(g.projectRoot)
+	if err := generator.GenerateProxyDeployScript(contractInfo, strategy, proxyType); err != nil {
+		return fmt.Errorf("proxy script generation failed: %w", err)
+	}
+	
+	fmt.Printf("Proxy deploy script generated successfully!\n")
+	fmt.Printf("Strategy: %s\n", strategy)
+	fmt.Printf("Proxy Type: %s\n", proxyType)
+	
+	// Show initializer info
+	fmt.Printf("\nInitializer Information:\n")
+	// Try to parse ABI to show initializer info
+	abiParser := abi.NewParser(g.projectRoot)
+	if contractABI, err := abiParser.ParseContractABI(contractInfo.Name); err == nil {
+		if initMethod := abiParser.FindInitializeMethod(contractABI); initMethod != nil {
+			fmt.Printf("Initialize method detected: %s\n", initMethod.Name)
+			fmt.Printf("Arguments will be automatically configured in _getProxyInitializer()\n")
+		} else {
+			fmt.Printf("No initialize method found - proxy will be deployed without initialization\n")
+		}
+	}
+	
+	return nil
 }

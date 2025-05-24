@@ -21,10 +21,18 @@ type ABIConstructor struct {
 	Inputs []ABIInput `json:"inputs"`
 }
 
+// Method represents a function in the ABI
+type Method struct {
+	Name   string     `json:"name"`
+	Type   string     `json:"type"`
+	Inputs []ABIInput `json:"inputs"`
+}
+
 // ContractABI represents the parsed ABI of a contract
 type ContractABI struct {
 	Constructor *ABIConstructor
 	HasConstructor bool
+	Methods []Method
 }
 
 // Parser handles ABI parsing from Foundry artifacts
@@ -58,12 +66,14 @@ func (p *Parser) ParseContractABI(contractName string) (*ContractABI, error) {
 	
 	result := &ContractABI{
 		HasConstructor: false,
+		Methods: []Method{},
 	}
 	
-	// Look for constructor in ABI
+	// Look for constructor and methods in ABI
 	for _, rawABI := range artifact.ABI {
 		var abiEntry struct {
 			Type   string     `json:"type"`
+			Name   string     `json:"name"`
 			Inputs []ABIInput `json:"inputs"`
 		}
 		
@@ -77,7 +87,12 @@ func (p *Parser) ParseContractABI(contractName string) (*ContractABI, error) {
 				Type:   abiEntry.Type,
 				Inputs: abiEntry.Inputs,
 			}
-			break
+		} else if abiEntry.Type == "function" {
+			result.Methods = append(result.Methods, Method{
+				Name:   abiEntry.Name,
+				Type:   abiEntry.Type,
+				Inputs: abiEntry.Inputs,
+			})
 		}
 	}
 	
@@ -159,4 +174,80 @@ func (p *Parser) getDefaultValue(solidityType string) string {
 		}
 		return "/* TODO: Set default value */"
 	}
+}
+
+// FindInitializeMethod finds an initialize method in the ABI
+func (p *Parser) FindInitializeMethod(abi *ContractABI) *Method {
+	// Look for common initialize method names
+	initializeNames := []string{"initialize", "init", "__init", "initializer"}
+	
+	for _, method := range abi.Methods {
+		for _, initName := range initializeNames {
+			if strings.EqualFold(method.Name, initName) {
+				return &method
+			}
+		}
+	}
+	
+	return nil
+}
+
+// GenerateInitializerArgs generates Solidity initializer argument code for proxy deployment
+func (p *Parser) GenerateInitializerArgs(method *Method) (string, string) {
+	if method == nil || len(method.Inputs) == 0 {
+		return "", "return \"\";"
+	}
+	
+	var variables []string
+	var args []string
+	
+	for i, input := range method.Inputs {
+		varName := input.Name
+		if varName == "" {
+			varName = fmt.Sprintf("arg%d", i)
+		}
+		
+		// Generate variable declaration with default value
+		defaultValue := p.getDefaultValue(input.Type)
+		typeDecl := p.getTypeDeclaration(input.Type)
+		variables = append(variables, fmt.Sprintf("        %s %s = %s;", typeDecl, varName, defaultValue))
+		args = append(args, varName)
+	}
+	
+	variableDecl := strings.Join(variables, "\n")
+	
+	// For initializer, we need to encode with selector
+	selectorCall := fmt.Sprintf("bytes4 selector = bytes4(keccak256(\"%s(%s)\"));", 
+		method.Name, 
+		p.getMethodSignature(method.Inputs))
+	
+	encodeCall := fmt.Sprintf("return abi.encodeWithSelector(selector, %s);", strings.Join(args, ", "))
+	
+	return variableDecl + "\n        \n        " + selectorCall, encodeCall
+}
+
+// getMethodSignature generates the method signature string for function selector
+func (p *Parser) getMethodSignature(inputs []ABIInput) string {
+	var types []string
+	for _, input := range inputs {
+		types = append(types, p.normalizeType(input.Type))
+	}
+	return strings.Join(types, ",")
+}
+
+// normalizeType normalizes a Solidity type for signature generation
+func (p *Parser) normalizeType(solidityType string) string {
+	// Remove memory/storage/calldata keywords
+	normalized := solidityType
+	normalized = strings.ReplaceAll(normalized, " memory", "")
+	normalized = strings.ReplaceAll(normalized, " storage", "")
+	normalized = strings.ReplaceAll(normalized, " calldata", "")
+	
+	// Handle fixed-size arrays
+	if strings.Contains(normalized, "[") && strings.Contains(normalized, "]") {
+		// Keep array notation as-is
+		return normalized
+	}
+	
+	return normalized
 }

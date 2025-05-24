@@ -442,10 +442,12 @@ func listDeployments() error {
 	}
 
 	// Create color styles
-	envHeader := color.New(color.BgGreen, color.FgBlack)
-	envHeaderBold := color.New(color.BgGreen, color.FgBlack, color.Bold)
-	chainHeader := color.New(color.BgCyan, color.FgWhite)
-	chainHeaderBold := color.New(color.BgCyan, color.FgWhite, color.Bold)
+	chainBg := color.BgBlue
+	envBg := color.BgMagenta
+	envHeader := color.New(envBg, color.FgBlack)
+	envHeaderBold := color.New(envBg, color.FgBlack, color.Bold)
+	chainHeader := color.New(chainBg, color.FgBlack)
+	chainHeaderBold := color.New(chainBg, color.FgBlack, color.Bold)
 	// deployerStyle := color.New(color.Faint)
 	contractNameStyle := color.New(color.Bold)
 	addressStyle := color.New(color.Bold, color.FgHiWhite)
@@ -522,10 +524,10 @@ func listDeployments() error {
 
 		if len(envs) > 1 {
 			// Environment header with colored environment name only
-			envHeader.Print(" ▶ Environment: ")
-			envHeaderBold.Print(env)
-			envHeader.Print(" ")
-			envHeader.Printf(" (deployer: %s)", deployerAddress)
+			envHeader.Print("   ◎ Environment ")
+			envHeaderBold.Printf("%-*s ", 34, env)
+			envHeader.Printf(" deployer: ")
+			envHeaderBold.Printf("%s ", deployerAddress)
 			fmt.Println() // No extra newline after header
 		}
 		for _, network := range networks {
@@ -534,9 +536,9 @@ func listDeployments() error {
 				continue
 			}
 			// Chain header with color starting at text (no whitespace prefix)
-			chainHeader.Print(" ⛓ Chain: ")
-			chainHeaderBold.Print(network)
-			chainHeader.Print(" ")
+			fmt.Print("└─")
+			chainHeader.Print(" ⛓ Chain       ")
+			chainHeaderBold.Printf("%-*s ", 88, network)
 			fmt.Println() // No extra newline after header
 			fmt.Println() // No extra newline after header
 
