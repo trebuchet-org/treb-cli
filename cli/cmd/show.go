@@ -6,8 +6,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/cli/internal/registry"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/interactive"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/safe"
 )
@@ -73,9 +75,7 @@ func showDeploymentByIdentifier(identifier string) error {
 		return showDeploymentInfo(matches[0])
 	}
 
-	// Multiple matches - show selection
-	fmt.Printf("Multiple deployments found matching '%s':\n\n", identifier)
-
+	// Multiple matches - use interactive selector
 	// Sort matches by network, then env, then contract name
 	sort.Slice(matches, func(i, j int) bool {
 		if matches[i].NetworkName != matches[j].NetworkName {
@@ -87,22 +87,36 @@ func showDeploymentByIdentifier(identifier string) error {
 		return matches[i].Entry.ContractName < matches[j].Entry.ContractName
 	})
 
+	// Find max identifier length for alignment
+	maxIdLen := 0
+	for _, match := range matches {
+		displayName := match.Entry.GetDisplayName()
+		fullId := fmt.Sprintf("%s/%s/%s", match.NetworkName, match.Entry.Environment, displayName)
+		if len(fullId) > maxIdLen {
+			maxIdLen = len(fullId)
+		}
+	}
+
+	// Create options with aligned addresses
+	options := make([]string, len(matches))
 	for i, match := range matches {
 		displayName := match.Entry.GetDisplayName()
 		fullId := fmt.Sprintf("%s/%s/%s", match.NetworkName, match.Entry.Environment, displayName)
-		fmt.Printf("%d. %s\n   Address: %s\n\n", i+1, fullId, match.Address.Hex())
+		padding := strings.Repeat(" ", maxIdLen-len(fullId))
+		options[i] = fmt.Sprintf("%s%s  %s", fullId, padding, match.Address.Hex())
 	}
 
-	// Ask user to select
-	fmt.Print("Select deployment (1-", len(matches), "): ")
-	var selection int
-	fmt.Scanln(&selection)
-
-	if selection < 1 || selection > len(matches) {
-		return fmt.Errorf("invalid selection")
+	selector := interactive.NewSelector()
+	_, selectedIndex, err := selector.SelectOption(
+		fmt.Sprintf("Multiple deployments found matching '%s'", identifier),
+		options,
+		0,
+	)
+	if err != nil {
+		return fmt.Errorf("selection cancelled")
 	}
 
-	return showDeploymentInfo(matches[selection-1])
+	return showDeploymentInfo(matches[selectedIndex])
 }
 
 func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
@@ -113,96 +127,197 @@ func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
 		return fmt.Errorf("failed to resolve network: %w", err)
 	}
 
-	// Display deployment information
+	// Color styles
+	titleStyle := color.New(color.FgCyan, color.Bold)
+	labelStyle := color.New(color.FgWhite, color.Bold)
+	addressStyle := color.New(color.FgGreen, color.Bold)
+	warningStyle := color.New(color.FgYellow, color.Bold)
+	errorStyle := color.New(color.FgRed, color.Bold)
+	successStyle := color.New(color.FgGreen)
+	sectionStyle := color.New(color.FgWhite, color.Bold, color.Underline)
+	
+	// Header
 	displayName := deployment.Entry.GetDisplayName()
-	fmt.Printf("Deployment: %s\n", displayName)
-	fmt.Printf("Environment: %s\n\n", deployment.Entry.Environment)
-
-	// Basic deployment info
-	fmt.Printf("Contract Information:\n")
-	fmt.Printf("   Address: %s\n", deployment.Address.Hex())
-	fmt.Printf("   Type: %s\n", deployment.Entry.Type)
-	fmt.Printf("   Salt: %s\n", deployment.Entry.Salt)
-	if deployment.Entry.InitCodeHash != "" {
-		fmt.Printf("   Init Code Hash: %s\n", deployment.Entry.InitCodeHash)
-	}
 	fmt.Println()
-
-	// Deployment details
-	fmt.Printf("Deployment Details:\n")
-
+	titleStyle.Printf("Deployment Details: %s/%s/%s\n", networkInfo.Name, deployment.Entry.Environment, displayName)
+	fmt.Println(strings.Repeat("=", 60))
+	
+	// Contract section
+	fmt.Println()
+	sectionStyle.Println("CONTRACT")
+	labelStyle.Print("Address:      ")
+	addressStyle.Println(deployment.Address.Hex())
+	labelStyle.Print("Type:         ")
+	fmt.Println(deployment.Entry.Type)
+	if deployment.Entry.Salt != "" {
+		labelStyle.Print("Salt:         ")
+		fmt.Println(deployment.Entry.Salt)
+	}
+	if deployment.Entry.InitCodeHash != "" {
+		labelStyle.Print("Init Code:    ")
+		fmt.Println(deployment.Entry.InitCodeHash)
+	}
+	
+	// Network section
+	fmt.Println()
+	sectionStyle.Println("NETWORK")
+	labelStyle.Print("Chain:        ")
+	fmt.Printf("%s (ID: %s)\n", networkInfo.Name, deployment.ChainID)
+	labelStyle.Print("Environment:  ")
+	fmt.Println(deployment.Entry.Environment)
+	
+	// Deployment section
+	fmt.Println()
+	sectionStyle.Println("DEPLOYMENT")
+	
 	// Show deployment status
 	status := deployment.Entry.Deployment.Status
 	if status == "" {
 		status = "deployed"
 	}
-	fmt.Printf("   Status: %s\n", status)
-
+	labelStyle.Print("Status:       ")
+	
+	switch status {
+	case "deployed":
+		successStyle.Println("Deployed ✓")
+	case "pending_safe":
+		warningStyle.Println("Pending Safe Execution ⏳")
+	default:
+		fmt.Println(status)
+	}
+	
 	// Safe-specific information for pending deployments
 	if status == "pending_safe" {
 		if deployment.Entry.Deployment.SafeAddress != "" {
-			fmt.Printf("   Safe Address: %s\n", deployment.Entry.Deployment.SafeAddress)
-		}
-		if deployment.Entry.Deployment.SafeNonce > 0 {
-			fmt.Printf("   Safe Nonce: %d\n", deployment.Entry.Deployment.SafeNonce)
+			labelStyle.Print("Safe:         ")
+			fmt.Println(deployment.Entry.Deployment.SafeAddress)
 		}
 		if deployment.Entry.Deployment.SafeTxHash != nil {
-			fmt.Printf("   Safe Tx Hash: %s\n", deployment.Entry.Deployment.SafeTxHash.Hex())
-
+			labelStyle.Print("Safe Tx:      ")
+			fmt.Println(deployment.Entry.Deployment.SafeTxHash.Hex())
+			
 			// Try to get current confirmation status
 			chainIDUint, err := strconv.ParseUint(deployment.ChainID, 10, 64)
 			if err == nil {
 				if safeClient, err := safe.NewClient(chainIDUint); err == nil {
 					if tx, err := safeClient.GetTransaction(*deployment.Entry.Deployment.SafeTxHash); err == nil {
-						fmt.Printf("   Confirmations: %d/%d\n", len(tx.Confirmations), tx.ConfirmationsRequired)
+						labelStyle.Print("Confirmations: ")
+						if len(tx.Confirmations) >= tx.ConfirmationsRequired {
+							successStyle.Printf("%d/%d (Ready to execute!)\n", len(tx.Confirmations), tx.ConfirmationsRequired)
+						} else {
+							fmt.Printf("%d/%d\n", len(tx.Confirmations), tx.ConfirmationsRequired)
+						}
 					}
 				}
 			}
 		}
-		fmt.Printf("   This deployment is pending execution in the Safe UI\n")
+		if deployment.Entry.Deployment.SafeNonce > 0 {
+			labelStyle.Print("Nonce:        ")
+			fmt.Printf("%d\n", deployment.Entry.Deployment.SafeNonce)
+		}
 	} else {
 		// Regular deployment info
 		if deployment.Entry.Deployment.TxHash != nil && deployment.Entry.Deployment.TxHash.Hex() != "0x0000000000000000000000000000000000000000000000000000000000000000" {
-			fmt.Printf("   Transaction: %s\n", deployment.Entry.Deployment.TxHash.Hex())
+			labelStyle.Print("Transaction:  ")
+			fmt.Println(deployment.Entry.Deployment.TxHash.Hex())
 		}
 		if deployment.Entry.Deployment.BlockNumber > 0 {
-			fmt.Printf("   Block: %d\n", deployment.Entry.Deployment.BlockNumber)
+			labelStyle.Print("Block:        ")
+			fmt.Printf("%d\n", deployment.Entry.Deployment.BlockNumber)
 		}
 	}
-
-	fmt.Printf("   Network: %s (Chain ID: %s)\n", networkInfo.Name, deployment.ChainID)
-	fmt.Printf("   Timestamp: %s\n", deployment.Entry.Deployment.Timestamp.Format("2006-01-02 15:04:05"))
-	if deployment.Entry.Deployment.BroadcastFile != "" {
-		fmt.Printf("   Broadcast File: %s\n", deployment.Entry.Deployment.BroadcastFile)
+	
+	labelStyle.Print("Timestamp:    ")
+	fmt.Println(deployment.Entry.Deployment.Timestamp.Format("2006-01-02 15:04:05"))
+	
+	// Metadata section
+	if deployment.Entry.Metadata.ContractPath != "" || deployment.Entry.Metadata.Compiler != "" {
+		fmt.Println()
+		sectionStyle.Println("METADATA")
+		if deployment.Entry.Metadata.ContractPath != "" {
+			labelStyle.Print("Path:         ")
+			fmt.Println(deployment.Entry.Metadata.ContractPath)
+		}
+		if deployment.Entry.Metadata.Compiler != "" {
+			labelStyle.Print("Compiler:     ")
+			fmt.Println(deployment.Entry.Metadata.Compiler)
+		}
+		if deployment.Entry.Metadata.SourceCommit != "" {
+			labelStyle.Print("Commit:       ")
+			fmt.Println(deployment.Entry.Metadata.SourceCommit)
+		}
+		if len(deployment.Entry.Tags) > 0 {
+			labelStyle.Print("Tags:         ")
+			color.New(color.FgCyan).Println(strings.Join(deployment.Entry.Tags, ", "))
+		}
 	}
+	
+	// Verification section
 	fmt.Println()
-
-	// Metadata
-	fmt.Printf("Contract Metadata:\n")
-	if deployment.Entry.Metadata.ContractPath != "" {
-		fmt.Printf("   Path: %s\n", deployment.Entry.Metadata.ContractPath)
+	sectionStyle.Println("VERIFICATION")
+	labelStyle.Print("Status:       ")
+	if deployment.Entry.Verification.Status == "verified" {
+		successStyle.Println("Verified ✓")
+		if deployment.Entry.Verification.ExplorerUrl != "" {
+			labelStyle.Print("Explorer:     ")
+			fmt.Println(deployment.Entry.Verification.ExplorerUrl)
+		}
+	} else {
+		errorStyle.Println("Not Verified ✗")
+		if deployment.Entry.Verification.Reason != "" {
+			labelStyle.Print("Reason:       ")
+			fmt.Println(deployment.Entry.Verification.Reason)
+		}
 	}
-	fmt.Printf("   Compiler: %s\n", deployment.Entry.Metadata.Compiler)
-	if deployment.Entry.Metadata.SourceCommit != "" {
-		fmt.Printf("   Source Commit: %s\n", deployment.Entry.Metadata.SourceCommit)
-	}
-	if deployment.Entry.Metadata.SourceHash != "" {
-		fmt.Printf("   Source Hash: %s\n", deployment.Entry.Metadata.SourceHash)
-	}
-	if len(deployment.Entry.Tags) > 0 {
-		fmt.Printf("   Tags: %s\n", strings.Join(deployment.Entry.Tags, ", "))
-	}
+	
+	// Warnings and call-to-actions
 	fmt.Println()
-
-	// Verification status
-	fmt.Printf("Verification:\n")
-	fmt.Printf("   Status: %s\n", deployment.Entry.Verification.Status)
-	if deployment.Entry.Verification.ExplorerUrl != "" {
-		fmt.Printf("   Explorer: %s\n", deployment.Entry.Verification.ExplorerUrl)
+	warnings := []string{}
+	
+	// Pending safe warning
+	if status == "pending_safe" && deployment.Entry.Deployment.SafeAddress != "" {
+		safeUrl := getSafeUrl(networkInfo.Name, deployment.Entry.Deployment.SafeAddress)
+		warnings = append(warnings, fmt.Sprintf("⚠️  This deployment is pending execution in Safe. Visit the Safe UI to execute:\n   %s", safeUrl))
 	}
-	if deployment.Entry.Verification.Reason != "" {
-		fmt.Printf("   Reason: %s\n", deployment.Entry.Verification.Reason)
+	
+	// Verification warning
+	if deployment.Entry.Verification.Status != "verified" && status == "deployed" {
+		warnings = append(warnings, "⚠️  This contract is not verified. Run 'treb verify' to verify on block explorer.")
+	}
+	
+	if len(warnings) > 0 {
+		warningStyle.Println("ACTIONS REQUIRED:")
+		for _, warning := range warnings {
+			fmt.Println(warning)
+		}
+		fmt.Println()
 	}
 
 	return nil
+}
+
+// getSafeUrl returns the Safe UI URL for the given network and safe address
+func getSafeUrl(network, safeAddress string) string {
+	// Map network names to Safe UI subdomains
+	safeNetworks := map[string]string{
+		"mainnet":          "eth",
+		"sepolia":          "sep",
+		"optimism":         "oeth",
+		"arbitrum":         "arb1",
+		"arbitrum_sepolia": "arb-sep",
+		"polygon":          "matic",
+		"base":             "base",
+		"base_sepolia":     "base-sep",
+		"gnosis":           "gno",
+		"celo":             "celo",
+		"alfajores":        "celo-alf",
+	}
+	
+	subdomain, ok := safeNetworks[network]
+	if !ok {
+		// Default to mainnet for unknown networks
+		subdomain = "eth"
+	}
+	
+	return fmt.Sprintf("https://app.safe.global/%s:%s/home", subdomain, safeAddress)
 }
