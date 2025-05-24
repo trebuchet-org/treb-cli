@@ -6,10 +6,13 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 // NetworkInfo contains resolved network details
@@ -26,6 +29,13 @@ type Resolver struct {
 
 // NewResolver creates a new network resolver
 func NewResolver(projectRoot string) *Resolver {
+	// Try to load .env file from project root
+	envPath := filepath.Join(projectRoot, ".env")
+	if _, err := os.Stat(envPath); err == nil {
+		// Load .env file, but don't fail if it doesn't exist
+		godotenv.Load(envPath)
+	}
+	
 	return &Resolver{
 		projectRoot: projectRoot,
 	}
@@ -59,7 +69,7 @@ func (r *Resolver) ResolveNetworkByChainID(chainIDStr string) (*NetworkInfo, err
 	if err != nil {
 		return nil, fmt.Errorf("invalid chain ID: %w", err)
 	}
-	
+
 	// Known chain IDs to network names
 	chainIDMap := map[uint64]string{
 		1:        "mainnet",
@@ -69,7 +79,7 @@ func (r *Resolver) ResolveNetworkByChainID(chainIDStr string) (*NetworkInfo, err
 		42220:    "celo",
 		// Add more as needed
 	}
-	
+
 	networkName, ok := chainIDMap[chainID]
 	if !ok {
 		// Return a generic network info
@@ -79,7 +89,7 @@ func (r *Resolver) ResolveNetworkByChainID(chainIDStr string) (*NetworkInfo, err
 			ChainID: chainID,
 		}, nil
 	}
-	
+
 	// Try to get full network info
 	info, err := r.ResolveNetwork(networkName)
 	if err != nil {
@@ -90,7 +100,7 @@ func (r *Resolver) ResolveNetworkByChainID(chainIDStr string) (*NetworkInfo, err
 			ChainID: chainID,
 		}, nil
 	}
-	
+
 	return info, nil
 }
 
@@ -104,7 +114,7 @@ func (r *Resolver) getRpcUrlFromFoundry(network string) (string, error) {
 // getFoundryRpcUrl reads foundry.toml and resolves RPC URL with env var substitution
 func (r *Resolver) getFoundryRpcUrl(network string) (string, error) {
 	foundryToml := fmt.Sprintf("%s/foundry.toml", r.projectRoot)
-	
+
 	content, err := os.ReadFile(foundryToml)
 	if err != nil {
 		return "", fmt.Errorf("failed to read foundry.toml: %w", err)
@@ -113,37 +123,37 @@ func (r *Resolver) getFoundryRpcUrl(network string) (string, error) {
 	// Simple TOML parsing for rpc_endpoints
 	lines := strings.Split(string(content), "\n")
 	inRpcSection := false
-	
+
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		
+
 		if line == "[rpc_endpoints]" {
 			inRpcSection = true
 			continue
 		}
-		
+
 		if strings.HasPrefix(line, "[") && line != "[rpc_endpoints]" {
 			inRpcSection = false
 			continue
 		}
-		
+
 		if inRpcSection && strings.Contains(line, "=") {
 			parts := strings.SplitN(line, "=", 2)
 			if len(parts) == 2 {
 				key := strings.TrimSpace(parts[0])
 				value := strings.TrimSpace(parts[1])
-				
+
 				if key == network {
 					// Remove quotes
 					value = strings.Trim(value, `"`)
-					
+
 					// Substitute environment variables
 					return r.substituteEnvVars(value), nil
 				}
 			}
 		}
 	}
-	
+
 	return "", fmt.Errorf("network %s not found in foundry.toml", network)
 }
 
@@ -151,13 +161,23 @@ func (r *Resolver) getFoundryRpcUrl(network string) (string, error) {
 func (r *Resolver) substituteEnvVars(value string) string {
 	re := regexp.MustCompile(`\$\{([^}]+)\}`)
 	
-	return re.ReplaceAllStringFunc(value, func(match string) string {
+	result := re.ReplaceAllStringFunc(value, func(match string) string {
 		varName := match[2 : len(match)-1] // Remove ${ and }
 		if envValue := os.Getenv(varName); envValue != "" {
 			return envValue
 		}
-		return match // Return original if env var not found
+		// If env var not found, return the original placeholder
+		// This will help identify missing env vars
+		return match
 	})
+	
+	// Check if there are still unresolved variables
+	if strings.Contains(result, "${") {
+		// Log a warning but don't fail - let the RPC call fail with a clearer error
+		fmt.Fprintf(os.Stderr, "Warning: Unresolved environment variables in RPC URL: %s\n", result)
+	}
+	
+	return result
 }
 
 // getChainID extracts chain ID from RPC endpoint
@@ -169,7 +189,7 @@ func (r *Resolver) getChainID(rpcUrl string) (uint64, error) {
 
 	// Prepare eth_chainId JSON-RPC request
 	requestBody := `{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}`
-	
+
 	resp, err := client.Post(rpcUrl, "application/json", strings.NewReader(requestBody))
 	if err != nil {
 		return 0, fmt.Errorf("failed to make RPC request: %w", err)

@@ -1,9 +1,9 @@
 {
   "project": {
-    "name": "treb-project",
-    "version": "0.1.0",
+    "name": "",
+    "version": "",
     "commit": "",
-    "timestamp": "2025-05-24T12:21:22.661222+02:00"
+    "timestamp": "0001-01-01T00:00:00Z"
   },
   "networks": {
     "11155111": {
@@ -61,6 +61,33 @@
             "contract_path": "./src/SampleToken.sol:SampleToken"
           }
         },
+        "0x384efaea61e0561d2101e0c09d6bd0cdabe0b2f6": {
+          "address": "0x384efaea61e0561d2101e0c09d6bd0cdabe0b2f6",
+          "contract_name": "Counter",
+          "environment": "staging",
+          "type": "contract",
+          "salt": "32cb58b145d3f7e28c45ce4b2cc31fa94248b23f00af628d98077d12b691e24a",
+          "init_code_hash": "82b985e9bef239bbf1c9e6256f184a8bd64be7fa2afa7e6a608f5f880dc7dab7",
+          "label": "V8",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "safe_tx_hash": "0xb5743c009e5d99c0c7e4f8185e04c4453f605dfd7e98b28e4831bc6f08ff8a62",
+            "block_number": 8398471,
+            "broadcast_file": "",
+            "timestamp": "2025-05-24T21:42:50.645626+02:00",
+            "status": "pending_safe",
+            "safe_address": "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
+          },
+          "metadata": {
+            "source_commit": "655cbc60d843bf6c1a7a6d605929975b2f76561d",
+            "compiler": "0.8.22",
+            "source_hash": "4b5eaa107784609cabdbd23e34e479cc957ee69bd4c4de2881625b884e6bbacc",
+            "contract_path": "./src/Counter.sol:Counter"
+          }
+        },
         "0x477670732f6adbf392540dbf74fcb3ffa6a1d091": {
           "address": "0x477670732f6adbf392540dbf74fcb3ffa6a1d091",
           "contract_name": "SimpleTokenV07",
@@ -68,6 +95,9 @@
           "type": "implementation",
           "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00cc1270108595989d91b5a6",
           "init_code_hash": "37bd690533ec14929081fc636302cb3f2bbc108e843f104ac03079640f6a940a",
+          "tags": [
+            "v1.0.0"
+          ],
           "verification": {
             "status": "pending"
           },
@@ -110,6 +140,32 @@
             "compiler": "0.8.22",
             "source_hash": "c825bab40f4fbc6abf72d758e3f001161ea5ac069f7e4b80ceba7f04295d670e",
             "contract_path": "./src/UpgradeableCounter.sol:UpgradeableCounter"
+          }
+        },
+        "0xb5f64d4e297ec2859830f830cb83af3a129bd9a2": {
+          "address": "0xb5f64d4e297ec2859830f830cb83af3a129bd9a2",
+          "contract_name": "Counter",
+          "environment": "staging",
+          "type": "contract",
+          "salt": "32cb58b145d3f7e28c45ce4b2cc31fa94248b23f004f220fb0468a3385ba744f",
+          "init_code_hash": "82b985e9bef239bbf1c9e6256f184a8bd64be7fa2afa7e6a608f5f880dc7dab7",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "safe_tx_hash": "0xe0f7d3a5c367fe49e76d9444116803ffe29c76b3ebcb1e265668f8d4f9f02e62",
+            "block_number": 8398480,
+            "broadcast_file": "",
+            "timestamp": "2025-05-24T21:44:47.700899+02:00",
+            "status": "pending_safe",
+            "safe_address": "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
+          },
+          "metadata": {
+            "source_commit": "655cbc60d843bf6c1a7a6d605929975b2f76561d",
+            "compiler": "0.8.22",
+            "source_hash": "4b5eaa107784609cabdbd23e34e479cc957ee69bd4c4de2881625b884e6bbacc",
+            "contract_path": "./src/Counter.sol:Counter"
           }
         },
         "0xb7a577c5c11f50beacb7aa83ff0835ce4bf3eb34": {
@@ -194,6 +250,32 @@
             "contract_path": "./src/SimpleTokenV07.sol:SimpleTokenV07"
           }
         },
+        "0x446cd78821ffea4cadbca6d200aa9b7688640a5a": {
+          "address": "0x446cd78821ffea4cadbca6d200aa9b7688640a5a",
+          "contract_name": "Counter",
+          "environment": "default",
+          "type": "contract",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00db01eff47a6298d5c62220",
+          "init_code_hash": "82b985e9bef239bbf1c9e6256f184a8bd64be7fa2afa7e6a608f5f880dc7dab7",
+          "label": "V8",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47159304,
+            "broadcast_file": "",
+            "timestamp": "2025-05-24T21:23:58.011548+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "655cbc60d843bf6c1a7a6d605929975b2f76561d",
+            "compiler": "0.8.22",
+            "source_hash": "4b5eaa107784609cabdbd23e34e479cc957ee69bd4c4de2881625b884e6bbacc",
+            "contract_path": "./src/Counter.sol:Counter"
+          }
+        },
         "0x4ac73812120a1985325a9b448179353e48d0cd91": {
           "address": "0x4ac73812120a1985325a9b448179353e48d0cd91",
           "contract_name": "UpgradeableCounter",
@@ -217,6 +299,32 @@
             "compiler": "0.8.22",
             "source_hash": "c825bab40f4fbc6abf72d758e3f001161ea5ac069f7e4b80ceba7f04295d670e",
             "contract_path": "./src/UpgradeableCounter.sol:UpgradeableCounter"
+          }
+        },
+        "0x7bc8fecd0778fe43126109e3f74ee5d1686e5476": {
+          "address": "0x7bc8fecd0778fe43126109e3f74ee5d1686e5476",
+          "contract_name": "Counter",
+          "environment": "default",
+          "type": "contract",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c005587637cf9124fece140a3",
+          "init_code_hash": "82b985e9bef239bbf1c9e6256f184a8bd64be7fa2afa7e6a608f5f880dc7dab7",
+          "label": "v6",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47159042,
+            "broadcast_file": "",
+            "timestamp": "2025-05-24T21:19:36.886392+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "655cbc60d843bf6c1a7a6d605929975b2f76561d",
+            "compiler": "0.8.22",
+            "source_hash": "4b5eaa107784609cabdbd23e34e479cc957ee69bd4c4de2881625b884e6bbacc",
+            "contract_path": "./src/Counter.sol:Counter"
           }
         },
         "0x83e46a53975f592200d22a214148a00beda72582": {
@@ -294,6 +402,32 @@
             "compiler": "0.8.22",
             "source_hash": "7e055f374634b71faea61a17c12a0d171432a04bb71872f45fb4d386e24f42fc",
             "contract_path": "./src/SampleToken.sol:SampleToken"
+          }
+        },
+        "0xba6bf711a75c1b53bc1aa673bf12cfe1d2187e40": {
+          "address": "0xba6bf711a75c1b53bc1aa673bf12cfe1d2187e40",
+          "contract_name": "Counter",
+          "environment": "default",
+          "type": "contract",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c006c02ee72d90e1c741d58f4",
+          "init_code_hash": "82b985e9bef239bbf1c9e6256f184a8bd64be7fa2afa7e6a608f5f880dc7dab7",
+          "label": "V6",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47159110,
+            "broadcast_file": "",
+            "timestamp": "2025-05-24T21:20:44.41359+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "655cbc60d843bf6c1a7a6d605929975b2f76561d",
+            "compiler": "0.8.22",
+            "source_hash": "4b5eaa107784609cabdbd23e34e479cc957ee69bd4c4de2881625b884e6bbacc",
+            "contract_path": "./src/Counter.sol:Counter"
           }
         },
         "0xcf0248811f98babaa01d308961a61d9574d09e73": {

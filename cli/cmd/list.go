@@ -9,16 +9,29 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/fatih/color"
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/cli/internal/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
+)
+
+var (
+	filterEnv      string
+	filterNetwork  string
+	filterContract string
 )
 
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all deployments",
 	Long: `Display deployments organized by environment and network.
-Shows contract addresses, deployment status, and version tags.`,
+Shows contract addresses, deployment status, and version tags.
+
+Filters:
+  --filter-env      Filter by environment (exact match, case-insensitive)
+  --filter-network  Filter by network (exact match, case-insensitive)
+  --filter-contract Filter by contract name (partial match, case-insensitive)`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := listDeployments(); err != nil {
 			checkError(err)
@@ -27,7 +40,18 @@ Shows contract addresses, deployment status, and version tags.`,
 }
 
 func init() {
-	// Add flags if needed in the future
+	listCmd.Flags().StringVar(&filterEnv, "filter-env", "", "Filter by environment")
+	listCmd.Flags().StringVar(&filterNetwork, "filter-network", "", "Filter by network")
+	listCmd.Flags().StringVar(&filterContract, "filter-contract", "", "Filter by contract name (partial match)")
+}
+
+// columnWidths stores the calculated column widths for consistent table rendering
+type columnWidths struct {
+	contract  int
+	address   int
+	verified  int
+	timestamp int
+	status    int
 }
 
 func listDeployments() error {
@@ -41,9 +65,17 @@ func listDeployments() error {
 	if err != nil {
 		return fmt.Errorf("failed to load deploy config: %w", err)
 	}
-	deployments := registryManager.GetAllDeployments()
+	allDeployments := registryManager.GetAllDeployments()
+	
+	// Apply filters
+	deployments := filterDeployments(allDeployments)
+	
 	if len(deployments) == 0 {
-		fmt.Println("No deployments found")
+		if len(allDeployments) > 0 {
+			fmt.Println("No deployments found matching the filters")
+		} else {
+			fmt.Println("No deployments found")
+		}
 		return nil
 	}
 
@@ -59,15 +91,20 @@ func listDeployments() error {
 	timestampStyle := color.New(color.Faint)
 	pendingStyle := color.New(color.FgYellow)
 	tagsStyle := color.New(color.FgCyan)
+	verifiedStyle := color.New(color.FgGreen)
+	notVerifiedStyle := color.New(color.FgRed)
 
 	fmt.Printf("Deployments (%d total):\n\n", len(deployments))
 
 	groups := make(map[string]map[string][]*registry.DeploymentInfo)
 
-	// First pass: collect all environments per network
+	// First pass: collect all environments per network and calculate max widths
 	envs := make([]string, 0)
 	networks := make([]string, 0)
 	envsByNetwork := make(map[string][]string)
+
+	// Calculate max widths across all deployments
+	widths := calculateColumnWidths(deployments)
 
 	for _, deployment := range deployments {
 		env := deployment.Entry.Environment
@@ -99,15 +136,6 @@ func listDeployments() error {
 	slices.Sort(envs)
 	slices.Sort(networks)
 
-	// Calculate global max name length for alignment
-	maxNameLen := 0
-	for _, deployment := range deployments {
-		displayName := deployment.Entry.GetDisplayName()
-		if len(displayName) > maxNameLen {
-			maxNameLen = len(displayName)
-		}
-	}
-
 	// Display groups
 	for _, env := range envs {
 		envConfig, err := deployConfig.GetEnvironmentConfig(env)
@@ -127,63 +155,177 @@ func listDeployments() error {
 			}
 		}
 
-		if len(envs) > 1 {
-			// Environment header with colored environment name only
-			envHeader.Print("   ◎ environment ")
-			envHeaderBold.Printf(" %-*s ", 33, strings.ToUpper(env))
-			envHeader.Printf("  deployer ")
-			envHeaderBold.Printf("%s ", deployerAddress)
-			fmt.Println() // No extra newline after header
-		}
+		// Always show environment header when there are deployments
+		// Environment header with colored environment name only
+		envHeader.Print("   ◎ environment ")
+		envHeaderBold.Printf(" %-*s ", 35, strings.ToUpper(env))
+		envHeader.Printf("  deployer ")
+		envHeaderBold.Printf("%s ", deployerAddress)
+		fmt.Println()
+		// Filter networks to only show those with deployments for this env
+		networksWithDeployments := []string{}
 		for _, network := range networks {
-			deployments := groups[network][env]
-			if len(deployments) == 0 {
-				continue
+			if len(groups[network][env]) > 0 {
+				networksWithDeployments = append(networksWithDeployments, network)
 			}
-			// Chain header with color starting at text (no whitespace prefix)
-			fmt.Print("└─")
-			chainHeader.Print(" ⛓ chain       ")
-			chainHeaderBold.Printf(" %-*s ", 87, strings.ToUpper(network))
-			fmt.Println() // No extra newline after header
-			fmt.Println() // No extra newline after header
+		}
 
+		for netIdx, network := range networksWithDeployments {
+			deployments := groups[network][env]
+
+			// Sort deployments by timestamp (newest first)
 			sort.Slice(deployments, func(i, j int) bool {
 				return deployments[i].Entry.Deployment.Timestamp.After(deployments[j].Entry.Deployment.Timestamp)
 			})
+
+			// Determine if this is the last network for tree drawing
+			isLastNetwork := netIdx == len(networksWithDeployments)-1
+			treePrefix := "├─"
+			continuationPrefix := "│ "
+			if isLastNetwork {
+				treePrefix = "└─"
+				continuationPrefix = "  "
+			}
+
+			// Create table with chain header as the first row
+			t := table.NewWriter()
+			t.SetStyle(table.StyleLight)
+			t.Style().Options.SeparateRows = false
+			t.Style().Options.DrawBorder = false
+			t.Style().Options.SeparateHeader = false
+			t.Style().Options.SeparateColumns = false
+			t.Style().Box = table.BoxStyle{
+				PaddingLeft:  "",
+				PaddingRight: "  ",
+			}
+
+			// Configure column styles with calculated widths
+			t.SetColumnConfigs([]table.ColumnConfig{
+				{Number: 1, Align: text.AlignLeft, WidthMin: widths.contract, WidthMax: widths.contract},
+				{Number: 2, Align: text.AlignLeft, WidthMin: widths.address, WidthMax: widths.address},
+				{Number: 3, Align: text.AlignLeft, WidthMin: widths.verified, WidthMax: widths.verified},
+				{Number: 4, Align: text.AlignLeft, WidthMin: widths.timestamp, WidthMax: widths.timestamp},
+			})
+
+			// Add chain header with proper tree character
+			chainHeaderRow := fmt.Sprintf("%s%s%s",
+				treePrefix,
+				chainHeader.Sprint(" ⛓ chain       "),
+				chainHeaderBold.Sprintf(" %s ", strings.ToUpper(network)))
+
+			// Print the chain header outside the table
+			fmt.Println(chainHeaderRow)
+			fmt.Println(continuationPrefix) // Continue the tree line
+
 			for _, deployment := range deployments {
 				displayName := deployment.Entry.GetDisplayName()
 				timestamp := deployment.Entry.Deployment.Timestamp.Format("2006-01-02 15:04:05")
 
-				// Print contract name in bold with extra space for alignment
-				fmt.Printf("   ")
-				contractNameStyle.Printf("%-*s", maxNameLen, displayName)
-				fmt.Print("  ")
-
-				// Print address in bold
-				addressStyle.Print(deployment.Address.Hex())
-				fmt.Print("  ")
-
-				// Print timestamp in faint
-				timestampStyle.Print(timestamp)
-
-				// Add status indicator for pending Safe deployments
-				if deployment.Entry.Deployment.Status == "pending_safe" {
-					pendingStyle.Print(" ⏳ pending safe execution")
-				}
-
-				// Add tags if present
+				// Build contract name with tags
+				contractCell := contractNameStyle.Sprint(displayName)
 				if len(deployment.Entry.Tags) > 0 {
-					fmt.Print(" ")
-					tagsStyle.Printf("[%s]", strings.Join(deployment.Entry.Tags, ", "))
+					contractCell += " " + tagsStyle.Sprintf("(%s)", deployment.Entry.Tags[0])
 				}
 
+				// Address cell
+				addressCell := addressStyle.Sprint(deployment.Address.Hex())
+
+				// Verified status or pending safe status
+				verifiedCell := ""
+				if deployment.Entry.Deployment.Status == "pending_safe" {
+					verifiedCell = pendingStyle.Sprint("⧖ deploy queued")
+				} else if deployment.Entry.Verification.Status == "verified" {
+					verifiedCell = verifiedStyle.Sprint("✓ verified")
+				} else {
+					verifiedCell = notVerifiedStyle.Sprint("✗ not verified")
+				}
+
+				// Timestamp
+				timestampCell := timestampStyle.Sprint(timestamp)
+
+				t.AppendRow(table.Row{
+					continuationPrefix + " " + contractCell, // Add tree continuation and single space
+					addressCell,
+					verifiedCell,
+					timestampCell,
+				})
+			}
+
+			fmt.Print(t.Render())
+			fmt.Println() // Extra newline for spacing between sections
+			if !isLastNetwork {
+				fmt.Println(continuationPrefix) // Continue the tree line
+			} else {
 				fmt.Println()
 			}
-			fmt.Println()
 		}
 	}
 
 	return nil
+}
+
+// calculateColumnWidths calculates the max width needed for each column across all deployments
+func calculateColumnWidths(deployments []*registry.DeploymentInfo) columnWidths {
+	widths := columnWidths{
+		contract:  20, // Minimum width
+		address:   42, // Fixed for addresses
+		verified:  15, // Fixed for "⧖ deploy queued"
+		timestamp: 19, // Fixed for timestamp format
+		status:    0,  // Not used anymore
+	}
+
+	// Calculate max contract name width (including tags)
+	for _, deployment := range deployments {
+		displayName := deployment.Entry.GetDisplayName()
+		contractLen := len(displayName) + 3 // +3 for tree prefix and space ("│ " or "  ")
+		if len(deployment.Entry.Tags) > 0 {
+			// Add space for tag like " (v1.0.0)"
+			contractLen += len(deployment.Entry.Tags[0]) + 3
+		}
+		if contractLen > widths.contract {
+			widths.contract = contractLen
+		}
+	}
+
+	// Cap the contract column at a reasonable max
+	if widths.contract > 50 {
+		widths.contract = 50
+	}
+
+	return widths
+}
+
+// filterDeployments applies the command-line filters to the deployment list
+func filterDeployments(deployments []*registry.DeploymentInfo) []*registry.DeploymentInfo {
+	if filterEnv == "" && filterNetwork == "" && filterContract == "" {
+		return deployments
+	}
+	
+	filtered := make([]*registry.DeploymentInfo, 0)
+	
+	for _, deployment := range deployments {
+		// Filter by environment (exact match, case-insensitive)
+		if filterEnv != "" && !strings.EqualFold(deployment.Entry.Environment, filterEnv) {
+			continue
+		}
+		
+		// Filter by network (exact match, case-insensitive)
+		if filterNetwork != "" && !strings.EqualFold(deployment.NetworkName, filterNetwork) {
+			continue
+		}
+		
+		// Filter by contract (partial match, case-insensitive)
+		if filterContract != "" {
+			contractName := deployment.Entry.ContractName
+			if !strings.Contains(strings.ToLower(contractName), strings.ToLower(filterContract)) {
+				continue
+			}
+		}
+		
+		filtered = append(filtered, deployment)
+	}
+	
+	return filtered
 }
 
 // privateKeyToAddress derives the Ethereum address from a private key

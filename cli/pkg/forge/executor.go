@@ -20,25 +20,16 @@ func NewExecutor(projectRoot string) *Executor {
 
 // Build runs forge build with proper output handling
 func (e *Executor) Build() error {
-	fmt.Println("🔨 Building contracts with Forge...")
-	
 	cmd := exec.Command("forge", "build")
 	cmd.Dir = e.projectRoot
 	
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Printf("❌ Build failed:\n%s\n", string(output))
-		return fmt.Errorf("forge build failed: %w", err)
+		// Only print error details if build actually failed
+		return fmt.Errorf("forge build failed: %w\nOutput: %s", err, string(output))
 	}
 	
-	// Check if there were warnings
-	outputStr := string(output)
-	if strings.Contains(outputStr, "Warning") {
-		fmt.Printf("⚠️  Build completed with warnings:\n%s\n", outputStr)
-	} else {
-		fmt.Println("✅ Build completed successfully")
-	}
-	
+	// Don't print anything on success - let the caller handle UI
 	return nil
 }
 
@@ -55,7 +46,7 @@ func (e *Executor) RunScript(scriptName, networkName string, broadcast bool) err
 		args = append(args, "--broadcast")
 	}
 	
-	fmt.Printf("🚀 Executing: forge %s\n", strings.Join(args, " "))
+	// Don't print execution details - let caller handle UI
 	
 	cmd := exec.Command("forge", args...)
 	cmd.Dir = e.projectRoot

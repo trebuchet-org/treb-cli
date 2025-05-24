@@ -99,7 +99,7 @@ func (se *ScriptExecutor) Deploy(contract string, env string, args DeployArgs) (
 	if err != nil {
 		return nil, fmt.Errorf("address prediction failed: %w", err)
 	}
-	fmt.Printf("Predicted address: %s\n", predictResult.Address.Hex())
+	// Address prediction successful - don't print here as caller will handle
 
 	// 3. Check if already deployed
 	existing := se.registry.GetDeploymentWithLabel(contract, env, args.Label, args.ChainID)
@@ -118,7 +118,7 @@ func (se *ScriptExecutor) Deploy(contract string, env string, args DeployArgs) (
 			return nil, fmt.Errorf("deployment pending Safe execution")
 		}
 		
-		fmt.Printf("Contract already deployed at predicted address\n")
+		// Contract already deployed - don't print here as caller will handle
 		
 		// Convert hex strings back to byte arrays
 		var salt [32]byte
@@ -156,7 +156,7 @@ func (se *ScriptExecutor) Deploy(contract string, env string, args DeployArgs) (
 		}
 	}
 
-	fmt.Printf("[%s] Executing deployment...\n", setup.ScriptPath)
+	// Execute deployment script - don't print here as caller shows progress
 	
 	cmd := exec.Command("forge", cmdArgs...)
 	cmd.Dir = setup.ProjectRoot
@@ -198,7 +198,6 @@ func (se *ScriptExecutor) Deploy(contract string, env string, args DeployArgs) (
 		if args.EnvVars != nil {
 			if safeAddr, ok := args.EnvVars["DEPLOYER_SAFE_ADDRESS"]; ok && safeAddr != "" {
 				result.SafeAddress = common.HexToAddress(safeAddr)
-				fmt.Printf("Captured Safe address from deployment: %s\n", safeAddr)
 			}
 		}
 		
@@ -206,12 +205,12 @@ func (se *ScriptExecutor) Deploy(contract string, env string, args DeployArgs) (
 		if result.SafeAddress == (common.Address{}) {
 			if safeAddr := os.Getenv("DEPLOYER_SAFE_ADDRESS"); safeAddr != "" {
 				result.SafeAddress = common.HexToAddress(safeAddr)
-				fmt.Printf("Captured Safe address from OS env: %s\n", safeAddr)
 			}
 		}
 		
 		if result.SafeAddress == (common.Address{}) {
-			fmt.Printf("Warning: Could not capture Safe address for Safe deployment\n")
+			// Don't print warning during deployment - it interrupts the spinner
+			// The Safe address will be shown in the final summary if available
 		}
 	}
 
@@ -256,7 +255,7 @@ func (se *ScriptExecutor) PredictAddress(contract string, env string, args Deplo
 		cmdArgs = append(cmdArgs, "--rpc-url", setup.Args.RpcUrl)
 	}
 	
-	fmt.Printf("[%s] Predicting address...\n", setup.ScriptPath);
+	// Execute predict address script - don't print here as caller shows progress
 	
 	cmd := exec.Command("forge", cmdArgs...)
 	cmd.Dir = setup.ProjectRoot
@@ -325,7 +324,7 @@ func (se *ScriptExecutor) DeployProxy(proxyContract, implementationContract stri
 	}
 
 	if existingDeployment != nil {
-		fmt.Printf("\n⚠️  Proxy already deployed at %s\n", existingDeployment.Address.Hex())
+		// Proxy already deployed - don't print here as caller will handle
 		
 		// Convert hex strings back to byte arrays
 		var salt [32]byte
@@ -347,8 +346,7 @@ func (se *ScriptExecutor) DeployProxy(proxyContract, implementationContract stri
 		}, nil
 	}
 
-	// 3. Execute deployment script  
-	fmt.Printf("\nDeploying proxy %s...\n", proxyContract)
+	// 3. Execute deployment script - don't print here as caller shows progress
 	
 	// Execute forge script for deployment
 	cmdArgs := []string{"script", setup.ScriptPath, "-vvvv"} // High verbosity for better error messages
@@ -366,7 +364,7 @@ func (se *ScriptExecutor) DeployProxy(proxyContract, implementationContract stri
 		}
 	}
 
-	fmt.Printf("[%s] Executing deployment...\n", setup.ScriptPath)
+	// Execute deployment script - don't print here as caller shows progress
 	
 	cmd := exec.Command("forge", cmdArgs...)
 	cmd.Dir = setup.ProjectRoot
