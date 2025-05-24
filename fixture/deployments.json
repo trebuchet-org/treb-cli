@@ -219,6 +219,32 @@
             "contract_path": "./src/UpgradeableCounter.sol:UpgradeableCounter"
           }
         },
+        "0x83e46a53975f592200d22a214148a00beda72582": {
+          "address": "0x83e46a53975f592200d22a214148a00beda72582",
+          "contract_name": "UpgradeableCounter",
+          "environment": "test",
+          "type": "contract",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c005e4fea7677c9f016747f38",
+          "init_code_hash": "0ac6b36512481b422cc8cb28b4e681e54eaf566bc5fc853af72b0e355d6fbdcf",
+          "label": "v2",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47148589,
+            "broadcast_file": "",
+            "timestamp": "2025-05-24T18:25:32.325375+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "5197bd2da7abe9fdb72ab8c4c075bc316e66e02a",
+            "compiler": "0.8.22",
+            "source_hash": "c825bab40f4fbc6abf72d758e3f001161ea5ac069f7e4b80ceba7f04295d670e",
+            "contract_path": "./src/UpgradeableCounter.sol:UpgradeableCounter"
+          }
+        },
         "0x8c3e67fcbd82107ae1f1722e8782f5fcd7f0b01c": {
           "address": "0x8c3e67fcbd82107ae1f1722e8782f5fcd7f0b01c",
           "contract_name": "SimpleTokenV07",
@@ -290,6 +316,32 @@
           },
           "metadata": {
             "source_commit": "978e9e9c9e42a03daa9112a7b4ccb0c2872b8eca",
+            "compiler": "0.8.22",
+            "source_hash": "",
+            "contract_path": ""
+          }
+        },
+        "0xff128c7a9ab882cb3e506993573c3378b7b52365": {
+          "address": "0xff128c7a9ab882cb3e506993573c3378b7b52365",
+          "contract_name": "UpgradeableCounterProxy",
+          "environment": "test",
+          "type": "proxy",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00754e53a10794182a1f70b7",
+          "init_code_hash": "d5ee90cb2fcfa990aed8b970f497e8d5e2fe28f4dcbff767c7ac802495796ee7",
+          "target_contract": "UpgradeableCounter",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47148665,
+            "broadcast_file": "",
+            "timestamp": "2025-05-24T18:27:01.378724+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "5197bd2da7abe9fdb72ab8c4c075bc316e66e02a",
             "compiler": "0.8.22",
             "source_hash": "",
             "contract_path": ""

@@ -1,0 +1,5 @@
+{
+  "environment": "test",
+  "network": "alfajores",
+  "verify": false
+}

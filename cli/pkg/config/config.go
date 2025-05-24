@@ -87,9 +87,6 @@ func (m *Manager) Set(key, value string) error {
 
 	switch key {
 	case "environment", "env":
-		if value != "staging" && value != "prod" {
-			return fmt.Errorf("invalid environment: %s (must be 'staging' or 'prod')", value)
-		}
 		config.Environment = value
 	case "network":
 		config.Network = value
