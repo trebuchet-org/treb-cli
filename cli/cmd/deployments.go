@@ -601,8 +601,8 @@ func showRegistryStatus() error {
 			if recent.Type == "proxy" {
 				displayName = recent.Contract + "Proxy"
 			}
-			if recent.ProxyLabel != "" {
-				displayName = displayName + ":" + recent.ProxyLabel
+			if recent.Label != "" {
+				displayName = displayName + ":" + recent.Label
 			}
 			fmt.Printf("   %s (%s): %s on %s\n", displayName, recent.Environment, recent.Address, recent.Network)
 		}

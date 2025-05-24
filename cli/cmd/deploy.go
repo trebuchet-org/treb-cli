@@ -20,6 +20,7 @@ var (
 	verify      bool
 	networkName string
 	label       string
+	debug       bool
 )
 
 var deployCmd = &cobra.Command{
@@ -42,11 +43,13 @@ This command:
 			checkError(err)
 		}
 		
-		// Show final success message
-		if result.AlreadyDeployed {
-			fmt.Printf("\nContract %s was already deployed to %s environment\n", contract, env)
-		} else {
-			fmt.Printf("\nSuccessfully deployed %s to %s environment\n", contract, env)
+		// Show final success message only if we have a result
+		if result != nil {
+			if result.AlreadyDeployed {
+				fmt.Printf("\nContract %s was already deployed to %s environment\n", contract, env)
+			} else {
+				fmt.Printf("\nSuccessfully deployed %s to %s environment\n", contract, env)
+			}
 		}
 	},
 }
@@ -60,6 +63,7 @@ func init() {
 	deployCmd.Flags().StringVar(&networkName, "network", defaultNetwork, "Network to deploy to (defined in foundry.toml)")
 	deployCmd.Flags().BoolVar(&verify, "verify", defaultVerify, "Verify contract after deployment")
 	deployCmd.Flags().StringVar(&label, "label", "", "Optional label for the deployment (included in salt)")
+	deployCmd.Flags().BoolVar(&debug, "debug", false, "Show full Foundry script output")
 	
 	// Mark network flag as required if it doesn't have a default
 	if defaultNetwork == "" {
@@ -102,7 +106,7 @@ func deployContract(contract string) (*types.DeploymentResult, error) {
 		return nil, fmt.Errorf("contract %s not found in src/ directory", contract)
 	}
 
-	fmt.Printf("Found contract: %s at %s\n", contract, contractInfo.SolidityFile)
+	fmt.Printf("Found contract: %s at src/%s\n", contract, contractInfo.SolidityFile)
 
 	// Step 4: Check if deploy script exists, generate if needed
 	if !validator.DeployScriptExists(contract) {
@@ -126,6 +130,8 @@ func deployContract(contract string) (*types.DeploymentResult, error) {
 		}
 		return nil, nil
 	}
+
+	fmt.Printf("Found deploy script: script/deploy/Deploy%s.s.sol\n", contract)
 
 	// Step 5: Resolve network configuration
 	resolver := network.NewResolver(".")
@@ -156,6 +162,7 @@ func deployContract(contract string) (*types.DeploymentResult, error) {
 		ChainID: networkInfo.ChainID,
 		Label:   label,
 		EnvVars: envVars,
+		Debug:   debug,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("deployment failed: %w", err)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 
 	"github.com/bogdan/fdeploy/cli/pkg/broadcast"
@@ -33,6 +34,16 @@ type DeployArgs struct {
 	Verify          bool
 	Label           string
 	EnvVars         map[string]string
+	Debug           bool
+}
+
+type DeploymentSetup struct {
+	Contract    string
+	Env         string
+	Args        DeployArgs
+	ScriptPath  string
+	EnvVars     []string
+	ProjectRoot string
 }
 
 func NewScriptExecutor(foundryProfile, projectRoot string, registry RegistryManager) *ScriptExecutor {
@@ -44,18 +55,54 @@ func NewScriptExecutor(foundryProfile, projectRoot string, registry RegistryMana
 	}
 }
 
+func (se *ScriptExecutor) setupDeployment(contract string, env string, args DeployArgs) (*DeploymentSetup, error) {
+	scriptPath := fmt.Sprintf("script/deploy/Deploy%s.s.sol", contract)
+	
+	// Set environment variables
+	envVars := os.Environ()
+	
+	// Add deployment-specific environment variables
+	if args.EnvVars != nil {
+		for key, value := range args.EnvVars {
+			envVars = append(envVars, fmt.Sprintf("%s=%s", key, value))
+		}
+	}
+	
+	// Legacy environment variables for backwards compatibility
+	envVars = append(envVars, fmt.Sprintf("DEPLOYMENT_ENV=%s", env))
+	if args.Label != "" {
+		envVars = append(envVars, fmt.Sprintf("DEPLOYMENT_LABEL=%s", args.Label))
+	}
+	if args.DeployerPK != "" {
+		envVars = append(envVars, fmt.Sprintf("DEPLOYER_PRIVATE_KEY=%s", args.DeployerPK))
+	}
+
+	return &DeploymentSetup{
+		Contract:    contract,
+		Env:         env,
+		Args:        args,
+		ScriptPath:  scriptPath,
+		EnvVars:     envVars,
+		ProjectRoot: se.projectRoot,
+	}, nil
+}
+
 func (se *ScriptExecutor) Deploy(contract string, env string, args DeployArgs) (*types.DeploymentResult, error) {
-	// 1. Predict address first
+	// 1. Setup deployment configuration
+	setup, err := se.setupDeployment(contract, env, args)
+	if err != nil {
+		return nil, fmt.Errorf("deployment setup failed: %w", err)
+	}
+
+	// 2. Predict address first using the new method
 	predictResult, err := se.PredictAddress(contract, env, args)
 	if err != nil {
 		return nil, fmt.Errorf("address prediction failed: %w", err)
 	}
 	fmt.Printf("Predicted address: %s\n", predictResult.Address.Hex())
 
-	// 2. Check if already deployed
+	// 3. Check if already deployed
 	existing := se.registry.GetDeploymentWithLabel(contract, env, args.Label, args.ChainID)
-	fmt.Printf("Existing deployment: %v\n", existing.Address.Hex())
-	fmt.Printf("PredictResult: %v\n", predictResult.Address.Hex())
 	if existing != nil && existing.Address == predictResult.Address {
 		// Check deployment status
 		if existing.Deployment.Status == "pending_safe" {
@@ -93,47 +140,27 @@ func (se *ScriptExecutor) Deploy(contract string, env string, args DeployArgs) (
 		}, nil
 	}
 
-	// 3. Execute forge script
-	scriptPath := fmt.Sprintf("script/deploy/Deploy%s.s.sol", contract)
+	// 4. Execute forge script for deployment
+	cmdArgs := []string{"script", setup.ScriptPath, "-vvvv"} // High verbosity for better error messages
 	
-	cmdArgs := []string{"script", scriptPath, "-vvvv"} // High verbosity for better error messages
-	
-	if args.RpcUrl != "" {
-		cmdArgs = append(cmdArgs, "--rpc-url", args.RpcUrl)
+	if setup.Args.RpcUrl != "" {
+		cmdArgs = append(cmdArgs, "--rpc-url", setup.Args.RpcUrl)
 	}
 	
 	cmdArgs = append(cmdArgs, "--broadcast")
 	
-	if args.Verify {
+	if setup.Args.Verify {
 		cmdArgs = append(cmdArgs, "--verify")
-		if args.EtherscanApiKey != "" {
-			cmdArgs = append(cmdArgs, fmt.Sprintf("--etherscan-api-key=%s", args.EtherscanApiKey))
+		if setup.Args.EtherscanApiKey != "" {
+			cmdArgs = append(cmdArgs, fmt.Sprintf("--etherscan-api-key=%s", setup.Args.EtherscanApiKey))
 		}
 	}
 
-	fmt.Printf("Executing deployment: forge %s\n", strings.Join(cmdArgs, " "))
+	fmt.Printf("[%s] Executing deployment...\n", setup.ScriptPath)
 	
 	cmd := exec.Command("forge", cmdArgs...)
-	cmd.Dir = se.projectRoot
-
-	// Set environment variables
-	cmd.Env = os.Environ()
-	
-	// Add deployment-specific environment variables
-	if args.EnvVars != nil {
-		for key, value := range args.EnvVars {
-			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
-		}
-	}
-	
-	// Legacy environment variables for backwards compatibility
-	cmd.Env = append(cmd.Env, fmt.Sprintf("DEPLOYMENT_ENV=%s", env))
-	if args.Label != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("DEPLOYMENT_LABEL=%s", args.Label))
-	}
-	if args.DeployerPK != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("DEPLOYER_PRIVATE_KEY=%s", args.DeployerPK))
-	}
+	cmd.Dir = setup.ProjectRoot
+	cmd.Env = setup.EnvVars
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -144,10 +171,17 @@ func (se *ScriptExecutor) Deploy(contract string, env string, args DeployArgs) (
 		return nil, fmt.Errorf("forge script failed: %w", err)
 	}
 	
-	// Parse output for key information
-	se.parseScriptOutput(string(output))
+	// Show full output if debug is enabled
+	if setup.Args.Debug {
+		fmt.Printf("\n=== Full Foundry Script Output ===\n")
+		fmt.Printf("%s\n", string(output))
+		fmt.Printf("=== End of Output ===\n\n")
+	} else {
+		// Parse output for key information
+		se.parseScriptOutput(string(output))
+	}
 
-	// 4. Try to parse structured output first
+	// 5. Try to parse structured output first
 	result, err := se.parser.ParseDeploymentOutput(output)
 	if err != nil {
 		// Fallback to parsing broadcast file
@@ -158,7 +192,7 @@ func (se *ScriptExecutor) Deploy(contract string, env string, args DeployArgs) (
 		}
 	}
 	
-	// 4a. If Safe deployment, capture Safe address from environment variables
+	// 6. If Safe deployment, capture Safe address from environment variables
 	if result.SafeTxHash != (common.Hash{}) {
 		// First try args.EnvVars which contains the actual deployment environment
 		if args.EnvVars != nil {
@@ -181,7 +215,7 @@ func (se *ScriptExecutor) Deploy(contract string, env string, args DeployArgs) (
 		}
 	}
 
-	// 5. Update registry
+	// 7. Update registry
 	err = se.registry.RecordDeployment(contract, env, result, args.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to record deployment: %w", err)
@@ -208,36 +242,25 @@ func (se *ScriptExecutor) parseScriptOutput(output string) {
 }
 
 func (se *ScriptExecutor) PredictAddress(contract string, env string, args DeployArgs) (*types.PredictResult, error) {
-	// Use the library's PredictAddress script 
-	scriptPath := "lib/forge-deploy/script/PredictAddress.s.sol:PredictAddress"
-	
-	cmdArgs := []string{"script", scriptPath, "--sig", "predict(string,string)", contract, env, "-vvvv"}
+	// 1. Setup deployment configuration
+	setup, err := se.setupDeployment(contract, env, args)
+	if err != nil {
+		return nil, fmt.Errorf("prediction setup failed: %w", err)
+	}
+
+	// 2. Execute the deployment script's predictAddress function
+	cmdArgs := []string{"script", setup.ScriptPath, "--sig", "predictAddress()", "-vvvv"}
 	
 	// Add RPC URL if provided to ensure prediction uses same chain as deployment
-	if args.RpcUrl != "" {
-		cmdArgs = append(cmdArgs, "--rpc-url", args.RpcUrl)
+	if setup.Args.RpcUrl != "" {
+		cmdArgs = append(cmdArgs, "--rpc-url", setup.Args.RpcUrl)
 	}
 	
-	fmt.Printf("Predicting address: forge %s\n", strings.Join(cmdArgs, " "))
+	fmt.Printf("[%s] Predicting address...\n", setup.ScriptPath);
 	
 	cmd := exec.Command("forge", cmdArgs...)
-	cmd.Dir = se.projectRoot
-
-	// Set environment variables
-	cmd.Env = os.Environ()
-	
-	// Add deployment-specific environment variables
-	if args.EnvVars != nil {
-		for key, value := range args.EnvVars {
-			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
-		}
-	}
-	
-	// Legacy environment variables for backwards compatibility
-	cmd.Env = append(cmd.Env, 
-		fmt.Sprintf("DEPLOYMENT_ENV=%s", env),
-		fmt.Sprintf("CONTRACT_VERSION=%s", "v1.0.0"), // TODO: Get from config
-	)
+	cmd.Dir = setup.ProjectRoot
+	cmd.Env = setup.EnvVars
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -248,7 +271,40 @@ func (se *ScriptExecutor) PredictAddress(contract string, env string, args Deplo
 		return nil, fmt.Errorf("forge script failed: %w", err)
 	}
 
-	// Parse output for predicted address
-	return se.parser.ParsePredictionOutput(output)
+	// Show full output if debug is enabled
+	if setup.Args.Debug {
+		fmt.Printf("\n=== Full Foundry Script Output (Prediction) ===\n")
+		fmt.Printf("%s\n", string(output))
+		fmt.Printf("=== End of Output ===\n\n")
+	}
+
+	// 3. Parse output for predicted address using the new parser
+	return se.parseScriptPredictionOutput(string(output))
+}
+
+// parseScriptPredictionOutput parses the output from deployment script's predictAddress function
+func (se *ScriptExecutor) parseScriptPredictionOutput(output string) (*types.PredictResult, error) {
+	lines := strings.Split(output, "\n")
+	
+	// Look for the line containing "Predicted Address:"
+	predictedAddressRegex := regexp.MustCompile(`Predicted Address:\s*(0x[a-fA-F0-9]{40})`)
+	
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		
+		if matches := predictedAddressRegex.FindStringSubmatch(line); len(matches) > 1 {
+			address := common.HexToAddress(matches[1])
+			
+			// For now, return basic prediction result
+			// TODO: Extract salt and init code hash if script provides them
+			return &types.PredictResult{
+				Address:      address,
+				Salt:         [32]byte{}, // Will be filled from deployment
+				InitCodeHash: [32]byte{}, // Will be filled from deployment
+			}, nil
+		}
+	}
+	
+	return nil, fmt.Errorf("failed to parse prediction output: 'Predicted Address:' not found in output")
 }
 

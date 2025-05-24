@@ -133,7 +133,6 @@ func (m *Manager) RecordDeployment(contract, env string, result *types.Deploymen
 		
 		// Proxy-specific fields
 		TargetContract: result.TargetContract,
-		ProxyLabel:     result.ProxyLabel, // DEPRECATED: kept for compatibility
 		
 		// Version tags
 		Tags: result.Tags,
@@ -370,14 +369,13 @@ type RegistryStatus struct {
 
 // RecentDeploymentInfo represents recent deployment information
 type RecentDeploymentInfo struct {
-	ContractEnv string `json:"contract_env"`  // Keep for backward compatibility
 	Contract    string `json:"contract"`
 	Environment string `json:"environment"`
+	Label       string `json:"label"`
 	Address     string `json:"address"`
 	Network     string `json:"network"`
 	Timestamp   string `json:"timestamp"`
 	Type        string `json:"type"`  // implementation/proxy
-	ProxyLabel  string `json:"proxy_label,omitempty"`
 }
 
 // GetAllDeployments returns all deployments across networks
@@ -501,14 +499,13 @@ func (m *Manager) GetStatus() *RegistryStatus {
 			// Add to recent deployments (limit to 5 most recent)
 			if len(recentDeployments) < 5 {
 				recentDeployments = append(recentDeployments, RecentDeploymentInfo{
-					ContractEnv: fmt.Sprintf("%s_%s", deployment.ContractName, deployment.Environment),  // Keep for backward compatibility
 					Contract:    deployment.ContractName,
 					Environment: deployment.Environment,
 					Address:     deployment.Address.Hex(),
 					Network:     network.Name,
 					Timestamp:   deployment.Deployment.Timestamp.Format("2006-01-02 15:04"),
 					Type:        deployment.Type,
-					ProxyLabel:  deployment.Label,  // Use Label instead of ProxyLabel
+					Label:       deployment.Label,
 				})
 			}
 		}

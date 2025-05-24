@@ -18,9 +18,9 @@ type DeploymentResult struct {
 	// New deployment type information
 	DeploymentType  string         `json:"deployment_type"`  // "implementation" or "proxy"
 	TargetContract  string         `json:"target_contract,omitempty"`
-	ProxyLabel      string         `json:"proxy_label,omitempty"`
 	Label           string         `json:"label,omitempty"`  // For implementation deployments
 	Tags            []string       `json:"tags,omitempty"`
+	Env             string         `json:"env,omitempty"`
 	
 	// Safe deployment information
 	SafeTxHash      common.Hash    `json:"safe_tx_hash,omitempty"`
@@ -47,7 +47,6 @@ type DeploymentEntry struct {
 	
 	// Proxy-specific fields
 	TargetContract string           `json:"target_contract,omitempty"` // For proxy deployments
-	ProxyLabel     string           `json:"proxy_label,omitempty"`     // DEPRECATED: use Label instead
 	
 	// Version tags (metadata only, not part of salt)
 	Tags          []string         `json:"tags,omitempty"`

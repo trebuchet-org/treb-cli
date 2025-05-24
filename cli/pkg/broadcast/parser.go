@@ -218,12 +218,10 @@ func (p *Parser) ParseDeploymentOutput(output []byte) (*types.DeploymentResult, 
 			result.TxHash = common.HexToHash(value)
 		case "DEPLOYMENT_TYPE":
 			result.DeploymentType = strings.ToLower(value)
-		case "TARGET_CONTRACT":
-			result.TargetContract = value
-		case "PROXY_LABEL":
-			result.ProxyLabel = value
-		case "LABEL":
+		case "DEPLOYMENT_LABEL":
 			result.Label = value
+		case "DEPLOYMENT_ENV":
+			result.Env = value
 		case "SAFE_TX_HASH":
 			result.SafeTxHash = common.HexToHash(value)
 		}
