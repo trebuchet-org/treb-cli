@@ -1,12 +1,14 @@
 package cmd
 
 import (
+	"crypto/ecdsa"
 	"fmt"
 	"slices"
 	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/cli/internal/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
@@ -485,16 +487,20 @@ func listDeployments() error {
 			return fmt.Errorf("failed to get environment config: %w", err)
 		}
 
-		deployerType := envConfig.Deployer.Type
-		deployerAddress := ""
-		if deployerType == "safe" {
+		deployerAddress := "<unknown>"
+		if envConfig.Deployer.Type == "safe" {
 			deployerAddress = envConfig.Deployer.Safe
-		} else {
-			deployerAddress = "0x0"
+		} else if envConfig.Deployer.Type == "private_key" {
+			// Convert private key to address for display
+			if addr, err := privateKeyToAddress(envConfig.Deployer.PrivateKey); err == nil {
+				deployerAddress = addr
+			} else {
+				deployerAddress = "<invalid>"
+			}
 		}
 
 		if len(envs) > 1 {
-			fmt.Printf("▶ Environment: %s (deployer: %s %s)\n\n", env, deployerType, deployerAddress)
+			fmt.Printf("▶ Environment: %s (deployer: %s)\n\n", env, deployerAddress)
 			envPrefix = "  "
 		}
 		for _, network := range networks {
@@ -746,4 +752,27 @@ func syncPendingSafeTransactions(registryManager *registry.Manager) error {
 	}
 
 	return nil
+}
+
+// privateKeyToAddress derives the Ethereum address from a private key
+func privateKeyToAddress(privateKeyHex string) (string, error) {
+	// Remove 0x prefix if present
+	privateKeyHex = strings.TrimPrefix(privateKeyHex, "0x")
+
+	// Convert hex string to ECDSA private key
+	privateKey, err := crypto.HexToECDSA(privateKeyHex)
+	if err != nil {
+		return "", fmt.Errorf("invalid private key: %w", err)
+	}
+
+	// Get the public key from the private key
+	publicKey := privateKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return "", fmt.Errorf("error casting public key to ECDSA")
+	}
+
+	// Derive the Ethereum address
+	address := crypto.PubkeyToAddress(*publicKeyECDSA)
+	return address.Hex(), nil
 }

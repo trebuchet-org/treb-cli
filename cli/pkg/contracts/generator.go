@@ -21,17 +21,17 @@ const (
 
 // ScriptTemplate contains data for generating deploy scripts
 type ScriptTemplate struct {
-	ContractName         string
-	SolidityFile         string
-	Strategy             DeployStrategy
-	Version              string
-	ImportPath           string
-	TargetVersion        string // Solidity version of the target contract
-	VersionMismatch      bool   // True if target version differs from 0.8
-	UseTypeCreationCode  bool   // True if we should use type().creationCode
-	HasConstructor       bool   // True if contract has constructor
-	ConstructorVars      string // Variable declarations for constructor args
-	ConstructorEncode    string // abi.encode call for constructor args
+	ContractName        string
+	SolidityFile        string
+	Strategy            DeployStrategy
+	Version             string
+	ImportPath          string
+	TargetVersion       string // Solidity version of the target contract
+	VersionMismatch     bool   // True if target version differs from 0.8
+	UseTypeCreationCode bool   // True if we should use type().creationCode
+	HasConstructor      bool   // True if contract has constructor
+	ConstructorVars     string // Variable declarations for constructor args
+	ConstructorEncode   string // abi.encode call for constructor args
 }
 
 // Generator handles deploy script generation
@@ -78,9 +78,9 @@ func (g *Generator) GenerateDeployScript(contractInfo *ContractInfo, strategy De
 
 	// Prepare template data
 	templateData := ScriptTemplate{
-		ContractName:        contractInfo.Name,
-		SolidityFile:        contractInfo.SolidityFile,
-		Strategy:            strategy,
+		ContractName: contractInfo.Name,
+		SolidityFile: contractInfo.SolidityFile,
+		Strategy:     strategy,
 		// Version removed - using tags instead
 		ImportPath:          fmt.Sprintf("../../src/%s", contractInfo.SolidityFile),
 		TargetVersion:       targetVersion,
@@ -135,28 +135,27 @@ func (g *Generator) getSameVersionTemplate() string {
 	return `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "treb-sol/CreateXDeployment.sol";
-import "{{.ImportPath}}";
+import {ContractDeployment, DeployStrategy} from "treb-sol/ContractDeployment.sol";
+import {{{.ContractName}}} from "{{.ImportPath}}";
 
 /**
  * @title Deploy{{.ContractName}}
  * @notice Deployment script for {{.ContractName}} contract
  * @dev Generated automatically by treb
  */
-contract Deploy{{.ContractName}} is CreateXDeployment {
-    constructor() CreateXDeployment(
+contract Deploy{{.ContractName}} is ContractDeployment {
+    constructor() ContractDeployment(
         "{{.ContractName}}",
-        DeploymentType.IMPLEMENTATION,
         DeployStrategy.{{.Strategy}}
     ) {}
 
 {{if .UseTypeCreationCode}}    /// @notice Get contract bytecode using type().creationCode
-    function getContractBytecode() internal pure override returns (bytes memory) {
+    function _getContractBytecode() internal pure override returns (bytes memory) {
         return type({{.ContractName}}).creationCode;
     }
 {{end}}
 {{if .HasConstructor}}    /// @notice Get constructor arguments
-    function getConstructorArgs() internal pure override returns (bytes memory) {
+    function _getConstructorArgs() internal pure override returns (bytes memory) {
         // Constructor arguments detected from ABI
 {{.ConstructorVars}}
         {{.ConstructorEncode}}
@@ -170,7 +169,7 @@ func (g *Generator) getCrossVersionTemplate() string {
 	return `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "treb-sol/CreateXDeployment.sol";
+import {ContractDeployment, DeployStrategy} from "treb-sol/ContractDeployment.sol";
 // Target contract uses Solidity {{.TargetVersion}}, which is incompatible with this deployment script (0.8)
 // Import commented out to avoid version conflicts. Using artifact-based deployment instead.
 // import "{{.ImportPath}}";
@@ -181,15 +180,14 @@ import "treb-sol/CreateXDeployment.sol";
  * @dev Generated automatically by treb
  * @dev Target contract version: {{.TargetVersion}} (cross-version deployment)
  */
-contract Deploy{{.ContractName}} is CreateXDeployment {
-    constructor() CreateXDeployment(
+contract Deploy{{.ContractName}} is ContractDeployment {
+    constructor() ContractDeployment(
         "{{.ContractName}}",
-        DeploymentType.IMPLEMENTATION,
         DeployStrategy.{{.Strategy}}
     ) {}
 
 {{if .HasConstructor}}    /// @notice Get constructor arguments
-    function getConstructorArgs() internal pure override returns (bytes memory) {
+    function _getConstructorArgs() internal pure override returns (bytes memory) {
         // Constructor arguments detected from ABI
 {{.ConstructorVars}}
         {{.ConstructorEncode}}

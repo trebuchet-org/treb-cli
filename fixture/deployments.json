@@ -91,6 +91,31 @@
     "44787": {
       "name": "alfajores",
       "deployments": {
+        "0x0dfe13e6a316ff7a9b325848f8a881f136321284": {
+          "address": "0x0dfe13e6a316ff7a9b325848f8a881f136321284",
+          "contract_name": "Counter",
+          "environment": "test",
+          "type": "contract",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c0064f97d43a474016dae87c1",
+          "init_code_hash": "eb8f9b76e6389742a2e174264b2e06326a3a8aacabfa34265f2424656bb1c826",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47141582,
+            "broadcast_file": "",
+            "timestamp": "2025-05-24T16:28:35.111037+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "ab408a7d4142a1057e11c922296d7a85e03d9513",
+            "compiler": "0.8.22",
+            "source_hash": "4b5eaa107784609cabdbd23e34e479cc957ee69bd4c4de2881625b884e6bbacc",
+            "contract_path": "./src/Counter.sol:Counter"
+          }
+        },
         "0x1b0990d8e9fc779cc6fc2b866f0aaf559f847056": {
           "address": "0x1b0990d8e9fc779cc6fc2b866f0aaf559f847056",
           "contract_name": "SimpleTokenV07",
