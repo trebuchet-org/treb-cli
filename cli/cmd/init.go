@@ -5,25 +5,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	createxFlag bool
-)
-
 var initCmd = &cobra.Command{
-	Use:   "init [project-name]",
-	Short: "Initialize a new treb project",
-	Long: `Initialize a new treb project with enhanced registry and optional CreateX integration.
-
-This command sets up:
-- Project structure with lib submodule
-- treb-sol as git submodule
-- Initial registry configuration
-- Foundry project setup`,
-	Args: cobra.ExactArgs(1),
+	Use:   "init",
+	Short: "Initialize treb in a Foundry project",
+	Long: `Initialize treb in an existing Foundry project by installing dependencies
+and creating the deployment registry.`,
+	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		projectName := args[0]
-		
-		initializer := project.NewInitializer(projectName, createxFlag)
+		initializer := project.NewInitializer()
 		if err := initializer.Initialize(); err != nil {
 			checkError(err)
 		}
@@ -31,6 +20,6 @@ This command sets up:
 }
 
 func init() {
-	initCmd.Flags().BoolVar(&createxFlag, "createx", true, "Initialize with CreateX integration")
+	// No flags needed
 }
 

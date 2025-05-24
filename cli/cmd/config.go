@@ -10,54 +10,62 @@ import (
 // configCmd represents the config command
 var configCmd = &cobra.Command{
 	Use:   "config",
-	Short: "Manage treb configuration",
-	Long: `Manage treb configuration settings stored in .treb file.
+	Short: "Show current configuration",
+	Long: `Display resolved configuration from environment and .treb file.
+Shows environment, network, and deployer settings.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		if err := configList(config.NewManager(".")); err != nil {
+			checkError(err)
+		}
+	},
+}
 
-The configuration file is git-ignored and stores project-specific defaults
-for environment, network, and verification settings.
-
-Available configuration keys:
-  environment (env)  - Deployment environment: staging, prod
-  network           - Network name from foundry.toml
-  verify            - Auto-verify contracts: true, false
-
-Examples:
-  treb config list                    # Show all configuration
-  treb config get network             # Get network setting  
-  treb config set env prod            # Set environment to prod
-  treb config set network mainnet     # Set default network
-  treb config set verify true         # Enable auto-verification`,
-	Args: cobra.MinimumNArgs(1),
-	RunE: runConfig,
+var configCheckCmd = &cobra.Command{
+	Use:   "check",
+	Short: "Validate configuration",
+	Long: `Check that all required configuration is present and valid.
+Verifies RPC endpoints, API keys, and deployer settings.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		if err := configCheck(); err != nil {
+			checkError(err)
+		}
+	},
 }
 
 func init() {
-	rootCmd.AddCommand(configCmd)
+	configCmd.AddCommand(configCheckCmd)
 }
 
-func runConfig(cmd *cobra.Command, args []string) error {
-	manager := config.NewManager(".")
-	
-	switch args[0] {
-	case "list", "ls":
-		return configList(manager)
-	case "get":
-		if len(args) < 2 {
-			return fmt.Errorf("get requires a key argument")
-		}
-		return configGet(manager, args[1])
-	case "set":
-		if len(args) < 3 {
-			return fmt.Errorf("set requires key and value arguments")
-		}
-		return configSet(manager, args[1], args[2])
-	case "init":
-		return configInit(manager)
-	case "path":
-		return configPath(manager)
-	default:
-		return fmt.Errorf("unknown config command: %s", args[0])
+func configCheck() error {
+	// Load and validate deploy configuration
+	deployConfig, err := config.LoadDeployConfig(".")
+	if err != nil {
+		return fmt.Errorf("failed to load deploy configuration: %w", err)
 	}
+
+	fmt.Println("Configuration Check:")
+	fmt.Println("===================")
+
+	// Check default environment
+	env := "default"
+	if err := deployConfig.Validate(env); err != nil {
+		fmt.Printf("❌ Default environment validation failed: %v\n", err)
+		return err
+	}
+	fmt.Printf("✅ Default environment configuration is valid\n")
+
+	// Show environment info
+	envConfig, err := deployConfig.GetEnvironmentConfig(env)
+	if err != nil {
+		return fmt.Errorf("failed to get environment config: %w", err)
+	}
+
+	fmt.Printf("   Deployer Type: %s\n", envConfig.Deployer.Type)
+	if envConfig.Deployer.Type == "safe" {
+		fmt.Printf("   Safe Address: %s\n", envConfig.Deployer.Safe)
+	}
+
+	return nil
 }
 
 // configList displays all configuration values
@@ -86,55 +94,6 @@ func configList(manager *config.Manager) error {
 	return nil
 }
 
-// configGet retrieves a specific configuration value
-func configGet(manager *config.Manager, key string) error {
-	value, err := manager.Get(key)
-	if err != nil {
-		return fmt.Errorf("failed to get config value: %w", err)
-	}
-
-	fmt.Printf("%s\n", value)
-	return nil
-}
-
-// configSet updates a configuration value
-func configSet(manager *config.Manager, key, value string) error {
-	if err := manager.Set(key, value); err != nil {
-		return fmt.Errorf("failed to set config value: %w", err)
-	}
-
-	fmt.Printf("✅ Set %s = %s\n", key, value)
-	
-	// Show current config after change
-	fmt.Println()
-	return configList(manager)
-}
-
-// configInit creates a new .treb configuration file
-func configInit(manager *config.Manager) error {
-	if manager.Exists() {
-		fmt.Printf("⚠️  Configuration file already exists at %s\n", manager.GetPath())
-		fmt.Printf("Current configuration:\n\n")
-		return configList(manager)
-	}
-
-	// Create with default values
-	defaultCfg := config.DefaultConfig()
-	if err := manager.Save(defaultCfg); err != nil {
-		return fmt.Errorf("failed to create config file: %w", err)
-	}
-
-	fmt.Printf("✅ Created configuration file: %s\n", manager.GetPath())
-	fmt.Printf("🔒 This file is git-ignored and stores project-specific defaults\n\n")
-	
-	return configList(manager)
-}
-
-// configPath shows the path to the configuration file
-func configPath(manager *config.Manager) error {
-	fmt.Printf("%s\n", manager.GetPath())
-	return nil
-}
 
 // GetConfiguredDefaults returns configuration values for command defaults
 // Returns empty strings if no config file exists, indicating flags should be required

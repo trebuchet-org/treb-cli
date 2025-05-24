@@ -28,7 +28,6 @@ var debugConfigCmd = &cobra.Command{
 
 func init() {
 	debugCmd.AddCommand(debugConfigCmd)
-	rootCmd.AddCommand(debugCmd)
 }
 
 func showDeployConfig(env string) error {

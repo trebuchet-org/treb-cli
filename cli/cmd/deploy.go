@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"encoding/hex"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/trebuchet-org/treb-cli/cli/internal/forge"
@@ -16,24 +18,23 @@ import (
 )
 
 var (
-	env         string
-	verify      bool
-	networkName string
-	label       string
-	debug       bool
+	env                 string
+	verify              bool
+	networkName         string
+	label               string
+	debug               bool
+	implementationLabel string
 )
 
 var deployCmd = &cobra.Command{
-	Use:   "deploy [contract]",
-	Short: "Deploy contracts via Foundry scripts",
-	Long: `Deploy contracts using Foundry scripts with enhanced tracking.
+	Use:   "deploy <contract>",
+	Short: "Deploy a contract",
+	Long: `Deploy contracts using Foundry scripts with automatic registry tracking.
+Supports EOA and Safe multisig deployments.
 
-This command:
-- Predicts deployment addresses
-- Checks for existing deployments
-- Executes forge script for deployment
-- Records deployment in registry
-- Handles verification if requested`,
+Examples:
+  treb deploy Counter --network sepolia
+  treb deploy Token --env production --verify`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		contract := args[0]
@@ -54,20 +55,80 @@ This command:
 	},
 }
 
+var deployProxyCmd = &cobra.Command{
+	Use:   "proxy <contract>",
+	Short: "Deploy a proxy for an implementation",
+	Long: `Deploy proxy contracts using Foundry scripts. The implementation must be
+deployed first. Supports UUPS, Transparent, and custom proxy patterns.
+
+Examples:
+  treb deploy proxy Counter
+  treb deploy proxy Token --impl-label v1`,
+	Args: cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		implementationContract := args[0]
+		proxyContract := implementationContract + "Proxy"
+		
+		result, err := deployProxyContract(implementationContract, proxyContract)
+		if err != nil {
+			checkError(err)
+		}
+		
+		// Show final success message only if we have a result
+		if result != nil {
+			if result.AlreadyDeployed {
+				fmt.Printf("\nProxy %s was already deployed to %s environment\n", proxyContract, env)
+			} else {
+				fmt.Printf("\n✅ Proxy deployment successful!\n")
+				fmt.Printf("   Implementation: %s\n", implementationContract)
+				if implementationLabel != "" {
+					fmt.Printf("   Implementation Label: %s\n", implementationLabel)
+				}
+			}
+		}
+	},
+}
+
+var deployPredictCmd = &cobra.Command{
+	Use:   "predict <contract>",
+	Short: "Predict deployment address",
+	Long: `Calculate deterministic deployment addresses before deploying.
+Useful for pre-funding accounts or configuration.
+
+Examples:
+  treb deploy predict Counter
+  treb deploy predict Token --label v2`,
+	Args: cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		contract := args[0]
+		
+		if err := predictAddress(contract); err != nil {
+			checkError(err)
+		}
+	},
+}
+
 func init() {
 	// Get configured defaults (empty if no config file)
 	_, defaultNetwork, defaultVerify, _ := GetConfiguredDefaults()
 	
-	// Create flags with defaults - env always defaults to "default"
-	deployCmd.Flags().StringVar(&env, "env", "default", "Deployment environment")
-	deployCmd.Flags().StringVar(&networkName, "network", defaultNetwork, "Network to deploy to (defined in foundry.toml)")
-	deployCmd.Flags().BoolVar(&verify, "verify", defaultVerify, "Verify contract after deployment")
-	deployCmd.Flags().StringVar(&label, "label", "", "Optional label for the deployment (included in salt)")
-	deployCmd.Flags().BoolVar(&debug, "debug", false, "Show full Foundry script output")
+	// Add subcommands
+	deployCmd.AddCommand(deployProxyCmd)
+	deployCmd.AddCommand(deployPredictCmd)
+	
+	// Create flags for main deploy command with defaults - env always defaults to "default"
+	deployCmd.PersistentFlags().StringVar(&env, "env", "default", "Deployment environment")
+	deployCmd.PersistentFlags().StringVar(&networkName, "network", defaultNetwork, "Network to deploy to (defined in foundry.toml)")
+	deployCmd.PersistentFlags().BoolVar(&verify, "verify", defaultVerify, "Verify contract after deployment")
+	deployCmd.PersistentFlags().StringVar(&label, "label", "", "Optional label for the deployment (included in salt)")
+	deployCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Show full Foundry script output")
+	
+	// Proxy-specific flags
+	deployProxyCmd.Flags().StringVar(&implementationLabel, "impl-label", "", "Implementation label to point to (optional)")
 	
 	// Mark network flag as required if it doesn't have a default
 	if defaultNetwork == "" {
-		deployCmd.MarkFlagRequired("network")
+		deployCmd.MarkPersistentFlagRequired("network")
 	}
 }
 
@@ -181,4 +242,212 @@ func deployContract(contract string) (*types.DeploymentResult, error) {
 	}
 
 	return result, nil
+}
+
+func deployProxyContract(implementationContract, proxyContract string) (*types.DeploymentResult, error) {
+	fmt.Printf("🚀 Deploying proxy for %s\n", implementationContract)
+	fmt.Println("================================")
+	
+	// Step 1: Load deploy configuration
+	deployConfig, err := config.LoadDeployConfig(".")
+	if err != nil {
+		return nil, fmt.Errorf("failed to load deploy config: %w", err)
+	}
+	
+	// Step 2: Validate environment configuration
+	if err := deployConfig.Validate(env); err != nil {
+		return nil, fmt.Errorf("invalid deploy configuration for environment '%s': %w", env, err)
+	}
+	
+	fmt.Printf("✓ Validated deploy configuration for environment: %s\n", env)
+	
+	// Step 3: Check if proxy deploy script exists
+	validator := contracts.NewValidator(".")
+	if !validator.DeployScriptExists(proxyContract) {
+		return nil, fmt.Errorf("proxy deploy script not found: script/deploy/Deploy%s.s.sol\nPlease run 'treb generate proxy' first", proxyContract)
+	}
+	
+	fmt.Printf("Found proxy deploy script: script/deploy/Deploy%s.s.sol\n", proxyContract)
+	
+	// Step 4: Resolve network configuration
+	resolver := network.NewResolver(".")
+	networkInfo, err := resolver.ResolveNetwork(networkName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve network: %w", err)
+	}
+	
+	// Step 5: Initialize registry manager
+	registryManager, err := registry.NewManager("deployments.json")
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize registry: %w", err)
+	}
+	
+	// Step 6: Check if implementation is deployed
+	var implDeployment *types.DeploymentEntry
+	if implementationLabel != "" {
+		implDeployment = registryManager.GetDeploymentWithLabel(implementationContract, env, implementationLabel, networkInfo.ChainID)
+		if implDeployment == nil {
+			return nil, fmt.Errorf("implementation %s with label '%s' not found in %s environment on %s", 
+				implementationContract, implementationLabel, env, networkInfo.Name)
+		}
+		fmt.Printf("Found implementation at: %s (label: %s)\n", implDeployment.Address.Hex(), implementationLabel)
+	} else {
+		// Check for default implementation
+		implDeployment = registryManager.GetDeployment(implementationContract, env, networkInfo.ChainID)
+		if implDeployment == nil {
+			return nil, fmt.Errorf("implementation %s not found in %s environment on %s\nPlease deploy the implementation first with 'treb deploy %s'", 
+				implementationContract, env, networkInfo.Name, implementationContract)
+		}
+		fmt.Printf("Found implementation at: %s\n", implDeployment.Address.Hex())
+	}
+	
+	// Step 7: Check for existing proxy deployment
+	existingProxy := registryManager.GetDeploymentWithLabel(proxyContract, env, label, networkInfo.ChainID)
+	if existingProxy != nil {
+		fmt.Printf("\n⚠️  Proxy already deployed!\n")
+		fmt.Printf("   Contract: %s\n", proxyContract)
+		fmt.Printf("   Environment: %s\n", env)
+		fmt.Printf("   Network: %s\n", networkInfo.Name)
+		fmt.Printf("   Address: %s\n", existingProxy.Address.Hex())
+		if label != "" {
+			fmt.Printf("   Label: %s\n", label)
+		}
+		
+		// Convert hex string salt to [32]byte
+		var salt [32]byte
+		if saltBytes, err := hex.DecodeString(existingProxy.Salt); err == nil && len(saltBytes) == 32 {
+			copy(salt[:], saltBytes)
+		}
+		
+		return &types.DeploymentResult{
+			AlreadyDeployed: true,
+			Address:         existingProxy.Address,
+			Salt:            salt,
+		}, nil
+	}
+	
+	// Step 8: Generate environment variables for deployment
+	envVars, err := deployConfig.GenerateEnvVars(env)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate environment variables: %w", err)
+	}
+	
+	// Add implementation label if specified
+	if implementationLabel != "" {
+		envVars["IMPLEMENTATION_LABEL"] = implementationLabel
+	}
+	
+	// Step 9: Initialize forge script executor with proxy support
+	executor := forge.NewScriptExecutor("", ".", registryManager)
+	
+	// Step 10: Deploy proxy
+	result, err := executor.DeployProxy(proxyContract, implementationContract, env, forge.DeployArgs{
+		RpcUrl:  networkInfo.RpcUrl,
+		Verify:  verify,
+		ChainID: networkInfo.ChainID,
+		Label:   label,
+		EnvVars: envVars,
+		Debug:   debug,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("proxy deployment failed: %w", err)
+	}
+	
+	// Step 11: Display results
+	fmt.Printf("\nProxy Deployment Summary:\n")
+	fmt.Printf("  Proxy Contract: %s\n", proxyContract)
+	fmt.Printf("  Implementation: %s\n", implementationContract)
+	if implementationLabel != "" {
+		fmt.Printf("  Implementation Label: %s\n", implementationLabel)
+	}
+	fmt.Printf("  Environment: %s\n", env)
+	fmt.Printf("  Network: %s (Chain ID: %d)\n", networkInfo.Name, networkInfo.ChainID)
+	fmt.Printf("  Proxy Address: %s\n", result.Address.Hex())
+	fmt.Printf("  Implementation Address: %s\n", implDeployment.Address.Hex())
+	fmt.Printf("  Salt: %x\n", result.Salt)
+	if result.TxHash.Hex() != "0x0000000000000000000000000000000000000000000000000000000000000000" {
+		fmt.Printf("  Tx Hash: %s\n", result.TxHash.Hex())
+		fmt.Printf("  Block: %d\n", result.BlockNumber)
+	}
+	
+	return result, nil
+}
+
+// validateProxyDeployment performs proxy-specific validation
+func validateProxyDeployment(implementationContract, proxyContract string) error {
+	// Check if proxy deploy script exists
+	scriptPath := fmt.Sprintf("script/deploy/Deploy%s.s.sol", proxyContract)
+	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
+		return fmt.Errorf("proxy deploy script not found: %s", scriptPath)
+	}
+	
+	return nil
+}
+
+func predictAddress(contract string) error {
+	// Initialize forge executor
+	forgeExecutor := forgeExec.NewExecutor(".")
+	if err := forgeExecutor.CheckForgeInstallation(); err != nil {
+		return fmt.Errorf("forge check failed: %w", err)
+	}
+
+	// Build contracts to ensure artifacts are up to date
+	if err := forgeExecutor.Build(); err != nil {
+		return fmt.Errorf("build failed: %w", err)
+	}
+
+	// Validate contract exists in src/
+	validator := contracts.NewValidator(".")
+	contractInfo, err := validator.ValidateContract(contract)
+	if err != nil {
+		return fmt.Errorf("contract validation failed: %w", err)
+	}
+
+	if !contractInfo.Exists {
+		return fmt.Errorf("contract %s not found in src/ directory", contract)
+	}
+
+	// Resolve network configuration
+	resolver := network.NewResolver(".")
+	networkInfo, err := resolver.ResolveNetwork(networkName)
+	if err != nil {
+		return fmt.Errorf("failed to resolve network: %w", err)
+	}
+
+	// Load deploy config for environment variables
+	deployConfig, err := config.LoadDeployConfig(".")
+	if err != nil {
+		return fmt.Errorf("failed to load deploy config: %w", err)
+	}
+
+	envVars, err := deployConfig.GenerateEnvVars(env)
+	if err != nil {
+		return fmt.Errorf("failed to generate environment variables: %w", err)
+	}
+
+	// Initialize script executor
+	executor := forge.NewScriptExecutor("", ".", nil)
+
+	// Predict address
+	result, err := executor.PredictAddress(contract, env, forge.DeployArgs{
+		RpcUrl:  networkInfo.RpcUrl,
+		Label:   label,
+		EnvVars: envVars,
+	})
+	if err != nil {
+		return fmt.Errorf("address prediction failed: %w", err)
+	}
+
+	// Display results
+	fmt.Printf("\nPredicted Deployment Address:\n")
+	fmt.Printf("  Contract: %s\n", contract)
+	fmt.Printf("  Environment: %s\n", env)
+	fmt.Printf("  Network: %s (Chain ID: %d)\n", networkInfo.Name, networkInfo.ChainID)
+	if label != "" {
+		fmt.Printf("  Label: %s\n", label)
+	}
+	fmt.Printf("  Address: %s\n", result.Address.Hex())
+	fmt.Printf("  Salt: %x\n", result.Salt)
+
+	return nil
 }

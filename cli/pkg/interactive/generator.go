@@ -293,3 +293,85 @@ func (g *Generator) GenerateProxyDeployScript() error {
 	
 	return nil
 }
+
+// GenerateProxyDeployScriptForContract generates a proxy deploy script for a specific contract
+func (g *Generator) GenerateProxyDeployScriptForContract(contractName string) error {
+	fmt.Println("Proxy Deploy Script Generator")
+	fmt.Println("=============================")
+	
+	// Step 1: Validate the contract exists
+	validator := contracts.NewValidator(g.projectRoot)
+	contractInfo, err := validator.ValidateContract(contractName)
+	if err != nil {
+		return fmt.Errorf("contract validation failed: %w", err)
+	}
+	
+	if !contractInfo.Exists {
+		return fmt.Errorf("contract %s not found in src/ directory", contractName)
+	}
+	
+	fmt.Printf("\nGenerating proxy deploy script for: %s\n", contractName)
+	
+	// Step 2: Select proxy type
+	proxyTypes := []string{
+		"OZ-TransparentUpgradeable - OpenZeppelin Transparent Upgradeable Proxy",
+		"OZ-UUPSUpgradeable - OpenZeppelin UUPS Upgradeable Proxy", 
+		"Custom - Custom proxy implementation",
+	}
+	
+	proxyTypeStr, proxyTypeIndex, err := g.selector.SimpleSelect("Select proxy type:", proxyTypes, 0)
+	if err != nil {
+		return fmt.Errorf("proxy type selection failed: %w", err)
+	}
+	
+	var proxyType contracts.ProxyType
+	switch proxyTypeIndex {
+	case 0:
+		proxyType = contracts.ProxyTypeTransparent
+	case 1:
+		proxyType = contracts.ProxyTypeUUPS
+	case 2:
+		proxyType = contracts.ProxyTypeCustom
+	}
+	
+	fmt.Printf("Selected proxy type: %s\n", proxyTypeStr)
+	
+	// Step 3: Choose deployment strategy
+	strategies := []string{"CREATE2", "CREATE3"}
+	strategyStr, _, err := g.selector.SimpleSelect("Select deployment strategy:", strategies, 1) // Default to CREATE3
+	if err != nil {
+		return fmt.Errorf("strategy selection failed: %w", err)
+	}
+	
+	strategy, err := contracts.ValidateStrategy(strategyStr)
+	if err != nil {
+		return fmt.Errorf("invalid strategy: %w", err)
+	}
+	
+	// Step 4: Generate the script
+	fmt.Printf("\nGenerating proxy deploy script for %s...\n", contractInfo.Name)
+	
+	generator := contracts.NewGenerator(g.projectRoot)
+	if err := generator.GenerateProxyDeployScript(contractInfo, strategy, proxyType); err != nil {
+		return fmt.Errorf("proxy script generation failed: %w", err)
+	}
+	
+	fmt.Printf("Proxy deploy script generated successfully!\n")
+	fmt.Printf("Strategy: %s\n", strategy)
+	fmt.Printf("Proxy Type: %s\n", proxyType)
+	
+	// Show initializer info
+	fmt.Printf("\nInitializer Information:\n")
+	// Try to parse ABI to show initializer info
+	abiParser := abi.NewParser(g.projectRoot)
+	if contractABI, err := abiParser.ParseContractABI(contractInfo.Name); err == nil {
+		if initMethod := abiParser.FindInitializeMethod(contractABI); initMethod != nil {
+			fmt.Printf("Initialize method detected: %s\n", initMethod.Name)
+			fmt.Printf("Arguments will be automatically configured in _getProxyInitializer()\n")
+		} else {
+			fmt.Printf("No initialize method found - proxy will be deployed without initialization\n")
+		}
+	}
+	
+	return nil
+}

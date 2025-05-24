@@ -5,10 +5,34 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/cli/internal/registry"
 )
 
-func tagDeployments(identifier, tag string, all, remove bool) error {
+var tagCmd = &cobra.Command{
+	Use:   "tag <contract> <tag>",
+	Short: "Tag a deployment with a version",
+	Long: `Add version tags to deployments for tracking releases.
+
+Examples:
+  treb tag Counter v1.0.0
+  treb tag 0x1234... production-release`,
+	Args: cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		identifier := args[0]
+		tag := args[1]
+
+		if err := tagDeployments(identifier, tag, false, false); err != nil {
+			checkError(err)
+		}
+	},
+}
+
+func init() {
+	// Add flags if needed in the future
+}
+
+func tagDeployments(identifier string, tag string, all bool, remove bool) error {
 	// Initialize registry manager
 	registryManager, err := registry.NewManager("deployments.json")
 	if err != nil {
@@ -40,8 +64,8 @@ func tagDeployments(identifier, tag string, all, remove bool) error {
 		return fmt.Errorf("no deployment found matching '%s'", identifier)
 	}
 
-	// If multiple matches and not using --all, show selection
-	if len(matches) > 1 && !all {
+	// If not tagging all and multiple matches exist, show selection
+	if !all && len(matches) > 1 {
 		fmt.Printf("Multiple deployments found matching '%s':\n\n", identifier)
 
 		// Sort matches by network, then env, then contract name
@@ -62,7 +86,7 @@ func tagDeployments(identifier, tag string, all, remove bool) error {
 		}
 
 		// Ask user to select
-		fmt.Print("Select deployment (1-", len(matches), ") or use --all to tag all: ")
+		fmt.Print("Select deployment (1-", len(matches), "): ")
 		var selection int
 		fmt.Scanln(&selection)
 
@@ -73,19 +97,12 @@ func tagDeployments(identifier, tag string, all, remove bool) error {
 		matches = []*registry.DeploymentInfo{matches[selection-1]}
 	}
 
-	// Tag or remove tags from the selected deployments
-	var modified int
-	var action string
-	if remove {
-		action = "removed"
-	} else {
-		action = "tagged"
-	}
-
-	for _, match := range matches {
+	// Apply tag operation to selected deployments
+	modified := 0
+	for _, deployment := range matches {
 		// Check if tag exists
 		tagExists := false
-		for _, existingTag := range match.Entry.Tags {
+		for _, existingTag := range deployment.Entry.Tags {
 			if existingTag == tag {
 				tagExists = true
 				break
@@ -95,26 +112,26 @@ func tagDeployments(identifier, tag string, all, remove bool) error {
 		if remove {
 			// Remove the tag
 			if tagExists {
-				if err := registryManager.RemoveTag(match.Address, tag); err != nil {
-					fmt.Printf("Failed to remove tag from %s: %v\n", match.Address.Hex(), err)
+				if err := registryManager.RemoveTag(deployment.Address, tag); err != nil {
+					fmt.Printf("Failed to remove tag from %s: %v\n", deployment.Address.Hex(), err)
 					continue
 				}
 				modified++
-				fmt.Printf("Removed tag '%s' from %s\n", tag, match.Entry.GetDisplayName())
+				fmt.Printf("Removed tag '%s' from %s\n", tag, deployment.Entry.GetDisplayName())
 			} else {
-				fmt.Printf("%s doesn't have tag '%s'\n", match.Entry.GetDisplayName(), tag)
+				fmt.Printf("%s doesn't have tag '%s'\n", deployment.Entry.GetDisplayName(), tag)
 			}
 		} else {
 			// Add the tag
 			if !tagExists {
-				if err := registryManager.AddTag(match.Address, tag); err != nil {
-					fmt.Printf("Failed to tag %s: %v\n", match.Address.Hex(), err)
+				if err := registryManager.AddTag(deployment.Address, tag); err != nil {
+					fmt.Printf("Failed to tag %s: %v\n", deployment.Address.Hex(), err)
 					continue
 				}
 				modified++
-				fmt.Printf("Tagged %s with '%s'\n", match.Entry.GetDisplayName(), tag)
+				fmt.Printf("Tagged %s with '%s'\n", deployment.Entry.GetDisplayName(), tag)
 			} else {
-				fmt.Printf("%s already has tag '%s'\n", match.Entry.GetDisplayName(), tag)
+				fmt.Printf("%s already has tag '%s'\n", deployment.Entry.GetDisplayName(), tag)
 			}
 		}
 	}
@@ -122,6 +139,10 @@ func tagDeployments(identifier, tag string, all, remove bool) error {
 	if modified > 0 {
 		if err := registryManager.Save(); err != nil {
 			return fmt.Errorf("failed to save registry: %w", err)
+		}
+		action := "tagged"
+		if remove {
+			action = "removed"
 		}
 		fmt.Printf("\nSuccessfully %s %d deployment(s)\n", action, modified)
 	}

@@ -3,22 +3,14 @@ package project
 import (
 	"fmt"
 	"os"
-	"os/exec"
-	"strings"
 )
 
 // Initializer handles project setup and initialization
-type Initializer struct {
-	projectName string
-	createx     bool
-}
+type Initializer struct {}
 
 // NewInitializer creates a new project initializer
-func NewInitializer(projectName string, createx bool) *Initializer {
-	return &Initializer{
-		projectName: projectName,
-		createx:     createx,
-	}
+func NewInitializer() *Initializer {
+	return &Initializer{}
 }
 
 // Initialize sets up treb in an existing Foundry project
@@ -29,10 +21,8 @@ func (i *Initializer) Initialize() error {
 	}
 
 	steps := []func() error{
-		i.createDeploymentsDir,
+		i.checkTrebSolLibrary,
 		i.createRegistry,
-		i.updateRemappings,
-		i.setupTrebSolLibrary,
 		i.createExampleEnvironment,
 	}
 
@@ -64,60 +54,18 @@ func (i *Initializer) validateFoundryProject() error {
 	return nil
 }
 
-func (i *Initializer) createDeploymentsDir() error {
-	if err := os.MkdirAll("deployments", 0755); err != nil {
-		return fmt.Errorf("failed to create deployments directory: %w", err)
-	}
-	fmt.Println("📁 Created deployments directory")
-	return nil
-}
 
-func (i *Initializer) updateRemappings() error {
-	// Read existing remappings if they exist
-	existingContent := ""
-	if data, err := os.ReadFile("remappings.txt"); err == nil {
-		existingContent = string(data)
-	}
 
-	// Add treb-sol remapping if not present
-	trebRemapping := "treb-sol/=lib/treb-sol/src/"
-	if !contains(existingContent, "treb-sol/") {
-		if existingContent != "" && !strings.HasSuffix(existingContent, "\n") {
-			existingContent += "\n"
-		}
-		existingContent += trebRemapping + "\n"
-	}
-
-	if err := os.WriteFile("remappings.txt", []byte(existingContent), 0644); err != nil {
-		return fmt.Errorf("failed to update remappings.txt: %w", err)
-	}
-
-	fmt.Println("📝 Updated remappings.txt with treb-sol")
-	return nil
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || (len(s) > len(substr) && (s[:len(substr)+1] == substr+"\n" || s[len(s)-len(substr)-1:] == "\n"+substr || strings.Contains(s, "\n"+substr+"\n"))))
-}
-
-func (i *Initializer) setupTrebSolLibrary() error {
-	// Check if treb-sol is already installed
+func (i *Initializer) checkTrebSolLibrary() error {
+	// Check if treb-sol is installed
 	if _, err := os.Stat("lib/treb-sol"); err == nil {
-		fmt.Println("📦 treb-sol already installed")
+		fmt.Println("✅ treb-sol library found")
 		return nil
 	}
 
-	fmt.Println("📦 Installing treb-sol...")
-	
-	// Install treb-sol
-	if err := i.runCommand("forge", "install", "trebuchet-org/treb-sol", "--no-deps"); err != nil {
-		fmt.Println("⚠️  Could not install treb-sol automatically")
-		fmt.Println("   Please install manually with: forge install trebuchet-org/treb-sol")
-		return nil // Don't fail the init process
-	}
-
-	fmt.Println("✅ treb-sol installed")
-	return nil
+	fmt.Println("❌ treb-sol library not found")
+	fmt.Println("   Please install with: forge install trebuchet-org/treb-sol")
+	return fmt.Errorf("treb-sol library is required but not found in lib/treb-sol")
 }
 
 func (i *Initializer) createExampleEnvironment() error {
@@ -164,15 +112,7 @@ func (i *Initializer) createRegistry() error {
 		return nil
 	}
 
-	registry := fmt.Sprintf(`{
-  "project": {
-    "name": "%s",
-    "version": "0.1.0",
-    "commit": "",
-    "timestamp": ""
-  },
-  "networks": {}
-}`, i.projectName)
+	registry := `{}`
 
 	if err := os.WriteFile("deployments.json", []byte(registry), 0644); err != nil {
 		return fmt.Errorf("failed to create deployments.json: %w", err)
@@ -182,29 +122,32 @@ func (i *Initializer) createRegistry() error {
 	return nil
 }
 
-func (i *Initializer) runCommand(name string, args ...string) error {
-	cmd := exec.Command(name, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
-}
 
 func (i *Initializer) printNextSteps() {
 	fmt.Println("")
 	fmt.Println("🎉 treb initialized successfully!")
 	fmt.Println("")
 	fmt.Println("📋 Next steps:")
-	fmt.Println("1. Copy .env.example to .env and configure your values")
-	if !i.fileExists("lib/treb-sol") {
-		fmt.Println("2. Install treb-sol:")
-		fmt.Println("   forge install trebuchet-org/treb-sol")
-	}
-	fmt.Println("3. Create your first deployment script in script/")
-	fmt.Println("   Example: script/DeployMyContract.s.sol")
-	fmt.Println("4. Run: treb predict MyContract --env staging")
-	fmt.Println("5. Run: treb deploy MyContract --env staging")
+	fmt.Println("1. Copy .env.example to .env and configure your deployment keys:")
+	fmt.Println("   • Set DEPLOYER_PRIVATE_KEY for your deployment wallet")
+	fmt.Println("   • Set RPC URLs for networks you'll deploy to")
+	fmt.Println("   • Set API keys for contract verification")
 	fmt.Println("")
-	fmt.Printf("📁 Project: %s\n", i.projectName)
+	fmt.Println("2. Configure deployment environments in foundry.toml:")
+	fmt.Println("   • Add [profile.staging.deployer] and [profile.production.deployer] sections")
+	fmt.Println("   • See documentation for Safe multisig and hardware wallet support")
+	fmt.Println("")
+	fmt.Println("3. Generate your first deployment script:")
+	fmt.Println("   treb generate deploy Counter")
+	fmt.Println("")
+	fmt.Println("4. Predict and deploy:")
+	fmt.Println("   treb deploy predict Counter --network sepolia")
+	fmt.Println("   treb deploy Counter --network sepolia")
+	fmt.Println("")
+	fmt.Println("5. View and manage deployments:")
+	fmt.Println("   treb list")
+	fmt.Println("   treb show Counter")
+	fmt.Println("   treb tag Counter v1.0.0")
 }
 
 func (i *Initializer) fileExists(path string) bool {

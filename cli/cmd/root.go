@@ -9,12 +9,9 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "treb",
-	Short: "Trebuchet - Foundry Script Orchestration with CreateX",
-	Long: `treb is a CLI tool that orchestrates Foundry script execution for 
-deterministic smart contract deployments using CreateX.
-
-Go handles configuration, planning, and registry management while all chain 
-interactions happen through proven Foundry scripts.`,
+	Short: "Smart contract deployment orchestrator for Foundry",
+	Long: `Trebuchet (treb) orchestrates Foundry script execution for deterministic 
+smart contract deployments using CreateX factory contracts.`,
 }
 
 func Execute() error {
@@ -22,11 +19,44 @@ func Execute() error {
 }
 
 func init() {
-	rootCmd.AddCommand(initCmd)
+	// Add command groups
+	rootCmd.AddGroup(&cobra.Group{
+		ID:    "main",
+		Title: "Main Commands",
+	})
+	rootCmd.AddGroup(&cobra.Group{
+		ID:    "management",
+		Title: "Management Commands", 
+	})
+
+	// Main workflow commands (init at the end)
+	deployCmd.GroupID = "main"
+	listCmd.GroupID = "main"
+	showCmd.GroupID = "main"
+	verifyCmd.GroupID = "main"
+	generateCmd.GroupID = "main"
+	initCmd.GroupID = "main"
+	
+	// Management commands
+	tagCmd.GroupID = "management"
+	syncCmd.GroupID = "management"
+	configCmd.GroupID = "management"
+	
+	// Additional commands (merged with other utility commands)
+	// debugCmd and versionCmd will appear in "Additional Commands" section
+	// since they don't have a GroupID set
+
 	rootCmd.AddCommand(deployCmd)
-	rootCmd.AddCommand(predictCmd)
+	rootCmd.AddCommand(listCmd)
+	rootCmd.AddCommand(showCmd)
 	rootCmd.AddCommand(verifyCmd)
-	rootCmd.AddCommand(deploymentsCmd)
+	rootCmd.AddCommand(generateCmd)
+	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(tagCmd)
+	rootCmd.AddCommand(syncCmd)
+	rootCmd.AddCommand(configCmd)
+	rootCmd.AddCommand(debugCmd)
+	rootCmd.AddCommand(versionCmd)
 }
 
 func checkError(err error) {
