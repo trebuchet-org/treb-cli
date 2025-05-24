@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "forge-deploy/CreateXDeployment.sol";
+import "treb-sol/CreateXDeployment.sol";
 import "../../src/Counter.sol";
 
 /**
@@ -20,6 +20,4 @@ contract DeployCounter is CreateXDeployment {
     function getContractBytecode() internal pure override returns (bytes memory) {
         return type(Counter).creationCode;
     }
-
-
 }

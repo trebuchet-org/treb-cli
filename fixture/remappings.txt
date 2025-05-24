@@ -1,2 +1,2 @@
 forge-std/=lib/forge-std/src/
-forge-deploy/=lib/forge-deploy/src/
+treb-sol/=lib/treb-sol/src/

@@ -1,3 +1,3 @@
-[submodule "forge-deploy-lib"]
-	path = forge-deploy-lib
-	url = https://github.com/fdeploy-org/forge-deploy.git
+[submodule "treb-sol"]
+	path = treb-sol
+	url = https://github.com/trebuchet-org/treb-sol.git
