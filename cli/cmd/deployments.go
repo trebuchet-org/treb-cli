@@ -2,20 +2,22 @@ package cmd
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/cli/internal/registry"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/safe"
-	"github.com/spf13/cobra"
 )
 
 var (
-	showContract string
+	showContract  string
 	fromBroadcast bool
-	debugSync bool
+	debugSync     bool
 )
 
 var deploymentsCmd = &cobra.Command{
@@ -23,7 +25,6 @@ var deploymentsCmd = &cobra.Command{
 	Short: "Deployment management commands",
 	Long: `Manage deployments including showing deployment details,
 listing all deployments, and tracking verification status.`,
-	Aliases: []string{"deployment", "registry"},
 }
 
 var deploymentsShowCmd = &cobra.Command{
@@ -37,10 +38,10 @@ The identifier can be:
 - Part of a display name (will show matches)
 
 If multiple deployments match, you'll be prompted to select one.`,
-	Args:  cobra.ExactArgs(1),
+	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		identifier := args[0]
-		
+
 		if err := showDeploymentByIdentifier(identifier); err != nil {
 			checkError(err)
 		}
@@ -55,7 +56,7 @@ var deploymentsSyncCmd = &cobra.Command{
 		if err := syncRegistry(); err != nil {
 			checkError(err)
 		}
-		
+
 		fmt.Println("Registry synced from broadcast files")
 	},
 }
@@ -116,17 +117,17 @@ The identifier can be:
 
 Use --all to tag all deployments that match the identifier.
 Use --remove to remove tags instead of adding them.`,
-	Args:  cobra.ExactArgs(1),
+	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		identifier := args[0]
 		tag, _ := cmd.Flags().GetString("tag")
 		all, _ := cmd.Flags().GetBool("all")
 		remove, _ := cmd.Flags().GetBool("remove")
-		
+
 		if tag == "" {
 			checkError(fmt.Errorf("--tag flag is required"))
 		}
-		
+
 		if err := tagDeployments(identifier, tag, all, remove); err != nil {
 			checkError(err)
 		}
@@ -141,11 +142,11 @@ func init() {
 	deploymentsCmd.AddCommand(deploymentsStatusCmd)
 	deploymentsCmd.AddCommand(deploymentsCleanCmd)
 	deploymentsCmd.AddCommand(deploymentsTagCmd)
-	
+
 	// Create flags for sync command
 	deploymentsSyncCmd.Flags().BoolVar(&fromBroadcast, "from-broadcast", true, "Sync from broadcast files")
 	deploymentsSyncCmd.Flags().BoolVar(&debugSync, "debug", false, "Show debug information during sync")
-	
+
 	// Add flags for tag command
 	deploymentsTagCmd.Flags().String("tag", "", "Tag to add or remove from deployments")
 	deploymentsTagCmd.Flags().Bool("all", false, "Tag all deployments that match the identifier")
@@ -159,40 +160,40 @@ func showDeploymentByIdentifier(identifier string) error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize registry: %w", err)
 	}
-	
+
 	// Get all deployments
 	allDeployments := registryManager.GetAllDeployments()
-	
+
 	// Find matching deployments
 	var matches []*registry.DeploymentInfo
 	identifierLower := strings.ToLower(identifier)
-	
+
 	for _, deployment := range allDeployments {
 		// Check if identifier is an address
 		if strings.ToLower(deployment.Address.Hex()) == identifierLower {
 			matches = append(matches, deployment)
 			continue
 		}
-		
+
 		// Check if identifier matches or is contained in display name
 		displayName := deployment.Entry.GetDisplayName()
 		if strings.EqualFold(displayName, identifier) || strings.Contains(strings.ToLower(displayName), identifierLower) {
 			matches = append(matches, deployment)
 		}
 	}
-	
+
 	if len(matches) == 0 {
 		return fmt.Errorf("no deployment found matching '%s'", identifier)
 	}
-	
+
 	// If single match, show it
 	if len(matches) == 1 {
 		return showDeploymentInfo(matches[0])
 	}
-	
+
 	// Multiple matches - show selection
 	fmt.Printf("Multiple deployments found matching '%s':\n\n", identifier)
-	
+
 	// Sort matches by network, then env, then contract name
 	sort.Slice(matches, func(i, j int) bool {
 		if matches[i].NetworkName != matches[j].NetworkName {
@@ -203,22 +204,22 @@ func showDeploymentByIdentifier(identifier string) error {
 		}
 		return matches[i].Entry.ContractName < matches[j].Entry.ContractName
 	})
-	
+
 	for i, match := range matches {
 		displayName := match.Entry.GetDisplayName()
 		fullId := fmt.Sprintf("%s/%s/%s", match.NetworkName, match.Entry.Environment, displayName)
 		fmt.Printf("%d. %s\n   Address: %s\n\n", i+1, fullId, match.Address.Hex())
 	}
-	
+
 	// Ask user to select
 	fmt.Print("Select deployment (1-", len(matches), "): ")
 	var selection int
 	fmt.Scanln(&selection)
-	
+
 	if selection < 1 || selection > len(matches) {
 		return fmt.Errorf("invalid selection")
 	}
-	
+
 	return showDeploymentInfo(matches[selection-1])
 }
 
@@ -229,12 +230,12 @@ func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
 	if err != nil {
 		return fmt.Errorf("failed to resolve network: %w", err)
 	}
-	
+
 	// Display deployment information
 	displayName := deployment.Entry.GetDisplayName()
 	fmt.Printf("Deployment: %s\n", displayName)
 	fmt.Printf("Environment: %s\n\n", deployment.Entry.Environment)
-	
+
 	// Basic deployment info
 	fmt.Printf("Contract Information:\n")
 	fmt.Printf("   Address: %s\n", deployment.Address.Hex())
@@ -244,17 +245,17 @@ func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
 		fmt.Printf("   Init Code Hash: %s\n", deployment.Entry.InitCodeHash)
 	}
 	fmt.Println()
-	
+
 	// Deployment details
 	fmt.Printf("Deployment Details:\n")
-	
+
 	// Show deployment status
 	status := deployment.Entry.Deployment.Status
 	if status == "" {
 		status = "deployed"
 	}
 	fmt.Printf("   Status: %s\n", status)
-	
+
 	// Safe-specific information for pending deployments
 	if status == "pending_safe" {
 		if deployment.Entry.Deployment.SafeAddress != "" {
@@ -265,7 +266,7 @@ func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
 		}
 		if deployment.Entry.Deployment.SafeTxHash != nil {
 			fmt.Printf("   Safe Tx Hash: %s\n", deployment.Entry.Deployment.SafeTxHash.Hex())
-			
+
 			// Try to get current confirmation status
 			chainIDUint, err := strconv.ParseUint(deployment.ChainID, 10, 64)
 			if err == nil {
@@ -286,14 +287,14 @@ func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
 			fmt.Printf("   Block: %d\n", deployment.Entry.Deployment.BlockNumber)
 		}
 	}
-	
+
 	fmt.Printf("   Network: %s (Chain ID: %s)\n", networkInfo.Name, deployment.ChainID)
 	fmt.Printf("   Timestamp: %s\n", deployment.Entry.Deployment.Timestamp.Format("2006-01-02 15:04:05"))
 	if deployment.Entry.Deployment.BroadcastFile != "" {
 		fmt.Printf("   Broadcast File: %s\n", deployment.Entry.Deployment.BroadcastFile)
 	}
 	fmt.Println()
-	
+
 	// Metadata
 	fmt.Printf("Contract Metadata:\n")
 	if deployment.Entry.Metadata.ContractPath != "" {
@@ -310,7 +311,7 @@ func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
 		fmt.Printf("   Tags: %s\n", strings.Join(deployment.Entry.Tags, ", "))
 	}
 	fmt.Println()
-	
+
 	// Verification status
 	fmt.Printf("Verification:\n")
 	fmt.Printf("   Status: %s\n", deployment.Entry.Verification.Status)
@@ -320,7 +321,7 @@ func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
 	if deployment.Entry.Verification.Reason != "" {
 		fmt.Printf("   Reason: %s\n", deployment.Entry.Verification.Reason)
 	}
-	
+
 	return nil
 }
 
@@ -347,7 +348,7 @@ func showDeployment(contract string) error {
 	displayName := deployment.GetDisplayName()
 	fmt.Printf("Deployment: %s\n", displayName)
 	fmt.Printf("Environment: %s\n\n", deployment.Environment)
-	
+
 	// Basic deployment info
 	fmt.Printf("Contract Information:\n")
 	fmt.Printf("   Address: %s\n", deployment.Address.Hex())
@@ -357,7 +358,7 @@ func showDeployment(contract string) error {
 		fmt.Printf("   Init Code Hash: %s\n", deployment.InitCodeHash)
 	}
 	fmt.Println()
-	
+
 	// Deployment details
 	fmt.Printf("Deployment Details:\n")
 	if deployment.Deployment.TxHash != nil && deployment.Deployment.TxHash.Hex() != "0x0000000000000000000000000000000000000000000000000000000000000000" {
@@ -372,7 +373,7 @@ func showDeployment(contract string) error {
 		fmt.Printf("   Broadcast File: %s\n", deployment.Deployment.BroadcastFile)
 	}
 	fmt.Println()
-	
+
 	// Metadata
 	fmt.Printf("Contract Metadata:\n")
 	if deployment.Metadata.ContractPath != "" {
@@ -389,7 +390,7 @@ func showDeployment(contract string) error {
 		fmt.Printf("   Tags: %s\n", strings.Join(deployment.Tags, ", "))
 	}
 	fmt.Println()
-	
+
 	// Verification status
 	fmt.Printf("Verification:\n")
 	fmt.Printf("   Status: %s\n", deployment.Verification.Status)
@@ -411,12 +412,12 @@ func syncRegistry() error {
 	}
 
 	fmt.Println("Syncing registry...")
-	
+
 	// Check and update pending Safe transactions
 	if err := syncPendingSafeTransactions(registryManager); err != nil {
 		fmt.Printf("Warning: Failed to sync Safe transactions: %v\n", err)
 	}
-	
+
 	return registryManager.Save()
 }
 
@@ -427,6 +428,10 @@ func listDeployments() error {
 		return fmt.Errorf("failed to initialize registry: %w", err)
 	}
 
+	deployConfig, err := config.LoadDeployConfig(".")
+	if err != nil {
+		return fmt.Errorf("failed to load deploy config: %w", err)
+	}
 	deployments := registryManager.GetAllDeployments()
 	if len(deployments) == 0 {
 		fmt.Println("No deployments found")
@@ -434,91 +439,100 @@ func listDeployments() error {
 	}
 
 	fmt.Printf("Deployments (%d total):\n\n", len(deployments))
-	
-	// Group by (network, env)
-	type groupKey struct {
-		network string
-		env     string
-	}
-	groups := make(map[groupKey][]*registry.DeploymentInfo)
-	
+
+	groups := make(map[string]map[string][]*registry.DeploymentInfo)
+
 	// First pass: collect all environments per network
-	networkEnvs := make(map[string]map[string]bool)
-	
+	envs := make([]string, 0)
+	networks := make([]string, 0)
+	envsByNetwork := make(map[string][]string)
+
 	for _, deployment := range deployments {
 		env := deployment.Entry.Environment
-		
-		// Track environments per network
-		if networkEnvs[deployment.NetworkName] == nil {
-			networkEnvs[deployment.NetworkName] = make(map[string]bool)
+		network := deployment.NetworkName
+
+		if !slices.Contains(networks, network) {
+			networks = append(networks, network)
 		}
-		networkEnvs[deployment.NetworkName][env] = true
-		
-		gk := groupKey{
-			network: deployment.NetworkName,
-			env:     env,
+
+		if !slices.Contains(envs, env) {
+			envs = append(envs, env)
 		}
-		groups[gk] = append(groups[gk], deployment)
+
+		if envsByNetwork[network] == nil {
+			envsByNetwork[network] = make([]string, 0)
+		}
+
+		if !slices.Contains(envsByNetwork[network], env) {
+			envsByNetwork[network] = append(envsByNetwork[network], env)
+		}
+
+		if groups[deployment.NetworkName] == nil {
+			groups[deployment.NetworkName] = make(map[string][]*registry.DeploymentInfo)
+		}
+
+		groups[deployment.NetworkName][env] = append(groups[deployment.NetworkName][env], deployment)
 	}
-	
-	// Sort group keys
-	var groupKeys []groupKey
-	for gk := range groups {
-		groupKeys = append(groupKeys, gk)
-	}
-	sort.Slice(groupKeys, func(i, j int) bool {
-		if groupKeys[i].network != groupKeys[j].network {
-			return groupKeys[i].network < groupKeys[j].network
-		}
-		return groupKeys[i].env < groupKeys[j].env
-	})
-	
+
+	slices.Sort(envs)
+	slices.Sort(networks)
+
 	// Display groups
-	for _, gk := range groupKeys {
-		// Check if we should show environment
-		multipleEnvs := len(networkEnvs[gk.network]) > 1
-		
-		if multipleEnvs {
-			fmt.Printf("▶ %s (%s)\n\n", gk.network, gk.env)
+	for _, env := range envs {
+		envPrefix := ""
+		envConfig, err := deployConfig.GetEnvironmentConfig(env)
+		if err != nil {
+			return fmt.Errorf("failed to get environment config: %w", err)
+		}
+
+		deployerType := envConfig.Deployer.Type
+		deployerAddress := ""
+		if deployerType == "safe" {
+			deployerAddress = envConfig.Deployer.Safe
 		} else {
-			fmt.Printf("▶ %s\n\n", gk.network)
+			deployerAddress = "0x0"
 		}
-		
-		// Sort deployments within group by timestamp (most recent first)
-		deploymentList := groups[gk]
-		sort.Slice(deploymentList, func(i, j int) bool {
-			return deploymentList[i].Entry.Deployment.Timestamp.After(deploymentList[j].Entry.Deployment.Timestamp)
-		})
-		
-		// Find longest display name for alignment
-		maxNameLen := 0
-		for _, deployment := range deploymentList {
-			displayName := deployment.Entry.GetDisplayName()
-			if len(displayName) > maxNameLen {
-				maxNameLen = len(displayName)
-			}
+
+		if len(envs) > 1 {
+			fmt.Printf("▶ Environment: %s (deployer: %s %s)\n\n", env, deployerType, deployerAddress)
+			envPrefix = "  "
 		}
-		
-		// Display with aligned columns
-		for _, deployment := range deploymentList {
-			displayName := deployment.Entry.GetDisplayName()
-			timestamp := deployment.Entry.Deployment.Timestamp.Format("2006-01-02 15:04:05")
-			
-			// Add status indicator for pending Safe deployments
-			statusIndicator := ""
-			if deployment.Entry.Deployment.Status == "pending_safe" {
-				statusIndicator = " ⏳"
+		for _, network := range networks {
+			deployments := groups[network][env]
+			if len(deployments) == 0 {
+				continue
 			}
-			
-			// Add tags if present
-			tagsDisplay := ""
-			if len(deployment.Entry.Tags) > 0 {
-				tagsDisplay = fmt.Sprintf(" [%s]", strings.Join(deployment.Entry.Tags, ", "))
+			fmt.Printf("%s⛓ Chain: %s\n\n", envPrefix, network)
+			sort.Slice(deployments, func(i, j int) bool {
+				return deployments[i].Entry.Deployment.Timestamp.After(deployments[j].Entry.Deployment.Timestamp)
+			})
+			maxNameLen := 0
+			for _, deployment := range deployments {
+				displayName := deployment.Entry.GetDisplayName()
+				if len(displayName) > maxNameLen {
+					maxNameLen = len(displayName)
+				}
 			}
-			
-			fmt.Printf("  %-*s  %s  %s%s%s\n", maxNameLen, displayName, deployment.Address.Hex(), timestamp, statusIndicator, tagsDisplay)
+			for _, deployment := range deployments {
+				displayName := deployment.Entry.GetDisplayName()
+				timestamp := deployment.Entry.Deployment.Timestamp.Format("2006-01-02 15:04:05")
+
+				// Add status indicator for pending Safe deployments
+				statusIndicator := ""
+				if deployment.Entry.Deployment.Status == "pending_safe" {
+					statusIndicator = " ⏳ pending safe execution"
+				}
+
+				// Add tags if present
+				tagsDisplay := ""
+				if len(deployment.Entry.Tags) > 0 {
+					tagsDisplay = fmt.Sprintf(" [%s]", strings.Join(deployment.Entry.Tags, ", "))
+				}
+
+				fmt.Printf("  %-*s  %s  %s%s%s\n", maxNameLen, displayName, deployment.Address.Hex(), timestamp, statusIndicator, tagsDisplay)
+			}
+			fmt.Println()
 		}
-		fmt.Println()
 	}
 
 	return nil
@@ -538,30 +552,30 @@ func showNetworks() error {
 	}
 
 	fmt.Println("Deployment Networks:\n")
-	
+
 	// Sort networks by chain ID for consistent output
 	var chainIDs []string
 	for chainID := range networks {
 		chainIDs = append(chainIDs, chainID)
 	}
 	sort.Strings(chainIDs)
-	
+
 	totalDeployments := 0
 	for _, chainID := range chainIDs {
 		networkInfo := networks[chainID]
 		fmt.Printf("%s (Chain ID: %s)\n", networkInfo.Name, chainID)
 		fmt.Printf("   Deployments: %d\n", networkInfo.DeploymentCount)
-		
+
 		if len(networkInfo.Contracts) > 0 {
 			// Sort contracts alphabetically
 			sort.Strings(networkInfo.Contracts)
 			fmt.Printf("   Contracts: %s\n", strings.Join(networkInfo.Contracts, ", "))
 		}
 		fmt.Println()
-		
+
 		totalDeployments += networkInfo.DeploymentCount
 	}
-	
+
 	fmt.Printf("Total: %d networks, %d deployments\n", len(networks), totalDeployments)
 	return nil
 }
@@ -574,16 +588,16 @@ func showRegistryStatus() error {
 	}
 
 	status := registryManager.GetStatus()
-	
+
 	fmt.Println("Deployments Status:\n")
-	
+
 	// Project info
 	fmt.Printf("Project: %s (v%s)\n", status.ProjectName, status.ProjectVersion)
 	if status.LastUpdated != "" {
 		fmt.Printf("Last Updated: %s\n", status.LastUpdated)
 	}
 	fmt.Println()
-	
+
 	// Statistics
 	fmt.Printf("Statistics:\n")
 	fmt.Printf("   Networks: %d\n", status.NetworkCount)
@@ -591,7 +605,7 @@ func showRegistryStatus() error {
 	fmt.Printf("   Verified: %d\n", status.VerifiedCount)
 	fmt.Printf("   Pending Verification: %d\n", status.PendingVerification)
 	fmt.Println()
-	
+
 	// Recent deployments
 	if len(status.RecentDeployments) > 0 {
 		fmt.Printf("Recent Deployments:\n")
@@ -608,7 +622,7 @@ func showRegistryStatus() error {
 		}
 		fmt.Println()
 	}
-	
+
 	return nil
 }
 
@@ -620,9 +634,9 @@ func cleanRegistry() error {
 	}
 
 	fmt.Println("Cleaning deployments...")
-	
+
 	cleaned := registryManager.CleanInvalidEntries()
-	
+
 	if cleaned > 0 {
 		fmt.Printf("Removed %d invalid entries\n", cleaned)
 		err := registryManager.Save()
@@ -633,17 +647,17 @@ func cleanRegistry() error {
 	} else {
 		fmt.Println("No invalid entries found")
 	}
-	
+
 	return nil
 }
 
 // syncPendingSafeTransactions checks pending Safe transactions and updates their status
 func syncPendingSafeTransactions(registryManager *registry.Manager) error {
 	deployments := registryManager.GetAllDeployments()
-	
+
 	// Group pending deployments by chain ID
 	pendingByChain := make(map[uint64][]*registry.DeploymentInfo)
-	
+
 	for _, deployment := range deployments {
 		if deployment.Entry.Deployment.Status == "pending_safe" && deployment.Entry.Deployment.SafeTxHash != nil {
 			chainID, err := strconv.ParseUint(deployment.ChainID, 10, 64)
@@ -654,66 +668,66 @@ func syncPendingSafeTransactions(registryManager *registry.Manager) error {
 			pendingByChain[chainID] = append(pendingByChain[chainID], deployment)
 		}
 	}
-	
+
 	if len(pendingByChain) == 0 {
 		fmt.Println("No pending Safe transactions found")
 		return nil
 	}
-	
+
 	fmt.Printf("Found pending Safe transactions on %d network(s)\n", len(pendingByChain))
-	
+
 	// Check each chain
 	for chainID, pendingDeployments := range pendingByChain {
 		fmt.Printf("\nChecking %d pending transaction(s) on chain %d...\n", len(pendingDeployments), chainID)
-		
+
 		// Create Safe client for this chain
 		safeClient, err := safe.NewClient(chainID)
 		if err != nil {
 			fmt.Printf("Warning: Cannot create Safe client for chain %d: %v\n", chainID, err)
 			continue
 		}
-		
+
 		// Enable debug if flag is set
 		safeClient.SetDebug(debugSync)
-		
+
 		// Check each pending deployment
 		for _, deployment := range pendingDeployments {
 			safeTxHash := *deployment.Entry.Deployment.SafeTxHash
 			fmt.Printf("  Checking Safe tx %s for %s... \n", safeTxHash.Hex(), deployment.Entry.GetDisplayName())
-			
+
 			// Debug info
 			if debugSync {
 				fmt.Printf("    [DEBUG] Deployment address: %s\n", deployment.Address.Hex())
 				fmt.Printf("    [DEBUG] Safe address: %s\n", deployment.Entry.Deployment.SafeAddress)
 				fmt.Printf("    [DEBUG] Environment: %s\n", deployment.Entry.Environment)
 			}
-			
+
 			// Check if transaction is executed
 			isExecuted, ethTxHash, err := safeClient.IsTransactionExecuted(safeTxHash)
 			if err != nil {
 				fmt.Printf("    ERROR: %v\n", err)
-				
+
 				// Provide helpful context for common errors
 				if strings.Contains(err.Error(), "transaction not found") {
 					fmt.Printf("    HINT: This might happen if:\n")
-					fmt.Printf("      - The Safe transaction was never created (check if Safe address is correct)\n") 
+					fmt.Printf("      - The Safe transaction was never created (check if Safe address is correct)\n")
 					fmt.Printf("      - The transaction is on a different network\n")
 					fmt.Printf("      - The Safe Transaction Service hasn't indexed it yet (try again later)\n")
-					
+
 					if deployment.Entry.Deployment.SafeAddress == "" || deployment.Entry.Deployment.SafeAddress == "0x0000000000000000000000000000000000000000" {
 						fmt.Printf("      - WARNING: Safe address is missing! This deployment needs to be re-executed.\n")
 					}
 				}
 				continue
 			}
-			
+
 			if isExecuted && ethTxHash != nil {
 				fmt.Printf("EXECUTED (tx: %s)\n", ethTxHash.Hex())
-				
+
 				// Update the deployment entry
 				deployment.Entry.Deployment.Status = "deployed"
 				deployment.Entry.Deployment.TxHash = ethTxHash
-				
+
 				// Update in registry
 				key := strings.ToLower(deployment.Address.Hex())
 				if err := registryManager.UpdateDeployment(key, deployment.Entry); err != nil {
@@ -730,6 +744,6 @@ func syncPendingSafeTransactions(registryManager *registry.Manager) error {
 			}
 		}
 	}
-	
+
 	return nil
 }

@@ -9,132 +9,81 @@
     "11155111": {
       "name": "sepolia",
       "deployments": {
-        "0x06b8b5b1af3feafb61ea07366f4bbd64da7a6fc6": {
-          "address": "0x06b8b5b1af3feafb61ea07366f4bbd64da7a6fc6",
-          "contract_name": "SampleToken",
+        "0x1b0990d8e9fc779cc6fc2b866f0aaf559f847056": {
+          "address": "0x1b0990d8e9fc779cc6fc2b866f0aaf559f847056",
+          "contract_name": "SimpleTokenV07",
           "environment": "default",
           "type": "implementation",
-          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00e112f0deb5c3b3fca70291",
-          "init_code_hash": "f084e5ea3d82edd6896f29d0a9518bdbed48b18c9c5eaa8405f6addb246cb6e1",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00c6834a3b64ed477865043e",
+          "init_code_hash": "37bd690533ec14929081fc636302cb3f2bbc108e843f104ac03079640f6a940a",
+          "label": "V2",
           "verification": {
             "status": "pending"
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "block_number": 8395739,
+            "block_number": 8396185,
             "broadcast_file": "",
-            "timestamp": "2025-05-24T12:23:03.443487+02:00",
+            "timestamp": "2025-05-24T13:53:25.262191+02:00",
             "status": "deployed",
             "safe_address": "0x0000000000000000000000000000000000000000"
           },
           "metadata": {
-            "source_commit": "2e1b55558e4690ab30ccca77f00fb94268dad075",
+            "source_commit": "6d9310eb6b1f67d7724636d401673e12b349f27d",
             "compiler": "0.8.22",
-            "source_hash": "7e055f374634b71faea61a17c12a0d171432a04bb71872f45fb4d386e24f42fc",
-            "contract_path": "./src/SampleToken.sol:SampleToken"
+            "source_hash": "65649cad4aff3ac5cef9be53aea2d4df288f83154897ce2ae695e8dea18e09e9",
+            "contract_path": "./src/SimpleTokenV07.sol:SimpleTokenV07"
           }
         },
-        "0x454db79918669c75c495df4668c19542b6588f2e": {
-          "address": "0x454db79918669c75c495df4668c19542b6588f2e",
-          "contract_name": "SimpleTokenV07",
+        "0x27e7cc1663693411bc75af52bc03c35f95a424de": {
+          "address": "0x27e7cc1663693411bc75af52bc03c35f95a424de",
+          "contract_name": "SampleToken",
           "environment": "staging",
           "type": "implementation",
-          "salt": "32cb58b145d3f7e28c45ce4b2cc31fa94248b23f0081cea78e15de8cc416a625",
-          "init_code_hash": "e0d75a5488464a73c737046cab76cf741f71f4325f61671f078aa2419540919a",
+          "salt": "32cb58b145d3f7e28c45ce4b2cc31fa94248b23f0025d477ad8defa15470fbe3",
+          "init_code_hash": "94536da82003228f5385be34bebe7f45a6f421e61d248163c382e8f586af83f8",
           "verification": {
             "status": "pending"
           },
           "deployment": {
-            "tx_hash": "0x84441b350953efd98096674da03d0168534ede68a55cc933e5afeae31ac61b6f",
-            "safe_tx_hash": "0x3fdee3bce1e39f0a5cd8523e4b7ae552faad050acf071d1ec765ec57ceb96497",
-            "block_number": 8395792,
+            "tx_hash": "0x860dde8f38dd7b9fe119c2bb2fa79babc804ac5314c1c9f12d575456d5ce1e91",
+            "safe_tx_hash": "0xe29db81d3063df718dc1caec4adf6959d63e1a0ac7ace9bc49b2df4fec34291d",
+            "block_number": 8396214,
             "broadcast_file": "",
-            "timestamp": "2025-05-24T12:33:34.673336+02:00",
+            "timestamp": "2025-05-24T13:59:06.880401+02:00",
             "status": "deployed",
             "safe_address": "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
           },
           "metadata": {
-            "source_commit": "2e1b55558e4690ab30ccca77f00fb94268dad075",
-            "compiler": "0.8.22",
-            "source_hash": "20cc5e0bc190eaa2175c3a2e9aa514b84f49f296f0796da7fddacb067a55e9c3",
-            "contract_path": "./src/SimpleTokenV07.sol:SimpleTokenV07"
-          }
-        },
-        "0x5d4945dab42f2f576cd07e5d85bf05295a3279c3": {
-          "address": "0x5d4945dab42f2f576cd07e5d85bf05295a3279c3",
-          "contract_name": "SampleToken",
-          "environment": "default",
-          "type": "implementation",
-          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00e7419f46d501f28c6ef2ad",
-          "init_code_hash": "f084e5ea3d82edd6896f29d0a9518bdbed48b18c9c5eaa8405f6addb246cb6e1",
-          "label": "v2",
-          "verification": {
-            "status": "pending"
-          },
-          "deployment": {
-            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "block_number": 8395734,
-            "broadcast_file": "",
-            "timestamp": "2025-05-24T12:21:49.523037+02:00",
-            "status": "deployed",
-            "safe_address": "0x0000000000000000000000000000000000000000"
-          },
-          "metadata": {
-            "source_commit": "2e1b55558e4690ab30ccca77f00fb94268dad075",
+            "source_commit": "6d9310eb6b1f67d7724636d401673e12b349f27d",
             "compiler": "0.8.22",
             "source_hash": "7e055f374634b71faea61a17c12a0d171432a04bb71872f45fb4d386e24f42fc",
             "contract_path": "./src/SampleToken.sol:SampleToken"
           }
         },
-        "0x8c3e67fcbd82107ae1f1722e8782f5fcd7f0b01c": {
-          "address": "0x8c3e67fcbd82107ae1f1722e8782f5fcd7f0b01c",
+        "0x477670732f6adbf392540dbf74fcb3ffa6a1d091": {
+          "address": "0x477670732f6adbf392540dbf74fcb3ffa6a1d091",
           "contract_name": "SimpleTokenV07",
-          "environment": "default",
+          "environment": "test",
           "type": "implementation",
-          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c0067d4d057b58a385c3427d0",
-          "init_code_hash": "e0d75a5488464a73c737046cab76cf741f71f4325f61671f078aa2419540919a",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00cc1270108595989d91b5a6",
+          "init_code_hash": "37bd690533ec14929081fc636302cb3f2bbc108e843f104ac03079640f6a940a",
           "verification": {
             "status": "pending"
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "block_number": 8395784,
+            "block_number": 8396165,
             "broadcast_file": "",
-            "timestamp": "2025-05-24T12:32:01.537753+02:00",
+            "timestamp": "2025-05-24T13:49:25.093666+02:00",
             "status": "deployed",
             "safe_address": "0x0000000000000000000000000000000000000000"
           },
           "metadata": {
-            "source_commit": "2e1b55558e4690ab30ccca77f00fb94268dad075",
+            "source_commit": "6d9310eb6b1f67d7724636d401673e12b349f27d",
             "compiler": "0.8.22",
-            "source_hash": "20cc5e0bc190eaa2175c3a2e9aa514b84f49f296f0796da7fddacb067a55e9c3",
+            "source_hash": "65649cad4aff3ac5cef9be53aea2d4df288f83154897ce2ae695e8dea18e09e9",
             "contract_path": "./src/SimpleTokenV07.sol:SimpleTokenV07"
-          }
-        },
-        "0xb74123220cb521046b9ab7972425e27f84fc8179": {
-          "address": "0xb74123220cb521046b9ab7972425e27f84fc8179",
-          "contract_name": "SampleToken",
-          "environment": "default",
-          "type": "implementation",
-          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c0047f3457a95279409996e18",
-          "init_code_hash": "f084e5ea3d82edd6896f29d0a9518bdbed48b18c9c5eaa8405f6addb246cb6e1",
-          "label": "test",
-          "verification": {
-            "status": "pending"
-          },
-          "deployment": {
-            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "block_number": 8395759,
-            "broadcast_file": "",
-            "timestamp": "2025-05-24T12:27:01.31132+02:00",
-            "status": "deployed",
-            "safe_address": "0x0000000000000000000000000000000000000000"
-          },
-          "metadata": {
-            "source_commit": "2e1b55558e4690ab30ccca77f00fb94268dad075",
-            "compiler": "0.8.22",
-            "source_hash": "7e055f374634b71faea61a17c12a0d171432a04bb71872f45fb4d386e24f42fc",
-            "contract_path": "./src/SampleToken.sol:SampleToken"
           }
         }
       }
@@ -142,6 +91,32 @@
     "44787": {
       "name": "alfajores",
       "deployments": {
+        "0x1b0990d8e9fc779cc6fc2b866f0aaf559f847056": {
+          "address": "0x1b0990d8e9fc779cc6fc2b866f0aaf559f847056",
+          "contract_name": "SimpleTokenV07",
+          "environment": "default",
+          "type": "implementation",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00c6834a3b64ed477865043e",
+          "init_code_hash": "37bd690533ec14929081fc636302cb3f2bbc108e843f104ac03079640f6a940a",
+          "label": "V2",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47132312,
+            "broadcast_file": "",
+            "timestamp": "2025-05-24T13:54:06.155575+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "6d9310eb6b1f67d7724636d401673e12b349f27d",
+            "compiler": "0.8.22",
+            "source_hash": "65649cad4aff3ac5cef9be53aea2d4df288f83154897ce2ae695e8dea18e09e9",
+            "contract_path": "./src/SimpleTokenV07.sol:SimpleTokenV07"
+          }
+        },
         "0x8c3e67fcbd82107ae1f1722e8782f5fcd7f0b01c": {
           "address": "0x8c3e67fcbd82107ae1f1722e8782f5fcd7f0b01c",
           "contract_name": "SimpleTokenV07",

@@ -1,4 +1,4 @@
-.PHONY: build install test clean dev-setup
+.PHONY: build install test clean dev-setup watch
 
 # Build the CLI binary
 build:
@@ -48,3 +48,20 @@ example: build
 	@mkdir -p example
 	@cd example && ../bin/treb init example-protocol --createx
 	@echo "✅ Example project created in ./example/"
+
+# Watch for file changes and rebuild
+watch:
+	@echo "👀 Watching for changes in cli/..."
+	@command -v fswatch >/dev/null 2>&1 || { \
+		echo "❌ fswatch not found. Install it with:"; \
+		echo "   macOS: brew install fswatch"; \
+		echo "   Linux: apt-get install fswatch"; \
+		exit 1; \
+	}
+	@fswatch -o cli/ | while read f; do \
+		echo ""; \
+		echo "🔄 Changes detected, rebuilding..."; \
+		make build; \
+		echo "✅ Build complete"; \
+		echo ""; \
+	done
