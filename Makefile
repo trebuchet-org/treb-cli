@@ -50,7 +50,7 @@ example: build
 	@echo "✅ Example project created in ./example/"
 
 # Watch for file changes and rebuild
-watch:
+watch: build
 	@echo "👀 Watching for changes in cli/..."
 	@command -v fswatch >/dev/null 2>&1 || { \
 		echo "❌ fswatch not found. Install it with:"; \
