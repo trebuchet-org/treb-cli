@@ -128,6 +128,9 @@ func (m *Manager) RecordDeployment(contract, env string, result *types.Deploymen
 		Salt:         hex.EncodeToString(result.Salt[:]),         // Convert to hex string
 		InitCodeHash: hex.EncodeToString(result.InitCodeHash[:]), // Convert to hex string
 		
+		// Constructor arguments for verification
+		ConstructorArgs: result.ConstructorArgs,
+		
 		// Label for all deployments
 		Label:        result.Label,
 		
@@ -235,6 +238,17 @@ func (m *Manager) UpdateDeployment(key string, deployment *types.DeploymentEntry
 	return fmt.Errorf("network not found")
 }
 
+func (m *Manager) UpdateDeploymentByAddress(address string, deployment *types.DeploymentEntry, chainID uint64) error {
+	chainIDStr := fmt.Sprintf("%d", chainID)
+	
+	if network := m.registry.Networks[chainIDStr]; network != nil {
+		network.Deployments[address] = deployment
+		return m.Save()
+	}
+	
+	return fmt.Errorf("network not found")
+}
+
 func (m *Manager) getGitCommit() string {
 	cmd := exec.Command("git", "rev-parse", "HEAD")
 	output, err := cmd.Output()
@@ -246,7 +260,7 @@ func (m *Manager) getGitCommit() string {
 
 func (m *Manager) getCompilerVersion(contract string) string {
 	// Try to extract from foundry artifact
-	if version := m.getCompilerFromArtifact(contract); version != "" {
+	if version := m.GetCompilerVersionFromArtifact(contract); version != "" {
 		return version
 	}
 	
@@ -342,7 +356,7 @@ func (m *Manager) getNetworkName(chainID uint64) string {
 	}
 }
 
-func (m *Manager) getCompilerFromArtifact(contract string) string {
+func (m *Manager) GetCompilerVersionFromArtifact(contract string) string {
 	// Look for the foundry artifact in out/ directory
 	artifactPath := fmt.Sprintf("out/%s.sol/%s.json", contract, contract)
 	
@@ -691,7 +705,6 @@ func (m *Manager) migrateFromOldFormat(data []byte) error {
 				Type:          oldDeployment.Type,
 				Salt:          hex.EncodeToString(oldDeployment.Salt[:]),
 				InitCodeHash:  hex.EncodeToString(oldDeployment.InitCodeHash[:]),
-				Constructor:   oldDeployment.Constructor,
 				Verification:  oldDeployment.Verification,
 				Deployment:    oldDeployment.Deployment,
 				Metadata:      oldDeployment.Metadata,

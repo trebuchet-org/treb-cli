@@ -27,6 +27,9 @@ type DeploymentResult struct {
 	SafeTxHash      common.Hash       `json:"safe_tx_hash,omitempty"`
 	SafeAddress     common.Address    `json:"safe_address,omitempty"`
 	
+	// Constructor arguments for verification
+	ConstructorArgs string         `json:"constructor_args,omitempty"`
+	
 	// Metadata
 	Metadata        *ContractMetadata `json:"metadata,omitempty"`
 }
@@ -44,7 +47,7 @@ type DeploymentEntry struct {
 	Type          string           `json:"type"` // implementation/proxy
 	Salt          string           `json:"salt"`           // hex string
 	InitCodeHash  string           `json:"init_code_hash"` // hex string
-	Constructor   []interface{}    `json:"constructor_args,omitempty"`
+	ConstructorArgs string           `json:"constructor_args,omitempty"` // Raw hex-encoded constructor args
 	
 	// Label for all deployments (optional for implementations, required for proxies)
 	Label         string           `json:"label,omitempty"`
@@ -61,9 +64,16 @@ type DeploymentEntry struct {
 }
 
 type Verification struct {
-	Status      string `json:"status"`      // verified/pending/failed
-	ExplorerUrl string `json:"explorer_url,omitempty"`
-	Reason      string `json:"reason,omitempty"`
+	Status      string                    `json:"status"`      // verified/pending/failed/partial
+	ExplorerUrl string                    `json:"explorer_url,omitempty"`
+	Reason      string                    `json:"reason,omitempty"`
+	Verifiers   map[string]VerifierStatus `json:"verifiers,omitempty"` // etherscan, sourcify status
+}
+
+type VerifierStatus struct {
+	Status string `json:"status"` // verified/pending/failed
+	URL    string `json:"url,omitempty"`
+	Reason string `json:"reason,omitempty"`
 }
 
 type DeploymentInfo struct {

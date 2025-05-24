@@ -234,10 +234,17 @@ func listDeployments() error {
 				verifiedCell := ""
 				if deployment.Entry.Deployment.Status == "pending_safe" {
 					verifiedCell = pendingStyle.Sprint("⧖ deploy queued")
-				} else if deployment.Entry.Verification.Status == "verified" {
-					verifiedCell = verifiedStyle.Sprint("✓ verified")
 				} else {
-					verifiedCell = notVerifiedStyle.Sprint("✗ not verified")
+					switch deployment.Entry.Verification.Status {
+					case "verified":
+						verifiedCell = verifiedStyle.Sprint("✓ verified")
+					case "partial":
+						verifiedCell = color.New(color.FgYellow).Sprint("⚠ partial")
+					case "failed":
+						verifiedCell = notVerifiedStyle.Sprint("✗ failed")
+					default:
+						verifiedCell = notVerifiedStyle.Sprint("✗ not verified")
+					}
 				}
 
 				// Timestamp

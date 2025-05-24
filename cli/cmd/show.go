@@ -218,18 +218,45 @@ func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
 	fmt.Println()
 	sectionStyle.Println("VERIFICATION")
 	labelStyle.Print("Status:       ")
-	if deployment.Entry.Verification.Status == "verified" {
+	switch deployment.Entry.Verification.Status {
+	case "verified":
 		successStyle.Println("Verified ✓")
-		if deployment.Entry.Verification.ExplorerUrl != "" {
-			labelStyle.Print("Explorer:     ")
-			fmt.Println(deployment.Entry.Verification.ExplorerUrl)
+	case "partial":
+		color.New(color.FgYellow).Println("Partially Verified ⚠")
+	case "failed":
+		errorStyle.Println("Failed ✗")
+	default:
+		color.New(color.FgYellow).Println("Pending ⏳")
+	}
+	
+	// Show individual verifier status
+	if deployment.Entry.Verification.Verifiers != nil {
+		for verifier, status := range deployment.Entry.Verification.Verifiers {
+			labelStyle.Printf("%s:  ", strings.Title(verifier))
+			switch status.Status {
+			case "verified":
+				successStyle.Print("✓ Verified")
+				if status.URL != "" {
+					fmt.Printf(" - %s", status.URL)
+				}
+			case "failed":
+				errorStyle.Print("✗ Failed")
+				if status.Reason != "" {
+					fmt.Printf(" - %s", status.Reason)
+				}
+			default:
+				color.New(color.FgYellow).Print("⏳ Pending")
+			}
+			fmt.Println()
 		}
-	} else {
-		errorStyle.Println("Not Verified ✗")
-		if deployment.Entry.Verification.Reason != "" {
-			labelStyle.Print("Reason:       ")
-			fmt.Println(deployment.Entry.Verification.Reason)
-		}
+	} else if deployment.Entry.Verification.ExplorerUrl != "" {
+		labelStyle.Print("Explorer:     ")
+		fmt.Println(deployment.Entry.Verification.ExplorerUrl)
+	}
+	
+	if deployment.Entry.Verification.Reason != "" && deployment.Entry.Verification.Status == "failed" {
+		labelStyle.Print("Reason:       ")
+		fmt.Println(deployment.Entry.Verification.Reason)
 	}
 	
 	// Warnings and call-to-actions
