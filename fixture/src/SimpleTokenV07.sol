@@ -4,7 +4,7 @@ pragma solidity ^0.7.0;
 /**
  * @title SimpleTokenV07
  * @notice A simple ERC20-like token using Solidity 0.7 for testing cross-version compatibility
- * @dev This contract demonstrates fdeploy's ability to handle different Solidity versions
+ * @dev This contract demonstrates treb's ability to handle different Solidity versions
  */
 contract SimpleTokenV07 {
     string public name;

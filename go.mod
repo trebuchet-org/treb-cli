@@ -1,4 +1,4 @@
-module github.com/bogdan/fdeploy
+module github.com/trebuchet-org/treb-cli
 
 go 1.21
 

@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/bogdan/fdeploy/cli/internal/registry"
-	"github.com/bogdan/fdeploy/cli/internal/verification"
+	"github.com/trebuchet-org/treb-cli/cli/internal/registry"
+	"github.com/trebuchet-org/treb-cli/cli/internal/verification"
 	"github.com/spf13/cobra"
 )
 

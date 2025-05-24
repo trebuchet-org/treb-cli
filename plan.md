@@ -1,6 +1,6 @@
 Looking at your Solidity deployment infrastructure, this is a much cleaner approach! Having Go orchestrate Foundry scripts rather than doing direct chain interaction is brilliant - it keeps the proven patterns while adding the orchestration layer.
 
-## **Forge Deploy** - Foundry Script Orchestration with CreateX
+## **Trebuchet (treb)** - Foundry Script Orchestration with CreateX
 
 ### Updated Architecture: Go Orchestrates, Solidity Executes
 
@@ -9,7 +9,7 @@ Looking at your Solidity deployment infrastructure, this is a much cleaner appro
 ## Revised Project Structure
 
 ```
-forge-deploy/
+treb-cli/
 ├── cli/
 │   ├── cmd/
 │   │   ├── init.go           # Project + lib initialization  
@@ -25,12 +25,12 @@ forge-deploy/
 │   └── pkg/
 │       ├── metadata/         # Version/commit tracking
 │       └── broadcast/        # Broadcast file parsing
-├── lib/                      # Git submodule → forge-deploy-lib
+├── lib/                      # Git submodule → treb-sol
 └── examples/
 ```
 
 ```
-forge-deploy-lib/
+treb-sol/
 ├── src/
 │   ├── base/
 │   │   ├── CreateXOperation.sol     # Your Operation + CreateX

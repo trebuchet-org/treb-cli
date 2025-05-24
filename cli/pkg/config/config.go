@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-// Config represents the fdeploy configuration
+// Config represents the treb configuration
 type Config struct {
 	Environment string `json:"environment"`
 	Network     string `json:"network"`
@@ -31,11 +31,11 @@ type Manager struct {
 // NewManager creates a new configuration manager
 func NewManager(projectRoot string) *Manager {
 	return &Manager{
-		configPath: filepath.Join(projectRoot, ".fdeploy"),
+		configPath: filepath.Join(projectRoot, ".treb"),
 	}
 }
 
-// Load reads the configuration from the .fdeploy file
+// Load reads the configuration from the .treb file
 func (m *Manager) Load() (*Config, error) {
 	// If file doesn't exist, return error
 	if _, err := os.Stat(m.configPath); os.IsNotExist(err) {
@@ -64,7 +64,7 @@ func (m *Manager) Load() (*Config, error) {
 	return &config, nil
 }
 
-// Save writes the configuration to the .fdeploy file
+// Save writes the configuration to the .treb file
 func (m *Manager) Save(config *Config) error {
 	data, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {

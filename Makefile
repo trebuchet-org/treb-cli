@@ -2,14 +2,14 @@
 
 # Build the CLI binary
 build:
-	@echo "🔨 Building fdeploy..."
-	@go build -o bin/fdeploy ./cli
+	@echo "🔨 Building treb..."
+	@go build -o bin/treb ./cli
 
 # Install globally
 install: build
-	@echo "📦 Installing fdeploy..."
-	@cp bin/fdeploy /usr/local/bin/fdeploy
-	@echo "✅ fdeploy installed to /usr/local/bin/fdeploy"
+	@echo "📦 Installing treb..."
+	@cp bin/treb /usr/local/bin/treb
+	@echo "✅ treb installed to /usr/local/bin/treb"
 
 # Run tests
 test:
@@ -32,7 +32,7 @@ dev-setup:
 
 # Run the CLI locally
 run: build
-	@./bin/fdeploy $(ARGS)
+	@./bin/treb $(ARGS)
 
 # Install forge if not present
 install-forge:
@@ -46,5 +46,5 @@ install-forge:
 example: build
 	@echo "📝 Creating example project..."
 	@mkdir -p example
-	@cd example && ../bin/fdeploy init example-protocol --createx
+	@cd example && ../bin/treb init example-protocol --createx
 	@echo "✅ Example project created in ./example/"

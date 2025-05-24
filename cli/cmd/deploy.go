@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/bogdan/fdeploy/cli/internal/forge"
-	"github.com/bogdan/fdeploy/cli/internal/registry"
-	"github.com/bogdan/fdeploy/cli/pkg/config"
-	"github.com/bogdan/fdeploy/cli/pkg/contracts"
-	"github.com/bogdan/fdeploy/cli/pkg/interactive"
-	"github.com/bogdan/fdeploy/cli/pkg/network"
-	"github.com/bogdan/fdeploy/cli/pkg/types"
-	forgeExec "github.com/bogdan/fdeploy/cli/pkg/forge"
+	"github.com/trebuchet-org/treb-cli/cli/internal/forge"
+	"github.com/trebuchet-org/treb-cli/cli/internal/registry"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/interactive"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
+	forgeExec "github.com/trebuchet-org/treb-cli/cli/pkg/forge"
 	"github.com/spf13/cobra"
 )
 

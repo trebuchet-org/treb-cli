@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/bogdan/fdeploy/cli/pkg/abi"
-	"github.com/bogdan/fdeploy/cli/pkg/contracts"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/abi"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 )
 
 // Generator handles interactive generation workflows

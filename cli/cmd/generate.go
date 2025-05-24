@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/bogdan/fdeploy/cli/pkg/interactive"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/interactive"
 	"github.com/spf13/cobra"
 )
 
@@ -20,10 +20,10 @@ Available generation types:
   upgrade    - Generate upgrade scripts (coming soon)
 
 Examples:
-  fdeploy generate deploy
-  fdeploy generate migration
-  fdeploy generate upgrade
-  fdeploy generate  # Interactive type selection`,
+  treb generate deploy
+  treb generate migration
+  treb generate upgrade
+  treb generate  # Interactive type selection`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runGenerate,
 }

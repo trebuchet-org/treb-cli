@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bogdan/fdeploy/cli/internal/registry"
-	"github.com/bogdan/fdeploy/cli/pkg/network"
-	"github.com/bogdan/fdeploy/cli/pkg/safe"
+	"github.com/trebuchet-org/treb-cli/cli/internal/registry"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/safe"
 	"github.com/spf13/cobra"
 )
 

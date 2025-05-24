@@ -7,7 +7,7 @@ import "../../src/tokens/MyToken.sol";
 /**
  * @title DeployMyToken
  * @notice Deployment script for MyToken contract
- * @dev Generated automatically by fdeploy
+ * @dev Generated automatically by treb
  */
 contract DeployMyToken is CreateXDeployment {
     constructor() CreateXDeployment(

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/bogdan/fdeploy/cli/pkg/abi"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/abi"
 )
 
 // DeployStrategy represents the deployment strategy
@@ -135,13 +135,13 @@ func (g *Generator) getSameVersionTemplate() string {
 	return `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "forge-deploy/CreateXDeployment.sol";
+import "treb-sol/CreateXDeployment.sol";
 import "{{.ImportPath}}";
 
 /**
  * @title Deploy{{.ContractName}}
  * @notice Deployment script for {{.ContractName}} contract
- * @dev Generated automatically by fdeploy
+ * @dev Generated automatically by treb
  */
 contract Deploy{{.ContractName}} is CreateXDeployment {
     constructor() CreateXDeployment(
@@ -170,7 +170,7 @@ func (g *Generator) getCrossVersionTemplate() string {
 	return `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "forge-deploy/CreateXDeployment.sol";
+import "treb-sol/CreateXDeployment.sol";
 // Target contract uses Solidity {{.TargetVersion}}, which is incompatible with this deployment script (0.8)
 // Import commented out to avoid version conflicts. Using artifact-based deployment instead.
 // import "{{.ImportPath}}";
@@ -178,7 +178,7 @@ import "forge-deploy/CreateXDeployment.sol";
 /**
  * @title Deploy{{.ContractName}}
  * @notice Deployment script for {{.ContractName}} contract
- * @dev Generated automatically by fdeploy
+ * @dev Generated automatically by treb
  * @dev Target contract version: {{.TargetVersion}} (cross-version deployment)
  */
 contract Deploy{{.ContractName}} is CreateXDeployment {

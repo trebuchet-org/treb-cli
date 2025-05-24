@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/bogdan/fdeploy/cli/internal/registry"
+	"github.com/trebuchet-org/treb-cli/cli/internal/registry"
 )
 
 func tagDeployments(identifier, tag string, all, remove bool) error {

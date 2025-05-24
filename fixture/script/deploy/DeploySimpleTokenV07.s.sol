@@ -9,7 +9,7 @@ import "treb-sol/CreateXDeployment.sol";
 /**
  * @title DeploySimpleTokenV07
  * @notice Deployment script for SimpleTokenV07 contract
- * @dev Generated automatically by fdeploy
+ * @dev Generated automatically by treb
  * @dev Target contract version: 0.7.0 (cross-version deployment)
  */
 contract DeploySimpleTokenV07 is CreateXDeployment {

@@ -1,10 +1,10 @@
-# fdeploy
+# treb
 
-**Forge Deploy** - Foundry Script Orchestration with CreateX for deterministic smart contract deployments.
+**Trebuchet** - Foundry Script Orchestration with CreateX for deterministic smart contract deployments.
 
 ## Overview
 
-fdeploy is a CLI tool that orchestrates Foundry script execution for deterministic smart contract deployments using CreateX. It follows a "Go orchestrates, Solidity executes" pattern where:
+treb is a CLI tool that orchestrates Foundry script execution for deterministic smart contract deployments using CreateX. It follows a "Go orchestrates, Solidity executes" pattern where:
 
 - **Go** handles configuration, planning, and registry management
 - **Foundry scripts** handle all chain interactions using proven patterns
@@ -26,12 +26,12 @@ fdeploy is a CLI tool that orchestrates Foundry script execution for determinist
 - [Go 1.21+](https://golang.org/doc/install)
 - [Foundry](https://book.getfoundry.sh/getting-started/installation)
 
-### Install fdeploy
+### Install treb
 
 ```bash
 # Clone the repository
-git clone https://github.com/bogdan/fdeploy
-cd fdeploy
+git clone https://github.com/trebuchet-org/treb-cli
+cd treb-cli
 
 # Build and install
 make install
@@ -46,17 +46,17 @@ forge init my-protocol
 cd my-protocol
 ```
 
-### 2. Initialize fdeploy
+### 2. Initialize treb
 
 ```bash
-fdeploy init my-protocol
+treb init my-protocol
 ```
 
-### 3. Install forge-deploy-lib
+### 3. Install treb-sol
 
 ```bash
 # Install the deployment library
-forge install fdeploy-org/forge-deploy
+forge install trebuchet-org/treb-sol
 ```
 
 ### 4. Set up environment
@@ -73,7 +73,7 @@ cp .env.example .env
 // script/DeployMyToken.s.sol
 pragma solidity ^0.8.0;
 
-import "forge-deploy-lib/base/CreateXDeployment.sol";
+import "treb-sol/CreateXDeployment.sol";
 import "../src/MyToken.sol";
 
 contract DeployMyToken is CreateXDeployment {
@@ -108,33 +108,33 @@ contract DeployMyToken is CreateXDeployment {
 
 ```bash
 # Predict address
-fdeploy predict MyToken --env staging
+treb predict MyToken --env staging
 
 # Deploy to staging
-fdeploy deploy MyToken --env staging --verify
+treb deploy MyToken --env staging --verify
 
 # Deploy to production across multiple chains
-fdeploy deploy MyToken --env prod --networks mainnet,polygon,arbitrum --verify
+treb deploy MyToken --env prod --networks mainnet,polygon,arbitrum --verify
 ```
 
 ## Commands
 
 ### Project Management
 ```bash
-fdeploy init <project-name>     # Initialize fdeploy in existing Foundry project
+treb init <project-name>        # Initialize treb in existing Foundry project
 ```
 
 ### Deployment
 ```bash
-fdeploy predict <contract>      # Predict deployment address
-fdeploy deploy <contract>       # Deploy contract via Foundry script
-fdeploy verify                  # Verify contracts on explorers
+treb predict <contract>         # Predict deployment address
+treb deploy <contract>          # Deploy contract via Foundry script
+treb verify                     # Verify contracts on explorers
 ```
 
 ### Registry Management
 ```bash
-fdeploy registry show <contract>   # Show deployment info
-fdeploy registry sync              # Sync from broadcast files
+treb registry show <contract>   # Show deployment info
+treb registry sync              # Sync from broadcast files
 ```
 
 ## Registry Structure

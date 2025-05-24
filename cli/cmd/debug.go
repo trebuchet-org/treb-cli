@@ -3,14 +3,14 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/bogdan/fdeploy/cli/pkg/config"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/spf13/cobra"
 )
 
 var debugCmd = &cobra.Command{
 	Use:   "debug",
 	Short: "Debug utilities",
-	Long:  `Debug utilities for troubleshooting fdeploy configuration and environment.`,
+	Long:  `Debug utilities for troubleshooting treb configuration and environment.`,
 }
 
 var debugConfigCmd = &cobra.Command{

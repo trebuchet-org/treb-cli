@@ -8,9 +8,9 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "fdeploy",
-	Short: "Forge Deploy - Foundry Script Orchestration with CreateX",
-	Long: `fdeploy is a CLI tool that orchestrates Foundry script execution for 
+	Use:   "treb",
+	Short: "Trebuchet - Foundry Script Orchestration with CreateX",
+	Long: `treb is a CLI tool that orchestrates Foundry script execution for 
 deterministic smart contract deployments using CreateX.
 
 Go handles configuration, planning, and registry management while all chain 

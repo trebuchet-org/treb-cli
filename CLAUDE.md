@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is **fdeploy** (Forge Deploy) - a Go CLI tool that orchestrates Foundry script execution for deterministic smart contract deployments using CreateX. The architecture follows a "Go orchestrates, Solidity executes" pattern where Go handles configuration, planning, and registry management while all chain interactions happen through proven Foundry scripts.
+This is **treb** (Trebuchet) - a Go CLI tool that orchestrates Foundry script execution for deterministic smart contract deployments using CreateX. The architecture follows a "Go orchestrates, Solidity executes" pattern where Go handles configuration, planning, and registry management while all chain interactions happen through proven Foundry scripts.
 
 ## Architecture
 
 ### Core Components
 - **Go CLI** (`cli/`): Orchestration layer with commands for init, deploy, predict, verify, and registry management
-- **Foundry Library** (`forge-deploy-lib/`): Git submodule containing Solidity base contracts and utilities
+- **Foundry Library** (`treb-sol/`): Git submodule containing Solidity base contracts and utilities
 - **Registry System**: JSON-based deployment tracking with enhanced metadata (versions, verification status, salt/address tracking)
 - **CreateX Integration**: Deterministic deployments across chains using CreateX factory
 
@@ -24,7 +24,7 @@ This is **fdeploy** (Forge Deploy) - a Go CLI tool that orchestrates Foundry scr
 
 ### Go CLI Development
 ```bash
-# Build fdeploy CLI
+# Build treb CLI
 make build
 
 # Run tests
@@ -46,16 +46,16 @@ make dev-setup
 make clean
 ```
 
-### Foundry Library (forge-deploy-lib)
+### Foundry Library (treb-sol)
 ```bash
-# Build library (in forge-deploy-lib/)
-cd forge-deploy-lib && forge build
+# Build library (in treb-sol/)
+cd treb-sol && forge build
 
 # Run library tests
-cd forge-deploy-lib && forge test
+cd treb-sol && forge test
 
 # Test address prediction
-cd forge-deploy-lib && forge script script/PredictAddress.s.sol --sig "predict(string,string)" "MyContract" "staging"
+cd treb-sol && forge script script/PredictAddress.s.sol --sig "predict(string,string)" "MyContract" "staging"
 ```
 
 ### Project Setup Workflow
@@ -63,11 +63,11 @@ cd forge-deploy-lib && forge script script/PredictAddress.s.sol --sig "predict(s
 # 1. Create Foundry project
 forge init my-project && cd my-project
 
-# 2. Initialize fdeploy
-fdeploy init my-project  
+# 2. Initialize treb
+treb init my-project  
 
-# 3. Install forge-deploy-lib
-forge install fdeploy-org/forge-deploy
+# 3. Install treb-sol
+forge install trebuchet-org/treb-sol
 
 # 4. Configure environment
 cp .env.example .env && edit .env
@@ -83,7 +83,7 @@ cp .env.example .env && edit .env
 
 ## Deployment Workflow
 
-The `fdeploy deploy` command follows this flow:
+The `treb deploy` command follows this flow:
 
 1. **Validation**: Check deploy configuration in `foundry.toml` under `[deploy.contracts]`
 2. **Build**: Execute `forge build` to compile contracts
@@ -138,11 +138,11 @@ RPC_URL=...                          # Network RPC endpoint
 ### Deploy Command Options
 ```bash
 # Deploy with specific profile
-fdeploy deploy Counter --profile staging
+treb deploy Counter --profile staging
 
 # Deploy with custom label (affects salt/address)
-fdeploy deploy Counter --label v2
+treb deploy Counter --label v2
 
 # Deploy with version tag (metadata only)
-fdeploy deploy Counter --tag 1.0.0
+treb deploy Counter --tag 1.0.0
 ```

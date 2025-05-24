@@ -7,7 +7,7 @@ import "../../src/SampleToken.sol";
 /**
  * @title DeploySampleToken
  * @notice Deployment script for SampleToken contract
- * @dev Generated automatically by fdeploy
+ * @dev Generated automatically by treb
  */
 contract DeploySampleToken is CreateXDeployment {
     constructor() CreateXDeployment(

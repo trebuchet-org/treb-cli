@@ -3,7 +3,7 @@ package verification
 import (
 	"fmt"
 
-	"github.com/bogdan/fdeploy/cli/pkg/types"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
 )
 

@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bogdan/fdeploy/cli/pkg/types"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -55,7 +55,7 @@ func (m *Manager) load() error {
 		// Create empty registry
 		m.registry = &Registry{
 			Project: ProjectMetadata{
-				Name:      "fdeploy-project",
+				Name:      "treb-project",
 				Version:   "0.1.0",
 				Timestamp: time.Now(),
 			},

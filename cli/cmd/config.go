@@ -3,15 +3,15 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/bogdan/fdeploy/cli/pkg/config"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/spf13/cobra"
 )
 
 // configCmd represents the config command
 var configCmd = &cobra.Command{
 	Use:   "config",
-	Short: "Manage fdeploy configuration",
-	Long: `Manage fdeploy configuration settings stored in .fdeploy file.
+	Short: "Manage treb configuration",
+	Long: `Manage treb configuration settings stored in .treb file.
 
 The configuration file is git-ignored and stores project-specific defaults
 for environment, network, and verification settings.
@@ -22,11 +22,11 @@ Available configuration keys:
   verify            - Auto-verify contracts: true, false
 
 Examples:
-  fdeploy config list                    # Show all configuration
-  fdeploy config get network             # Get network setting  
-  fdeploy config set env prod            # Set environment to prod
-  fdeploy config set network mainnet     # Set default network
-  fdeploy config set verify true         # Enable auto-verification`,
+  treb config list                    # Show all configuration
+  treb config get network             # Get network setting  
+  treb config set env prod            # Set environment to prod
+  treb config set network mainnet     # Set default network
+  treb config set verify true         # Enable auto-verification`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: runConfig,
 }
@@ -65,8 +65,8 @@ func configList(manager *config.Manager) error {
 	if !manager.Exists() {
 		fmt.Println("📋 No Configuration Found")
 		fmt.Println("=========================")
-		fmt.Printf("❌ No .fdeploy file found\n")
-		fmt.Printf("💡 Run 'fdeploy config init' to create a config file\n")
+		fmt.Printf("❌ No .treb file found\n")
+		fmt.Printf("💡 Run 'treb config init' to create a config file\n")
 		fmt.Printf("⚠️  Without configuration, deploy/predict commands require --env and --network flags\n")
 		return nil
 	}
@@ -110,7 +110,7 @@ func configSet(manager *config.Manager, key, value string) error {
 	return configList(manager)
 }
 
-// configInit creates a new .fdeploy configuration file
+// configInit creates a new .treb configuration file
 func configInit(manager *config.Manager) error {
 	if manager.Exists() {
 		fmt.Printf("⚠️  Configuration file already exists at %s\n", manager.GetPath())

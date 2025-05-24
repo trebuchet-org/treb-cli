@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/bogdan/fdeploy/cli/cmd"
+	"github.com/trebuchet-org/treb-cli/cli/cmd"
 )
 
 func main() {
