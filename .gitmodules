@@ -1,3 +1,9 @@
 [submodule "treb-sol"]
 	path = treb-sol
 	url = https://github.com/trebuchet-org/treb-sol.git
+[submodule "fixture/lib/openzeppelin-contracts"]
+	path = fixture/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "fixture/lib/openzeppelin-contracts-upgradeable"]
+	path = fixture/lib/openzeppelin-contracts-upgradeable
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable
