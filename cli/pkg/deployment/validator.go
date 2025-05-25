@@ -76,10 +76,22 @@ func (v *Validator) BuildContracts() error {
 
 // ValidateContract validates a singleton contract deployment
 func (v *Validator) ValidateContract(ctx *Context) error {
+	generated, err := v.ValidateContractWithGeneration(ctx)
+	if err != nil {
+		return err
+	}
+	if generated {
+		return fmt.Errorf("script generated, please run the deploy command again")
+	}
+	return nil
+}
+
+// ValidateContractWithGeneration validates a singleton contract deployment and returns whether a script was generated
+func (v *Validator) ValidateContractWithGeneration(ctx *Context) (bool, error) {
 	// Resolve the contract
 	contractInfo, err := interactive.ResolveContract(ctx.ContractName)
 	if err != nil {
-		return fmt.Errorf("failed to resolve contract: %w", err)
+		return false, fmt.Errorf("failed to resolve contract: %w", err)
 	}
 
 	// Update context with resolved contract name
@@ -89,7 +101,7 @@ func (v *Validator) ValidateContract(ctx *Context) error {
 	validator := contracts.NewValidator(v.projectRoot)
 	if !validator.DeployScriptExists(ctx.ContractName) {
 		if ctx.Predict {
-			return fmt.Errorf("deploy script required but not found: script/deploy/Deploy%s.s.sol", ctx.ContractName)
+			return false, fmt.Errorf("deploy script required but not found: script/deploy/Deploy%s.s.sol", ctx.ContractName)
 		}
 
 		fmt.Printf("\nDeploy script not found for %s\n", ctx.ContractName)
@@ -98,23 +110,23 @@ func (v *Validator) ValidateContract(ctx *Context) error {
 		selector := interactive.NewSelector()
 		shouldGenerate, err := selector.PromptConfirm("Would you like to generate a deploy script?", true)
 		if err != nil || !shouldGenerate {
-			return fmt.Errorf("deploy script required but not found: script/deploy/Deploy%s.s.sol", ctx.ContractName)
+			return false, fmt.Errorf("deploy script required but not found: script/deploy/Deploy%s.s.sol", ctx.ContractName)
 		}
 
 		// Generate the script interactively
 		fmt.Printf("\nStarting interactive script generation...\n\n")
 		generator := interactive.NewGenerator(v.projectRoot)
 		if err := generator.GenerateDeployScriptForContract(contractInfo); err != nil {
-			return fmt.Errorf("script generation failed: %w", err)
+			return false, fmt.Errorf("script generation failed: %w", err)
 		}
-		return fmt.Errorf("script generated, please run the deploy command again")
+		return true, nil
 	}
 
 	// Set script path using the new generator
 	generator := contracts.NewGenerator(v.projectRoot)
 	ctx.ScriptPath = generator.GetDeployScriptPath(contractInfo)
 
-	return nil
+	return false, nil
 }
 
 // ValidateProxyDeployment validates a proxy deployment

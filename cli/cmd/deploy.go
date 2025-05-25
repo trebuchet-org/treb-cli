@@ -130,7 +130,11 @@ func init() {
 	if configManager.Exists() {
 		if cfg, err := configManager.Load(); err == nil && cfg.Network != "" {
 			defaultNetwork = cfg.Network
-			defaultEnv = cfg.Environment || "default"
+			if cfg.Environment == "" {
+				defaultEnv = "default"
+			} else {
+				defaultEnv = cfg.Environment
+			}
 		}
 	}
 
@@ -155,16 +159,49 @@ func runDeployment(ctx *deployment.Context) error {
 	display := deployment.NewDisplay()
 	validator := deployment.NewValidator(".")
 
-	// Run validation first
+	// Validate deployment config first (non-interactive)
 	s := display.CreateSpinner("Validating deployment configuration...")
-	if err := validator.ValidateAll(ctx); err != nil {
+	if err := validator.ValidateDeploymentConfig(ctx); err != nil {
 		s.Stop()
 		return err
 	}
 	s.Stop()
 	display.PrintStep("Validated deployment configuration")
+	
+	// Build contracts
+	s = display.CreateSpinner("Building contracts...")
+	if err := validator.BuildContracts(); err != nil {
+		s.Stop()
+		return err
+	}
+	s.Stop()
 	display.PrintStep("Built contracts")
-
+	
+	// Now do type-specific validation (may be interactive)
+	var scriptGenerated bool
+	switch ctx.Type {
+	case deployment.TypeSingleton:
+		generated, err := validator.ValidateContractWithGeneration(ctx)
+		if err != nil {
+			return err
+		}
+		scriptGenerated = generated
+	case deployment.TypeProxy:
+		if err := validator.ValidateProxyDeployment(ctx); err != nil {
+			return err
+		}
+	case deployment.TypeLibrary:
+		if err := validator.ValidateLibrary(ctx); err != nil {
+			return err
+		}
+	}
+	
+	// If script was generated, restart the deployment
+	if scriptGenerated {
+		fmt.Println("\nRestarting deployment with generated script...")
+		return runDeployment(ctx)
+	}
+	
 	// Show deployment summary after validation
 	display.PrintSummary(ctx)
 
