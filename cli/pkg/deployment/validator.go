@@ -37,12 +37,10 @@ func (v *Validator) ValidateDeploymentConfig(ctx *Context) error {
 
 	// Resolve network
 	networkResolver := network.NewResolver(v.projectRoot)
-	networkName := ctx.NetworkName
-	if networkName == "" {
-		// Try to get default network from config or use a fallback
-		networkName = "sepolia" // Default network
+	if ctx.NetworkName == "" {
+		return fmt.Errorf("network must be specified (use --network flag)")
 	}
-	networkInfo, err := networkResolver.ResolveNetwork(networkName)
+	networkInfo, err := networkResolver.ResolveNetwork(ctx.NetworkName)
 	if err != nil {
 		return fmt.Errorf("failed to resolve network: %w", err)
 	}
