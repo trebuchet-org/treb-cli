@@ -15,8 +15,7 @@ var genCmd = &cobra.Command{
 
 Available types:
   deploy  - Standard contract deployment
-  proxy   - Proxy deployment scripts
-  library - Library deployment scripts`,
+  proxy   - Proxy deployment scripts`,
 }
 
 var genDeployCmd = &cobra.Command{
@@ -55,26 +54,7 @@ var genProxyCmd = &cobra.Command{
 	},
 }
 
-var genLibraryCmd = &cobra.Command{
-	Use:   "library [name]",
-	Short: "Generate library deploy script",
-	Long:  `Generate a deployment script for a library.`,
-	Args:  cobra.MaximumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println("🧙 Interactive Library Deploy Script Generator")
-		generator := interactive.NewGenerator(".")
-
-		var libraryName string
-		if len(args) > 0 {
-			libraryName = args[0]
-		}
-
-		return generator.GenerateLibraryScript(libraryName)
-	},
-}
-
 func init() {
 	genCmd.AddCommand(genDeployCmd)
 	genCmd.AddCommand(genProxyCmd)
-	genCmd.AddCommand(genLibraryCmd)
 }

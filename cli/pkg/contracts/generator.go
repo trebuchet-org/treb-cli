@@ -23,15 +23,16 @@ const (
 type ProxyType string
 
 const (
-	ProxyTypeTransparent ProxyType = "TransparentUpgradeable"
-	ProxyTypeUUPS        ProxyType = "UUPSUpgradeable"
-	ProxyTypeCustom      ProxyType = "Custom"
+	ProxyTypeOZTransparent ProxyType = "TransparentUpgradeable"
+	ProxyTypeOZUUPS        ProxyType = "UUPSUpgradeable"
+	ProxyTypeCustom        ProxyType = "Custom"
 )
 
 // ScriptTemplate contains data for generating deploy scripts
 type ScriptTemplate struct {
 	ContractName        string
 	SolidityFile        string
+	ArtifactPath        string // Artifact path for the contract
 	Strategy            DeployStrategy
 	Version             string
 	ImportPath          string
@@ -78,7 +79,7 @@ func (g *Generator) GenerateDeployScript(contractInfo *ContractInfo, strategy De
 	}
 
 	// Parse target contract version
-	targetVersion, err := g.parseContractVersion(contractInfo.FilePath)
+	targetVersion, err := g.parseContractVersion(contractInfo.Path)
 	if err != nil {
 		// If we can't parse version, assume version mismatch for safety
 		targetVersion = "unknown"
@@ -100,18 +101,26 @@ func (g *Generator) GenerateDeployScript(contractInfo *ContractInfo, strategy De
 	constructorVars, constructorEncode := abiParser.GenerateConstructorArgs(contractABI)
 
 	// Calculate relative import path from script location to contract
-	importPath := g.calculateImportPath(scriptPath, contractInfo.FilePath)
+	importPath := g.calculateImportPath(scriptPath, contractInfo.Path)
 	
 	// Prepare template data
 	// For SolidityFile, we need the path relative to src for artifact lookup
-	solidityFilePath := contractInfo.FilePath
+	solidityFilePath := contractInfo.Path
 	if !strings.HasSuffix(solidityFilePath, ".sol") {
-		solidityFilePath = contractInfo.SolidityFile
+		solidityFilePath = contractInfo.Path
 	}
+	
+	// Index contracts to get artifact path
+	indexer, err := GetGlobalIndexer(g.projectRoot)
+	if err != nil {
+		return fmt.Errorf("failed to initialize contract indexer: %w", err)
+	}
+	artifactPath := indexer.ResolveContractKey(contractInfo)
 	
 	templateData := ScriptTemplate{
 		ContractName: contractInfo.Name,
 		SolidityFile: solidityFilePath,
+		ArtifactPath: artifactPath,
 		Strategy:     strategy,
 		// Version removed - using tags instead
 		ImportPath:          importPath,
@@ -153,72 +162,6 @@ func (g *Generator) GenerateDeployScript(contractInfo *ContractInfo, strategy De
 	return nil
 }
 
-// GenerateLibraryScript creates a new library deploy script from template
-func (g *Generator) GenerateLibraryScript(libraryInfo *ContractInfo) error {
-	// Ensure script/deploy directory exists
-	scriptDir := filepath.Join(g.projectRoot, "script", "deploy")
-	if err := os.MkdirAll(scriptDir, 0755); err != nil {
-		return fmt.Errorf("failed to create script/deploy directory: %w", err)
-	}
-
-	// Prepare template data (libraries always use CREATE2 for determinism)
-	templateData := ScriptTemplate{
-		ContractName: libraryInfo.Name,
-		SolidityFile: libraryInfo.SolidityFile,
-		Strategy:     StrategyCreate2,
-		ImportPath:   fmt.Sprintf("../../src/%s", libraryInfo.SolidityFile),
-	}
-
-	// Get library template content
-	templateContent := g.getLibraryScriptTemplate()
-
-	// Parse and execute template
-	tmpl, err := template.New("library").Parse(templateContent)
-	if err != nil {
-		return fmt.Errorf("failed to parse template: %w", err)
-	}
-
-	// Check if deploy script already exists
-	outputPath := filepath.Join(scriptDir, fmt.Sprintf("Deploy%s.s.sol", libraryInfo.Name))
-	if _, err := os.Stat(outputPath); err == nil {
-		return fmt.Errorf("deploy script already exists: %s\nUse a different library name or remove the existing script", outputPath)
-	}
-
-	// Create output file
-	file, err := os.Create(outputPath)
-	if err != nil {
-		return fmt.Errorf("failed to create library deploy script: %w", err)
-	}
-	defer file.Close()
-
-	// Execute template
-	if err := tmpl.Execute(file, templateData); err != nil {
-		return fmt.Errorf("failed to execute template: %w", err)
-	}
-
-	fmt.Printf("Generated library deploy script: %s\n", outputPath)
-	return nil
-}
-
-// getLibraryScriptTemplate returns the template for library deployments
-func (g *Generator) getLibraryScriptTemplate() string {
-	return `// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
-
-import {LibraryDeployment} from "treb-sol/LibraryDeployment.sol";
-import { {{.ContractName}} } from "{{.ImportPath}}";
-
-/**
- * @title Deploy{{.ContractName}}
- * @notice Deployment script for {{.ContractName}} library
- * @dev Generated automatically by treb
- * @dev Libraries are deployed globally (no environment) for cross-chain consistency
- */
-contract Deploy{{.ContractName}} is LibraryDeployment {
-    constructor() LibraryDeployment("{{.ContractName}}") {}
-}
-`
-}
 
 // getDeployScriptTemplate returns the appropriate template based on version compatibility
 func (g *Generator) getDeployScriptTemplate(versionMismatch bool) string {
@@ -233,7 +176,7 @@ func (g *Generator) getSameVersionTemplate() string {
 	return `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {ContractDeployment, DeployStrategy} from "treb-sol/ContractDeployment.sol";
+import {Deployment, DeployStrategy} from "treb-sol/Deployment.sol";
 import { {{.ContractName}} } from "{{.ImportPath}}";
 
 /**
@@ -241,9 +184,9 @@ import { {{.ContractName}} } from "{{.ImportPath}}";
  * @notice Deployment script for {{.ContractName}} contract
  * @dev Generated automatically by treb
  */
-contract Deploy{{.ContractName}} is ContractDeployment {
-    constructor() ContractDeployment(
-        "{{.ContractName}}",
+contract Deploy{{.ContractName}} is Deployment {
+    constructor() Deployment(
+        "{{.ArtifactPath}}",
         DeployStrategy.{{.Strategy}}
     ) {}
 
@@ -267,7 +210,7 @@ func (g *Generator) getCrossVersionTemplate() string {
 	return `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {ContractDeployment, DeployStrategy} from "treb-sol/ContractDeployment.sol";
+import {Deployment, DeployStrategy} from "treb-sol/Deployment.sol";
 // Target contract uses Solidity {{.TargetVersion}}, which is incompatible with this deployment script (0.8)
 // Import commented out to avoid version conflicts. Using artifact-based deployment instead.
 // import "{{.ImportPath}}";
@@ -278,9 +221,9 @@ import {ContractDeployment, DeployStrategy} from "treb-sol/ContractDeployment.so
  * @dev Generated automatically by treb
  * @dev Target contract version: {{.TargetVersion}} (cross-version deployment)
  */
-contract Deploy{{.ContractName}} is ContractDeployment {
-    constructor() ContractDeployment(
-        "{{.ContractName}}",
+contract Deploy{{.ContractName}} is Deployment {
+    constructor() Deployment(
+        "{{.ArtifactPath}}",
         DeployStrategy.{{.Strategy}}
     ) {}
 
@@ -291,10 +234,6 @@ contract Deploy{{.ContractName}} is ContractDeployment {
         {{.ConstructorEncode}}
     }
 {{end}}
-    /// @notice Override artifact path to handle multiple contracts with same name
-    function getArtifactPath() internal pure override returns (string memory) {
-        return "out/{{.SolidityFile}}/{{.ContractName}}.json";
-    }
 }`
 }
 
@@ -359,9 +298,9 @@ func (g *Generator) GenerateProxyDeployScript(contractInfo *ContractInfo, strate
 	// Determine proxy import path based on type
 	var proxyImportPath string
 	switch proxyType {
-	case ProxyTypeTransparent:
+	case ProxyTypeOZTransparent:
 		proxyImportPath = "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol"
-	case ProxyTypeUUPS:
+	case ProxyTypeOZUUPS:
 		proxyImportPath = "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol"
 	case ProxyTypeCustom:
 		// For custom proxy, we'll use a placeholder that users need to update
@@ -371,10 +310,10 @@ func (g *Generator) GenerateProxyDeployScript(contractInfo *ContractInfo, strate
 	// Prepare template data
 	templateData := ProxyScriptTemplate{
 		ImplementationName: contractInfo.Name,
-		SolidityFile:       contractInfo.SolidityFile,
+		SolidityFile:       contractInfo.Path,
 		Strategy:           strategy,
 		ProxyType:          proxyType,
-		ImportPath:         fmt.Sprintf("../../src/%s", contractInfo.SolidityFile),
+		ImportPath:         fmt.Sprintf("../../%s", contractInfo.Path),
 		ProxyImportPath:    proxyImportPath,
 		HasInitializer:     hasInitializer,
 		InitializerVars:    initializerVars,
@@ -414,9 +353,9 @@ func (g *Generator) GenerateProxyDeployScript(contractInfo *ContractInfo, strate
 // getProxyDeployScriptTemplate returns the appropriate proxy template
 func (g *Generator) getProxyDeployScriptTemplate(proxyType ProxyType) string {
 	switch proxyType {
-	case ProxyTypeTransparent:
+	case ProxyTypeOZTransparent:
 		return g.getTransparentProxyTemplate()
-	case ProxyTypeUUPS:
+	case ProxyTypeOZUUPS:
 		return g.getUUPSProxyTemplate()
 	case ProxyTypeCustom:
 		return g.getCustomProxyTemplate()
@@ -555,4 +494,170 @@ contract Deploy{{.ImplementationName}}Proxy is ProxyDeployment {
     }
 {{end}}
 }`
+}
+
+// ProxyScriptTemplateV2 contains data for generating proxy deploy scripts with new structure
+type ProxyScriptTemplateV2 struct {
+	ImplementationName     string
+	ImplementationPath     string
+	ProxyContractName      string
+	ProxyArtifactPath      string
+	ProxyImportPath        string
+	Strategy               DeployStrategy
+	ProxyType              ProxyType
+	HasInitializer         bool
+	InitializerVars        string
+	InitializerEncode      string
+	UseTypeCreationCode    bool
+	HasConstructorOverride bool
+	ConstructorOverride    string
+}
+
+// GenerateProxyDeployScriptV2 generates a proxy deployment script with the new structure
+func (g *Generator) GenerateProxyDeployScriptV2(implementationInfo *ContractInfo, proxyInfo *ContractInfo, strategy DeployStrategy, proxyType ProxyType) error {
+	// Resolve artifact paths
+	indexer, err := GetGlobalIndexer(g.projectRoot)
+	if err != nil {
+		return fmt.Errorf("failed to initialize contract indexer: %w", err)
+	}
+
+	// Get implementation artifact path
+	implArtifactPath := indexer.ResolveContractKey(&ContractInfo{
+		Name: implementationInfo.Name,
+		Path: implementationInfo.Path,
+	})
+
+	// Get proxy artifact path
+	proxyArtifactPath := indexer.ResolveContractKey(proxyInfo)
+
+	// Prepare import path for proxy
+	proxyImportPath := proxyInfo.Path
+	if !strings.HasPrefix(proxyImportPath, "@") && !strings.HasPrefix(proxyImportPath, "lib/") {
+		proxyImportPath = filepath.Join("..", "..", proxyImportPath)
+	} else if strings.HasPrefix(proxyImportPath, "lib/") {
+		// Convert lib path to import format
+		proxyImportPath = strings.TrimPrefix(proxyImportPath, "lib/")
+	}
+
+	// Parse ABI for initializer method
+	abiParser := abi.NewParser(g.projectRoot)
+	contractABI, err := abiParser.ParseContractABI(implementationInfo.Name)
+	if err != nil {
+		fmt.Printf("Warning: Could not parse ABI for %s: %v\n", implementationInfo.Name, err)
+	}
+
+	var hasInitializer bool
+	var initializerVars, initializerEncode string
+	if contractABI != nil {
+		if initMethod := abiParser.FindInitializeMethod(contractABI); initMethod != nil {
+			hasInitializer = true
+			initializerVars, initializerEncode = abiParser.GenerateInitializerArgs(initMethod)
+		}
+	}
+
+	// Check if we need constructor override (for TransparentUpgradeableProxy)
+	hasConstructorOverride := proxyType == ProxyTypeOZTransparent
+	var constructorOverride string
+	if hasConstructorOverride {
+		constructorOverride = `    /// @notice Get constructor arguments - override to include admin parameter
+    function _getConstructorArgs() internal view override returns (bytes memory) {
+        address admin = executor; // Use executor as the ProxyAdmin owner
+        bytes memory initData = _getProxyInitializer();
+        return abi.encode(implementationAddress, admin, initData);
+    }`
+	}
+
+	// Create template data
+	data := ProxyScriptTemplateV2{
+		ImplementationName:     implementationInfo.Name,
+		ImplementationPath:     implArtifactPath,
+		ProxyContractName:      proxyInfo.Name,
+		ProxyArtifactPath:      proxyArtifactPath,
+		ProxyImportPath:        proxyImportPath,
+		Strategy:               strategy,
+		ProxyType:              proxyType,
+		HasInitializer:         hasInitializer,
+		InitializerVars:        initializerVars,
+		InitializerEncode:      initializerEncode,
+		UseTypeCreationCode:    true, // We can use type() for proxy contracts
+		HasConstructorOverride: hasConstructorOverride,
+		ConstructorOverride:    constructorOverride,
+	}
+
+	// Generate script content
+	scriptContent, err := g.generateProxyScriptV2(data)
+	if err != nil {
+		return fmt.Errorf("failed to generate script: %w", err)
+	}
+
+	// Write script file
+	scriptName := fmt.Sprintf("Deploy%sProxy", implementationInfo.Name)
+	scriptPath := filepath.Join(g.projectRoot, "script", "deploy", fmt.Sprintf("%s.s.sol", scriptName))
+
+	// Create directory if needed
+	if err := os.MkdirAll(filepath.Dir(scriptPath), 0755); err != nil {
+		return fmt.Errorf("failed to create script directory: %w", err)
+	}
+
+	// Write the script
+	if err := os.WriteFile(scriptPath, []byte(scriptContent), 0644); err != nil {
+		return fmt.Errorf("failed to write script file: %w", err)
+	}
+
+	fmt.Printf("\n✅ Generated proxy deploy script: %s\n", scriptPath)
+	return nil
+}
+
+// generateProxyScriptV2 generates the proxy script content with the new structure
+func (g *Generator) generateProxyScriptV2(data ProxyScriptTemplateV2) (string, error) {
+	tmplStr := `// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import {ProxyDeployment, DeployStrategy} from "treb-sol/ProxyDeployment.sol";
+import {{{.ProxyContractName}}} from "{{.ProxyImportPath}}";
+
+/**
+ * @title Deploy{{.ImplementationName}}Proxy
+ * @notice Deployment script for {{.ImplementationName}} with {{.ProxyType}} Proxy
+ * @dev Generated automatically by treb
+ */
+contract Deploy{{.ImplementationName}}Proxy is ProxyDeployment {
+    constructor() ProxyDeployment(
+        "{{.ProxyArtifactPath}}",
+        "{{.ImplementationPath}}",
+        DeployStrategy.{{.Strategy}}
+    ) {}
+
+    /// @notice Get contract bytecode for the proxy
+    function _getContractBytecode() internal pure override returns (bytes memory) {
+        return type({{.ProxyContractName}}).creationCode;
+    }
+{{if .HasConstructorOverride}}
+{{.ConstructorOverride}}
+{{end}}
+{{if .HasInitializer}}    /// @notice Get proxy initializer data
+    function _getProxyInitializer() internal view override returns (bytes memory) {
+        // Initialize method arguments detected from ABI
+{{.InitializerVars}}
+        {{.InitializerEncode}}
+    }
+{{else}}    /// @notice Get proxy initializer data
+    function _getProxyInitializer() internal pure override returns (bytes memory) {
+        // No initialize method detected - proxy will be deployed without initialization
+        return "";
+    }
+{{end}}
+}`
+
+	tmpl, err := template.New("proxyScript").Parse(tmplStr)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse template: %w", err)
+	}
+
+	var buf strings.Builder
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", fmt.Errorf("failed to execute template: %w", err)
+	}
+
+	return buf.String(), nil
 }
