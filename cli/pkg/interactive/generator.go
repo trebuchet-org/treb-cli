@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/trebuchet-org/treb-cli/cli/pkg/abi"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
@@ -43,50 +44,117 @@ func GetAvailableTypes() []GenerateType {
 
 // pickContract selects a contract from available contracts, or validates a specific contract
 func (g *Generator) pickContract(contractNameOrPath string) (*contracts.ContractInfo, error) {
-	discovery := contracts.NewDiscovery(g.projectRoot)
-	
-	var selectedContract contracts.ContractDiscovery
+	// Use the global indexer
+	indexer, err := contracts.GetGlobalIndexer(g.projectRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize contract indexer: %w", err)
+	}
+
+	var selected *contracts.ContractInfo
 
 	// If a contract name/path was specified, try to resolve it
 	if contractNameOrPath != "" {
-		// Use the new contract resolution
-		resolved, err := ResolveContract(contractNameOrPath)
-		if err != nil {
-			return nil, err
+		// Try direct lookup first
+		if contract, err := indexer.GetContract(contractNameOrPath); err == nil {
+			selected = contract
+			fmt.Printf("Using specified contract: %s\n\n", contract.Name)
+		} else {
+			// Try by name
+			contracts := indexer.GetContractsByName(contractNameOrPath)
+			if len(contracts) == 0 {
+				return nil, fmt.Errorf("contract not found: %s", contractNameOrPath)
+			} else if len(contracts) == 1 {
+				selected = contracts[0]
+				fmt.Printf("Using specified contract: %s\n\n", contracts[0].Name)
+			} else {
+				// Multiple contracts with same name - let user pick
+				var options []string
+				for _, c := range contracts {
+					options = append(options, fmt.Sprintf("%s (%s)", c.Name, c.Path))
+				}
+				_, selectedIndex, err := g.selector.SelectOption("Multiple contracts found. Select one:", options, 0)
+				if err != nil {
+					return nil, fmt.Errorf("contract selection failed: %w", err)
+				}
+				selected = contracts[selectedIndex]
+			}
 		}
-		selectedContract = *resolved
-		fmt.Printf("Using specified contract: %s\n\n", selectedContract.Name)
 	} else {
-		// No contract specified - show picker with all contracts
-		discoveredContracts, err := discovery.DiscoverContracts()
-		if err != nil {
-			return nil, fmt.Errorf("failed to discover contracts: %w", err)
+		// No contract specified - show picker with deployable contracts
+		deployableContracts := indexer.GetDeployableContracts()
+		if len(deployableContracts) == 0 {
+			return nil, fmt.Errorf("no deployable contracts found")
 		}
 
-		if len(discoveredContracts) == 0 {
-			return nil, fmt.Errorf("no contracts found in src/ directory")
+		var options []string
+		for _, c := range deployableContracts {
+			if c.Version != "" {
+				options = append(options, fmt.Sprintf("%s (%s)", c.Name, c.Version))
+			} else {
+				options = append(options, c.Name)
+			}
 		}
 
-		contractOptions := discovery.GetFormattedOptions(discoveredContracts)
-		_, selectedIndex, err := g.selector.SelectOption("Select contract:", contractOptions, 0)
+		_, selectedIndex, err := g.selector.SelectOption("Select contract:", options, 0)
 		if err != nil {
 			return nil, fmt.Errorf("contract selection failed: %w", err)
 		}
 
-		selectedContract = discoveredContracts[selectedIndex]
+		selected = deployableContracts[selectedIndex]
 	}
 
-	// Step 3: Convert discovery result to ContractInfo
+	// Convert to ContractInfo
 	contractInfo := &contracts.ContractInfo{
-		Name:         selectedContract.Name,
-		Exists:       true,
-		FilePath:     selectedContract.RelativePath,
-		SolidityFile: selectedContract.FileName,
+		Name:      selected.Name,
+		Path:      selected.Path,
+		IsLibrary: selected.IsLibrary,
 	}
 
-	fmt.Printf("Selected: %s\n", discovery.FormatContractOption(selectedContract))
+	fmt.Printf("Selected: %s\n", selected.Name)
+	if selected.Path != "" {
+		fmt.Printf("Path: %s\n", selected.Path)
+	}
 
 	return contractInfo, nil
+}
+
+// pickProxyContract selects a proxy contract from available proxy contracts
+func (g *Generator) pickProxyContract() (*contracts.ContractInfo, error) {
+	// Use the global indexer (always includes libraries)
+	indexer, err := contracts.GetGlobalIndexer(g.projectRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize contract indexer: %w", err)
+	}
+
+	// Get all proxy contracts (including from libraries)
+	filter := contracts.AllFilter() // Include libraries for proxy contracts
+	proxyContracts := indexer.GetProxyContractsFiltered(filter)
+	if len(proxyContracts) == 0 {
+		return nil, fmt.Errorf("no proxy contracts found. Make sure you have proxy contracts in your project")
+	}
+
+	// Build options
+	var options []string
+	for _, proxy := range proxyContracts {
+		option := proxy.Name
+		if proxy.Path != "" {
+			option = fmt.Sprintf("%s (%s)", proxy.Name, proxy.Path)
+		}
+		options = append(options, option)
+	}
+
+	_, selectedIndex, err := g.selector.SelectOption("Select proxy contract:", options, 0)
+	if err != nil {
+		return nil, fmt.Errorf("proxy selection failed: %w", err)
+	}
+
+	selected := proxyContracts[selectedIndex]
+	fmt.Printf("Selected proxy: %s\n", selected.Name)
+	if selected.Path != "" {
+		fmt.Printf("Path: %s\n", selected.Path)
+	}
+
+	return selected, nil
 }
 
 // pickProxyType selects a proxy type for proxy deployments
@@ -105,9 +173,9 @@ func (g *Generator) pickProxyType() (contracts.ProxyType, error) {
 	var proxyType contracts.ProxyType
 	switch proxyTypeIndex {
 	case 0:
-		proxyType = contracts.ProxyTypeTransparent
+		proxyType = contracts.ProxyTypeOZTransparent
 	case 1:
-		proxyType = contracts.ProxyTypeUUPS
+		proxyType = contracts.ProxyTypeOZUUPS
 	case 2:
 		proxyType = contracts.ProxyTypeCustom
 	}
@@ -133,11 +201,15 @@ func (g *Generator) pickDeploymentStrategy() (contracts.DeployStrategy, error) {
 }
 
 // GenerateDeployScript interactively generates a deploy script
-func (g *Generator) GenerateDeployScript(contractName string) error {
-	// Step 1: Pick contract
-	contractInfo, err := g.pickContract(contractName)
+func (g *Generator) GenerateDeployScript(contractNameOrPath string) error {
+	// Step 1: Pick or resolve contract
+	var contractInfo *contracts.ContractInfo
+	var err error
+	
+	// Try to resolve the contract by name or path
+	contractInfo, err = ResolveContract(contractNameOrPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to resolve contract: %w", err)
 	}
 
 	// Step 2: Pick deployment strategy
@@ -169,30 +241,33 @@ func (g *Generator) GenerateDeployScript(contractName string) error {
 	return nil
 }
 
-// GenerateLibraryScript interactively generates a library deploy script
-func (g *Generator) GenerateLibraryScript(libraryName string) error {
-	// Step 1: Pick library
-	libraryInfo, err := g.pickContract(libraryName)
+// GenerateDeployScriptForContract generates a deploy script for a specific contract
+func (g *Generator) GenerateDeployScriptForContract(contractInfo *contracts.ContractInfo) error {
+	// Step 1: Pick deployment strategy
+	strategy, err := g.pickDeploymentStrategy()
 	if err != nil {
 		return err
 	}
 
-	// Step 2: Validate it's a library
-	validator := contracts.NewValidator(g.projectRoot)
-	if !validator.IsLibrary(libraryInfo.Name) {
-		return fmt.Errorf("%s is not a library", libraryInfo.Name)
-	}
-
-	// Step 3: Generate the script (libraries always use CREATE2 for determinism)
+	// Step 2: Generate the script
 	generator := contracts.NewGenerator(g.projectRoot)
-	if err := generator.GenerateLibraryScript(libraryInfo); err != nil {
-		return fmt.Errorf("library script generation failed: %w", err)
+	if err := generator.GenerateDeployScript(contractInfo, strategy); err != nil {
+		return fmt.Errorf("script generation failed: %w", err)
 	}
 
-	fmt.Printf("Library deploy script generated successfully!\n")
-	fmt.Printf("Library: %s\n", libraryInfo.Name)
-	fmt.Printf("Strategy: CREATE2 (deterministic)\n")
-	fmt.Printf("\nLibraries are deployed globally (no environment) for cross-chain consistency.\n")
+	fmt.Printf("Deploy script generated successfully!\n")
+	fmt.Printf("Strategy: %s\n", strategy)
+
+	// Show constructor info
+	abiParser := abi.NewParser(g.projectRoot)
+	if contractABI, err := abiParser.ParseContractABI(contractInfo.Name); err == nil {
+		if contractABI.HasConstructor {
+			fmt.Printf("Constructor arguments automatically detected and configured\n")
+			fmt.Printf("You can customize the values in getConstructorArgs() method\n")
+		} else {
+			fmt.Printf("No constructor arguments required\n")
+		}
+	}
 
 	return nil
 }
@@ -205,27 +280,31 @@ func (g *Generator) GenerateProxyDeployScript(contractName string) error {
 		return err
 	}
 
-	// Step 2: Pick proxy type
-	proxyType, err := g.pickProxyType()
+	// Step 2: Pick proxy contract
+	proxyInfo, err := g.pickProxyContract()
 	if err != nil {
 		return err
 	}
 
-	// Step 3: Pick deployment strategy
+	// Step 3: Determine proxy type based on selected proxy
+	proxyType := g.determineProxyType(proxyInfo.Name)
+
+	// Step 4: Pick deployment strategy
 	strategy, err := g.pickDeploymentStrategy()
 	if err != nil {
 		return err
 	}
 
-	// Step 4: Generate the script
+	// Step 5: Generate the script
 	generator := contracts.NewGenerator(g.projectRoot)
-	if err := generator.GenerateProxyDeployScript(contractInfo, strategy, proxyType); err != nil {
+	if err := generator.GenerateProxyDeployScriptV2(contractInfo, proxyInfo, strategy, proxyType); err != nil {
 		return fmt.Errorf("proxy script generation failed: %w", err)
 	}
 
 	fmt.Printf("Proxy deploy script generated successfully!\n")
+	fmt.Printf("Implementation: %s\n", contractInfo.Name)
+	fmt.Printf("Proxy: %s\n", proxyInfo.Name)
 	fmt.Printf("Strategy: %s\n", strategy)
-	fmt.Printf("Proxy Type: %s\n", proxyType)
 
 	// Show initializer info
 	abiParser := abi.NewParser(g.projectRoot)
@@ -239,4 +318,14 @@ func (g *Generator) GenerateProxyDeployScript(contractName string) error {
 	}
 
 	return nil
+}
+
+// determineProxyType determines the proxy type based on the proxy contract name
+func (g *Generator) determineProxyType(proxyName string) contracts.ProxyType {
+	if strings.Contains(proxyName, "TransparentUpgradeable") {
+		return contracts.ProxyTypeOZTransparent
+	} else if strings.Contains(proxyName, "ERC1967") || strings.Contains(proxyName, "UUPS") {
+		return contracts.ProxyTypeOZUUPS
+	}
+	return contracts.ProxyTypeCustom
 }

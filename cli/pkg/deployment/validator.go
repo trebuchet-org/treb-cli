@@ -1,0 +1,202 @@
+package deployment
+
+import (
+	"fmt"
+
+	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
+	forgeExec "github.com/trebuchet-org/treb-cli/cli/pkg/forge"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/interactive"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
+)
+
+// Validator handles deployment validation
+type Validator struct {
+	projectRoot string
+}
+
+// NewValidator creates a new deployment validator
+func NewValidator(projectRoot string) *Validator {
+	return &Validator{
+		projectRoot: projectRoot,
+	}
+}
+
+// ValidateDeploymentConfig validates the deployment configuration
+func (v *Validator) ValidateDeploymentConfig(ctx *Context) error {
+	// Load deploy config
+	deployConfig, err := config.LoadDeployConfig(v.projectRoot)
+	if err != nil {
+		return fmt.Errorf("failed to load deploy config: %w", err)
+	}
+
+	// Validate deploy config for environment
+	if err := deployConfig.Validate(ctx.Env); err != nil {
+		return fmt.Errorf("invalid deploy config: %w", err)
+	}
+
+	// Resolve network
+	networkResolver := network.NewResolver(v.projectRoot)
+	networkName := ctx.NetworkName
+	if networkName == "" {
+		// Try to get default network from config or use a fallback
+		networkName = "sepolia" // Default network
+	}
+	networkInfo, err := networkResolver.ResolveNetwork(networkName)
+	if err != nil {
+		return fmt.Errorf("failed to resolve network: %w", err)
+	}
+	ctx.NetworkInfo = networkInfo
+
+	// Generate environment variables
+	envVars, err := deployConfig.GenerateEnvVars(ctx.Env)
+	if err != nil {
+		return fmt.Errorf("failed to generate environment variables: %w", err)
+	}
+	
+	// Add network-specific environment variables
+	if networkInfo.RpcUrl != "" {
+		envVars["RPC_URL"] = networkInfo.RpcUrl
+	}
+	envVars["CHAIN_ID"] = fmt.Sprintf("%d", networkInfo.ChainID)
+	
+	ctx.EnvVars = envVars
+
+	return nil
+}
+
+// BuildContracts runs forge build
+func (v *Validator) BuildContracts() error {
+	forgeExecutor := forgeExec.NewExecutor(v.projectRoot)
+	if err := forgeExecutor.CheckForgeInstallation(); err != nil {
+		return fmt.Errorf("forge check failed: %w", err)
+	}
+
+	if err := forgeExecutor.Build(); err != nil {
+		return fmt.Errorf("build failed: %w", err)
+	}
+
+	return nil
+}
+
+// ValidateContract validates a singleton contract deployment
+func (v *Validator) ValidateContract(ctx *Context) error {
+	// Resolve the contract
+	contractInfo, err := interactive.ResolveContract(ctx.ContractName)
+	if err != nil {
+		return fmt.Errorf("failed to resolve contract: %w", err)
+	}
+
+	// Update context with resolved contract name
+	ctx.ContractName = contractInfo.Name
+
+	// Check if deploy script exists
+	validator := contracts.NewValidator(v.projectRoot)
+	if !validator.DeployScriptExists(ctx.ContractName) {
+		if ctx.Predict {
+			return fmt.Errorf("deploy script required but not found: script/deploy/Deploy%s.s.sol", ctx.ContractName)
+		}
+
+		fmt.Printf("\nDeploy script not found for %s\n", ctx.ContractName)
+
+		// Ask if user wants to generate the script
+		selector := interactive.NewSelector()
+		shouldGenerate, err := selector.PromptConfirm("Would you like to generate a deploy script?", true)
+		if err != nil || !shouldGenerate {
+			return fmt.Errorf("deploy script required but not found: script/deploy/Deploy%s.s.sol", ctx.ContractName)
+		}
+
+		// Generate the script interactively
+		fmt.Printf("\nStarting interactive script generation...\n\n")
+		generator := interactive.NewGenerator(v.projectRoot)
+		if err := generator.GenerateDeployScriptForContract(contractInfo); err != nil {
+			return fmt.Errorf("script generation failed: %w", err)
+		}
+		return fmt.Errorf("script generated, please run the deploy command again")
+	}
+
+	// Set script path using the new generator
+	generator := contracts.NewGenerator(v.projectRoot)
+	ctx.ScriptPath = generator.GetDeployScriptPath(contractInfo)
+
+	return nil
+}
+
+// ValidateProxyDeployment validates a proxy deployment
+func (v *Validator) ValidateProxyDeployment(ctx *Context) error {
+	// Check if proxy deploy script exists
+	validator := contracts.NewValidator(v.projectRoot)
+	if !validator.DeployScriptExists(ctx.ProxyName) {
+		return fmt.Errorf("proxy deploy script not found: script/deploy/Deploy%s.s.sol\nPlease run 'treb gen proxy %s' first", ctx.ProxyName, ctx.ImplementationName)
+	}
+
+	// Set script path
+	ctx.ScriptPath = fmt.Sprintf("script/deploy/Deploy%s.s.sol", ctx.ProxyName)
+
+	// Get implementation info from registry
+	if ctx.ImplementationLabel == "" {
+		ctx.ImplementationLabel = "default"
+	}
+
+	// Determine implementation identifier
+	implIdentifier := ctx.ImplementationName
+	if ctx.Env != "" {
+		implIdentifier = fmt.Sprintf("%s/%s", ctx.Env, ctx.ImplementationName)
+	}
+	if ctx.ImplementationLabel != "default" {
+		implIdentifier = fmt.Sprintf("%s:%s", implIdentifier, ctx.ImplementationLabel)
+	}
+
+	// TODO: Validate implementation exists in registry
+	// This would require access to the registry manager
+
+	return nil
+}
+
+// ValidateLibrary validates a library deployment
+func (v *Validator) ValidateLibrary(ctx *Context) error {
+	// Resolve the library
+	contractInfo, err := interactive.ResolveContract(ctx.ContractName)
+	if err != nil {
+		return fmt.Errorf("failed to resolve library: %w", err)
+	}
+
+	// Update context with resolved contract name
+	ctx.ContractName = contractInfo.Name
+
+	// Check if deploy script exists
+	validator := contracts.NewValidator(v.projectRoot)
+	if !validator.DeployScriptExists(ctx.ContractName) {
+		return fmt.Errorf("library deploy script not found: script/deploy/Deploy%s.s.sol", ctx.ContractName)
+	}
+
+	// Set script path
+	ctx.ScriptPath = fmt.Sprintf("script/deploy/Deploy%s.s.sol", ctx.ContractName)
+
+	return nil
+}
+
+// ValidateAll runs all necessary validations based on deployment type
+func (v *Validator) ValidateAll(ctx *Context) error {
+	// Always validate deployment config
+	if err := v.ValidateDeploymentConfig(ctx); err != nil {
+		return err
+	}
+
+	// Always build contracts
+	if err := v.BuildContracts(); err != nil {
+		return err
+	}
+
+	// Type-specific validation
+	switch ctx.Type {
+	case TypeSingleton:
+		return v.ValidateContract(ctx)
+	case TypeProxy:
+		return v.ValidateProxyDeployment(ctx)
+	case TypeLibrary:
+		return v.ValidateLibrary(ctx)
+	default:
+		return fmt.Errorf("unknown deployment type: %s", ctx.Type)
+	}
+}

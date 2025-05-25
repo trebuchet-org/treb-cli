@@ -191,6 +191,37 @@ func (fm *FoundryManager) UpdateLibraryAddress(profile, libraryName, newAddress 
 	return os.WriteFile(fm.configPath, []byte(updatedContent), 0644)
 }
 
+// GetRemappings returns all remappings for a profile
+func (fm *FoundryManager) GetRemappings(profile string) ([]string, error) {
+	config, err := fm.Load()
+	if err != nil {
+		return nil, err
+	}
+
+	if profileConfig, exists := config.Profile[profile]; exists {
+		return profileConfig.Remappings, nil
+	}
+
+	// If profile doesn't exist, check default
+	if profile != "default" {
+		if defaultProfile, exists := config.Profile["default"]; exists {
+			return defaultProfile.Remappings, nil
+		}
+	}
+
+	return nil, nil
+}
+
+// ParseRemapping parses a remapping string and returns the mapping name and path
+// Example: "@openzeppelin/=lib/openzeppelin-contracts/" returns ("@openzeppelin/", "lib/openzeppelin-contracts/")
+func ParseRemapping(remapping string) (string, string, error) {
+	parts := strings.SplitN(remapping, "=", 2)
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("invalid remapping format: %s", remapping)
+	}
+	return parts[0], parts[1], nil
+}
+
 // GetLibraries returns all libraries for a profile
 func (fm *FoundryManager) GetLibraries(profile string) ([]string, error) {
 	config, err := fm.Load()

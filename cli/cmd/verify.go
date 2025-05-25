@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/briandowns/spinner"
 	"github.com/fatih/color"
@@ -315,5 +316,14 @@ func calculateSourceHashFromPath(contractPath string) (string, error) {
 // parseChainID parses a chain ID string to uint64
 func parseChainID(chainIDStr string) (uint64, error) {
 	return strconv.ParseUint(chainIDStr, 10, 64)
+}
+
+// createSpinner creates a new spinner with the given message
+func createSpinner(message string) *spinner.Spinner {
+	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+	s.Suffix = " " + message
+	s.Color("cyan", "bold")
+	s.Start()
+	return s
 }
 

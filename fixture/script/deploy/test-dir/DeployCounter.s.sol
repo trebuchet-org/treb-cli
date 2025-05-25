@@ -2,20 +2,23 @@
 pragma solidity ^0.8.0;
 
 import {Deployment, DeployStrategy} from "treb-sol/Deployment.sol";
-// Target contract uses Solidity unknown, which is incompatible with this deployment script (0.8)
-// Import commented out to avoid version conflicts. Using artifact-based deployment instead.
-// import "../../../src/test-dir/Counter.sol";
+import { Counter } from "../../../src/test-dir/Counter.sol";
 
 /**
  * @title DeployCounter
  * @notice Deployment script for Counter contract
  * @dev Generated automatically by treb
- * @dev Target contract version: unknown (cross-version deployment)
  */
 contract DeployCounter is Deployment {
     constructor() Deployment(
-        "Counter",
         "src/test-dir/Counter.sol:Counter",
         DeployStrategy.CREATE3
     ) {}
+
+    /// @notice Get contract bytecode using type().creationCode
+    function _getContractBytecode() internal pure override returns (bytes memory) {
+        return type(Counter).creationCode;
+    }
+
+
 }

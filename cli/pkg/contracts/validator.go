@@ -7,13 +7,6 @@ import (
 	"strings"
 )
 
-// ContractInfo contains information about a contract
-type ContractInfo struct {
-	Name         string
-	FilePath     string
-	SolidityFile string
-	Exists       bool
-}
 
 // Validator handles contract validation and discovery
 type Validator struct {
@@ -37,9 +30,8 @@ func (v *Validator) ValidateContract(contractName string) (*ContractInfo, error)
 	}
 
 	// Look for contract file
-	contractInfo := &ContractInfo{
-		Name: contractName,
-	}
+	var contractInfo *ContractInfo
+	var found bool
 
 	// Try common patterns: ContractName.sol, contractName.sol
 	patterns := []string{
@@ -50,15 +42,17 @@ func (v *Validator) ValidateContract(contractName string) (*ContractInfo, error)
 	for _, pattern := range patterns {
 		filePath := filepath.Join(srcDir, pattern)
 		if _, err := os.Stat(filePath); err == nil {
-			contractInfo.FilePath = filePath
-			contractInfo.SolidityFile = pattern
-			contractInfo.Exists = true
+			contractInfo = &ContractInfo{
+				Name: contractName,
+				Path: filePath,
+			}
+			found = true
 			break
 		}
 	}
 
 	// Search in subdirectories if not found
-	if !contractInfo.Exists {
+	if !found {
 		err := filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
@@ -73,9 +67,11 @@ func (v *Validator) ValidateContract(contractName string) (*ContractInfo, error)
 				
 				// Simple check for contract declaration
 				if strings.Contains(string(content), fmt.Sprintf("contract %s", contractName)) {
-					contractInfo.FilePath = path
-					contractInfo.SolidityFile = strings.TrimPrefix(path, srcDir+"/")
-					contractInfo.Exists = true
+					contractInfo = &ContractInfo{
+						Name: contractName,
+						Path: path,
+					}
+					found = true
 					return filepath.SkipAll // Found it, stop searching
 				}
 			}
@@ -106,12 +102,12 @@ func (v *Validator) DeployScriptExists(contractName string) bool {
 // IsLibrary checks if a contract is a library
 func (v *Validator) IsLibrary(contractName string) bool {
 	contractInfo, err := v.ValidateContract(contractName)
-	if err != nil || !contractInfo.Exists {
+	if err != nil || contractInfo == nil {
 		return false
 	}
 
 	// Read the contract file
-	content, err := os.ReadFile(contractInfo.FilePath)
+	content, err := os.ReadFile(contractInfo.Path)
 	if err != nil {
 		return false
 	}
