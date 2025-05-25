@@ -93,6 +93,7 @@ type ContractMetadata struct {
 	Compiler        string                 `json:"compiler"`
 	SourceHash      string                 `json:"source_hash"`
 	ContractPath    string                 `json:"contract_path"`  // Full path like ./src/Contract.sol:Contract
+	ScriptPath      string                 `json:"script_path"`    // Deployment script path like script/deploy/DeployCounter.s.sol
 	Extra           map[string]interface{} `json:"extra,omitempty"` // Additional metadata (e.g., proxy type, implementation address)
 }
 

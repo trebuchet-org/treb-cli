@@ -35,7 +35,7 @@ func NewResolver(projectRoot string) *Resolver {
 		// Load .env file, but don't fail if it doesn't exist
 		godotenv.Load(envPath)
 	}
-	
+
 	return &Resolver{
 		projectRoot: projectRoot,
 	}
@@ -75,7 +75,7 @@ func (r *Resolver) ResolveNetworkByChainID(chainIDStr string) (*NetworkInfo, err
 		1:        "mainnet",
 		11155111: "sepolia",
 		421614:   "arbitrum_sepolia",
-		44787:    "alfajores",
+		44787:    "celo-alfajores",
 		42220:    "celo",
 		// Add more as needed
 	}
@@ -160,7 +160,7 @@ func (r *Resolver) getFoundryRpcUrl(network string) (string, error) {
 // substituteEnvVars replaces ${VAR_NAME} with environment variable values
 func (r *Resolver) substituteEnvVars(value string) string {
 	re := regexp.MustCompile(`\$\{([^}]+)\}`)
-	
+
 	result := re.ReplaceAllStringFunc(value, func(match string) string {
 		varName := match[2 : len(match)-1] // Remove ${ and }
 		if envValue := os.Getenv(varName); envValue != "" {
@@ -170,13 +170,13 @@ func (r *Resolver) substituteEnvVars(value string) string {
 		// This will help identify missing env vars
 		return match
 	})
-	
+
 	// Check if there are still unresolved variables
 	if strings.Contains(result, "${") {
 		// Log a warning but don't fail - let the RPC call fail with a clearer error
 		fmt.Fprintf(os.Stderr, "Warning: Unresolved environment variables in RPC URL: %s\n", result)
 	}
-	
+
 	return result
 }
 

@@ -25,6 +25,12 @@ func NewManager(registryManager *registry.Manager, networkResolver *network.Reso
 
 // VerifyContract verifies a contract on both Etherscan and Sourcify
 func (vm *Manager) VerifyContract(deployment *registry.DeploymentInfo) error {
+	return vm.VerifyContractWithDebug(deployment, false)
+}
+
+// VerifyContractWithDebug verifies a contract with optional debug output
+func (vm *Manager) VerifyContractWithDebug(deployment *registry.DeploymentInfo, debug bool) error {
+	
 	// Get network info
 	networkInfo, err := vm.networkResolver.ResolveNetworkByChainID(deployment.ChainID)
 	if err != nil {
@@ -36,13 +42,17 @@ func (vm *Manager) VerifyContract(deployment *registry.DeploymentInfo) error {
 		deployment.Entry.Verification.Verifiers = make(map[string]types.VerifierStatus)
 	}
 
+	// Track verification errors
+	var verificationErrors []string
+
 	// Verify on Etherscan
-	etherscanErr := vm.verifyOnEtherscan(deployment, networkInfo)
+	etherscanErr := vm.verifyOnEtherscanWithDebug(deployment, networkInfo, debug)
 	if etherscanErr != nil {
 		deployment.Entry.Verification.Verifiers["etherscan"] = types.VerifierStatus{
 			Status: "failed",
 			Reason: etherscanErr.Error(),
 		}
+		verificationErrors = append(verificationErrors, fmt.Sprintf("etherscan: %v", etherscanErr))
 	} else {
 		deployment.Entry.Verification.Verifiers["etherscan"] = types.VerifierStatus{
 			Status: "verified",
@@ -51,12 +61,13 @@ func (vm *Manager) VerifyContract(deployment *registry.DeploymentInfo) error {
 	}
 
 	// Verify on Sourcify
-	sourcifyErr := vm.verifyOnSourceify(deployment, networkInfo)
+	sourcifyErr := vm.verifyOnSourceifyWithDebug(deployment, networkInfo, debug)
 	if sourcifyErr != nil {
 		deployment.Entry.Verification.Verifiers["sourcify"] = types.VerifierStatus{
 			Status: "failed",
 			Reason: sourcifyErr.Error(),
 		}
+		verificationErrors = append(verificationErrors, fmt.Sprintf("sourcify: %v", sourcifyErr))
 	} else {
 		deployment.Entry.Verification.Verifiers["sourcify"] = types.VerifierStatus{
 			Status: "verified",
@@ -67,14 +78,32 @@ func (vm *Manager) VerifyContract(deployment *registry.DeploymentInfo) error {
 	// Update overall status
 	vm.updateOverallStatus(deployment)
 
+	// Check verification status before saving to registry
+	verificationFailed := deployment.Entry.Verification.Status == "failed"
+
 	// Save to registry
 	key := strings.ToLower(deployment.Address.Hex())
 	chainIDUint, _ := strconv.ParseUint(deployment.ChainID, 10, 64)
-	return vm.registryManager.UpdateDeploymentByAddress(key, deployment.Entry, chainIDUint)
+	registryErr := vm.registryManager.UpdateDeploymentByAddress(key, deployment.Entry, chainIDUint)
+	if registryErr != nil {
+		return fmt.Errorf("failed to update registry: %w", registryErr)
+	}
+
+	// Return error based on verification status
+	if verificationFailed {
+		return fmt.Errorf("all verifications failed: %s", strings.Join(verificationErrors, "; "))
+	}
+
+	// Return nil if at least one verification succeeded (registry was updated successfully)
+	return nil
 }
 
 // verifyOnEtherscan verifies contract on Etherscan-compatible explorers
 func (vm *Manager) verifyOnEtherscan(deployment *registry.DeploymentInfo, networkInfo *network.NetworkInfo) error {
+	return vm.verifyOnEtherscanWithDebug(deployment, networkInfo, false)
+}
+
+func (vm *Manager) verifyOnEtherscanWithDebug(deployment *registry.DeploymentInfo, networkInfo *network.NetworkInfo, debug bool) error {
 	cmd := []string{
 		"forge", "verify-contract",
 		deployment.Address.Hex(),
@@ -92,11 +121,24 @@ func (vm *Manager) verifyOnEtherscan(deployment *registry.DeploymentInfo, networ
 		cmd = append(cmd, "--compiler-version", deployment.Entry.Metadata.Compiler)
 	}
 
+	// Print debug information if requested
+	if debug {
+		fmt.Printf("🔍 Etherscan verification command:\n")
+		fmt.Printf("   %s\n", strings.Join(cmd, " "))
+	}
+
 	// Execute command
 	execCmd := exec.Command(cmd[0], cmd[1:]...)
 	output, err := execCmd.CombinedOutput()
 	if err != nil {
+		if debug {
+			fmt.Printf("🔍 Etherscan verification output:\n%s\n", string(output))
+		}
 		return fmt.Errorf("etherscan verification failed: %s", string(output))
+	}
+
+	if debug {
+		fmt.Printf("🔍 Etherscan verification successful\n")
 	}
 
 	return nil
@@ -104,6 +146,10 @@ func (vm *Manager) verifyOnEtherscan(deployment *registry.DeploymentInfo, networ
 
 // verifyOnSourceify verifies contract on Sourcify
 func (vm *Manager) verifyOnSourceify(deployment *registry.DeploymentInfo, networkInfo *network.NetworkInfo) error {
+	return vm.verifyOnSourceifyWithDebug(deployment, networkInfo, false)
+}
+
+func (vm *Manager) verifyOnSourceifyWithDebug(deployment *registry.DeploymentInfo, networkInfo *network.NetworkInfo, debug bool) error {
 	// Build forge verify-contract command for Sourcify
 	cmd := []string{
 		"forge", "verify-contract",
@@ -118,11 +164,24 @@ func (vm *Manager) verifyOnSourceify(deployment *registry.DeploymentInfo, networ
 		cmd = append(cmd, "--constructor-args", deployment.Entry.ConstructorArgs)
 	}
 
+	// Print debug information if requested
+	if debug {
+		fmt.Printf("🔍 Sourcify verification command:\n")
+		fmt.Printf("   %s\n", strings.Join(cmd, " "))
+	}
+
 	// Execute command
 	execCmd := exec.Command(cmd[0], cmd[1:]...)
 	output, err := execCmd.CombinedOutput()
 	if err != nil {
+		if debug {
+			fmt.Printf("🔍 Sourcify verification output:\n%s\n", string(output))
+		}
 		return fmt.Errorf("sourcify verification failed: %s", string(output))
+	}
+
+	if debug {
+		fmt.Printf("🔍 Sourcify verification successful\n")
 	}
 
 	return nil

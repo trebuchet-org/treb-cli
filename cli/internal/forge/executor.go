@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/trebuchet-org/treb-cli/cli/pkg/broadcast"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -413,8 +414,14 @@ func (se *ScriptExecutor) DeployProxy(proxyContract, implementationContract stri
 		result.Metadata = &types.ContractMetadata{}
 	}
 	
-	// Set the deployment script path as contract path for proxies
-	result.Metadata.ContractPath = fmt.Sprintf("script/deploy/Deploy%s.s.sol", proxyContract)
+	// Analyze the deploy script to determine the actual contract being deployed (the proxy)
+	scriptPath := setup.ScriptPath
+	if analysisResult, err := contracts.AnalyzeDeployScript(scriptPath); err == nil {
+		// Update metadata with the analyzed contract information
+		result.Metadata.ContractPath = analysisResult.ContractPath
+		result.Metadata.SourceHash = analysisResult.SourceHash
+	}
+	// If analysis fails, we'll fall back to the default behavior in RecordDeployment
 	
 	// Add proxy-specific metadata
 	if result.Metadata.Extra == nil {

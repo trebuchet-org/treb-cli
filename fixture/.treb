@@ -1,5 +1,5 @@
 {
   "environment": "test",
-  "network": "alfajores",
+  "network": "celo-alfajores",
   "verify": false
 }

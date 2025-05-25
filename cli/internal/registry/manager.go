@@ -156,12 +156,7 @@ func (m *Manager) RecordDeployment(contract, env string, result *types.Deploymen
 			Deployer:      m.getDeployerFromBroadcast(result.BroadcastFile),
 		},
 		
-		Metadata: types.ContractMetadata{
-			SourceCommit:    m.getGitCommit(),
-			Compiler:        m.getCompilerVersion(contract),
-			SourceHash:      m.calculateSourceHash(contract),
-			ContractPath:    m.getContractPath(contract),
-		},
+		Metadata: m.buildMetadata(contract, result),
 	}
 
 	// Use address as key for uniqueness
@@ -266,6 +261,22 @@ func (m *Manager) getCompilerVersion(contract string) string {
 	
 	// Return unknown if artifact not found
 	return "unknown"
+}
+
+// getCompilerVersionForDeployment gets compiler version for a deployment, using contract_path for proxies
+func (m *Manager) getCompilerVersionForDeployment(contractName string, contractPath string, deploymentType string) string {
+	// For proxies, use the actual contract name from contract_path instead of contractName
+	if deploymentType == "proxy" && contractPath != "" {
+		actualContractName := extractContractNameFromPath(contractPath)
+		if actualContractName != "" {
+			if version := m.GetCompilerVersionFromArtifact(actualContractName); version != "" {
+				return version
+			}
+		}
+	}
+	
+	// Fallback to original method
+	return m.getCompilerVersion(contractName)
 }
 
 func (m *Manager) calculateSourceHash(contract string) string {
@@ -716,6 +727,62 @@ func (m *Manager) migrateFromOldFormat(data []byte) error {
 	}
 	
 	return nil
+}
+
+// buildMetadata builds contract metadata, using values from result.Metadata if available
+func (m *Manager) buildMetadata(contract string, result *types.DeploymentResult) types.ContractMetadata {
+	// Determine contract path for compiler version lookup
+	var contractPath string
+	var deploymentType string
+	if result.Metadata != nil && result.Metadata.ContractPath != "" {
+		contractPath = result.Metadata.ContractPath
+	}
+	if result.DeploymentType != "" {
+		deploymentType = result.DeploymentType
+	} else if result.Type != "" {
+		deploymentType = result.Type
+	}
+
+	metadata := types.ContractMetadata{
+		SourceCommit: m.getGitCommit(),
+		Compiler:     m.getCompilerVersionForDeployment(contract, contractPath, deploymentType),
+		ScriptPath:   fmt.Sprintf("script/deploy/Deploy%s.s.sol", contract),
+	}
+
+	// Use provided metadata if available, otherwise calculate
+	if result.Metadata != nil {
+		if result.Metadata.SourceHash != "" {
+			metadata.SourceHash = result.Metadata.SourceHash
+		} else {
+			metadata.SourceHash = m.calculateSourceHash(contract)
+		}
+
+		if result.Metadata.ContractPath != "" {
+			metadata.ContractPath = result.Metadata.ContractPath
+		} else {
+			metadata.ContractPath = m.getContractPath(contract)
+		}
+
+		// Preserve any extra metadata
+		metadata.Extra = result.Metadata.Extra
+	} else {
+		// No metadata provided, calculate everything
+		metadata.SourceHash = m.calculateSourceHash(contract)
+		metadata.ContractPath = m.getContractPath(contract)
+	}
+
+	return metadata
+}
+
+// extractContractNameFromPath extracts contract name from contract path
+// E.g., "./lib/openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy" -> "TransparentUpgradeableProxy"
+func extractContractNameFromPath(contractPath string) string {
+	// Contract path format: ./path/to/Contract.sol:ContractName
+	parts := strings.Split(contractPath, ":")
+	if len(parts) == 2 {
+		return strings.TrimSpace(parts[1])
+	}
+	return ""
 }
 
 // getDeploymentStatus determines the status based on deployment result

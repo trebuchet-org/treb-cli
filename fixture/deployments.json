@@ -18,7 +18,19 @@
           "init_code_hash": "37bd690533ec14929081fc636302cb3f2bbc108e843f104ac03079640f6a940a",
           "label": "V2",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://sepolia.etherscan.io/address/0x1b0990d8E9fc779Cc6fc2b866F0aaf559f847056#code",
+            "reason": "etherscan: etherscan verification failed: Error: environment variable `ETHERSCAN_MAIN_API_KEY` not found\n\nContext:\n- environment variable not found\n; sourcify: sourcify verification failed: Error: environment variable `ETHERSCAN_MAIN_API_KEY` not found\n\nContext:\n- environment variable not found\n",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://sepolia.etherscan.io/address/0x1b0990d8E9fc779Cc6fc2b866F0aaf559f847056#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x1b0990d8E9fc779Cc6fc2b866F0aaf559f847056"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -30,9 +42,10 @@
           },
           "metadata": {
             "source_commit": "6d9310eb6b1f67d7724636d401673e12b349f27d",
-            "compiler": "0.8.22",
+            "compiler": "0.7.6+commit.7338295f",
             "source_hash": "65649cad4aff3ac5cef9be53aea2d4df288f83154897ce2ae695e8dea18e09e9",
-            "contract_path": "./src/SimpleTokenV07.sol:SimpleTokenV07"
+            "contract_path": "./src/SimpleTokenV07.sol:SimpleTokenV07",
+            "script_path": "script/deploy/DeploySimpleTokenV07.s.sol"
           }
         },
         "0x27e7cc1663693411bc75af52bc03c35f95a424de": {
@@ -43,7 +56,19 @@
           "salt": "32cb58b145d3f7e28c45ce4b2cc31fa94248b23f0025d477ad8defa15470fbe3",
           "init_code_hash": "94536da82003228f5385be34bebe7f45a6f421e61d248163c382e8f586af83f8",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://sepolia.etherscan.io/address/0x27e7CC1663693411bc75AF52bc03C35F95a424dE#code",
+            "reason": "etherscan: etherscan verification failed: Error: environment variable `ETHERSCAN_MAIN_API_KEY` not found\n\nContext:\n- environment variable not found\n; sourcify: sourcify verification failed: Error: environment variable `ETHERSCAN_MAIN_API_KEY` not found\n\nContext:\n- environment variable not found\n",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://sepolia.etherscan.io/address/0x27e7CC1663693411bc75AF52bc03C35F95a424dE#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x27e7CC1663693411bc75AF52bc03C35F95a424dE"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x860dde8f38dd7b9fe119c2bb2fa79babc804ac5314c1c9f12d575456d5ce1e91",
@@ -56,9 +81,10 @@
           },
           "metadata": {
             "source_commit": "6d9310eb6b1f67d7724636d401673e12b349f27d",
-            "compiler": "0.8.22",
+            "compiler": "0.8.27+commit.40a35a09",
             "source_hash": "7e055f374634b71faea61a17c12a0d171432a04bb71872f45fb4d386e24f42fc",
-            "contract_path": "./src/SampleToken.sol:SampleToken"
+            "contract_path": "./src/SampleToken.sol:SampleToken",
+            "script_path": "script/deploy/DeploySampleToken.s.sol"
           }
         },
         "0x384efaea61e0561d2101e0c09d6bd0cdabe0b2f6": {
@@ -70,7 +96,18 @@
           "init_code_hash": "82b985e9bef239bbf1c9e6256f184a8bd64be7fa2afa7e6a608f5f880dc7dab7",
           "label": "V8",
           "verification": {
-            "status": "pending"
+            "status": "failed",
+            "reason": "etherscan: etherscan verification failed: Start verifying contract `0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6` deployed on sepolia\nCompiler version: 0.8.27+commit.40a35a09\n\nSubmitting verification for [src/Counter.sol:Counter] 0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (4 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (3 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (2 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (1 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (0 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6.\nError: Could not detect the deployment.\n; sourcify: sourcify verification failed: Start verifying contract `0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6` deployed on sepolia\n\nSubmitting verification for [src/Counter.sol:Counter] 0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (4 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (3 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (2 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (1 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (0 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6.\nError: Could not detect the deployment.\n",
+            "verifiers": {
+              "etherscan": {
+                "status": "failed",
+                "reason": "etherscan verification failed: Start verifying contract `0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6` deployed on sepolia\nCompiler version: 0.8.27+commit.40a35a09\n\nSubmitting verification for [src/Counter.sol:Counter] 0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (4 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (3 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (2 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (1 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (0 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6.\nError: Could not detect the deployment.\n"
+              },
+              "sourcify": {
+                "status": "failed",
+                "reason": "sourcify verification failed: Start verifying contract `0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6` deployed on sepolia\n\nSubmitting verification for [src/Counter.sol:Counter] 0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (4 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (3 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (2 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (1 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (0 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0x384EFaea61e0561d2101e0c09d6Bd0cDabe0b2f6.\nError: Could not detect the deployment.\n"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -83,9 +120,10 @@
           },
           "metadata": {
             "source_commit": "655cbc60d843bf6c1a7a6d605929975b2f76561d",
-            "compiler": "0.8.22",
+            "compiler": "0.8.27+commit.40a35a09",
             "source_hash": "4b5eaa107784609cabdbd23e34e479cc957ee69bd4c4de2881625b884e6bbacc",
-            "contract_path": "./src/Counter.sol:Counter"
+            "contract_path": "./src/Counter.sol:Counter",
+            "script_path": "script/deploy/DeployCounter.s.sol"
           }
         },
         "0x477670732f6adbf392540dbf74fcb3ffa6a1d091": {
@@ -99,7 +137,19 @@
             "v1.0.0"
           ],
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://sourcify.dev/#/lookup/0x477670732F6ADBF392540dBf74fcb3fFa6a1D091",
+            "reason": "etherscan: etherscan verification failed: Error: environment variable `ETHERSCAN_MAIN_API_KEY` not found\n\nContext:\n- environment variable not found\n; sourcify: sourcify verification failed: Error: environment variable `ETHERSCAN_MAIN_API_KEY` not found\n\nContext:\n- environment variable not found\n",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://sepolia.etherscan.io/address/0x477670732F6ADBF392540dBf74fcb3fFa6a1D091#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x477670732F6ADBF392540dBf74fcb3fFa6a1D091"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -111,9 +161,10 @@
           },
           "metadata": {
             "source_commit": "6d9310eb6b1f67d7724636d401673e12b349f27d",
-            "compiler": "0.8.22",
+            "compiler": "0.7.6+commit.7338295f",
             "source_hash": "65649cad4aff3ac5cef9be53aea2d4df288f83154897ce2ae695e8dea18e09e9",
-            "contract_path": "./src/SimpleTokenV07.sol:SimpleTokenV07"
+            "contract_path": "./src/SimpleTokenV07.sol:SimpleTokenV07",
+            "script_path": "script/deploy/DeploySimpleTokenV07.s.sol"
           }
         },
         "0x4ac73812120a1985325a9b448179353e48d0cd91": {
@@ -125,7 +176,18 @@
           "init_code_hash": "0ac6b36512481b422cc8cb28b4e681e54eaf566bc5fc853af72b0e355d6fbdcf",
           "label": "v2",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://sepolia.etherscan.io/address/0x4Ac73812120A1985325A9b448179353e48D0cd91#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://sepolia.etherscan.io/address/0x4Ac73812120A1985325A9b448179353e48D0cd91#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x4Ac73812120A1985325A9b448179353e48D0cd91"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -137,9 +199,10 @@
           },
           "metadata": {
             "source_commit": "978e9e9c9e42a03daa9112a7b4ccb0c2872b8eca",
-            "compiler": "0.8.22",
+            "compiler": "0.8.27+commit.40a35a09",
             "source_hash": "c825bab40f4fbc6abf72d758e3f001161ea5ac069f7e4b80ceba7f04295d670e",
-            "contract_path": "./src/UpgradeableCounter.sol:UpgradeableCounter"
+            "contract_path": "./src/UpgradeableCounter.sol:UpgradeableCounter",
+            "script_path": "script/deploy/DeployUpgradeableCounter.s.sol"
           }
         },
         "0xb5f64d4e297ec2859830f830cb83af3a129bd9a2": {
@@ -150,7 +213,18 @@
           "salt": "32cb58b145d3f7e28c45ce4b2cc31fa94248b23f004f220fb0468a3385ba744f",
           "init_code_hash": "82b985e9bef239bbf1c9e6256f184a8bd64be7fa2afa7e6a608f5f880dc7dab7",
           "verification": {
-            "status": "pending"
+            "status": "failed",
+            "reason": "etherscan: etherscan verification failed: Start verifying contract `0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2` deployed on sepolia\nCompiler version: 0.8.27+commit.40a35a09\n\nSubmitting verification for [src/Counter.sol:Counter] 0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (4 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (3 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (2 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (1 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (0 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2.\nError: Could not detect the deployment.\n; sourcify: sourcify verification failed: Start verifying contract `0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2` deployed on sepolia\n\nSubmitting verification for [src/Counter.sol:Counter] 0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (4 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (3 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (2 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (1 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (0 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2.\nError: Could not detect the deployment.\n",
+            "verifiers": {
+              "etherscan": {
+                "status": "failed",
+                "reason": "etherscan verification failed: Start verifying contract `0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2` deployed on sepolia\nCompiler version: 0.8.27+commit.40a35a09\n\nSubmitting verification for [src/Counter.sol:Counter] 0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (4 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (3 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (2 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (1 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (0 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2.\nError: Could not detect the deployment.\n"
+              },
+              "sourcify": {
+                "status": "failed",
+                "reason": "sourcify verification failed: Start verifying contract `0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2` deployed on sepolia\n\nSubmitting verification for [src/Counter.sol:Counter] 0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (4 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (3 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (2 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (1 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2.\nWarning: Could not detect the deployment.; waiting 5 seconds before trying again (0 tries remaining)\n\nSubmitting verification for [src/Counter.sol:Counter] 0xB5F64d4E297EC2859830f830cB83aF3a129BD9A2.\nError: Could not detect the deployment.\n"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -163,9 +237,10 @@
           },
           "metadata": {
             "source_commit": "655cbc60d843bf6c1a7a6d605929975b2f76561d",
-            "compiler": "0.8.22",
+            "compiler": "0.8.27+commit.40a35a09",
             "source_hash": "4b5eaa107784609cabdbd23e34e479cc957ee69bd4c4de2881625b884e6bbacc",
-            "contract_path": "./src/Counter.sol:Counter"
+            "contract_path": "./src/Counter.sol:Counter",
+            "script_path": "script/deploy/DeployCounter.s.sol"
           }
         },
         "0xb7a577c5c11f50beacb7aa83ff0835ce4bf3eb34": {
@@ -177,7 +252,18 @@
           "init_code_hash": "471d31a19c65fb880cc0552a2c1c18f017d1e446220936e6dedbad346b6dcc6b",
           "target_contract": "UpgradeableCounter",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://sepolia.etherscan.io/address/0xB7a577C5c11f50BEACb7aa83fF0835cE4BF3Eb34#code",
+            "reason": "etherscan: etherscan verification failed: Error: environment variable `ETHERSCAN_MAIN_API_KEY` not found\n\nContext:\n- environment variable not found\n; sourcify: sourcify verification failed: Error: environment variable `ETHERSCAN_MAIN_API_KEY` not found\n\nContext:\n- environment variable not found\n",
+            "verifiers": {
+              "etherscan": {
+                "status": "failed"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0xB7a577C5c11f50BEACb7aa83fF0835cE4BF3Eb34"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -189,15 +275,16 @@
           },
           "metadata": {
             "source_commit": "978e9e9c9e42a03daa9112a7b4ccb0c2872b8eca",
-            "compiler": "0.8.22",
-            "source_hash": "",
-            "contract_path": ""
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "8391555685fb89d92ad37327d21e098b242058c10ded6398447b4eeb1c908ab0",
+            "contract_path": "./lib/openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy",
+            "script_path": "script/deploy/DeployUpgradeableCounterProxy.s.sol"
           }
         }
       }
     },
     "44787": {
-      "name": "alfajores",
+      "name": "celo-alfajores",
       "deployments": {
         "0x0dfe13e6a316ff7a9b325848f8a881f136321284": {
           "address": "0x0dfe13e6a316ff7a9b325848f8a881f136321284",
@@ -207,7 +294,18 @@
           "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c0064f97d43a474016dae87c1",
           "init_code_hash": "eb8f9b76e6389742a2e174264b2e06326a3a8aacabfa34265f2424656bb1c826",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0x0dFe13e6a316Ff7a9B325848f8a881f136321284#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0x0dFe13e6a316Ff7a9B325848f8a881f136321284#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x0dFe13e6a316Ff7a9B325848f8a881f136321284"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -219,9 +317,37 @@
           },
           "metadata": {
             "source_commit": "ab408a7d4142a1057e11c922296d7a85e03d9513",
-            "compiler": "0.8.22",
+            "compiler": "0.8.27+commit.40a35a09",
             "source_hash": "4b5eaa107784609cabdbd23e34e479cc957ee69bd4c4de2881625b884e6bbacc",
-            "contract_path": "./src/Counter.sol:Counter"
+            "contract_path": "./src/Counter.sol:Counter",
+            "script_path": "script/deploy/DeployCounter.s.sol"
+          }
+        },
+        "0x18f01cbb6c6177f047d90d5abf3e10bd134d9d93": {
+          "address": "0x18f01cbb6c6177f047d90d5abf3e10bd134d9d93",
+          "contract_name": "CalculatorV08",
+          "environment": "default",
+          "type": "contract",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00cccae8b10029cdfd109d43",
+          "init_code_hash": "a375b8b13b493a83c77645ac8c372a5ab419073e01cab9e56c1a35aebecc41f5",
+          "label": "V5",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47180244,
+            "broadcast_file": "",
+            "timestamp": "2025-05-25T03:12:58.126867+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "d521c0c404745b9e7e39b02c4270cc61270850af",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "bffa98953803da38a07e8ce0067c1f372133bf2c7f8f0ee6683d2c297dfeac45",
+            "contract_path": "./src/CalculatorV08.sol:CalculatorV08",
+            "script_path": "script/deploy/DeployCalculatorV08.s.sol"
           }
         },
         "0x1b0990d8e9fc779cc6fc2b866f0aaf559f847056": {
@@ -233,7 +359,18 @@
           "init_code_hash": "37bd690533ec14929081fc636302cb3f2bbc108e843f104ac03079640f6a940a",
           "label": "V2",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0x1b0990d8E9fc779Cc6fc2b866F0aaf559f847056#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0x1b0990d8E9fc779Cc6fc2b866F0aaf559f847056#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x1b0990d8E9fc779Cc6fc2b866F0aaf559f847056"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -245,9 +382,10 @@
           },
           "metadata": {
             "source_commit": "6d9310eb6b1f67d7724636d401673e12b349f27d",
-            "compiler": "0.8.22",
+            "compiler": "0.7.6+commit.7338295f",
             "source_hash": "65649cad4aff3ac5cef9be53aea2d4df288f83154897ce2ae695e8dea18e09e9",
-            "contract_path": "./src/SimpleTokenV07.sol:SimpleTokenV07"
+            "contract_path": "./src/SimpleTokenV07.sol:SimpleTokenV07",
+            "script_path": "script/deploy/DeploySimpleTokenV07.s.sol"
           }
         },
         "0x446cd78821ffea4cadbca6d200aa9b7688640a5a": {
@@ -259,7 +397,18 @@
           "init_code_hash": "82b985e9bef239bbf1c9e6256f184a8bd64be7fa2afa7e6a608f5f880dc7dab7",
           "label": "V8",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0x446cD78821fFEa4CadBCa6D200Aa9b7688640a5A#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0x446cD78821fFEa4CadBCa6D200Aa9b7688640a5A#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x446cD78821fFEa4CadBCa6D200Aa9b7688640a5A"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -271,9 +420,10 @@
           },
           "metadata": {
             "source_commit": "655cbc60d843bf6c1a7a6d605929975b2f76561d",
-            "compiler": "0.8.22",
+            "compiler": "0.8.27+commit.40a35a09",
             "source_hash": "4b5eaa107784609cabdbd23e34e479cc957ee69bd4c4de2881625b884e6bbacc",
-            "contract_path": "./src/Counter.sol:Counter"
+            "contract_path": "./src/Counter.sol:Counter",
+            "script_path": "script/deploy/DeployCounter.s.sol"
           }
         },
         "0x4ac73812120a1985325a9b448179353e48d0cd91": {
@@ -284,7 +434,18 @@
           "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00701499a9cf8c0699aaaa67",
           "init_code_hash": "0ac6b36512481b422cc8cb28b4e681e54eaf566bc5fc853af72b0e355d6fbdcf",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0x4Ac73812120A1985325A9b448179353e48D0cd91#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0x4Ac73812120A1985325A9b448179353e48D0cd91#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x4Ac73812120A1985325A9b448179353e48D0cd91"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -296,9 +457,75 @@
           },
           "metadata": {
             "source_commit": "978e9e9c9e42a03daa9112a7b4ccb0c2872b8eca",
-            "compiler": "0.8.22",
+            "compiler": "0.8.27+commit.40a35a09",
             "source_hash": "c825bab40f4fbc6abf72d758e3f001161ea5ac069f7e4b80ceba7f04295d670e",
-            "contract_path": "./src/UpgradeableCounter.sol:UpgradeableCounter"
+            "contract_path": "./src/UpgradeableCounter.sol:UpgradeableCounter",
+            "script_path": "script/deploy/DeployUpgradeableCounter.s.sol"
+          }
+        },
+        "0x51c3d1db77d961b90b26735bf28f056cae431823": {
+          "address": "0x51c3d1db77d961b90b26735bf28f056cae431823",
+          "contract_name": "CalculatorV08",
+          "environment": "default",
+          "type": "contract",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00096ee7567a2a0a1fa12250",
+          "init_code_hash": "a375b8b13b493a83c77645ac8c372a5ab419073e01cab9e56c1a35aebecc41f5",
+          "label": "V6",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47180283,
+            "broadcast_file": "",
+            "timestamp": "2025-05-25T03:13:37.968908+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "d521c0c404745b9e7e39b02c4270cc61270850af",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "bffa98953803da38a07e8ce0067c1f372133bf2c7f8f0ee6683d2c297dfeac45",
+            "contract_path": "./src/CalculatorV08.sol:CalculatorV08",
+            "script_path": "script/deploy/DeployCalculatorV08.s.sol"
+          }
+        },
+        "0x6fe61736c4fa463a13a05ac20a43bb214d49d7d0": {
+          "address": "0x6fe61736c4fa463a13a05ac20a43bb214d49d7d0",
+          "contract_name": "Counter",
+          "environment": "test",
+          "type": "contract",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c0009ea977344a019477f7c05",
+          "init_code_hash": "82b985e9bef239bbf1c9e6256f184a8bd64be7fa2afa7e6a608f5f880dc7dab7",
+          "label": "v19",
+          "verification": {
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0x6fE61736c4fA463A13A05ac20a43bb214d49D7D0#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0x6fE61736c4fA463A13A05ac20a43bb214d49D7D0#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x6fE61736c4fA463A13A05ac20a43bb214d49D7D0"
+              }
+            }
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47164150,
+            "broadcast_file": "",
+            "timestamp": "2025-05-24T22:44:44.063136+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "ffaaad48bee97bf034ff9430854e6cdf6a449e07",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "4b5eaa107784609cabdbd23e34e479cc957ee69bd4c4de2881625b884e6bbacc",
+            "contract_path": "./src/Counter.sol:Counter",
+            "script_path": "script/deploy/DeployCounter.s.sol"
           }
         },
         "0x7bc8fecd0778fe43126109e3f74ee5d1686e5476": {
@@ -310,7 +537,18 @@
           "init_code_hash": "82b985e9bef239bbf1c9e6256f184a8bd64be7fa2afa7e6a608f5f880dc7dab7",
           "label": "v6",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://sourcify.dev/#/lookup/0x7Bc8fECD0778FE43126109E3f74EE5d1686E5476",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0x7Bc8fECD0778FE43126109E3f74EE5d1686E5476#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x7Bc8fECD0778FE43126109E3f74EE5d1686E5476"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -322,9 +560,10 @@
           },
           "metadata": {
             "source_commit": "655cbc60d843bf6c1a7a6d605929975b2f76561d",
-            "compiler": "0.8.22",
+            "compiler": "0.8.27+commit.40a35a09",
             "source_hash": "4b5eaa107784609cabdbd23e34e479cc957ee69bd4c4de2881625b884e6bbacc",
-            "contract_path": "./src/Counter.sol:Counter"
+            "contract_path": "./src/Counter.sol:Counter",
+            "script_path": "script/deploy/DeployCounter.s.sol"
           }
         },
         "0x83e46a53975f592200d22a214148a00beda72582": {
@@ -336,7 +575,18 @@
           "init_code_hash": "0ac6b36512481b422cc8cb28b4e681e54eaf566bc5fc853af72b0e355d6fbdcf",
           "label": "v2",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0x83E46a53975f592200d22A214148A00BEDa72582#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0x83E46a53975f592200d22A214148A00BEDa72582#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x83E46a53975f592200d22A214148A00BEDa72582"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -348,9 +598,10 @@
           },
           "metadata": {
             "source_commit": "5197bd2da7abe9fdb72ab8c4c075bc316e66e02a",
-            "compiler": "0.8.22",
+            "compiler": "0.8.27+commit.40a35a09",
             "source_hash": "c825bab40f4fbc6abf72d758e3f001161ea5ac069f7e4b80ceba7f04295d670e",
-            "contract_path": "./src/UpgradeableCounter.sol:UpgradeableCounter"
+            "contract_path": "./src/UpgradeableCounter.sol:UpgradeableCounter",
+            "script_path": "script/deploy/DeployUpgradeableCounter.s.sol"
           }
         },
         "0x8c3e67fcbd82107ae1f1722e8782f5fcd7f0b01c": {
@@ -361,7 +612,18 @@
           "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c0067d4d057b58a385c3427d0",
           "init_code_hash": "e0d75a5488464a73c737046cab76cf741f71f4325f61671f078aa2419540919a",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0x8c3E67fCBD82107AE1f1722E8782f5fcD7F0b01c#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0x8c3E67fCBD82107AE1f1722E8782f5fcD7F0b01c#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x8c3E67fCBD82107AE1f1722E8782f5fcD7F0b01c"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -373,9 +635,75 @@
           },
           "metadata": {
             "source_commit": "2e1b55558e4690ab30ccca77f00fb94268dad075",
-            "compiler": "0.8.22",
+            "compiler": "0.7.6+commit.7338295f",
             "source_hash": "20cc5e0bc190eaa2175c3a2e9aa514b84f49f296f0796da7fddacb067a55e9c3",
-            "contract_path": "./src/SimpleTokenV07.sol:SimpleTokenV07"
+            "contract_path": "./src/SimpleTokenV07.sol:SimpleTokenV07",
+            "script_path": "script/deploy/DeploySimpleTokenV07.s.sol"
+          }
+        },
+        "0x9fdb9d73513624a017c276b80baeea3709765d86": {
+          "address": "0x9fdb9d73513624a017c276b80baeea3709765d86",
+          "contract_name": "SimpleTokenV07",
+          "environment": "default",
+          "type": "contract",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00e3dfb098e2e2455e417bc3",
+          "init_code_hash": "1c68013fdcd4ee8be03c580d70ad55f47cdda4c5e01d545b99ae6a4322a6d3d9",
+          "label": "V10",
+          "verification": {
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0x9FDb9d73513624A017c276b80baeEa3709765d86#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0x9FDb9d73513624A017c276b80baeEa3709765d86#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x9FDb9d73513624A017c276b80baeEa3709765d86"
+              }
+            }
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47164219,
+            "broadcast_file": "",
+            "timestamp": "2025-05-24T22:45:53.765472+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "b0d0d68d5f6ae22cafa390618e013eb09461820d",
+            "compiler": "0.7.6+commit.7338295f",
+            "source_hash": "65649cad4aff3ac5cef9be53aea2d4df288f83154897ce2ae695e8dea18e09e9",
+            "contract_path": "./src/SimpleTokenV07.sol:SimpleTokenV07",
+            "script_path": "script/deploy/DeploySimpleTokenV07.s.sol"
+          }
+        },
+        "0xab2d8390d0401bc8c7541a6cef7f8d66092f6eab": {
+          "address": "0xab2d8390d0401bc8c7541a6cef7f8d66092f6eab",
+          "contract_name": "CalculatorV08",
+          "environment": "default",
+          "type": "contract",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00753cfe95226e0297ce15e4",
+          "init_code_hash": "a375b8b13b493a83c77645ac8c372a5ab419073e01cab9e56c1a35aebecc41f5",
+          "label": "V3",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47177910,
+            "broadcast_file": "",
+            "timestamp": "2025-05-25T02:34:05.596486+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "d521c0c404745b9e7e39b02c4270cc61270850af",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "bffa98953803da38a07e8ce0067c1f372133bf2c7f8f0ee6683d2c297dfeac45",
+            "contract_path": "./src/CalculatorV08.sol:CalculatorV08",
+            "script_path": "script/deploy/DeployCalculatorV08.s.sol"
           }
         },
         "0xb74123220cb521046b9ab7972425e27f84fc8179": {
@@ -387,7 +715,19 @@
           "init_code_hash": "f084e5ea3d82edd6896f29d0a9518bdbed48b18c9c5eaa8405f6addb246cb6e1",
           "label": "test",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0xB74123220CB521046b9aB7972425e27F84Fc8179#code",
+            "reason": "etherscan: etherscan verification failed: Start verifying contract `0xB74123220CB521046b9aB7972425e27F84Fc8179` deployed on celo-alfajores\nCompiler version: 0.8.27+commit.40a35a09\nError: Invalid API Key\n; sourcify: sourcify verification failed: Start verifying contract `0xB74123220CB521046b9aB7972425e27F84Fc8179` deployed on celo-alfajores\nError: Invalid API Key\n",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0xB74123220CB521046b9aB7972425e27F84Fc8179#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0xB74123220CB521046b9aB7972425e27F84Fc8179"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -399,9 +739,10 @@
           },
           "metadata": {
             "source_commit": "2e1b55558e4690ab30ccca77f00fb94268dad075",
-            "compiler": "0.8.22",
+            "compiler": "0.8.27+commit.40a35a09",
             "source_hash": "7e055f374634b71faea61a17c12a0d171432a04bb71872f45fb4d386e24f42fc",
-            "contract_path": "./src/SampleToken.sol:SampleToken"
+            "contract_path": "./src/SampleToken.sol:SampleToken",
+            "script_path": "script/deploy/DeploySampleToken.s.sol"
           }
         },
         "0xba6bf711a75c1b53bc1aa673bf12cfe1d2187e40": {
@@ -413,7 +754,18 @@
           "init_code_hash": "82b985e9bef239bbf1c9e6256f184a8bd64be7fa2afa7e6a608f5f880dc7dab7",
           "label": "V6",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0xBa6BF711A75C1b53bc1Aa673bf12cfE1D2187E40#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0xBa6BF711A75C1b53bc1Aa673bf12cfE1D2187E40#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0xBa6BF711A75C1b53bc1Aa673bf12cfE1D2187E40"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -425,9 +777,10 @@
           },
           "metadata": {
             "source_commit": "655cbc60d843bf6c1a7a6d605929975b2f76561d",
-            "compiler": "0.8.22",
+            "compiler": "0.8.27+commit.40a35a09",
             "source_hash": "4b5eaa107784609cabdbd23e34e479cc957ee69bd4c4de2881625b884e6bbacc",
-            "contract_path": "./src/Counter.sol:Counter"
+            "contract_path": "./src/Counter.sol:Counter",
+            "script_path": "script/deploy/DeployCounter.s.sol"
           }
         },
         "0xcf0248811f98babaa01d308961a61d9574d09e73": {
@@ -438,7 +791,19 @@
           "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00a2d2c3fe22101450e42130",
           "init_code_hash": "471d31a19c65fb880cc0552a2c1c18f017d1e446220936e6dedbad346b6dcc6b",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0xCF0248811F98bAbAA01d308961a61D9574D09E73#code",
+            "reason": "etherscan: etherscan verification failed: Error: No contract found with the name ``\n; sourcify: sourcify verification failed: Error: No contract found with the name ``\n",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0xCF0248811F98bAbAA01d308961a61D9574D09E73#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0xCF0248811F98bAbAA01d308961a61D9574D09E73"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -450,9 +815,10 @@
           },
           "metadata": {
             "source_commit": "978e9e9c9e42a03daa9112a7b4ccb0c2872b8eca",
-            "compiler": "0.8.22",
-            "source_hash": "",
-            "contract_path": ""
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "8391555685fb89d92ad37327d21e098b242058c10ded6398447b4eeb1c908ab0",
+            "contract_path": "./lib/openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy",
+            "script_path": "script/deploy/DeployUpgradeableCounterProxy.s.sol"
           }
         },
         "0xe8891d08cc831dc4e42fb56f8dfb84b7cd25301e": {
@@ -464,7 +830,18 @@
           "init_code_hash": "82b985e9bef239bbf1c9e6256f184a8bd64be7fa2afa7e6a608f5f880dc7dab7",
           "label": "v3",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0xE8891D08cc831dc4E42fB56F8dfb84b7cD25301e#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0xE8891D08cc831dc4E42fB56F8dfb84b7cD25301e#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0xE8891D08cc831dc4E42fB56F8dfb84b7cD25301e"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -476,9 +853,74 @@
           },
           "metadata": {
             "source_commit": "04717c6e0dba5993305ea961ffb57a62b553c299",
-            "compiler": "0.8.22",
+            "compiler": "0.8.27+commit.40a35a09",
             "source_hash": "4b5eaa107784609cabdbd23e34e479cc957ee69bd4c4de2881625b884e6bbacc",
-            "contract_path": "./src/Counter.sol:Counter"
+            "contract_path": "./src/Counter.sol:Counter",
+            "script_path": "script/deploy/DeployCounter.s.sol"
+          }
+        },
+        "0xecfd1735bdb488f3d630352ba2b262c00e31fc24": {
+          "address": "0xecfd1735bdb488f3d630352ba2b262c00e31fc24",
+          "contract_name": "CalculatorV08",
+          "environment": "default",
+          "type": "contract",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00482005357f9f88292b158b",
+          "init_code_hash": "eb8f9b76e6389742a2e174264b2e06326a3a8aacabfa34265f2424656bb1c826",
+          "verification": {
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0xeCfd1735bDb488f3D630352BA2B262C00E31Fc24#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0xeCfd1735bDb488f3D630352BA2B262C00E31Fc24#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0xeCfd1735bDb488f3D630352BA2B262C00E31Fc24"
+              }
+            }
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47176299,
+            "broadcast_file": "",
+            "timestamp": "2025-05-25T02:07:10.681409+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "d521c0c404745b9e7e39b02c4270cc61270850af",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "bffa98953803da38a07e8ce0067c1f372133bf2c7f8f0ee6683d2c297dfeac45",
+            "contract_path": "./src/CalculatorV08.sol:CalculatorV08",
+            "script_path": "script/deploy/DeployCalculatorV08.s.sol"
+          }
+        },
+        "0xeecb16676620aca66d3a880a7db46f7fcc1a0b7e": {
+          "address": "0xeecb16676620aca66d3a880a7db46f7fcc1a0b7e",
+          "contract_name": "SimpleTokenV07",
+          "environment": "default",
+          "type": "contract",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00ae001375f8d3a6a7fce9d0",
+          "init_code_hash": "1c68013fdcd4ee8be03c580d70ad55f47cdda4c5e01d545b99ae6a4322a6d3d9",
+          "label": "V11",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47176047,
+            "broadcast_file": "",
+            "timestamp": "2025-05-25T02:03:02.588534+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "d521c0c404745b9e7e39b02c4270cc61270850af",
+            "compiler": "0.7.6+commit.7338295f",
+            "source_hash": "65649cad4aff3ac5cef9be53aea2d4df288f83154897ce2ae695e8dea18e09e9",
+            "contract_path": "./src/SimpleTokenV07.sol:SimpleTokenV07",
+            "script_path": "script/deploy/DeploySimpleTokenV07.s.sol"
           }
         },
         "0xefa46f6f17acc685167e811057d799cd3dbd669e": {
@@ -490,7 +932,18 @@
           "init_code_hash": "82b985e9bef239bbf1c9e6256f184a8bd64be7fa2afa7e6a608f5f880dc7dab7",
           "label": "v4",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0xEFA46F6f17acc685167e811057D799cD3Dbd669E#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0xEFA46F6f17acc685167e811057D799cD3Dbd669E#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0xEFA46F6f17acc685167e811057D799cD3Dbd669E"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -502,9 +955,75 @@
           },
           "metadata": {
             "source_commit": "04717c6e0dba5993305ea961ffb57a62b553c299",
-            "compiler": "0.8.22",
+            "compiler": "0.8.27+commit.40a35a09",
             "source_hash": "4b5eaa107784609cabdbd23e34e479cc957ee69bd4c4de2881625b884e6bbacc",
-            "contract_path": "./src/Counter.sol:Counter"
+            "contract_path": "./src/Counter.sol:Counter",
+            "script_path": "script/deploy/DeployCounter.s.sol"
+          }
+        },
+        "0xf816b6bfb01fd09e393b440994eed2950cd80462": {
+          "address": "0xf816b6bfb01fd09e393b440994eed2950cd80462",
+          "contract_name": "CalculatorV08",
+          "environment": "default",
+          "type": "contract",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c000829c0834ad94cd20c1551",
+          "init_code_hash": "a375b8b13b493a83c77645ac8c372a5ab419073e01cab9e56c1a35aebecc41f5",
+          "label": "V4",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47178993,
+            "broadcast_file": "",
+            "timestamp": "2025-05-25T02:52:07.718028+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "d521c0c404745b9e7e39b02c4270cc61270850af",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "bffa98953803da38a07e8ce0067c1f372133bf2c7f8f0ee6683d2c297dfeac45",
+            "contract_path": "./src/CalculatorV08.sol:CalculatorV08",
+            "script_path": "script/deploy/DeployCalculatorV08.s.sol"
+          }
+        },
+        "0xfa1fa60830e7d53cbe60860441ef90cdf90cba9d": {
+          "address": "0xfa1fa60830e7d53cbe60860441ef90cdf90cba9d",
+          "contract_name": "CalculatorV08",
+          "environment": "default",
+          "type": "contract",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c0084616d73a58695ff158a66",
+          "init_code_hash": "a375b8b13b493a83c77645ac8c372a5ab419073e01cab9e56c1a35aebecc41f5",
+          "label": "V2",
+          "verification": {
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0xfa1fA60830e7d53cBe60860441ef90CdF90CBA9D#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0xfa1fA60830e7d53cBe60860441ef90CdF90CBA9D#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0xfa1fA60830e7d53cBe60860441ef90CdF90CBA9D"
+              }
+            }
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47176446,
+            "broadcast_file": "",
+            "timestamp": "2025-05-25T02:09:37.915127+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "d521c0c404745b9e7e39b02c4270cc61270850af",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "bffa98953803da38a07e8ce0067c1f372133bf2c7f8f0ee6683d2c297dfeac45",
+            "contract_path": "./src/CalculatorV08.sol:CalculatorV08",
+            "script_path": "script/deploy/DeployCalculatorV08.s.sol"
           }
         },
         "0xff128c7a9ab882cb3e506993573c3378b7b52365": {
@@ -516,7 +1035,19 @@
           "init_code_hash": "d5ee90cb2fcfa990aed8b970f497e8d5e2fe28f4dcbff767c7ac802495796ee7",
           "target_contract": "UpgradeableCounter",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0xff128C7A9ab882cb3E506993573c3378b7B52365#code",
+            "reason": "etherscan: etherscan verification failed: Error: No contract found with the name ``\n; sourcify: sourcify verification failed: Error: No contract found with the name ``\n",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0xff128C7A9ab882cb3E506993573c3378b7B52365#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0xff128C7A9ab882cb3E506993573c3378b7B52365"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -528,9 +1059,10 @@
           },
           "metadata": {
             "source_commit": "5197bd2da7abe9fdb72ab8c4c075bc316e66e02a",
-            "compiler": "0.8.22",
-            "source_hash": "",
-            "contract_path": ""
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "8391555685fb89d92ad37327d21e098b242058c10ded6398447b4eeb1c908ab0",
+            "contract_path": "./lib/openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy",
+            "script_path": "script/deploy/DeployUpgradeableCounterProxy.s.sol"
           }
         }
       }
