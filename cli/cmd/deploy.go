@@ -12,7 +12,6 @@ import (
 
 var (
 	env                 string
-	verify              bool
 	networkName         string
 	label               string
 	debug               bool
@@ -50,7 +49,6 @@ Examples:
 		ctx.Label = label
 		ctx.Predict = predict
 		ctx.Debug = debug
-		ctx.Verify = verify
 		ctx.NetworkName = networkName
 
 		if err := runDeployment(ctx); err != nil {
@@ -78,7 +76,6 @@ Examples:
 		ctx.Label = label
 		ctx.Predict = predict
 		ctx.Debug = debug
-		ctx.Verify = verify
 		ctx.NetworkName = networkName
 
 		if err := runDeployment(ctx); err != nil {
@@ -102,7 +99,6 @@ Examples:
 		ctx.ContractName = args[0]
 		ctx.Predict = predict
 		ctx.Debug = debug
-		ctx.Verify = verify
 		ctx.NetworkName = networkName
 
 		if err := runDeployment(ctx); err != nil {
@@ -112,7 +108,6 @@ Examples:
 }
 
 func init() {
-	rootCmd.AddCommand(deployCmd)
 	deployCmd.AddCommand(deployContractCmd)
 	deployCmd.AddCommand(deployProxyCmd)
 	deployCmd.AddCommand(deployLibraryCmd)
@@ -129,7 +124,6 @@ func init() {
 
 	// Global flags
 	deployCmd.PersistentFlags().StringVar(&networkName, "network", "", "Network to deploy to (overrides config)")
-	deployCmd.PersistentFlags().BoolVar(&verify, "verify", false, "Verify contracts on block explorer")
 	deployCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Show detailed debug output")
 	deployCmd.PersistentFlags().BoolVar(&predict, "predict", false, "Predict deployment address without deploying")
 
@@ -145,7 +139,7 @@ func init() {
 func runDeployment(ctx *deployment.Context) error {
 	display := deployment.NewDisplay()
 	validator := deployment.NewValidator(".")
-	
+
 	// Run validation first
 	s := display.CreateSpinner("Validating deployment configuration...")
 	if err := validator.ValidateAll(ctx); err != nil {
@@ -155,19 +149,19 @@ func runDeployment(ctx *deployment.Context) error {
 	s.Stop()
 	display.PrintStep("Validated deployment configuration")
 	display.PrintStep("Built contracts")
-	
+
 	// Show deployment summary after validation
 	display.PrintSummary(ctx)
-	
+
 	// Handle prediction mode
 	if ctx.Predict {
 		predictor := deployment.NewPredictor(".")
-		
+
 		// Show script path for debugging
 		if ctx.Debug {
 			fmt.Printf("\n[%s]\n\n", ctx.ScriptPath)
 		}
-		
+
 		s := display.CreateSpinner("Calculating deployment address...")
 		result, err := predictor.Predict(ctx)
 		if err != nil {
@@ -175,7 +169,7 @@ func runDeployment(ctx *deployment.Context) error {
 			return err
 		}
 		s.Stop()
-		
+
 		// Check if already deployed
 		registryPath := filepath.Join(".", "deployments.json")
 		registryManager, err := registry.NewManager(registryPath)
@@ -184,14 +178,14 @@ func runDeployment(ctx *deployment.Context) error {
 				return fmt.Errorf("contract already deployed at %s", existing.Hex())
 			}
 		}
-		
+
 		display.ShowPrediction(ctx, result)
 		return nil
 	}
-	
+
 	// Execute deployment
 	executor := deployment.NewExecutor(".")
-	
+
 	s = display.CreateSpinner("Executing deployment script...")
 	result, err := executor.Execute(ctx)
 	if err != nil {
@@ -199,9 +193,9 @@ func runDeployment(ctx *deployment.Context) error {
 		return err
 	}
 	s.Stop()
-	
+
 	// Show success
 	display.ShowSuccess(ctx, result)
-	
+
 	return nil
 }

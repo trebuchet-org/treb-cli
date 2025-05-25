@@ -10,7 +10,7 @@ type Type string
 
 const (
 	TypeSingleton Type = "singleton"
-	TypeProxy     Type = "proxy" 
+	TypeProxy     Type = "proxy"
 	TypeLibrary   Type = "library"
 )
 
@@ -25,7 +25,6 @@ type Context struct {
 	Label               string
 	Predict             bool
 	Debug               bool
-	Verify              bool
 	NetworkName         string
 	NetworkInfo         *network.NetworkInfo
 	EnvVars             map[string]string
@@ -56,14 +55,14 @@ func (ctx *Context) GetIdentifier() string {
 // GetFullIdentifier returns the full deployment identifier including environment and label
 func (ctx *Context) GetFullIdentifier() string {
 	identifier := ctx.GetIdentifier()
-	
+
 	if ctx.Type != TypeLibrary && ctx.Env != "" {
 		identifier = ctx.Env + "/" + identifier
 	}
-	
+
 	if ctx.Label != "" {
 		identifier += ":" + ctx.Label
 	}
-	
+
 	return identifier
 }

@@ -37,10 +37,24 @@ func (v *Validator) ValidateDeploymentConfig(ctx *Context) error {
 
 	// Resolve network
 	networkResolver := network.NewResolver(v.projectRoot)
-	if ctx.NetworkName == "" {
-		return fmt.Errorf("network must be specified (use --network flag)")
+	networkName := ctx.NetworkName
+	
+	// If no network specified, try to get from config
+	if networkName == "" {
+		configManager := config.NewManager(v.projectRoot)
+		if configManager.Exists() {
+			if cfg, err := configManager.Load(); err == nil && cfg.Network != "" {
+				networkName = cfg.Network
+			}
+		}
 	}
-	networkInfo, err := networkResolver.ResolveNetwork(ctx.NetworkName)
+	
+	// Still no network? Fail with helpful message
+	if networkName == "" {
+		return fmt.Errorf("network must be specified (use --network flag or set default with 'treb config set network <name>')")
+	}
+	
+	networkInfo, err := networkResolver.ResolveNetwork(networkName)
 	if err != nil {
 		return fmt.Errorf("failed to resolve network: %w", err)
 	}

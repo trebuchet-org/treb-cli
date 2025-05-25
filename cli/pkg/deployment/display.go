@@ -22,16 +22,16 @@ func NewDisplay() *Display {
 func (d *Display) PrintSummary(ctx *Context) {
 	// Clear any previous output
 	fmt.Println()
-	
+
 	// Determine action
 	action := "Deploying"
 	if ctx.Predict {
 		action = "Predicting address for"
 	}
-	
+
 	// Build identifier
 	identifier := ctx.GetFullIdentifier()
-	
+
 	// Print header
 	color.New(color.FgCyan, color.Bold).Printf("%s ", action)
 	color.New(color.FgWhite, color.Bold).Printf("%s ", identifier)
@@ -48,28 +48,25 @@ func (d *Display) ShowSuccess(ctx *Context, result *types.DeploymentResult) {
 	fmt.Println()
 	color.New(color.FgGreen, color.Bold).Printf("🚀 Deployment Successful!\n")
 	fmt.Println()
-	
+
 	// Contract info
 	d.printContractInfo(ctx, result)
-	
+
 	// Network info
 	d.printNetworkInfo(ctx, result)
-	
+
 	// Transaction info (if available)
 	if result.TxHash != (common.Hash{}) {
 		d.printTransactionInfo(result)
 	}
-	
+
 	// Safe info (if pending)
 	if result.SafeTxHash != (common.Hash{}) {
 		d.printSafeInfo(result)
 	}
-	
-	// Verification info
-	if ctx.Verify {
-		d.printVerificationInfo(ctx, result)
-	}
-	
+
+	d.printVerificationInfo(ctx, result)
+
 	fmt.Println()
 }
 
@@ -78,7 +75,7 @@ func (d *Display) ShowPrediction(ctx *Context, predicted *types.PredictResult) {
 	fmt.Println()
 	color.New(color.FgGreen, color.Bold).Printf("🎯 Predicted Deployment Address\n")
 	fmt.Println()
-	
+
 	// Contract info
 	switch ctx.Type {
 	case TypeSingleton:
@@ -98,21 +95,21 @@ func (d *Display) ShowPrediction(ctx *Context, predicted *types.PredictResult) {
 		fmt.Printf("%s", ctx.ContractName)
 	}
 	fmt.Println()
-	
+
 	// Network info
 	color.New(color.FgWhite, color.Bold).Printf("Network:      ")
 	color.New(color.FgMagenta).Printf("%s\n", ctx.NetworkInfo.Name)
-	
+
 	// Address
 	color.New(color.FgWhite, color.Bold).Printf("Address:      ")
 	color.New(color.FgGreen, color.Bold).Printf("%s\n", predicted.Address.Hex())
-	
+
 	// Salt (if available)
 	if predicted.Salt != [32]byte{} {
 		color.New(color.FgWhite, color.Bold).Printf("Salt:         ")
 		fmt.Printf("%x\n", predicted.Salt)
 	}
-	
+
 	fmt.Println()
 }
 
@@ -152,10 +149,10 @@ func (d *Display) printContractInfo(ctx *Context, result *types.DeploymentResult
 			fmt.Printf(")")
 		}
 		fmt.Println()
-		
+
 		color.New(color.FgWhite, color.Bold).Printf("Address:      ")
 		color.New(color.FgGreen, color.Bold).Printf("%s\n", result.Address.Hex())
-		
+
 	case TypeProxy:
 		color.New(color.FgWhite, color.Bold).Printf("Proxy:        ")
 		fmt.Printf("%s", ctx.ProxyName)
@@ -167,16 +164,16 @@ func (d *Display) printContractInfo(ctx *Context, result *types.DeploymentResult
 			fmt.Printf(")")
 		}
 		fmt.Println()
-		
+
 		color.New(color.FgWhite, color.Bold).Printf("Address:      ")
 		color.New(color.FgGreen, color.Bold).Printf("%s\n", result.Address.Hex())
-		
+
 		// TODO: Add implementation address when available in result
-		
+
 	case TypeLibrary:
 		color.New(color.FgWhite, color.Bold).Printf("Library:      ")
 		fmt.Printf("%s\n", ctx.ContractName)
-		
+
 		color.New(color.FgWhite, color.Bold).Printf("Address:      ")
 		color.New(color.FgGreen, color.Bold).Printf("%s\n", result.Address.Hex())
 	}
@@ -194,22 +191,22 @@ func (d *Display) printNetworkInfo(ctx *Context, result *types.DeploymentResult)
 func (d *Display) printTransactionInfo(result *types.DeploymentResult) {
 	color.New(color.FgWhite, color.Bold).Printf("Transaction:  ")
 	fmt.Printf("%s\n", result.TxHash.Hex())
-	
+
 	if result.BlockNumber > 0 {
 		color.New(color.FgWhite, color.Bold).Printf("Block:        ")
 		fmt.Printf("%d\n", result.BlockNumber)
 	}
-	
+
 	// TODO: Add deployer address when available in result
 }
 
 func (d *Display) printSafeInfo(result *types.DeploymentResult) {
 	fmt.Println()
 	color.New(color.FgYellow, color.Bold).Printf("⏳ Pending Safe Execution\n")
-	
+
 	color.New(color.FgWhite, color.Bold).Printf("Safe Tx Hash: ")
 	fmt.Printf("%s\n", result.SafeTxHash.Hex())
-	
+
 	fmt.Println()
 	color.New(color.FgYellow).Printf("Next steps:\n")
 	fmt.Printf("1. Collect signatures from Safe owners\n")

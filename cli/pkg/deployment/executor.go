@@ -52,7 +52,7 @@ func (e *Executor) Execute(ctx *Context) (*types.DeploymentResult, error) {
 
 	// Construct forge script command
 	cmdArgs := []string{"script", ctx.ScriptPath}
-	
+
 	// Add network configuration
 	if ctx.NetworkInfo.RpcUrl != "" {
 		cmdArgs = append(cmdArgs, "--rpc-url", ctx.NetworkInfo.RpcUrl)
@@ -61,9 +61,6 @@ func (e *Executor) Execute(ctx *Context) (*types.DeploymentResult, error) {
 	// Add broadcast flags for actual deployment
 	if !ctx.Predict {
 		cmdArgs = append(cmdArgs, "--broadcast")
-		if ctx.Verify {
-			cmdArgs = append(cmdArgs, "--verify")
-		}
 	}
 
 	// Add verbosity
@@ -127,10 +124,10 @@ func (e *Executor) checkExistingDeployment(ctx *Context, registryManager *regist
 // buildDeploymentResult builds deployment result from parsed output
 func (e *Executor) buildDeploymentResult(ctx *Context, results map[string]string) *types.DeploymentResult {
 	deployment := &types.DeploymentResult{
-		Type:         string(ctx.Type),
+		Type:           string(ctx.Type),
 		DeploymentType: string(ctx.Type),
-		Env:          ctx.Env,
-		Label:        ctx.Label,
+		Env:            ctx.Env,
+		Label:          ctx.Label,
 	}
 
 	// Set addresses

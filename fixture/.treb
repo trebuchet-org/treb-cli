@@ -1,5 +1,5 @@
 {
-  "environment": "test",
+  "environment": "default",
   "network": "celo-alfajores",
   "verify": false
 }
