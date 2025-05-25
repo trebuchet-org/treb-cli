@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/cli/internal/registry"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/deployment"
 )
 
@@ -122,13 +123,27 @@ func init() {
 		return nil
 	}
 
+	// Load config defaults
+	var defaultNetwork string
+	var defaultEnv string
+	configManager := config.NewManager(".")
+	if configManager.Exists() {
+		if cfg, err := configManager.Load(); err == nil && cfg.Network != "" {
+			defaultNetwork = cfg.Network
+			defaultEnv = cfg.Environment || "default"
+		}
+	}
+
 	// Global flags
-	deployCmd.PersistentFlags().StringVar(&networkName, "network", "", "Network to deploy to (overrides config)")
+	deployCmd.PersistentFlags().StringVar(&networkName, "network", defaultNetwork, "Network to deploy to")
+	if defaultNetwork == "" {
+		deployCmd.MarkPersistentFlagRequired("network")
+	}
 	deployCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Show detailed debug output")
 	deployCmd.PersistentFlags().BoolVar(&predict, "predict", false, "Predict deployment address without deploying")
 
 	// Contract/Proxy specific flags
-	deployContractCmd.Flags().StringVar(&env, "env", "default", "Deployment environment")
+	deployContractCmd.Flags().StringVar(&env, "env", defaultEnv, "Deployment environment")
 	deployContractCmd.Flags().StringVar(&label, "label", "", "Deployment label (affects address)")
 
 	deployProxyCmd.Flags().StringVar(&env, "env", "default", "Deployment environment")
