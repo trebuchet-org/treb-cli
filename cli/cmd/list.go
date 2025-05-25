@@ -27,8 +27,9 @@ var (
 )
 
 var listCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List all deployments",
+	Use:     "list",
+	Aliases: []string{"ls"},
+	Short:   "List all deployments",
 	Long: `Display deployments organized by environment and network.
 Shows contract addresses, deployment status, and version tags.
 

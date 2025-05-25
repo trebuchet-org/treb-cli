@@ -66,7 +66,12 @@ func (p *Predictor) predictScript(ctx *Context) (*types.PredictResult, error) {
 	}
 
 	// Parse prediction output
-	return p.parser.ParsePredictionOutput(string(output))
+	result, err := p.parser.ParsePredictionOutput(string(output))
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 // predictLibrary runs prediction for library deployment
@@ -123,7 +128,7 @@ func (p *Predictor) GetExistingAddress(ctx *Context, registryManager interface{}
 		GetDeployment(identifier, network string) *types.DeploymentResult
 		GetLibraryDeployment(name, network string) *types.DeploymentResult
 	}
-	
+
 	registry, ok := registryManager.(RegistryGetter)
 	if !ok {
 		return common.Address{}
@@ -139,6 +144,6 @@ func (p *Predictor) GetExistingAddress(ctx *Context, registryManager interface{}
 			return deployment.Address
 		}
 	}
-	
+
 	return common.Address{}
 }

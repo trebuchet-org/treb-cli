@@ -146,7 +146,10 @@ func init() {
 	deployCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Show detailed debug output")
 	deployCmd.PersistentFlags().BoolVar(&predict, "predict", false, "Predict deployment address without deploying")
 
-	// Contract/Proxy specific flags
+	// Contract/Proxy specific flags (also add to main deployCmd for bare usage)
+	deployCmd.PersistentFlags().StringVar(&env, "env", defaultEnv, "Deployment environment")
+	deployCmd.PersistentFlags().StringVar(&label, "label", "", "Deployment label (affects address)")
+
 	deployContractCmd.Flags().StringVar(&env, "env", defaultEnv, "Deployment environment")
 	deployContractCmd.Flags().StringVar(&label, "label", "", "Deployment label (affects address)")
 
@@ -167,7 +170,7 @@ func runDeployment(ctx *deployment.Context) error {
 	}
 	s.Stop()
 	display.PrintStep("Validated deployment configuration")
-	
+
 	// Build contracts
 	s = display.CreateSpinner("Building contracts...")
 	if err := validator.BuildContracts(); err != nil {
@@ -176,7 +179,7 @@ func runDeployment(ctx *deployment.Context) error {
 	}
 	s.Stop()
 	display.PrintStep("Built contracts")
-	
+
 	// Now do type-specific validation (may be interactive)
 	var scriptGenerated bool
 	switch ctx.Type {
@@ -195,13 +198,13 @@ func runDeployment(ctx *deployment.Context) error {
 			return err
 		}
 	}
-	
+
 	// If script was generated, restart the deployment
 	if scriptGenerated {
-		fmt.Println("\nRestarting deployment with generated script...")
-		return runDeployment(ctx)
+		fmt.Println("\nScript generated, update it if necessary and run again.")
+		return nil
 	}
-	
+
 	// Show deployment summary after validation
 	display.PrintSummary(ctx)
 

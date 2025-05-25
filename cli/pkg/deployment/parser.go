@@ -22,45 +22,60 @@ func NewParser() *Parser {
 func (p *Parser) ParseDeploymentResult(output string) (map[string]string, error) {
 	result := make(map[string]string)
 
-	// Extract contract name
-	contractNameRegex := regexp.MustCompile(`Contract name:\s+(\S+)`)
-	if match := contractNameRegex.FindStringSubmatch(output); len(match) > 1 {
-		result["contractName"] = match[1]
-	}
+	// Parse structured output between === DEPLOYMENT_RESULT === and === END_DEPLOYMENT ===
+	startPattern := "  === DEPLOYMENT_RESULT ===\n"
+	endPattern := "  === END_DEPLOYMENT ===\n"
 
-	// Extract deployed address
-	deployedRegex := regexp.MustCompile(`Deployed:\s+(0x[a-fA-F0-9]{40})`)
-	if match := deployedRegex.FindStringSubmatch(output); len(match) > 1 {
-		result["deployedAddress"] = match[1]
-	}
+	startIdx := strings.Index(output, startPattern)
+	endIdx := strings.Index(output, endPattern)
 
-	// Extract salt
-	saltRegex := regexp.MustCompile(`Salt:\s+(0x[a-fA-F0-9]{64})`)
-	if match := saltRegex.FindStringSubmatch(output); len(match) > 1 {
-		result["salt"] = match[1]
-	}
+	// Extract the section between markers
+	deploymentSection := output[startIdx+len(startPattern) : endIdx]
 
-	// Extract initCodeHash
-	initCodeHashRegex := regexp.MustCompile(`Init code hash:\s+(0x[a-fA-F0-9]{64})`)
-	if match := initCodeHashRegex.FindStringSubmatch(output); len(match) > 1 {
-		result["initCodeHash"] = match[1]
-	}
+	// Parse key:value pairs
+	lines := strings.Split(deploymentSection, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
 
-	// Extract implementation address for proxy deployments
-	implRegex := regexp.MustCompile(`Implementation:\s+(0x[a-fA-F0-9]{40})`)
-	if match := implRegex.FindStringSubmatch(output); len(match) > 1 {
-		result["implementationAddress"] = match[1]
-	}
+		// Split on first colon
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			value := strings.TrimSpace(parts[1])
 
-	// Extract Safe-specific data
-	safeTxHashRegex := regexp.MustCompile(`Safe transaction hash:\s+(0x[a-fA-F0-9]{64})`)
-	if match := safeTxHashRegex.FindStringSubmatch(output); len(match) > 1 {
-		result["safeTxHash"] = match[1]
-	}
-
-	executedRegex := regexp.MustCompile(`Deployment status:\s+(\w+)`)
-	if match := executedRegex.FindStringSubmatch(output); len(match) > 1 {
-		result["status"] = match[1]
+			// Map to expected field names
+			switch key {
+			case "ADDRESS":
+				result["deployedAddress"] = value
+			case "PREDICTED":
+				result["predictedAddress"] = value
+			case "SALT":
+				result["salt"] = value
+			case "INIT_CODE_HASH":
+				result["initCodeHash"] = value
+			case "STATUS":
+				result["status"] = value
+			case "DEPLOYMENT_TYPE":
+				result["deploymentType"] = value
+			case "STRATEGY":
+				result["strategy"] = value
+			case "BLOCK_NUMBER":
+				result["blockNumber"] = value
+			case "CONSTRUCTOR_ARGS":
+				result["constructorArgs"] = value
+			case "SAFE_TX_HASH":
+				result["safeTxHash"] = value
+			case "IMPLEMENTATION_ADDRESS":
+				result["implementationAddress"] = value
+			case "LIBRARY_ADDRESS":
+				result["libraryAddress"] = value
+			case "PROXY_INITIALIZER":
+				result["proxyInitializer"] = value
+			}
+		}
 	}
 
 	return result, nil
@@ -68,18 +83,24 @@ func (p *Parser) ParseDeploymentResult(output string) (map[string]string, error)
 
 // ParsePredictionOutput parses prediction output from script
 func (p *Parser) ParsePredictionOutput(output string) (*types.PredictResult, error) {
-	result := &types.PredictResult{}
-
-	// Extract predicted address
-	predictedRegex := regexp.MustCompile(`Predicted:\s+(0x[a-fA-F0-9]{40})`)
-	if match := predictedRegex.FindStringSubmatch(output); len(match) > 1 {
-		result.Address = common.HexToAddress(match[1])
+	// For predictions, use the same structured parser since they use the same format
+	parsed, err := p.ParseDeploymentResult(output)
+	if err != nil {
+		return nil, err
 	}
 
-	// Extract salt
-	saltRegex := regexp.MustCompile(`Salt:\s+(0x[a-fA-F0-9]{64})`)
-	if match := saltRegex.FindStringSubmatch(output); len(match) > 1 {
-		saltBytes, _ := hex.DecodeString(strings.TrimPrefix(match[1], "0x"))
+	result := &types.PredictResult{}
+
+	// Get predicted address - use ADDRESS or PREDICTED field
+	if addr := parsed["deployedAddress"]; addr != "" {
+		result.Address = common.HexToAddress(addr)
+	} else if addr := parsed["predictedAddress"]; addr != "" {
+		result.Address = common.HexToAddress(addr)
+	}
+
+	// Get salt
+	if salt := parsed["salt"]; salt != "" {
+		saltBytes, _ := hex.DecodeString(strings.TrimPrefix(salt, "0x"))
 		copy(result.Salt[:], saltBytes)
 	}
 
@@ -88,16 +109,20 @@ func (p *Parser) ParsePredictionOutput(output string) (*types.PredictResult, err
 
 // ParseLibraryAddress parses library address from deployment output
 func (p *Parser) ParseLibraryAddress(output string) (common.Address, error) {
-	// Look for library address pattern
-	libraryRegex := regexp.MustCompile(`Deployed library:\s+(0x[a-fA-F0-9]{40})`)
-	if match := libraryRegex.FindStringSubmatch(output); len(match) > 1 {
-		return common.HexToAddress(match[1]), nil
+	// Use structured parser to get library address
+	parsed, err := p.ParseDeploymentResult(output)
+	if err != nil {
+		return common.Address{}, err
 	}
 
-	// Fallback to general deployed pattern
-	deployedRegex := regexp.MustCompile(`Deployed:\s+(0x[a-fA-F0-9]{40})`)
-	if match := deployedRegex.FindStringSubmatch(output); len(match) > 1 {
-		return common.HexToAddress(match[1]), nil
+	// Check for library address
+	if addr := parsed["libraryAddress"]; addr != "" {
+		return common.HexToAddress(addr), nil
+	}
+
+	// Fallback to deployed address for older format
+	if addr := parsed["deployedAddress"]; addr != "" {
+		return common.HexToAddress(addr), nil
 	}
 
 	return common.Address{}, fmt.Errorf("library address not found in output")
@@ -116,10 +141,6 @@ func (p *Parser) HandleForgeError(err error, output []byte) error {
 		return fmt.Errorf("contract already deployed")
 	}
 
-	if strings.Contains(outputStr, "DeploymentPendingSafe") {
-		return fmt.Errorf("deployment pending Safe execution. Please execute the Safe transaction first")
-	}
-
 	if strings.Contains(outputStr, "insufficient funds") {
 		return fmt.Errorf("insufficient funds for deployment")
 	}
@@ -130,6 +151,22 @@ func (p *Parser) HandleForgeError(err error, output []byte) error {
 
 	if strings.Contains(outputStr, "replacement transaction underpriced") {
 		return fmt.Errorf("replacement transaction underpriced - increase gas price")
+	}
+
+	// Check for CreateX collision error
+	if strings.Contains(outputStr, "CreateCollision") || strings.Contains(outputStr, "create collision") {
+		// Try to extract the address that already exists
+		addrRegex := regexp.MustCompile(`address\s+(0x[a-fA-F0-9]{40})`)
+		var existingAddr string
+		if match := addrRegex.FindStringSubmatch(outputStr); len(match) > 1 {
+			existingAddr = match[1]
+		}
+
+		// More helpful message about deployments.json
+		if existingAddr != "" {
+			return fmt.Errorf("contract already exists at %s (CreateX collision). This was most likely deployed but not found in the current deployments.json - make sure you have the latest deployments.json. Alternatively, use a different label with --label flag", existingAddr)
+		}
+		return fmt.Errorf("contract already exists at this address (CreateX collision). This was most likely deployed but not found in the current deployments.json - make sure you have the latest deployments.json. Alternatively, use a different label with --label flag")
 	}
 
 	// Extract revert reason

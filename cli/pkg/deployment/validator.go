@@ -2,6 +2,7 @@ package deployment
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
@@ -55,6 +56,11 @@ func (v *Validator) ValidateDeploymentConfig(ctx *Context) error {
 	}
 	envVars["CHAIN_ID"] = fmt.Sprintf("%d", networkInfo.ChainID)
 	
+	// Add deployment label if specified
+	if ctx.Label != "" {
+		envVars["DEPLOYMENT_LABEL"] = ctx.Label
+	}
+	
 	ctx.EnvVars = envVars
 
 	return nil
@@ -97,11 +103,12 @@ func (v *Validator) ValidateContractWithGeneration(ctx *Context) (bool, error) {
 	// Update context with resolved contract name
 	ctx.ContractName = contractInfo.Name
 
-	// Check if deploy script exists
-	validator := contracts.NewValidator(v.projectRoot)
-	if !validator.DeployScriptExists(ctx.ContractName) {
+	// Check if deploy script exists using the generator's path logic
+	generator := contracts.NewGenerator(v.projectRoot)
+	scriptPath := generator.GetDeployScriptPath(contractInfo)
+	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
 		if ctx.Predict {
-			return false, fmt.Errorf("deploy script required but not found: script/deploy/Deploy%s.s.sol", ctx.ContractName)
+			return false, fmt.Errorf("deploy script required but not found: %s", scriptPath)
 		}
 
 		fmt.Printf("\nDeploy script not found for %s\n", ctx.ContractName)
@@ -110,21 +117,20 @@ func (v *Validator) ValidateContractWithGeneration(ctx *Context) (bool, error) {
 		selector := interactive.NewSelector()
 		shouldGenerate, err := selector.PromptConfirm("Would you like to generate a deploy script?", true)
 		if err != nil || !shouldGenerate {
-			return false, fmt.Errorf("deploy script required but not found: script/deploy/Deploy%s.s.sol", ctx.ContractName)
+			return false, fmt.Errorf("deploy script required but not found: %s", scriptPath)
 		}
 
 		// Generate the script interactively
 		fmt.Printf("\nStarting interactive script generation...\n\n")
-		generator := interactive.NewGenerator(v.projectRoot)
-		if err := generator.GenerateDeployScriptForContract(contractInfo); err != nil {
+		interactiveGenerator := interactive.NewGenerator(v.projectRoot)
+		if err := interactiveGenerator.GenerateDeployScriptForContract(contractInfo); err != nil {
 			return false, fmt.Errorf("script generation failed: %w", err)
 		}
 		return true, nil
 	}
 
-	// Set script path using the new generator
-	generator := contracts.NewGenerator(v.projectRoot)
-	ctx.ScriptPath = generator.GetDeployScriptPath(contractInfo)
+	// Set script path
+	ctx.ScriptPath = scriptPath
 
 	return false, nil
 }
