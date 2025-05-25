@@ -12,8 +12,10 @@ import { MyToken } from "../../src/tokens/MyToken.sol";
  */
 contract DeployMyTokenProxy is ProxyDeployment {
     constructor() ProxyDeployment(
-        "MyToken",
-        DeployStrategy.CREATE3
+        "MyTokenProxy",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
+        DeployStrategy.CREATE3,
+        "MyToken"
     ) {}
 
     /// @notice Get contract bytecode for the proxy

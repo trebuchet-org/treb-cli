@@ -12,8 +12,10 @@ import { UpgradeableCounter } from "../../src/UpgradeableCounter.sol";
  */
 contract DeployUpgradeableCounterProxy is ProxyDeployment {
     constructor() ProxyDeployment(
-        "UpgradeableCounter",
-        DeployStrategy.CREATE3
+        "UpgradeableCounterProxy",
+        "lib/openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy",
+        DeployStrategy.CREATE3,
+        "UpgradeableCounter"
     ) {}
 
     /// @notice Get contract bytecode for the proxy
@@ -23,7 +25,7 @@ contract DeployUpgradeableCounterProxy is ProxyDeployment {
 
     /// @notice Get constructor arguments - override to include admin parameter
     function _getConstructorArgs() internal view override returns (bytes memory) {
-        address implementation = getDeployment(_getImplementationIdentifier());
+        address implementation = getDeployment(implementationIdentifier);
         address admin = executor; // Use executor as the ProxyAdmin owner
         bytes memory initData = _getProxyInitializer();
         return abi.encode(implementation, admin, initData);

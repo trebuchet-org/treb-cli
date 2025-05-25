@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {ContractDeployment, DeployStrategy} from "treb-sol/ContractDeployment.sol";
+import {Deployment, DeployStrategy} from "treb-sol/Deployment.sol";
 import {SampleToken} from "../../src/SampleToken.sol";
 
 /**
@@ -9,9 +9,10 @@ import {SampleToken} from "../../src/SampleToken.sol";
  * @notice Deployment script for SampleToken contract
  * @dev Generated automatically by treb
  */
-contract DeploySampleToken is ContractDeployment {
-    constructor() ContractDeployment(
+contract DeploySampleToken is Deployment {
+    constructor() Deployment(
         "SampleToken",
+        "src/SampleToken.sol:SampleToken",
         DeployStrategy.CREATE3
     ) {}
 

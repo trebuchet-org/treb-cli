@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {ContractDeployment, DeployStrategy} from "treb-sol/ContractDeployment.sol";
+import {Deployment, DeployStrategy} from "treb-sol/Deployment.sol";
 // Target contract uses Solidity 0.7.6, which is incompatible with this deployment script (0.8)
 // Import commented out to avoid version conflicts. Using artifact-based deployment instead.
 // import "../../src/MessageStorageV07.sol";
@@ -12,11 +12,10 @@ import {ContractDeployment, DeployStrategy} from "treb-sol/ContractDeployment.so
  * @dev Generated automatically by treb
  * @dev Target contract version: 0.7.6 (cross-version deployment)
  */
-contract DeployMessageStorageV07 is ContractDeployment {
-    constructor() ContractDeployment(
+contract DeployMessageStorageV07 is Deployment {
+    constructor() Deployment(
         "MessageStorageV07",
+        "src/MessageStorageV07.sol:MessageStorageV07",
         DeployStrategy.CREATE3
     ) {}
-
-
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {ContractDeployment, DeployStrategy} from "treb-sol/ContractDeployment.sol";
+import {Deployment, DeployStrategy} from "treb-sol/Deployment.sol";
 import { MessageStorageV08 } from "../../src/MessageStorageV08.sol";
 
 /**
@@ -9,9 +9,10 @@ import { MessageStorageV08 } from "../../src/MessageStorageV08.sol";
  * @notice Deployment script for MessageStorageV08 contract
  * @dev Generated automatically by treb
  */
-contract DeployMessageStorageV08 is ContractDeployment {
-    constructor() ContractDeployment(
+contract DeployMessageStorageV08 is Deployment {
+    constructor() Deployment(
         "MessageStorageV08",
+        "src/MessageStorageV08.sol:MessageStorageV08",
         DeployStrategy.CREATE3
     ) {}
 

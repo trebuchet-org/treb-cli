@@ -133,3 +133,70 @@ func (d *Discovery) GetFormattedOptions(contracts []ContractDiscovery) []string 
 	}
 	return options
 }
+
+// FindContract finds a contract by name or path
+// Returns all matching contracts if multiple exist
+func (d *Discovery) FindContract(nameOrPath string) ([]ContractDiscovery, error) {
+	allContracts, err := d.DiscoverContracts()
+	if err != nil {
+		return nil, err
+	}
+
+	var matches []ContractDiscovery
+
+	// Normalize the input
+	nameOrPath = strings.TrimSpace(nameOrPath)
+	
+	// Check if it's a path (contains separator or .sol extension)
+	if strings.Contains(nameOrPath, string(os.PathSeparator)) || strings.Contains(nameOrPath, "/") || strings.HasSuffix(nameOrPath, ".sol") {
+		// Try to match by path
+		normalizedInput := strings.TrimPrefix(nameOrPath, "src/")
+		normalizedInput = strings.TrimSuffix(normalizedInput, ".sol")
+		
+		for _, contract := range allContracts {
+			// Check if relative path matches
+			contractPath := strings.TrimSuffix(contract.RelativePath, ".sol")
+			if contractPath == normalizedInput {
+				matches = append(matches, contract)
+			}
+		}
+	} else {
+		// Match by contract name
+		for _, contract := range allContracts {
+			if contract.Name == nameOrPath {
+				matches = append(matches, contract)
+			}
+		}
+	}
+
+	return matches, nil
+}
+
+// GetScriptPath generates the script path for a contract
+// Maintains directory structure from src to script/deploy
+func (d *Discovery) GetScriptPath(contract ContractDiscovery, scriptType string) string {
+	// Get directory path from relative path
+	dir := filepath.Dir(contract.RelativePath)
+	
+	// Build script path
+	var scriptPath string
+	if dir == "." {
+		// Contract is in root src directory
+		scriptPath = filepath.Join("script", "deploy", fmt.Sprintf("Deploy%s%s.s.sol", contract.Name, scriptType))
+	} else {
+		// Contract is in subdirectory - maintain structure
+		scriptPath = filepath.Join("script", "deploy", dir, fmt.Sprintf("Deploy%s%s.s.sol", contract.Name, scriptType))
+	}
+	
+	return scriptPath
+}
+
+// GetProxyScriptPath is a convenience method for proxy scripts
+func (d *Discovery) GetProxyScriptPath(contract ContractDiscovery) string {
+	return d.GetScriptPath(contract, "Proxy")
+}
+
+// GetDeployScriptPath is a convenience method for regular deploy scripts
+func (d *Discovery) GetDeployScriptPath(contract ContractDiscovery) string {
+	return d.GetScriptPath(contract, "")
+}

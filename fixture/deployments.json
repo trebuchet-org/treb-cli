@@ -205,6 +205,32 @@
             "script_path": "script/deploy/DeployUpgradeableCounter.s.sol"
           }
         },
+        "0x7a92cf8bf5efbe4af8c25e81c3aed5f58a83a759": {
+          "address": "0x7a92cf8bf5efbe4af8c25e81c3aed5f58a83a759",
+          "contract_name": "SampleToken",
+          "environment": "test",
+          "type": "",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00d031815262caf14704bb05",
+          "init_code_hash": "18f860bc1dae0786d9174a280fd54002e2d374c3f906d9eda952e3129f359c41",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 8404670,
+            "broadcast_file": "",
+            "timestamp": "2025-05-25T18:57:26.08739+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "a527485dfd2415d5351c28577b06676caf77ab70",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "7e055f374634b71faea61a17c12a0d171432a04bb71872f45fb4d386e24f42fc",
+            "contract_path": "./src/SampleToken.sol:SampleToken",
+            "script_path": "script/deploy/DeploySampleToken.s.sol"
+          }
+        },
         "0xb5f64d4e297ec2859830f830cb83af3a129bd9a2": {
           "address": "0xb5f64d4e297ec2859830f830cb83af3a129bd9a2",
           "contract_name": "Counter",
@@ -332,7 +358,18 @@
           "init_code_hash": "a375b8b13b493a83c77645ac8c372a5ab419073e01cab9e56c1a35aebecc41f5",
           "label": "V5",
           "verification": {
-            "status": "pending"
+            "status": "failed",
+            "reason": "etherscan: etherscan verification failed: Start verifying contract `0x18F01CbB6c6177F047d90d5abF3E10Bd134D9D93` deployed on celo-alfajores\nCompiler version: 0.8.27+commit.40a35a09\nError: Failed to get standard json input\n\nContext:\n- cannot resolve file at \"/Users/bogdan/Workspace/treb-cli/fixture/./src/CalculatorV08.sol\"\n; sourcify: sourcify verification failed: Error: If cache is disabled, compiler version must be either provided with `--compiler-version` option or set in foundry.toml\n",
+            "verifiers": {
+              "etherscan": {
+                "status": "failed",
+                "reason": "etherscan verification failed: Start verifying contract `0x18F01CbB6c6177F047d90d5abF3E10Bd134D9D93` deployed on celo-alfajores\nCompiler version: 0.8.27+commit.40a35a09\nError: Failed to get standard json input\n\nContext:\n- cannot resolve file at \"/Users/bogdan/Workspace/treb-cli/fixture/./src/CalculatorV08.sol\"\n"
+              },
+              "sourcify": {
+                "status": "failed",
+                "reason": "sourcify verification failed: Error: If cache is disabled, compiler version must be either provided with `--compiler-version` option or set in foundry.toml\n"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -472,7 +509,18 @@
           "init_code_hash": "a375b8b13b493a83c77645ac8c372a5ab419073e01cab9e56c1a35aebecc41f5",
           "label": "V6",
           "verification": {
-            "status": "pending"
+            "status": "failed",
+            "reason": "etherscan: etherscan verification failed: Start verifying contract `0x51C3D1DB77D961b90b26735Bf28F056Cae431823` deployed on celo-alfajores\nCompiler version: 0.8.27+commit.40a35a09\nError: Failed to get standard json input\n\nContext:\n- cannot resolve file at \"/Users/bogdan/Workspace/treb-cli/fixture/./src/CalculatorV08.sol\"\n; sourcify: sourcify verification failed: Error: If cache is disabled, compiler version must be either provided with `--compiler-version` option or set in foundry.toml\n",
+            "verifiers": {
+              "etherscan": {
+                "status": "failed",
+                "reason": "etherscan verification failed: Start verifying contract `0x51C3D1DB77D961b90b26735Bf28F056Cae431823` deployed on celo-alfajores\nCompiler version: 0.8.27+commit.40a35a09\nError: Failed to get standard json input\n\nContext:\n- cannot resolve file at \"/Users/bogdan/Workspace/treb-cli/fixture/./src/CalculatorV08.sol\"\n"
+              },
+              "sourcify": {
+                "status": "failed",
+                "reason": "sourcify verification failed: Error: If cache is disabled, compiler version must be either provided with `--compiler-version` option or set in foundry.toml\n"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -649,7 +697,18 @@
           "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00c3d23a461161da0f54bcae",
           "init_code_hash": "1929d0dfcd528ecab1a6df4116315f60b09e87a9a8a63b5122e9b0e9b6e5c5e0",
           "verification": {
-            "status": "pending"
+            "status": "failed",
+            "reason": "sourcify: sourcify verification failed: Error: No contract found with the name ``\n; etherscan: etherscan verification failed: Error: No contract found with the name ``\n",
+            "verifiers": {
+              "etherscan": {
+                "status": "failed",
+                "reason": "etherscan verification failed: Error: No contract found with the name ``\n"
+              },
+              "sourcify": {
+                "status": "failed",
+                "reason": "sourcify verification failed: Error: No contract found with the name ``\n"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -714,7 +773,18 @@
           "init_code_hash": "a375b8b13b493a83c77645ac8c372a5ab419073e01cab9e56c1a35aebecc41f5",
           "label": "V3",
           "verification": {
-            "status": "pending"
+            "status": "failed",
+            "reason": "etherscan: etherscan verification failed: Start verifying contract `0xaB2D8390d0401BC8C7541a6CeF7F8D66092f6eAb` deployed on celo-alfajores\nCompiler version: 0.8.27+commit.40a35a09\nError: Failed to get standard json input\n\nContext:\n- cannot resolve file at \"/Users/bogdan/Workspace/treb-cli/fixture/./src/CalculatorV08.sol\"\n; sourcify: sourcify verification failed: Error: If cache is disabled, compiler version must be either provided with `--compiler-version` option or set in foundry.toml\n",
+            "verifiers": {
+              "etherscan": {
+                "status": "failed",
+                "reason": "etherscan verification failed: Start verifying contract `0xaB2D8390d0401BC8C7541a6CeF7F8D66092f6eAb` deployed on celo-alfajores\nCompiler version: 0.8.27+commit.40a35a09\nError: Failed to get standard json input\n\nContext:\n- cannot resolve file at \"/Users/bogdan/Workspace/treb-cli/fixture/./src/CalculatorV08.sol\"\n"
+              },
+              "sourcify": {
+                "status": "failed",
+                "reason": "sourcify verification failed: Error: If cache is disabled, compiler version must be either provided with `--compiler-version` option or set in foundry.toml\n"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -817,7 +887,18 @@
           "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c003f9f168dfd51353d639504",
           "init_code_hash": "ebc011a0f6d12d597e9b64eb0a5239648fc8c8c365049611be68fc0e5a5c1bc2",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://sourcify.dev/#/lookup/0xC677ec323c7b6bA207f1c784bcBcA4D7EE9868cB",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0xC677ec323c7b6bA207f1c784bcBcA4D7EE9868cB#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0xC677ec323c7b6bA207f1c784bcBcA4D7EE9868cB"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -957,7 +1038,18 @@
           "init_code_hash": "1c68013fdcd4ee8be03c580d70ad55f47cdda4c5e01d545b99ae6a4322a6d3d9",
           "label": "V11",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0xeecB16676620AcA66D3a880a7dB46F7fcC1A0b7E#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0xeecB16676620AcA66D3a880a7dB46F7fcC1A0b7E#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0xeecB16676620AcA66D3a880a7dB46F7fcC1A0b7E"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -1022,7 +1114,18 @@
           "init_code_hash": "a375b8b13b493a83c77645ac8c372a5ab419073e01cab9e56c1a35aebecc41f5",
           "label": "V4",
           "verification": {
-            "status": "pending"
+            "status": "failed",
+            "reason": "etherscan: etherscan verification failed: Start verifying contract `0xf816b6bFB01fD09E393b440994eeD2950CD80462` deployed on celo-alfajores\nCompiler version: 0.8.27+commit.40a35a09\nError: Failed to get standard json input\n\nContext:\n- cannot resolve file at \"/Users/bogdan/Workspace/treb-cli/fixture/./src/CalculatorV08.sol\"\n; sourcify: sourcify verification failed: Error: If cache is disabled, compiler version must be either provided with `--compiler-version` option or set in foundry.toml\n",
+            "verifiers": {
+              "etherscan": {
+                "status": "failed",
+                "reason": "etherscan verification failed: Start verifying contract `0xf816b6bFB01fD09E393b440994eeD2950CD80462` deployed on celo-alfajores\nCompiler version: 0.8.27+commit.40a35a09\nError: Failed to get standard json input\n\nContext:\n- cannot resolve file at \"/Users/bogdan/Workspace/treb-cli/fixture/./src/CalculatorV08.sol\"\n"
+              },
+              "sourcify": {
+                "status": "failed",
+                "reason": "sourcify verification failed: Error: If cache is disabled, compiler version must be either provided with `--compiler-version` option or set in foundry.toml\n"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -1048,7 +1151,18 @@
           "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00757cff28c8f9556a969c69",
           "init_code_hash": "d9456e94231f3a2c8cb6a01c90729583d6c3643559c408ed1b5e3bc123e3a703",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0xf8cdE85EF369a0B72d98848116C9a7036e3145ba#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0xf8cdE85EF369a0B72d98848116C9a7036e3145ba#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0xf8cdE85EF369a0B72d98848116C9a7036e3145ba"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",

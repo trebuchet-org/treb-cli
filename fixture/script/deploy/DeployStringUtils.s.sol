@@ -11,5 +11,5 @@ import { StringUtils } from "../../src/StringUtils.sol";
  * @dev Libraries are deployed globally (no environment) for cross-chain consistency
  */
 contract DeployStringUtils is LibraryDeployment {
-    constructor() LibraryDeployment("StringUtils") {}
+    constructor() {}
 }

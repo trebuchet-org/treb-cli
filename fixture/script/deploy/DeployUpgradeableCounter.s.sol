@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {ContractDeployment, DeployStrategy} from "treb-sol/ContractDeployment.sol";
+import {Deployment, DeployStrategy} from "treb-sol/Deployment.sol";
 import { UpgradeableCounter } from "../../src/UpgradeableCounter.sol";
 
 /**
@@ -9,9 +9,10 @@ import { UpgradeableCounter } from "../../src/UpgradeableCounter.sol";
  * @notice Deployment script for UpgradeableCounter contract
  * @dev Generated automatically by treb
  */
-contract DeployUpgradeableCounter is ContractDeployment {
-    constructor() ContractDeployment(
+contract DeployUpgradeableCounter is Deployment {
+    constructor() Deployment(
         "UpgradeableCounter",
+        "src/UpgradeableCounter.sol:UpgradeableCounter",
         DeployStrategy.CREATE3
     ) {}
 

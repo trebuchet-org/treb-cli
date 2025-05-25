@@ -42,38 +42,31 @@ func GetAvailableTypes() []GenerateType {
 }
 
 // pickContract selects a contract from available contracts, or validates a specific contract
-func (g *Generator) pickContract(contractName string) (*contracts.ContractInfo, error) {
-	// Step 1: Discover all contracts in src directory
+func (g *Generator) pickContract(contractNameOrPath string) (*contracts.ContractInfo, error) {
 	discovery := contracts.NewDiscovery(g.projectRoot)
-	discoveredContracts, err := discovery.DiscoverContracts()
-	if err != nil {
-		return nil, fmt.Errorf("failed to discover contracts: %w", err)
-	}
-
-	if len(discoveredContracts) == 0 {
-		return nil, fmt.Errorf("no contracts found in src/ directory")
-	}
-
+	
 	var selectedContract contracts.ContractDiscovery
 
-	// Step 2: Select contract (or use specified contract)
-	if contractName != "" {
-		// Find the specific contract
-		found := false
-		for _, contract := range discoveredContracts {
-			if contract.Name == contractName {
-				selectedContract = contract
-				found = true
-				break
-			}
+	// If a contract name/path was specified, try to resolve it
+	if contractNameOrPath != "" {
+		// Use the new contract resolution
+		resolved, err := ResolveContract(contractNameOrPath)
+		if err != nil {
+			return nil, err
 		}
-
-		if !found {
-			return nil, fmt.Errorf("contract %s not found in src/ directory", contractName)
-		}
-
-		fmt.Printf("Using specified contract: %s\n\n", contractName)
+		selectedContract = *resolved
+		fmt.Printf("Using specified contract: %s\n\n", selectedContract.Name)
 	} else {
+		// No contract specified - show picker with all contracts
+		discoveredContracts, err := discovery.DiscoverContracts()
+		if err != nil {
+			return nil, fmt.Errorf("failed to discover contracts: %w", err)
+		}
+
+		if len(discoveredContracts) == 0 {
+			return nil, fmt.Errorf("no contracts found in src/ directory")
+		}
+
 		contractOptions := discovery.GetFormattedOptions(discoveredContracts)
 		_, selectedIndex, err := g.selector.SelectOption("Select contract:", contractOptions, 0)
 		if err != nil {
@@ -83,11 +76,12 @@ func (g *Generator) pickContract(contractName string) (*contracts.ContractInfo, 
 		selectedContract = discoveredContracts[selectedIndex]
 	}
 
-	// Step 3: Validate the selected contract
-	validator := contracts.NewValidator(g.projectRoot)
-	contractInfo, err := validator.ValidateContract(selectedContract.Name)
-	if err != nil {
-		return nil, fmt.Errorf("contract validation failed: %w", err)
+	// Step 3: Convert discovery result to ContractInfo
+	contractInfo := &contracts.ContractInfo{
+		Name:         selectedContract.Name,
+		Exists:       true,
+		FilePath:     selectedContract.RelativePath,
+		SolidityFile: selectedContract.FileName,
 	}
 
 	fmt.Printf("Selected: %s\n", discovery.FormatContractOption(selectedContract))

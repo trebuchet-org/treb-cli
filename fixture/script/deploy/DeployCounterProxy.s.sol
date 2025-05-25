@@ -12,8 +12,10 @@ import { Counter } from "../../src/Counter.sol";
  */
 contract DeployCounterProxy is ProxyDeployment {
     constructor() ProxyDeployment(
-        "Counter",
-        DeployStrategy.CREATE3
+        "CounterProxy",
+        "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
+        DeployStrategy.CREATE3,
+        "Counter"
     ) {}
 
     /// @notice Get contract bytecode for the proxy

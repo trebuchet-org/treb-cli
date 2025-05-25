@@ -6,10 +6,6 @@ test = "test"
 script = "script"
 optimizer_runs = 0
 
-libraries = [
-    "src/StringUtils.sol:StringUtils:0x77fF9Cc9082B53B51F8837097C1871789814e63F"
-]
-
 [profile.default.deployer]
 type = "private_key"
 private_key = "${DEPLOYER_PRIVATE_KEY}"

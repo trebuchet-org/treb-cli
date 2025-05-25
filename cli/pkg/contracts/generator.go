@@ -70,10 +70,11 @@ func NewGenerator(projectRoot string) *Generator {
 
 // GenerateDeployScript creates a new deploy script from template
 func (g *Generator) GenerateDeployScript(contractInfo *ContractInfo, strategy DeployStrategy) error {
-	// Ensure script/deploy directory exists
-	scriptDir := filepath.Join(g.projectRoot, "script", "deploy")
+	// Ensure script/deploy directory exists (including subdirectories if needed)
+	scriptPath := g.GetDeployScriptPath(contractInfo)
+	scriptDir := filepath.Dir(scriptPath)
 	if err := os.MkdirAll(scriptDir, 0755); err != nil {
-		return fmt.Errorf("failed to create script/deploy directory: %w", err)
+		return fmt.Errorf("failed to create script directory: %w", err)
 	}
 
 	// Parse target contract version
@@ -98,13 +99,22 @@ func (g *Generator) GenerateDeployScript(contractInfo *ContractInfo, strategy De
 	// Generate constructor argument code
 	constructorVars, constructorEncode := abiParser.GenerateConstructorArgs(contractABI)
 
+	// Calculate relative import path from script location to contract
+	importPath := g.calculateImportPath(scriptPath, contractInfo.FilePath)
+	
 	// Prepare template data
+	// For SolidityFile, we need the path relative to src for artifact lookup
+	solidityFilePath := contractInfo.FilePath
+	if !strings.HasSuffix(solidityFilePath, ".sol") {
+		solidityFilePath = contractInfo.SolidityFile
+	}
+	
 	templateData := ScriptTemplate{
 		ContractName: contractInfo.Name,
-		SolidityFile: contractInfo.SolidityFile,
+		SolidityFile: solidityFilePath,
 		Strategy:     strategy,
 		// Version removed - using tags instead
-		ImportPath:          fmt.Sprintf("../../src/%s", contractInfo.SolidityFile),
+		ImportPath:          importPath,
 		TargetVersion:       targetVersion,
 		VersionMismatch:     versionMismatch,
 		UseTypeCreationCode: useTypeCreationCode,
@@ -123,13 +133,12 @@ func (g *Generator) GenerateDeployScript(contractInfo *ContractInfo, strategy De
 	}
 
 	// Check if deploy script already exists
-	outputPath := filepath.Join(scriptDir, fmt.Sprintf("Deploy%s.s.sol", contractInfo.Name))
-	if _, err := os.Stat(outputPath); err == nil {
-		return fmt.Errorf("deploy script already exists: %s\nUse a different contract name or remove the existing script", outputPath)
+	if _, err := os.Stat(scriptPath); err == nil {
+		return fmt.Errorf("deploy script already exists: %s\nUse a different contract name or remove the existing script", scriptPath)
 	}
 
 	// Create output file
-	file, err := os.Create(outputPath)
+	file, err := os.Create(scriptPath)
 	if err != nil {
 		return fmt.Errorf("failed to create deploy script: %w", err)
 	}
@@ -140,7 +149,7 @@ func (g *Generator) GenerateDeployScript(contractInfo *ContractInfo, strategy De
 		return fmt.Errorf("failed to execute template: %w", err)
 	}
 
-	fmt.Printf("Generated deploy script: %s\n", outputPath)
+	fmt.Printf("Generated deploy script: %s\n", scriptPath)
 	return nil
 }
 
@@ -282,6 +291,10 @@ contract Deploy{{.ContractName}} is ContractDeployment {
         {{.ConstructorEncode}}
     }
 {{end}}
+    /// @notice Override artifact path to handle multiple contracts with same name
+    function getArtifactPath() internal pure override returns (string memory) {
+        return "out/{{.SolidityFile}}/{{.ContractName}}.json";
+    }
 }`
 }
 
@@ -318,10 +331,11 @@ func ValidateStrategy(strategy string) (DeployStrategy, error) {
 
 // GenerateProxyDeployScript creates a new proxy deploy script from template
 func (g *Generator) GenerateProxyDeployScript(contractInfo *ContractInfo, strategy DeployStrategy, proxyType ProxyType) error {
-	// Ensure script/deploy directory exists
-	scriptDir := filepath.Join(g.projectRoot, "script", "deploy")
+	// Ensure script/deploy directory exists (including subdirectories if needed)
+	scriptPath := g.GetProxyScriptPath(contractInfo)
+	scriptDir := filepath.Dir(scriptPath)
 	if err := os.MkdirAll(scriptDir, 0755); err != nil {
-		return fmt.Errorf("failed to create script/deploy directory: %w", err)
+		return fmt.Errorf("failed to create script directory: %w", err)
 	}
 
 	// Parse ABI for initializer information
@@ -377,13 +391,12 @@ func (g *Generator) GenerateProxyDeployScript(contractInfo *ContractInfo, strate
 	}
 
 	// Check if deploy script already exists
-	outputPath := filepath.Join(scriptDir, fmt.Sprintf("Deploy%sProxy.s.sol", contractInfo.Name))
-	if _, err := os.Stat(outputPath); err == nil {
-		return fmt.Errorf("proxy deploy script already exists: %s\nUse a different contract name or remove the existing script", outputPath)
+	if _, err := os.Stat(scriptPath); err == nil {
+		return fmt.Errorf("proxy deploy script already exists: %s\nUse a different contract name or remove the existing script", scriptPath)
 	}
 
 	// Create output file
-	file, err := os.Create(outputPath)
+	file, err := os.Create(scriptPath)
 	if err != nil {
 		return fmt.Errorf("failed to create proxy deploy script: %w", err)
 	}
@@ -394,7 +407,7 @@ func (g *Generator) GenerateProxyDeployScript(contractInfo *ContractInfo, strate
 		return fmt.Errorf("failed to execute template: %w", err)
 	}
 
-	fmt.Printf("Generated proxy deploy script: %s\n", outputPath)
+	fmt.Printf("Generated proxy deploy script: %s\n", scriptPath)
 	return nil
 }
 
