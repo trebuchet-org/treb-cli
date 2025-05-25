@@ -22,8 +22,9 @@ type Manager struct {
 }
 
 type Registry struct {
-	Project  ProjectMetadata           `json:"project"`
-	Networks map[string]*NetworkEntry `json:"networks"`
+	Project   ProjectMetadata                    `json:"project"`
+	Networks  map[string]*NetworkEntry           `json:"networks"`
+	Libraries map[string]*types.DeploymentEntry  `json:"libraries,omitempty"` // Global libraries by chain
 }
 
 type ProjectMetadata struct {
@@ -59,7 +60,8 @@ func (m *Manager) load() error {
 				Version:   "0.1.0",
 				Timestamp: time.Now(),
 			},
-			Networks: make(map[string]*NetworkEntry),
+			Networks:  make(map[string]*NetworkEntry),
+			Libraries: make(map[string]*types.DeploymentEntry),
 		}
 		return nil
 	}
@@ -164,6 +166,67 @@ func (m *Manager) RecordDeployment(contract, env string, result *types.Deploymen
 	m.registry.Networks[chainIDStr].Deployments[key] = entry
 
 	return m.Save()
+}
+
+// RecordLibraryDeployment records a library deployment in the global libraries section
+func (m *Manager) RecordLibraryDeployment(libraryName string, result *types.DeploymentResult, chainID uint64) error {
+	// Initialize libraries map if needed
+	if m.registry.Libraries == nil {
+		m.registry.Libraries = make(map[string]*types.DeploymentEntry)
+	}
+	
+	// Create chain-library key (e.g., "44787-MathLib" for Alfajores MathLib)
+	key := fmt.Sprintf("%d-%s", chainID, libraryName)
+	
+	entry := &types.DeploymentEntry{
+		Address:      result.Address,
+		ContractName: libraryName,
+		Environment:  "global", // Libraries are global
+		Type:         "library",
+		Salt:         hex.EncodeToString(result.Salt[:]),
+		InitCodeHash: hex.EncodeToString(result.InitCodeHash[:]),
+		
+		// No constructor args for libraries typically
+		ConstructorArgs: result.ConstructorArgs,
+		
+		Verification: types.Verification{
+			Status: "pending",
+		},
+		
+		Deployment: types.DeploymentInfo{
+			TxHash:        &result.TxHash,
+			BlockNumber:   result.BlockNumber,
+			BroadcastFile: result.BroadcastFile,
+			Timestamp:     time.Now(),
+			Status:        "deployed", // Libraries are always deployed, no Safe
+			Deployer:      m.getDeployerFromBroadcast(result.BroadcastFile),
+		},
+		
+		Metadata: m.buildMetadata(libraryName, result),
+	}
+	
+	// Store in libraries section
+	m.registry.Libraries[key] = entry
+	
+	return m.Save()
+}
+
+// GetLibrary retrieves a library deployment for a specific chain
+func (m *Manager) GetLibrary(libraryName string, chainID uint64) *types.DeploymentEntry {
+	if m.registry.Libraries == nil {
+		return nil
+	}
+	
+	key := fmt.Sprintf("%d-%s", chainID, libraryName)
+	return m.registry.Libraries[key]
+}
+
+// GetAllLibraries returns all library deployments
+func (m *Manager) GetAllLibraries() map[string]*types.DeploymentEntry {
+	if m.registry.Libraries == nil {
+		return make(map[string]*types.DeploymentEntry)
+	}
+	return m.registry.Libraries
 }
 
 func (m *Manager) GetDeployment(contract, env string, chainID uint64) *types.DeploymentEntry {

@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/fatih/color"
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -14,12 +16,14 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/cli/internal/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
 var (
 	filterEnv      string
 	filterNetwork  string
 	filterContract string
+	showLibraries  bool
 )
 
 var listCmd = &cobra.Command{
@@ -31,10 +35,17 @@ Shows contract addresses, deployment status, and version tags.
 Filters:
   --filter-env      Filter by environment (exact match, case-insensitive)
   --filter-network  Filter by network (exact match, case-insensitive)
-  --filter-contract Filter by contract name (partial match, case-insensitive)`,
+  --filter-contract Filter by contract name (partial match, case-insensitive)
+  --libraries        Show deployed libraries instead of contracts`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := listDeployments(); err != nil {
-			checkError(err)
+		if showLibraries {
+			if err := listLibraries(); err != nil {
+				checkError(err)
+			}
+		} else {
+			if err := listDeployments(); err != nil {
+				checkError(err)
+			}
 		}
 	},
 }
@@ -43,6 +54,7 @@ func init() {
 	listCmd.Flags().StringVar(&filterEnv, "filter-env", "", "Filter by environment")
 	listCmd.Flags().StringVar(&filterNetwork, "filter-network", "", "Filter by network")
 	listCmd.Flags().StringVar(&filterContract, "filter-contract", "", "Filter by contract name (partial match)")
+	listCmd.Flags().BoolVar(&showLibraries, "libraries", false, "Show deployed libraries instead of contracts")
 }
 
 // columnWidths stores the calculated column widths for consistent table rendering
@@ -356,4 +368,200 @@ func privateKeyToAddress(privateKeyHex string) (string, error) {
 	// Derive the Ethereum address
 	address := crypto.PubkeyToAddress(*publicKeyECDSA)
 	return address.Hex(), nil
+}
+
+// listLibraries displays all deployed libraries
+func listLibraries() error {
+	// Initialize registry manager
+	registryManager, err := registry.NewManager("deployments.json")
+	if err != nil {
+		return fmt.Errorf("failed to initialize registry: %w", err)
+	}
+
+	libraries := registryManager.GetAllLibraries()
+	
+	if len(libraries) == 0 {
+		fmt.Println("No libraries found")
+		return nil
+	}
+
+	// Create library info structure
+	type LibraryInfo struct {
+		Name    string
+		Entry   *types.DeploymentEntry
+		ChainID uint64
+		Address common.Address
+	}
+
+	// Group libraries by chain
+	librariesByChain := make(map[uint64][]*LibraryInfo)
+	chains := make([]uint64, 0)
+	allLibraries := make([]*LibraryInfo, 0)
+	
+	// Parse library keys (format: "chainID-libraryName")
+	for key, entry := range libraries {
+		parts := strings.Split(key, "-")
+		if len(parts) < 2 {
+			continue
+		}
+		
+		chainID, err := parseUint64(parts[0])
+		if err != nil {
+			continue
+		}
+		
+		libraryName := strings.Join(parts[1:], "-") // Handle library names with dashes
+		
+		libInfo := &LibraryInfo{
+			Name:    libraryName,
+			Entry:   entry,
+			ChainID: chainID,
+			Address: entry.Address,
+		}
+		
+		allLibraries = append(allLibraries, libInfo)
+		
+		if !slices.Contains(chains, chainID) {
+			chains = append(chains, chainID)
+		}
+		librariesByChain[chainID] = append(librariesByChain[chainID], libInfo)
+	}
+	
+	// Sort chains
+	sort.Slice(chains, func(i, j int) bool {
+		return chains[i] < chains[j]
+	})
+
+	// Create color styles
+	chainBg := color.BgCyan
+	chainHeader := color.New(chainBg, color.FgBlack)
+	chainHeaderBold := color.New(chainBg, color.FgBlack, color.Bold)
+	libraryNameStyle := color.New(color.Bold)
+	addressStyle := color.New(color.Bold, color.FgHiWhite)
+	timestampStyle := color.New(color.Faint)
+	foundryStyle := color.New(color.FgCyan)
+
+	fmt.Printf("Libraries (%d total):\n\n", len(libraries))
+
+	for _, chainID := range chains {
+		chainLibs := librariesByChain[chainID]
+		
+		// Sort libraries by timestamp (newest first)
+		sort.Slice(chainLibs, func(i, j int) bool {
+			return chainLibs[i].Entry.Deployment.Timestamp.After(chainLibs[j].Entry.Deployment.Timestamp)
+		})
+		
+		// Create table
+		t := table.NewWriter()
+		t.SetStyle(table.StyleLight)
+		t.Style().Options.SeparateRows = false
+		t.Style().Options.DrawBorder = false
+		t.Style().Options.SeparateHeader = false
+		t.Style().Options.SeparateColumns = false
+		t.Style().Box = table.BoxStyle{
+			PaddingLeft:  "",
+			PaddingRight: "  ",
+		}
+
+		// Configure column styles
+		t.SetColumnConfigs([]table.ColumnConfig{
+			{Number: 1, Align: text.AlignLeft, WidthMin: 20, WidthMax: 30},
+			{Number: 2, Align: text.AlignLeft, WidthMin: 42, WidthMax: 42},
+			{Number: 3, Align: text.AlignLeft, WidthMin: 50, WidthMax: 80},
+			{Number: 4, Align: text.AlignLeft, WidthMin: 19, WidthMax: 19},
+		})
+
+		// Add chain header
+		chainName := getChainName(chainID)
+		chainHeaderRow := fmt.Sprintf("%s%s",
+			chainHeader.Sprint(" ⛓ chain       "),
+			chainHeaderBold.Sprintf(" %s ", strings.ToUpper(chainName)))
+		
+		fmt.Println(chainHeaderRow)
+		fmt.Println()
+
+		for _, lib := range chainLibs {
+			libraryName := lib.Name
+			timestamp := lib.Entry.Deployment.Timestamp.Format("2006-01-02 15:04:05")
+			
+			// Build library name cell
+			libraryCell := libraryNameStyle.Sprint(libraryName)
+			
+			// Address cell
+			addressCell := addressStyle.Sprint(lib.Address.Hex())
+			
+			// Foundry.toml format
+			foundryCell := foundryStyle.Sprintf("\"src/%s.sol:%s:%s\"", libraryName, libraryName, lib.Address.Hex())
+			
+			// Timestamp
+			timestampCell := timestampStyle.Sprint(timestamp)
+			
+			t.AppendRow(table.Row{
+				"  " + libraryCell,
+				addressCell,
+				foundryCell,
+				timestampCell,
+			})
+		}
+		
+		fmt.Print(t.Render())
+		fmt.Println()
+		fmt.Println()
+	}
+	
+	// Show foundry.toml configuration tip
+	fmt.Println("To use these libraries, add the library entries to your foundry.toml:")
+	color.New(color.FgCyan).Println("[profile.default]")
+	color.New(color.FgCyan).Println("libraries = [")
+	for _, lib := range allLibraries {
+		color.New(color.FgCyan).Printf("  \"src/%s.sol:%s:%s\",\n", lib.Name, lib.Name, lib.Address.Hex())
+	}
+	color.New(color.FgCyan).Println("]")
+	
+	return nil
+}
+
+// getChainName returns the chain name for a given chain ID
+func getChainName(chainID uint64) string {
+	// Common chain names
+	chainNames := map[uint64]string{
+		1:        "mainnet",
+		5:        "goerli",
+		11155111: "sepolia",
+		17000:    "holesky",
+		10:       "optimism",
+		420:      "optimism-goerli",
+		11155420: "optimism-sepolia",
+		42161:    "arbitrum",
+		421613:   "arbitrum-goerli",
+		421614:   "arbitrum-sepolia",
+		137:      "polygon",
+		80001:    "mumbai",
+		80002:    "amoy",
+		8453:     "base",
+		84531:    "base-goerli",
+		84532:    "base-sepolia",
+		43114:    "avalanche",
+		43113:    "fuji",
+		56:       "bsc",
+		97:       "bsc-testnet",
+		100:      "gnosis",
+		10200:    "chiado",
+		42220:    "celo",
+		44787:    "alfajores",
+		62320:    "baklava",
+		534351:   "scroll-sepolia",
+		534352:   "scroll",
+	}
+	
+	if name, ok := chainNames[chainID]; ok {
+		return name
+	}
+	
+	return fmt.Sprintf("chain-%d", chainID)
+}
+
+// parseUint64 parses a string to uint64
+func parseUint64(s string) (uint64, error) {
+	return strconv.ParseUint(s, 10, 64)
 }

@@ -18,6 +18,8 @@ type RegistryManager interface {
 	GetDeployment(contract, env string, chainID uint64) *types.DeploymentEntry
 	GetDeploymentWithLabel(contract, env, label string, chainID uint64) *types.DeploymentEntry
 	RecordDeployment(contract, env string, result *types.DeploymentResult, chainID uint64) error
+	GetLibrary(libraryName string, chainID uint64) *types.DeploymentEntry
+	RecordLibraryDeployment(libraryName string, result *types.DeploymentResult, chainID uint64) error
 }
 
 type ScriptExecutor struct {
@@ -443,6 +445,110 @@ func (se *ScriptExecutor) DeployProxy(proxyContract, implementationContract stri
 	if args.Verify && result.TxHash != (common.Hash{}) {
 		fmt.Printf("\nVerifying proxy on Etherscan...\n")
 		// TODO: Implement proxy-specific verification
+	}
+
+	return result, nil
+}
+
+// DeployLibrary deploys a Solidity library using the default environment
+func (se *ScriptExecutor) DeployLibrary(libraryName string, args DeployArgs) (*types.DeploymentResult, error) {
+	// 1. Setup deployment configuration for library
+	scriptPath := fmt.Sprintf("script/deploy/Deploy%s.s.sol", libraryName)
+	
+	// Set environment variables
+	envVars := os.Environ()
+	
+	// Add deployment-specific environment variables
+	if args.EnvVars != nil {
+		for key, value := range args.EnvVars {
+			envVars = append(envVars, fmt.Sprintf("%s=%s", key, value))
+		}
+	}
+	
+	// Libraries are deployed in global environment
+	envVars = append(envVars, "DEPLOYMENT_ENV=global")
+	if args.DeployerPK != "" {
+		envVars = append(envVars, fmt.Sprintf("DEPLOYER_PRIVATE_KEY=%s", args.DeployerPK))
+	}
+
+	// 2. Check if already deployed
+	existing := se.registry.GetLibrary(libraryName, args.ChainID)
+	if existing != nil {
+		// Library already deployed
+		var salt [32]byte
+		var initCodeHash [32]byte
+		
+		if saltBytes, err := hex.DecodeString(existing.Salt); err == nil && len(saltBytes) == 32 {
+			copy(salt[:], saltBytes)
+		}
+		
+		if hashBytes, err := hex.DecodeString(existing.InitCodeHash); err == nil && len(hashBytes) == 32 {
+			copy(initCodeHash[:], hashBytes)
+		}
+		
+		return &types.DeploymentResult{
+			Address:         existing.Address,
+			Salt:            salt,
+			InitCodeHash:            initCodeHash,
+			AlreadyDeployed: true,
+		}, nil
+	}
+
+	// 3. Execute forge script for deployment
+	cmdArgs := []string{"script", scriptPath, "-vvvv"} // High verbosity for better error messages
+	
+	if args.RpcUrl != "" {
+		cmdArgs = append(cmdArgs, "--rpc-url", args.RpcUrl)
+	}
+	
+	cmdArgs = append(cmdArgs, "--broadcast")
+	
+	if args.Verify {
+		cmdArgs = append(cmdArgs, "--verify")
+		if args.EtherscanApiKey != "" {
+			cmdArgs = append(cmdArgs, fmt.Sprintf("--etherscan-api-key=%s", args.EtherscanApiKey))
+		}
+	}
+
+	// Execute deployment script
+	cmd := exec.Command("forge", cmdArgs...)
+	cmd.Dir = se.projectRoot
+	cmd.Env = envVars
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("Library deployment failed:\n")
+		fmt.Printf("Command: forge %s\n", strings.Join(cmdArgs, " "))
+		fmt.Printf("Error: %v\n", err)
+		fmt.Printf("Full output:\n%s\n", string(output))
+		return nil, fmt.Errorf("forge script failed: %w", err)
+	}
+	
+	// Show full output if debug is enabled
+	if args.Debug {
+		fmt.Printf("\n=== Full Foundry Script Output ===\n")
+		fmt.Printf("%s\n", string(output))
+		fmt.Printf("=== End of Output ===\n\n")
+	} else {
+		// Parse output for key information
+		se.parseScriptOutput(string(output))
+	}
+
+	// 4. Try to parse structured output first
+	result, err := se.parser.ParseDeploymentOutput(output)
+	if err != nil {
+		// Fallback to parsing broadcast file
+		scriptName := fmt.Sprintf("Deploy%s.s.sol", libraryName)
+		result, err = se.parser.ParseLatestBroadcast(scriptName, args.ChainID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse library deployment: %w", err)
+		}
+	}
+
+	// 5. Update registry
+	err = se.registry.RecordLibraryDeployment(libraryName, result, args.ChainID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to record library deployment: %w", err)
 	}
 
 	return result, nil

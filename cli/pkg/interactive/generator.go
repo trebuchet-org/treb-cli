@@ -175,6 +175,34 @@ func (g *Generator) GenerateDeployScript(contractName string) error {
 	return nil
 }
 
+// GenerateLibraryScript interactively generates a library deploy script
+func (g *Generator) GenerateLibraryScript(libraryName string) error {
+	// Step 1: Pick library
+	libraryInfo, err := g.pickContract(libraryName)
+	if err != nil {
+		return err
+	}
+
+	// Step 2: Validate it's a library
+	validator := contracts.NewValidator(g.projectRoot)
+	if !validator.IsLibrary(libraryInfo.Name) {
+		return fmt.Errorf("%s is not a library", libraryInfo.Name)
+	}
+
+	// Step 3: Generate the script (libraries always use CREATE2 for determinism)
+	generator := contracts.NewGenerator(g.projectRoot)
+	if err := generator.GenerateLibraryScript(libraryInfo); err != nil {
+		return fmt.Errorf("library script generation failed: %w", err)
+	}
+
+	fmt.Printf("Library deploy script generated successfully!\n")
+	fmt.Printf("Library: %s\n", libraryInfo.Name)
+	fmt.Printf("Strategy: CREATE2 (deterministic)\n")
+	fmt.Printf("\nLibraries are deployed globally (no environment) for cross-chain consistency.\n")
+
+	return nil
+}
+
 // GenerateProxyDeployScript interactively generates a proxy deploy script
 func (g *Generator) GenerateProxyDeployScript(contractName string) error {
 	// Step 1: Pick implementation contract

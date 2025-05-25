@@ -144,6 +144,73 @@ func (g *Generator) GenerateDeployScript(contractInfo *ContractInfo, strategy De
 	return nil
 }
 
+// GenerateLibraryScript creates a new library deploy script from template
+func (g *Generator) GenerateLibraryScript(libraryInfo *ContractInfo) error {
+	// Ensure script/deploy directory exists
+	scriptDir := filepath.Join(g.projectRoot, "script", "deploy")
+	if err := os.MkdirAll(scriptDir, 0755); err != nil {
+		return fmt.Errorf("failed to create script/deploy directory: %w", err)
+	}
+
+	// Prepare template data (libraries always use CREATE2 for determinism)
+	templateData := ScriptTemplate{
+		ContractName: libraryInfo.Name,
+		SolidityFile: libraryInfo.SolidityFile,
+		Strategy:     StrategyCreate2,
+		ImportPath:   fmt.Sprintf("../../src/%s", libraryInfo.SolidityFile),
+	}
+
+	// Get library template content
+	templateContent := g.getLibraryScriptTemplate()
+
+	// Parse and execute template
+	tmpl, err := template.New("library").Parse(templateContent)
+	if err != nil {
+		return fmt.Errorf("failed to parse template: %w", err)
+	}
+
+	// Check if deploy script already exists
+	outputPath := filepath.Join(scriptDir, fmt.Sprintf("Deploy%s.s.sol", libraryInfo.Name))
+	if _, err := os.Stat(outputPath); err == nil {
+		return fmt.Errorf("deploy script already exists: %s\nUse a different library name or remove the existing script", outputPath)
+	}
+
+	// Create output file
+	file, err := os.Create(outputPath)
+	if err != nil {
+		return fmt.Errorf("failed to create library deploy script: %w", err)
+	}
+	defer file.Close()
+
+	// Execute template
+	if err := tmpl.Execute(file, templateData); err != nil {
+		return fmt.Errorf("failed to execute template: %w", err)
+	}
+
+	fmt.Printf("Generated library deploy script: %s\n", outputPath)
+	return nil
+}
+
+// getLibraryScriptTemplate returns the template for library deployments
+func (g *Generator) getLibraryScriptTemplate() string {
+	return `// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import {LibraryDeployment} from "treb-sol/LibraryDeployment.sol";
+import { {{.ContractName}} } from "{{.ImportPath}}";
+
+/**
+ * @title Deploy{{.ContractName}}
+ * @notice Deployment script for {{.ContractName}} library
+ * @dev Generated automatically by treb
+ * @dev Libraries are deployed globally (no environment) for cross-chain consistency
+ */
+contract Deploy{{.ContractName}} is LibraryDeployment {
+    constructor() LibraryDeployment("{{.ContractName}}") {}
+}
+`
+}
+
 // getDeployScriptTemplate returns the appropriate template based on version compatibility
 func (g *Generator) getDeployScriptTemplate(versionMismatch bool) string {
 	if versionMismatch {

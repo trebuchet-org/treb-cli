@@ -102,3 +102,20 @@ func (v *Validator) DeployScriptExists(contractName string) bool {
 	_, err := os.Stat(scriptPath)
 	return err == nil
 }
+
+// IsLibrary checks if a contract is a library
+func (v *Validator) IsLibrary(contractName string) bool {
+	contractInfo, err := v.ValidateContract(contractName)
+	if err != nil || !contractInfo.Exists {
+		return false
+	}
+
+	// Read the contract file
+	content, err := os.ReadFile(contractInfo.FilePath)
+	if err != nil {
+		return false
+	}
+
+	// Check for library declaration
+	return strings.Contains(string(content), fmt.Sprintf("library %s", contractName))
+}

@@ -641,6 +641,32 @@
             "script_path": "script/deploy/DeploySimpleTokenV07.s.sol"
           }
         },
+        "0x9ef9eafcc830c1c68f327d9e4a8a257c4a244fcc": {
+          "address": "0x9ef9eafcc830c1c68f327d9e4a8a257c4a244fcc",
+          "contract_name": "MathLib",
+          "environment": "test",
+          "type": "contract",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00c3d23a461161da0f54bcae",
+          "init_code_hash": "1929d0dfcd528ecab1a6df4116315f60b09e87a9a8a63b5122e9b0e9b6e5c5e0",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47181323,
+            "broadcast_file": "",
+            "timestamp": "2025-05-25T03:30:57.407335+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "713aca5520b07038e3b9647d50e23eb11a37834a",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "",
+            "contract_path": "",
+            "script_path": "script/deploy/DeployMathLib.s.sol"
+          }
+        },
         "0x9fdb9d73513624a017c276b80baeea3709765d86": {
           "address": "0x9fdb9d73513624a017c276b80baeea3709765d86",
           "contract_name": "SimpleTokenV07",
@@ -781,6 +807,32 @@
             "source_hash": "4b5eaa107784609cabdbd23e34e479cc957ee69bd4c4de2881625b884e6bbacc",
             "contract_path": "./src/Counter.sol:Counter",
             "script_path": "script/deploy/DeployCounter.s.sol"
+          }
+        },
+        "0xc677ec323c7b6ba207f1c784bcbca4d7ee9868cb": {
+          "address": "0xc677ec323c7b6ba207f1c784bcbca4d7ee9868cb",
+          "contract_name": "MessageStorageV07",
+          "environment": "default",
+          "type": "",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c003f9f168dfd51353d639504",
+          "init_code_hash": "ebc011a0f6d12d597e9b64eb0a5239648fc8c8c365049611be68fc0e5a5c1bc2",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47185688,
+            "broadcast_file": "",
+            "timestamp": "2025-05-25T04:43:43.155473+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "713aca5520b07038e3b9647d50e23eb11a37834a",
+            "compiler": "0.7.6+commit.7338295f",
+            "source_hash": "762af8b69788d134b319f6df34cdc45986537898e7447d3ec1281e059897ad33",
+            "contract_path": "./src/MessageStorageV07.sol:MessageStorageV07",
+            "script_path": "script/deploy/DeployMessageStorageV07.s.sol"
           }
         },
         "0xcf0248811f98babaa01d308961a61d9574d09e73": {
@@ -988,6 +1040,32 @@
             "script_path": "script/deploy/DeployCalculatorV08.s.sol"
           }
         },
+        "0xf8cde85ef369a0b72d98848116c9a7036e3145ba": {
+          "address": "0xf8cde85ef369a0b72d98848116c9a7036e3145ba",
+          "contract_name": "MessageStorageV08",
+          "environment": "default",
+          "type": "",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00757cff28c8f9556a969c69",
+          "init_code_hash": "d9456e94231f3a2c8cb6a01c90729583d6c3643559c408ed1b5e3bc123e3a703",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "block_number": 47185736,
+            "broadcast_file": "",
+            "timestamp": "2025-05-25T04:44:30.461663+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "713aca5520b07038e3b9647d50e23eb11a37834a",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "99d9637aa20c2e88f110e022976035ba7d0a7eaa4bac33ac555283c29db06885",
+            "contract_path": "./src/MessageStorageV08.sol:MessageStorageV08",
+            "script_path": "script/deploy/DeployMessageStorageV08.s.sol"
+          }
+        },
         "0xfa1fa60830e7d53cbe60860441ef90cdf90cba9d": {
           "address": "0xfa1fa60830e7d53cbe60860441ef90cdf90cba9d",
           "contract_name": "CalculatorV08",
@@ -1065,6 +1143,33 @@
             "script_path": "script/deploy/DeployUpgradeableCounterProxy.s.sol"
           }
         }
+      }
+    }
+  },
+  "libraries": {
+    "44787-StringUtils": {
+      "address": "0x77ff9cc9082b53b51f8837097c1871789814e63f",
+      "contract_name": "StringUtils",
+      "environment": "global",
+      "type": "library",
+      "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c009744047e46ca3b5531d067",
+      "init_code_hash": "416205e34d1cfdd1b519c07f27e21f8510a4379c4a0a704ce5b3b8128a18fba4",
+      "verification": {
+        "status": "pending"
+      },
+      "deployment": {
+        "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "block_number": 47183870,
+        "broadcast_file": "",
+        "timestamp": "2025-05-25T04:13:24.240568+02:00",
+        "status": "deployed"
+      },
+      "metadata": {
+        "source_commit": "713aca5520b07038e3b9647d50e23eb11a37834a",
+        "compiler": "unknown",
+        "source_hash": "",
+        "contract_path": "",
+        "script_path": "script/deploy/DeployStringUtils.s.sol"
       }
     }
   }

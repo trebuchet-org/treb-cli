@@ -30,14 +30,25 @@ var (
 )
 
 var deployCmd = &cobra.Command{
-	Use:   "deploy <contract>",
-	Short: "Deploy a contract",
-	Long: `Deploy contracts using Foundry scripts with automatic registry tracking.
+	Use:   "deploy",
+	Short: "Deploy contracts and libraries",
+	Long: `Deploy contracts and libraries using Foundry scripts with automatic registry tracking.
 Supports EOA and Safe multisig deployments.
+
+Available subcommands:
+  contract - Deploy a regular contract (default when no subcommand specified)
+  library  - Deploy a library globally
 
 Examples:
   treb deploy Counter --network sepolia
-  treb deploy Token --env production --verify`,
+  treb deploy library MathLib --network sepolia
+  treb deploy contract Token --env production --verify`,
+}
+
+var deployContractCmd = &cobra.Command{
+	Use:   "contract <name>",
+	Short: "Deploy a contract",
+	Long: `Deploy a contract using Foundry scripts with automatic registry tracking.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		contract := args[0]
@@ -107,13 +118,109 @@ Examples:
 	},
 }
 
+var deployLibraryCmd = &cobra.Command{
+	Use:   "library <name>",
+	Short: "Deploy a library",
+	Long: `Deploy a library globally (no environment) for cross-chain consistency.
+Libraries are deployed using the default environment's deployer configuration.
+
+Examples:
+  treb deploy library MathLib --network sepolia
+  treb deploy library StringUtils --network mainnet`,
+	Args: cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		libraryName := args[0]
+		
+		result, err := deployLibrary(libraryName)
+		if err != nil {
+			checkError(err)
+		}
+		
+		// Show final success message only if we have a result
+		if result != nil && !result.AlreadyDeployed {
+			// Format as checksum address
+			checksumAddr := common.HexToAddress(result.Address.Hex()).Hex()
+			
+			fmt.Printf("\n")
+			color.New(color.FgGreen, color.Bold).Println("✅ Library Deployment Successful!")
+			fmt.Printf("\n")
+			fmt.Printf("Library:     %s\n", libraryName)
+			fmt.Printf("Network:     %s\n", networkName)
+			fmt.Printf("Address:     %s\n", checksumAddr)
+			
+			// Update foundry.toml with the deployed library
+			foundryManager := config.NewFoundryManager(".")
+			if err := foundryManager.AddLibraryAuto("default", libraryName, checksumAddr); err != nil {
+				// Non-fatal error - just warn the user
+				fmt.Printf("\n⚠️  Could not automatically update foundry.toml: %v\n", err)
+				fmt.Printf("\nAdd to foundry.toml libraries array:\n")
+				color.New(color.FgCyan).Printf("  \"src/%s.sol:%s:%s\"\n", libraryName, libraryName, checksumAddr)
+			} else {
+				fmt.Printf("\n✅ Updated foundry.toml with library mapping\n")
+			}
+			
+			// TODO: Add explorer URL support when NetworkInfo includes it
+		}
+	},
+}
+
 func init() {
 	// Get configured defaults (empty if no config file)
 	_, defaultNetwork, defaultVerify, _ := GetConfiguredDefaults()
 	
 	// Add subcommands
+	deployCmd.AddCommand(deployContractCmd)
 	deployCmd.AddCommand(deployProxyCmd)
 	deployCmd.AddCommand(deployPredictCmd)
+	deployCmd.AddCommand(deployLibraryCmd)
+	
+	// Make deploy command work without subcommand (defaults to contract deployment)
+	deployCmd.Args = func(cmd *cobra.Command, args []string) error {
+		// If no subcommand is provided and we have exactly 1 arg, treat it as contract deployment
+		if cmd.Flags().NArg() == 1 && !cmd.Flags().Changed("help") {
+			return nil
+		}
+		// Otherwise require a subcommand
+		return cobra.NoArgs(cmd, args)
+	}
+	deployCmd.Run = func(cmd *cobra.Command, args []string) {
+		if len(args) == 1 {
+			// Default to contract deployment
+			contract := args[0]
+			
+			result, err := deployContract(contract)
+			if err != nil {
+				checkError(err)
+			}
+			
+			// Show final success message only if we have a result
+			if result != nil && !result.AlreadyDeployed {
+				// Format as checksum address
+				checksumAddr := common.HexToAddress(result.Address.Hex()).Hex()
+				
+				fmt.Printf("\n")
+				color.New(color.FgGreen, color.Bold).Println("✅ Deployment Successful!")
+				fmt.Printf("\n")
+				fmt.Printf("Contract:    %s/%s\n", env, contract)
+				fmt.Printf("Network:     %s\n", networkName)
+				fmt.Printf("Address:     %s\n", checksumAddr)
+				
+				// Show Safe info if this was a Safe deployment
+				if result.SafeTxHash != (common.Hash{}) && result.SafeAddress != (common.Address{}) {
+					fmt.Printf("\n")
+					color.New(color.FgYellow, color.Bold).Println("⚠️  Safe Transaction Created")
+					fmt.Printf("Safe:        %s\n", result.SafeAddress.Hex())
+					fmt.Printf("Tx Hash:     %s\n", result.SafeTxHash.Hex())
+					fmt.Printf("\nThis deployment requires execution through your Safe interface.\n")
+				}
+				
+				// TODO: Add explorer URL support when NetworkInfo includes it
+			}
+		} else {
+			// Show help if no args provided
+			cmd.Help()
+		}
+	}
 	
 	// Create flags for main deploy command with defaults - env always defaults to "default"
 	deployCmd.PersistentFlags().StringVar(&env, "env", "default", "Deployment environment")
@@ -623,4 +730,121 @@ func createSpinner(message string) *spinner.Spinner {
 	s.Color("cyan")
 	s.Start()
 	return s
+}
+
+// deployLibrary handles library deployment
+func deployLibrary(libraryName string) (*types.DeploymentResult, error) {
+	// Print initial deployment summary
+	fmt.Println()
+	color.New(color.FgWhite).Printf("Deploying library ")
+	color.New(color.FgWhite, color.Bold).Printf("%s", libraryName)
+	color.New(color.FgWhite).Printf(" to ")
+	color.New(color.FgMagenta, color.Bold).Printf("%s\n", networkName)
+	fmt.Println()
+	
+	// Step 1: Resolve network information
+	resolver := network.NewResolver(".")
+	networkInfo, err := resolver.ResolveNetwork(networkName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve network: %w", err)
+	}
+	
+	// Step 2: Initialize registry manager
+	registryManager, err := registry.NewManager("deployments.json")
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize registry: %w", err)
+	}
+	
+	// Step 3: Check if library is already deployed on this chain
+	existingLibrary := registryManager.GetLibrary(libraryName, networkInfo.ChainID)
+	if existingLibrary != nil {
+		fmt.Printf("Library %s already deployed at %s on %s\n", 
+			libraryName, existingLibrary.Address.Hex(), networkInfo.Name)
+		
+		// Show library format for foundry.toml
+		fmt.Printf("\nLibrary entry for foundry.toml:\n")
+		color.New(color.FgCyan).Printf("  \"src/%s.sol:%s:%s\"\n", 
+			libraryName, libraryName, existingLibrary.Address.Hex())
+		
+		return &types.DeploymentResult{
+			AlreadyDeployed: true,
+			Address:         existingLibrary.Address,
+		}, nil
+	}
+	
+	// Step 4: Validate library script exists
+	scriptPath := fmt.Sprintf("script/deploy/Deploy%s.s.sol", libraryName)
+	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("library deploy script required but not found: %s\n\nGenerate it with: treb gen library %s", scriptPath, libraryName)
+	}
+	
+	// Step 5: Initialize forge executor and validate setup
+	forgeExecutor := forgeExec.NewExecutor(".")
+	s := createSpinner("Validating deployment configuration...")
+	if err := forgeExecutor.CheckForgeInstallation(); err != nil {
+		s.Stop()
+		return nil, fmt.Errorf("forge check failed: %w", err)
+	}
+	s.Stop()
+	color.New(color.FgGreen).Printf("✓ ")
+	fmt.Printf("Validated deployment configuration\n")
+	
+	// Step 6: Build contracts
+	s = createSpinner("Building contracts...")
+	if err := forgeExecutor.Build(); err != nil {
+		s.Stop()
+		return nil, fmt.Errorf("build failed: %w", err)
+	}
+	s.Stop()
+	color.New(color.FgGreen).Printf("✓ ")
+	fmt.Printf("Built contracts\n")
+	
+	// Step 7: Validate it's actually a library
+	validator := contracts.NewValidator(".")
+	if !validator.IsLibrary(libraryName) {
+		return nil, fmt.Errorf("%s is not a library", libraryName)
+	}
+	
+	// Step 8: Load deploy config for default environment
+	// Libraries use default environment's deployer
+	deployConfig, err := config.LoadDeployConfig(".")
+	if err != nil {
+		return nil, fmt.Errorf("failed to load deploy config: %w", err)
+	}
+	
+	// Step 9: Check if default deployer is a private key
+	defaultDeployer := deployConfig.GetDeployer("default")
+	if defaultDeployer == nil || defaultDeployer.Type != "private_key" {
+		return nil, fmt.Errorf("library deployment requires a private key deployer in default environment.\nPlease configure it in foundry.toml:\n\n[profile.default.deployer]\ntype = \"private_key\"\nprivate_key = \"${DEPLOYER_PRIVATE_KEY}\"")
+	}
+	
+	// Step 10: Generate environment variables
+	envVars, err := deployConfig.GenerateEnvVars("default")
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate environment variables: %w", err)
+	}
+	
+	// Step 11: Initialize script executor for library deployment
+	executor := forge.NewScriptExecutor("", ".", registryManager)
+	
+	// Step 12: Deploy library with spinner
+	color.New(color.FgCyan).Printf("\n[%s]\n\n", scriptPath)
+	
+	s = createSpinner("Deploying library...")
+	result, err := executor.DeployLibrary(libraryName, forge.DeployArgs{
+		RpcUrl:  networkInfo.RpcUrl,
+		Verify:  verify,
+		ChainID: networkInfo.ChainID,
+		EnvVars: envVars,
+		Debug:   debug,
+	})
+	if err != nil {
+		s.Stop()
+		return nil, fmt.Errorf("library deployment failed: %w", err)
+	}
+	s.Stop()
+	color.New(color.FgGreen).Printf("✓ ")
+	fmt.Printf("Library deployed successfully\n")
+	
+	return result, nil
 }

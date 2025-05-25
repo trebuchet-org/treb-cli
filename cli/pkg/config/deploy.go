@@ -72,6 +72,14 @@ func (dc *DeployConfig) GetEnvironmentConfig(env string) (*ProfileConfig, error)
 	return nil, fmt.Errorf("profile configuration for environment '%s' not found", env)
 }
 
+// GetDeployer returns the deployer configuration for a specific environment
+func (dc *DeployConfig) GetDeployer(env string) *DeployerConfig {
+	if profileConfig, exists := dc.Profile[env]; exists {
+		return &profileConfig.Deployer
+	}
+	return nil
+}
+
 // Validate checks if the deploy configuration is valid
 func (dc *DeployConfig) Validate(env string) error {
 	envConfig, err := dc.GetEnvironmentConfig(env)

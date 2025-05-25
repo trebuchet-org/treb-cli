@@ -2,17 +2,31 @@
 src = "src"
 out = "out"
 libs = ["lib"]
-script = "script"
 test = "test"
-cache_path = "cache"
-broadcast = "broadcast"
-ffi = true
-fs_permissions = [
-    { access = "read-write", path = "./deployments.json" },
-    { access = "read", path = "./out" }
+script = "script"
+optimizer_runs = 0
+
+libraries = [
+    "src/StringUtils.sol:StringUtils:0x77fF9Cc9082B53B51F8837097C1871789814e63F"
 ]
 
-# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+[profile.default.deployer]
+type = "private_key"
+private_key = "${DEPLOYER_PRIVATE_KEY}"
+
+[profile.production.deployer]
+type = "safe"
+safe = "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
+propose = { type = "ledger", derivation_path = "${PROD_PROPOSER_DERIVATION_PATH}" }
+
+[profile.staging.deployer]
+type = "safe"
+safe = "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
+propose = { type = "ledger", derivation_path = "${STAGING_PROPOSER_DERIVATION_PATH}" }
+
+[profile.test.deployer]
+type = "private_key"
+private_key = "${DEPLOYER_PRIVATE_KEY}"
 
 [rpc_endpoints]
 celo-alfajores = "https://alfajores-forno.celo-testnet.org"
@@ -25,21 +39,3 @@ sepolia = "https://sepolia.infura.io/v3/${INFURA_API_KEY}"
 sepolia = { key = "${ETHERSCAN_MAIN_API_KEY}" }
 celo-alfajores = { key = "${CELOSCAN_API_KEY}", chain = 44787 }
 celo = { key = "${CELOSCAN_API_KEY}", chain = "celo" }
-
-[profile.default.deployer]
-type = "private_key"
-private_key = "${DEPLOYER_PRIVATE_KEY}"
-
-[profile.test.deployer]
-type = "private_key"
-private_key = "${DEPLOYER_PRIVATE_KEY}"
-
-[profile.staging.deployer]
-type = "safe"
-safe = "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
-proposer = { type = "private_key", private_key = "${DEPLOYER_PRIVATE_KEY}" }
-
-[profile.production.deployer]
-type = "safe"
-safe = "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
-proposer = { type = "ledger", derivation_path = "${PROD_PROPOSER_DERIVATION_PATH}" }
