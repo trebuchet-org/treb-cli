@@ -49,18 +49,18 @@ func (v *Validator) ValidateDeploymentConfig(ctx *Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to generate environment variables: %w", err)
 	}
-	
+
 	// Add network-specific environment variables
 	if networkInfo.RpcUrl != "" {
 		envVars["RPC_URL"] = networkInfo.RpcUrl
 	}
 	envVars["CHAIN_ID"] = fmt.Sprintf("%d", networkInfo.ChainID)
-	
+
 	// Add deployment label if specified
 	if ctx.Label != "" {
 		envVars["DEPLOYMENT_LABEL"] = ctx.Label
 	}
-	
+
 	ctx.EnvVars = envVars
 
 	return nil
@@ -95,13 +95,13 @@ func (v *Validator) ValidateContract(ctx *Context) error {
 // ValidateContractWithGeneration validates a singleton contract deployment and returns whether a script was generated
 func (v *Validator) ValidateContractWithGeneration(ctx *Context) (bool, error) {
 	// Resolve the contract
-	contractInfo, err := interactive.ResolveContract(ctx.ContractName)
+	contractInfo, err := interactive.ResolveContract(ctx.ContractQuery)
 	if err != nil {
 		return false, fmt.Errorf("failed to resolve contract: %w", err)
 	}
 
 	// Update context with resolved contract name
-	ctx.ContractName = contractInfo.Name
+	ctx.ContractInfo = contractInfo
 
 	// Check if deploy script exists using the generator's path logic
 	generator := contracts.NewGenerator(v.projectRoot)
@@ -111,7 +111,7 @@ func (v *Validator) ValidateContractWithGeneration(ctx *Context) (bool, error) {
 			return false, fmt.Errorf("deploy script required but not found: %s", scriptPath)
 		}
 
-		fmt.Printf("\nDeploy script not found for %s\n", ctx.ContractName)
+		fmt.Printf("\nDeploy script not found for %s (%s)\n", ctx.ContractInfo.Name, ctx.ContractInfo.Path)
 
 		// Ask if user wants to generate the script
 		selector := interactive.NewSelector()
@@ -137,14 +137,24 @@ func (v *Validator) ValidateContractWithGeneration(ctx *Context) (bool, error) {
 
 // ValidateProxyDeployment validates a proxy deployment
 func (v *Validator) ValidateProxyDeployment(ctx *Context) error {
+	// Resolve the contract
+	contractInfo, err := interactive.ResolveContract(ctx.ContractQuery)
+	if err != nil {
+		return fmt.Errorf("failed to resolve contract: %w", err)
+	}
+
+	// Update context with resolved contract name
+	ctx.ContractInfo = contractInfo
+
 	// Check if proxy deploy script exists
-	validator := contracts.NewValidator(v.projectRoot)
-	if !validator.DeployScriptExists(ctx.ProxyName) {
-		return fmt.Errorf("proxy deploy script not found: script/deploy/Deploy%s.s.sol\nPlease run 'treb gen proxy %s' first", ctx.ProxyName, ctx.ImplementationName)
+	generator := contracts.NewGenerator(v.projectRoot)
+	scriptPath := generator.GetProxyScriptPath(contractInfo)
+	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
+		return fmt.Errorf("proxy deploy script not found: %s", scriptPath)
 	}
 
 	// Set script path
-	ctx.ScriptPath = fmt.Sprintf("script/deploy/Deploy%s.s.sol", ctx.ProxyName)
+	ctx.ScriptPath = scriptPath
 
 	// Get implementation info from registry
 	if ctx.ImplementationLabel == "" {
@@ -169,22 +179,13 @@ func (v *Validator) ValidateProxyDeployment(ctx *Context) error {
 // ValidateLibrary validates a library deployment
 func (v *Validator) ValidateLibrary(ctx *Context) error {
 	// Resolve the library
-	contractInfo, err := interactive.ResolveContract(ctx.ContractName)
+	contractInfo, err := interactive.ResolveContract(ctx.ContractQuery)
 	if err != nil {
 		return fmt.Errorf("failed to resolve library: %w", err)
 	}
 
 	// Update context with resolved contract name
-	ctx.ContractName = contractInfo.Name
-
-	// Check if deploy script exists
-	validator := contracts.NewValidator(v.projectRoot)
-	if !validator.DeployScriptExists(ctx.ContractName) {
-		return fmt.Errorf("library deploy script not found: script/deploy/Deploy%s.s.sol", ctx.ContractName)
-	}
-
-	// Set script path
-	ctx.ScriptPath = fmt.Sprintf("script/deploy/Deploy%s.s.sol", ctx.ContractName)
+	ctx.ContractInfo = contractInfo
 
 	return nil
 }

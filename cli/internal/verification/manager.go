@@ -30,7 +30,7 @@ func (vm *Manager) VerifyContract(deployment *registry.DeploymentInfo) error {
 
 // VerifyContractWithDebug verifies a contract with optional debug output
 func (vm *Manager) VerifyContractWithDebug(deployment *registry.DeploymentInfo, debug bool) error {
-	
+
 	// Get network info
 	networkInfo, err := vm.networkResolver.ResolveNetworkByChainID(deployment.ChainID)
 	if err != nil {
@@ -82,9 +82,8 @@ func (vm *Manager) VerifyContractWithDebug(deployment *registry.DeploymentInfo, 
 	verificationFailed := deployment.Entry.Verification.Status == "failed"
 
 	// Save to registry
-	key := strings.ToLower(deployment.Address.Hex())
 	chainIDUint, _ := strconv.ParseUint(deployment.ChainID, 10, 64)
-	registryErr := vm.registryManager.UpdateDeploymentByAddress(key, deployment.Entry, chainIDUint)
+	registryErr := vm.registryManager.UpdateDeployment(chainIDUint, deployment.Entry)
 	if registryErr != nil {
 		return fmt.Errorf("failed to update registry: %w", registryErr)
 	}

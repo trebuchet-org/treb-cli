@@ -45,7 +45,7 @@ Examples:
 	Aliases: []string{"singleton"},
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := deployment.NewContext(deployment.TypeSingleton)
-		ctx.ContractName = args[0]
+		ctx.ContractQuery = args[0]
 		ctx.Env = env
 		ctx.Label = label
 		ctx.Predict = predict
@@ -97,7 +97,7 @@ Examples:
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := deployment.NewContext(deployment.TypeLibrary)
-		ctx.ContractName = args[0]
+		ctx.ContractQuery = args[0]
 		ctx.Predict = predict
 		ctx.Debug = debug
 		ctx.NetworkName = networkName

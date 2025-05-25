@@ -18,10 +18,10 @@ import (
 )
 
 var (
-	allFlag         bool
-	forceFlag       bool
+	allFlag          bool
+	forceFlag        bool
 	contractPathFlag string
-	debugFlag       bool
+	debugFlag        bool
 )
 
 var verifyCmd = &cobra.Command{
@@ -80,20 +80,20 @@ func runVerify(args []string) error {
 
 func verifyAllContracts(verificationManager *verification.Manager, registryManager *registry.Manager) error {
 	allDeployments := registryManager.GetAllDeployments()
-	
+
 	// Filter contracts to verify based on verification status and deployment status
 	var contractsToVerify []*registry.DeploymentInfo
 	var skippedContracts []*registry.DeploymentInfo
-	
+
 	for _, deployment := range allDeployments {
 		// Skip deployments that are not yet deployed
 		if deployment.Entry.Deployment.Status != "deployed" {
 			skippedContracts = append(skippedContracts, deployment)
 			continue
 		}
-		
+
 		status := deployment.Entry.Verification.Status
-		
+
 		if forceFlag {
 			// With --force, verify all deployed contracts
 			contractsToVerify = append(contractsToVerify, deployment)
@@ -130,12 +130,12 @@ func verifyAllContracts(verificationManager *verification.Manager, registryManag
 	} else {
 		color.New(color.FgCyan, color.Bold).Printf("Found %d unverified deployed contracts to verify:\n", len(contractsToVerify))
 	}
-	
+
 	successCount := 0
 	for _, deployment := range contractsToVerify {
 		displayName := deployment.Entry.GetDisplayName()
 		status := deployment.Entry.Verification.Status
-		
+
 		// Show status indicator
 		var statusIcon string
 		switch status {
@@ -150,7 +150,7 @@ func verifyAllContracts(verificationManager *verification.Manager, registryManag
 		default:
 			statusIcon = "🆕" // New verification
 		}
-		
+
 		fmt.Printf("  %s %s/%s/%s\n", statusIcon, deployment.NetworkName, deployment.Entry.Environment, displayName)
 
 		// Start spinner for verification (unless debug mode)
@@ -158,18 +158,18 @@ func verifyAllContracts(verificationManager *verification.Manager, registryManag
 		if !debugFlag {
 			s = createSpinner(fmt.Sprintf("Verifying %s...", displayName))
 		}
-		
+
 		var err error
 		if debugFlag {
 			err = verificationManager.VerifyContractWithDebug(deployment, true)
 		} else {
 			err = verificationManager.VerifyContract(deployment)
 		}
-		
+
 		if s != nil {
 			s.Stop()
 		}
-		
+
 		if err != nil {
 			color.New(color.FgRed).Printf("    ✗ Verification failed: %v\n", err)
 		} else {
@@ -191,7 +191,7 @@ func verifySpecificContract(identifier string, verificationManager *verification
 
 	// Check if already verified
 	if deployment.Entry.Verification.Status == "verified" && !forceFlag {
-		color.New(color.FgYellow).Printf("Contract %s is already verified. Use --force to re-verify.\n", 
+		color.New(color.FgYellow).Printf("Contract %s is already verified. Use --force to re-verify.\n",
 			deployment.Entry.GetDisplayName())
 		return nil
 	}
@@ -199,16 +199,16 @@ func verifySpecificContract(identifier string, verificationManager *verification
 	// Handle manual contract path override
 	var originalContractPath, originalSourceHash string
 	var contractPathOverridden bool
-	
+
 	if contractPathFlag != "" {
 		// Save original values
 		originalContractPath = deployment.Entry.Metadata.ContractPath
 		originalSourceHash = deployment.Entry.Metadata.SourceHash
 		contractPathOverridden = true
-		
+
 		// Override with manual contract path
 		deployment.Entry.Metadata.ContractPath = contractPathFlag
-		
+
 		// Calculate new source hash for the manual contract path
 		if newSourceHash, err := calculateSourceHashFromPath(contractPathFlag); err == nil {
 			deployment.Entry.Metadata.SourceHash = newSourceHash
@@ -219,11 +219,11 @@ func verifySpecificContract(identifier string, verificationManager *verification
 	}
 
 	displayName := deployment.Entry.GetDisplayName()
-	
+
 	// Start spinner for verification (unless debug mode)
 	var s *spinner.Spinner
 	if !debugFlag {
-		s = createSpinner(fmt.Sprintf("Verifying %s/%s/%s...", 
+		s = createSpinner(fmt.Sprintf("Verifying %s/%s/%s...",
 			deployment.NetworkName, deployment.Entry.Environment, displayName))
 	}
 
@@ -232,11 +232,11 @@ func verifySpecificContract(identifier string, verificationManager *verification
 	} else {
 		err = verificationManager.VerifyContract(deployment)
 	}
-	
+
 	if s != nil {
 		s.Stop()
 	}
-	
+
 	if err != nil {
 		// If verification failed and we overrode the contract path, restore original values
 		if contractPathOverridden {
@@ -248,20 +248,19 @@ func verifySpecificContract(identifier string, verificationManager *verification
 	}
 
 	color.New(color.FgGreen).Println("✓ Verification completed successfully!")
-	
+
 	// If verification succeeded and we used a manual contract path, save the updated metadata
 	if contractPathOverridden {
 		chainIDUint, parseErr := parseChainID(deployment.ChainID)
 		if parseErr == nil {
-			key := strings.ToLower(deployment.Address.Hex())
-			if updateErr := registryManager.UpdateDeploymentByAddress(key, deployment.Entry, chainIDUint); updateErr == nil {
+			if updateErr := registryManager.UpdateDeployment(chainIDUint, deployment.Entry); updateErr == nil {
 				color.New(color.FgGreen).Printf("✓ Updated registry with correct contract path: %s\n", contractPathFlag)
 			} else {
 				color.New(color.FgYellow).Printf("Warning: Could not update registry: %v\n", updateErr)
 			}
 		}
 	}
-	
+
 	// Show verification status
 	showVerificationStatus(deployment)
 	return nil
@@ -302,7 +301,7 @@ func calculateSourceHashFromPath(contractPath string) (string, error) {
 	}
 
 	filePath := strings.TrimPrefix(parts[0], "./")
-	
+
 	// Read and hash the file
 	content, err := os.ReadFile(filePath)
 	if err != nil {
@@ -326,4 +325,3 @@ func createSpinner(message string) *spinner.Spinner {
 	s.Start()
 	return s
 }
-

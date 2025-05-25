@@ -135,7 +135,7 @@ func (p *Predictor) GetExistingAddress(ctx *Context, registryManager interface{}
 	}
 
 	if ctx.Type == TypeLibrary {
-		if deployment := registry.GetLibraryDeployment(ctx.ContractName, ctx.NetworkInfo.Name); deployment != nil {
+		if deployment := registry.GetLibraryDeployment(ctx.ContractInfo.Name, ctx.NetworkInfo.Name); deployment != nil {
 			return deployment.Address
 		}
 	} else {

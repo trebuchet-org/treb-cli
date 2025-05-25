@@ -144,8 +144,8 @@ func syncPendingSafeTransactions(registryManager *registry.Manager) error {
 				deployment.Entry.Deployment.TxHash = ethTxHash
 
 				// Update in registry
-				key := strings.ToLower(deployment.Address.Hex())
-				if err := registryManager.UpdateDeployment(key, deployment.Entry); err != nil {
+				chainID, _ := strconv.ParseUint(deployment.ChainID, 10, 64)
+				if err := registryManager.UpdateDeployment(chainID, deployment.Entry); err != nil {
 					fmt.Printf("    Warning: Failed to update registry: %v\n", err)
 				}
 			} else {

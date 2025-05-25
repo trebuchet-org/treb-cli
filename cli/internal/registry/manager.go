@@ -1,19 +1,17 @@
 package registry
 
 import (
-	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
 type Manager struct {
@@ -22,20 +20,12 @@ type Manager struct {
 }
 
 type Registry struct {
-	Project   ProjectMetadata                    `json:"project"`
-	Networks  map[string]*NetworkEntry           `json:"networks"`
-	Libraries map[string]*types.DeploymentEntry  `json:"libraries,omitempty"` // Global libraries by chain
-}
-
-type ProjectMetadata struct {
-	Name      string    `json:"name"`
-	Version   string    `json:"version"`
-	Commit    string    `json:"commit"`
-	Timestamp time.Time `json:"timestamp"`
+	Networks  map[string]*NetworkEntry          `json:"networks"`
+	Libraries map[string]*types.DeploymentEntry `json:"libraries,omitempty"` // Global libraries by chain
 }
 
 type NetworkEntry struct {
-	Name        string                        `json:"name"`
+	Name        string                            `json:"name"`
 	Deployments map[string]*types.DeploymentEntry `json:"deployments"`
 }
 
@@ -43,11 +33,11 @@ func NewManager(registryPath string) (*Manager, error) {
 	manager := &Manager{
 		registryPath: registryPath,
 	}
-	
+
 	if err := manager.load(); err != nil {
 		return nil, err
 	}
-	
+
 	return manager, nil
 }
 
@@ -55,11 +45,6 @@ func (m *Manager) load() error {
 	if _, err := os.Stat(m.registryPath); os.IsNotExist(err) {
 		// Create empty registry
 		m.registry = &Registry{
-			Project: ProjectMetadata{
-				Name:      "treb-project",
-				Version:   "0.1.0",
-				Timestamp: time.Now(),
-			},
 			Networks:  make(map[string]*NetworkEntry),
 			Libraries: make(map[string]*types.DeploymentEntry),
 		}
@@ -74,15 +59,7 @@ func (m *Manager) load() error {
 	// Try to load with new format first
 	m.registry = &Registry{}
 	if err := json.Unmarshal(data, m.registry); err != nil {
-		// If it fails, try to migrate from old format with byte arrays
-		if err := m.migrateFromOldFormat(data); err != nil {
-			return fmt.Errorf("failed to parse registry file: %w", err)
-		}
-		
-		// Save the migrated registry
-		if err := m.Save(); err != nil {
-			return fmt.Errorf("failed to save migrated registry: %w", err)
-		}
+		return fmt.Errorf("failed to parse registry file: %w", err)
 	}
 
 	// Initialize networks map if nil
@@ -106,13 +83,17 @@ func (m *Manager) Save() error {
 	return nil
 }
 
-func (m *Manager) RecordDeployment(contract, env string, result *types.DeploymentResult, chainID uint64) error {
+func (m *Manager) RecordDeployment(contractInfo *contracts.ContractInfo, env string, result *types.DeploymentResult, chainID uint64) error {
 	chainIDStr := fmt.Sprintf("%d", chainID)
-	
+
 	// Ensure network exists
 	if m.registry.Networks[chainIDStr] == nil {
+		networkName := "unknown"
+		if result.NetworkInfo != nil {
+			networkName = result.NetworkInfo.Name
+		}
 		m.registry.Networks[chainIDStr] = &NetworkEntry{
-			Name:        m.getNetworkName(chainID),
+			Name:        networkName,
 			Deployments: make(map[string]*types.DeploymentEntry),
 		}
 	}
@@ -121,31 +102,31 @@ func (m *Manager) RecordDeployment(contract, env string, result *types.Deploymen
 	if env == "" {
 		env = "default"
 	}
-	
+
 	entry := &types.DeploymentEntry{
 		Address:      result.Address,
-		ContractName: contract,
+		ContractName: contractInfo.Name,
 		Environment:  env,
-		Type:         result.DeploymentType, // Now comes from structured output
+		Type:         result.DeploymentType,                      // Now comes from structured output
 		Salt:         hex.EncodeToString(result.Salt[:]),         // Convert to hex string
 		InitCodeHash: hex.EncodeToString(result.InitCodeHash[:]), // Convert to hex string
-		
+
 		// Constructor arguments for verification
 		ConstructorArgs: result.ConstructorArgs,
-		
+
 		// Label for all deployments
-		Label:        result.Label,
-		
+		Label: result.Label,
+
 		// Proxy-specific fields
 		TargetContract: result.TargetContract,
-		
+
 		// Version tags
 		Tags: result.Tags,
-		
+
 		Verification: types.Verification{
 			Status: "pending",
 		},
-		
+
 		Deployment: types.DeploymentInfo{
 			TxHash:        &result.TxHash,
 			BlockNumber:   result.BlockNumber,
@@ -157,8 +138,8 @@ func (m *Manager) RecordDeployment(contract, env string, result *types.Deploymen
 			SafeNonce:     m.getSafeNonce(result),
 			Deployer:      m.getDeployerFromBroadcast(result.BroadcastFile),
 		},
-		
-		Metadata: m.buildMetadata(contract, result),
+
+		Metadata: m.buildMetadata(contractInfo, result),
 	}
 
 	// Use address as key for uniqueness
@@ -169,30 +150,30 @@ func (m *Manager) RecordDeployment(contract, env string, result *types.Deploymen
 }
 
 // RecordLibraryDeployment records a library deployment in the global libraries section
-func (m *Manager) RecordLibraryDeployment(libraryName string, result *types.DeploymentResult, chainID uint64) error {
+func (m *Manager) RecordLibraryDeployment(contractInfo *contracts.ContractInfo, result *types.DeploymentResult, chainID uint64) error {
 	// Initialize libraries map if needed
 	if m.registry.Libraries == nil {
 		m.registry.Libraries = make(map[string]*types.DeploymentEntry)
 	}
-	
+
 	// Create chain-library key (e.g., "44787-MathLib" for Alfajores MathLib)
-	key := fmt.Sprintf("%d-%s", chainID, libraryName)
-	
+	key := fmt.Sprintf("%d-%s", chainID, contractInfo.Name)
+
 	entry := &types.DeploymentEntry{
 		Address:      result.Address,
-		ContractName: libraryName,
+		ContractName: contractInfo.Name,
 		Environment:  "global", // Libraries are global
 		Type:         "library",
 		Salt:         hex.EncodeToString(result.Salt[:]),
 		InitCodeHash: hex.EncodeToString(result.InitCodeHash[:]),
-		
+
 		// No constructor args for libraries typically
 		ConstructorArgs: result.ConstructorArgs,
-		
+
 		Verification: types.Verification{
 			Status: "pending",
 		},
-		
+
 		Deployment: types.DeploymentInfo{
 			TxHash:        &result.TxHash,
 			BlockNumber:   result.BlockNumber,
@@ -201,13 +182,13 @@ func (m *Manager) RecordLibraryDeployment(libraryName string, result *types.Depl
 			Status:        "deployed", // Libraries are always deployed, no Safe
 			Deployer:      m.getDeployerFromBroadcast(result.BroadcastFile),
 		},
-		
-		Metadata: m.buildMetadata(libraryName, result),
+
+		Metadata: m.buildMetadata(contractInfo, result),
 	}
-	
+
 	// Store in libraries section
 	m.registry.Libraries[key] = entry
-	
+
 	return m.Save()
 }
 
@@ -216,7 +197,7 @@ func (m *Manager) GetLibrary(libraryName string, chainID uint64) *types.Deployme
 	if m.registry.Libraries == nil {
 		return nil
 	}
-	
+
 	key := fmt.Sprintf("%d-%s", chainID, libraryName)
 	return m.registry.Libraries[key]
 }
@@ -231,12 +212,12 @@ func (m *Manager) GetAllLibraries() map[string]*types.DeploymentEntry {
 
 func (m *Manager) GetDeployment(contract, env string, chainID uint64) *types.DeploymentEntry {
 	chainIDStr := fmt.Sprintf("%d", chainID)
-	
+
 	// Default environment to "default" if not provided
 	if env == "" {
 		env = "default"
 	}
-	
+
 	if network := m.registry.Networks[chainIDStr]; network != nil {
 		// Search through deployments to find matching contract and env
 		for _, deployment := range network.Deployments {
@@ -245,19 +226,19 @@ func (m *Manager) GetDeployment(contract, env string, chainID uint64) *types.Dep
 			}
 		}
 	}
-	
+
 	return nil
 }
 
 // GetDeploymentWithLabel gets a deployment by contract, env, and label
 func (m *Manager) GetDeploymentWithLabel(contract, env, label string, chainID uint64) *types.DeploymentEntry {
 	chainIDStr := fmt.Sprintf("%d", chainID)
-	
+
 	// Default environment to "default" if not provided
 	if env == "" {
 		env = "default"
 	}
-	
+
 	if network := m.registry.Networks[chainIDStr]; network != nil {
 		// Search through deployments to find matching contract, env, and label
 		for _, deployment := range network.Deployments {
@@ -266,14 +247,14 @@ func (m *Manager) GetDeploymentWithLabel(contract, env, label string, chainID ui
 			}
 		}
 	}
-	
+
 	return nil
 }
 
 func (m *Manager) GetPendingVerifications(chainID uint64) map[string]*types.DeploymentEntry {
 	chainIDStr := fmt.Sprintf("%d", chainID)
 	pending := make(map[string]*types.DeploymentEntry)
-	
+
 	if network := m.registry.Networks[chainIDStr]; network != nil {
 		for key, deployment := range network.Deployments {
 			if deployment.Verification.Status == "pending" {
@@ -281,29 +262,18 @@ func (m *Manager) GetPendingVerifications(chainID uint64) map[string]*types.Depl
 			}
 		}
 	}
-	
+
 	return pending
 }
 
-func (m *Manager) UpdateDeployment(key string, deployment *types.DeploymentEntry) error {
-	chainID := "11155111" // TODO: Get from config
-	
-	if network := m.registry.Networks[chainID]; network != nil {
-		network.Deployments[key] = deployment
-		return m.Save()
-	}
-	
-	return fmt.Errorf("network not found")
-}
-
-func (m *Manager) UpdateDeploymentByAddress(address string, deployment *types.DeploymentEntry, chainID uint64) error {
+func (m *Manager) UpdateDeployment(chainID uint64, deployment *types.DeploymentEntry) error {
 	chainIDStr := fmt.Sprintf("%d", chainID)
-	
+	address := strings.ToLower(deployment.Address.Hex())
 	if network := m.registry.Networks[chainIDStr]; network != nil {
 		network.Deployments[address] = deployment
 		return m.Save()
 	}
-	
+
 	return fmt.Errorf("network not found")
 }
 
@@ -316,169 +286,16 @@ func (m *Manager) getGitCommit() string {
 	return strings.TrimSpace(string(output))
 }
 
-func (m *Manager) getCompilerVersion(contract string) string {
-	// Try to extract from foundry artifact
-	if version := m.GetCompilerVersionFromArtifact(contract); version != "" {
-		return version
-	}
-	
-	// Return unknown if artifact not found
-	return "unknown"
-}
-
-// getCompilerVersionForDeployment gets compiler version for a deployment, using contract_path for proxies
-func (m *Manager) getCompilerVersionForDeployment(contractName string, contractPath string, deploymentType string) string {
-	// For proxies, use the actual contract name from contract_path instead of contractName
-	if deploymentType == "proxy" && contractPath != "" {
-		actualContractName := extractContractNameFromPath(contractPath)
-		if actualContractName != "" {
-			if version := m.GetCompilerVersionFromArtifact(actualContractName); version != "" {
-				return version
-			}
-		}
-	}
-	
-	// Fallback to original method
-	return m.getCompilerVersion(contractName)
-}
-
-func (m *Manager) calculateSourceHash(contract string) string {
-	// Find the contract source file
-	contractPath := m.findContractSourceFile(contract)
-	if contractPath == "" {
-		return ""
-	}
-	
-	// Read the file and calculate hash
-	content, err := os.ReadFile(contractPath)
-	if err != nil {
-		return ""
-	}
-	
-	hash := sha256.Sum256(content)
-	return hex.EncodeToString(hash[:])
-}
-
-func (m *Manager) getContractPath(contract string) string {
-	// Find the contract source file
-	contractPath := m.findContractSourceFile(contract)
-	if contractPath == "" {
-		return ""
-	}
-	
-	// Format as ./src/Contract.sol:Contract
-	return fmt.Sprintf("./%s:%s", contractPath, contract)
-}
-
-func (m *Manager) getCompilerFromFoundryToml() string {
-	content, err := os.ReadFile("foundry.toml")
-	if err != nil {
-		return ""
-	}
-	
-	lines := strings.Split(string(content), "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "solc") && strings.Contains(line, "=") {
-			parts := strings.Split(line, "=")
-			if len(parts) == 2 {
-				version := strings.Trim(strings.TrimSpace(parts[1]), "\"'")
-				return version
-			}
-		}
-	}
-	return ""
-}
-
-func (m *Manager) findContractSourceFile(contract string) string {
-	// Search in src/ directory
-	var contractPath string
-	
-	filepath.WalkDir("src", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return nil // Continue walking
-		}
-		
-		if !d.IsDir() && strings.HasSuffix(path, ".sol") {
-			// Check if this file contains the contract
-			if content, err := os.ReadFile(path); err == nil {
-				if strings.Contains(string(content), fmt.Sprintf("contract %s", contract)) {
-					contractPath = path
-					return filepath.SkipAll // Found it, stop walking
-				}
-			}
-		}
-		return nil
-	})
-	
-	return contractPath
-}
-
-func (m *Manager) getNetworkName(chainID uint64) string {
-	// Map common chain IDs to names
-	switch chainID {
-	case 1:
-		return "mainnet"
-	case 11155111:
-		return "sepolia"
-	case 137:
-		return "polygon"
-	case 44787:
-		return "alfajores"
-	default:
-		return fmt.Sprintf("chain-%d", chainID)
-	}
-}
-
-func (m *Manager) GetCompilerVersionFromArtifact(contract string) string {
-	// Look for the foundry artifact in out/ directory
-	artifactPath := fmt.Sprintf("out/%s.sol/%s.json", contract, contract)
-	
-	// Try common artifact paths
-	possiblePaths := []string{
-		artifactPath,
-		fmt.Sprintf("out/%s.sol/%s.json", contract, contract),
-	}
-	
-	// Also search for the contract in different files
-	contractPath := m.findContractSourceFile(contract)
-	if contractPath != "" {
-		// Extract file name from path (e.g., "src/tokens/MyToken.sol" -> "MyToken.sol")
-		fileName := filepath.Base(contractPath)
-		possiblePaths = append(possiblePaths, fmt.Sprintf("out/%s/%s.json", fileName, contract))
-	}
-	
-	for _, path := range possiblePaths {
-		if content, err := os.ReadFile(path); err == nil {
-			var artifact struct {
-				Metadata struct {
-					Compiler struct {
-						Version string `json:"version"`
-					} `json:"compiler"`
-				} `json:"metadata"`
-			}
-			
-			if err := json.Unmarshal(content, &artifact); err == nil {
-				if artifact.Metadata.Compiler.Version != "" {
-					return artifact.Metadata.Compiler.Version
-				}
-			}
-		}
-	}
-	
-	return ""
-}
-
 func (m *Manager) getDeployerFromBroadcast(broadcastFile string) string {
 	if broadcastFile == "" {
 		return ""
 	}
-	
+
 	content, err := os.ReadFile(broadcastFile)
 	if err != nil {
 		return ""
 	}
-	
+
 	var broadcast struct {
 		Transactions []struct {
 			Transaction struct {
@@ -486,13 +303,13 @@ func (m *Manager) getDeployerFromBroadcast(broadcastFile string) string {
 			} `json:"transaction"`
 		} `json:"transactions"`
 	}
-	
+
 	if err := json.Unmarshal(content, &broadcast); err == nil {
 		if len(broadcast.Transactions) > 0 {
 			return broadcast.Transactions[0].Transaction.From
 		}
 	}
-	
+
 	return ""
 }
 
@@ -513,14 +330,11 @@ type NetworkSummary struct {
 
 // RegistryStatus represents overall registry status
 type RegistryStatus struct {
-	ProjectName         string                   `json:"project_name"`
-	ProjectVersion      string                   `json:"project_version"`
-	LastUpdated         string                   `json:"last_updated"`
-	NetworkCount        int                      `json:"network_count"`
-	TotalDeployments    int                      `json:"total_deployments"`
-	VerifiedCount       int                      `json:"verified_count"`
-	PendingVerification int                      `json:"pending_verification"`
-	RecentDeployments   []RecentDeploymentInfo   `json:"recent_deployments"`
+	NetworkCount        int                    `json:"network_count"`
+	TotalDeployments    int                    `json:"total_deployments"`
+	VerifiedCount       int                    `json:"verified_count"`
+	PendingVerification int                    `json:"pending_verification"`
+	RecentDeployments   []RecentDeploymentInfo `json:"recent_deployments"`
 }
 
 // RecentDeploymentInfo represents recent deployment information
@@ -531,13 +345,13 @@ type RecentDeploymentInfo struct {
 	Address     string `json:"address"`
 	Network     string `json:"network"`
 	Timestamp   string `json:"timestamp"`
-	Type        string `json:"type"`  // implementation/proxy
+	Type        string `json:"type"` // implementation/proxy
 }
 
 // GetAllDeployments returns all deployments across networks
 func (m *Manager) GetAllDeployments() []*DeploymentInfo {
 	var deployments []*DeploymentInfo
-	
+
 	for chainID, network := range m.registry.Networks {
 		for _, deployment := range network.Deployments {
 			deployments = append(deployments, &DeploymentInfo{
@@ -548,7 +362,7 @@ func (m *Manager) GetAllDeployments() []*DeploymentInfo {
 			})
 		}
 	}
-	
+
 	return deployments
 }
 
@@ -556,7 +370,7 @@ func (m *Manager) GetAllDeployments() []*DeploymentInfo {
 func (m *Manager) AddTag(address common.Address, tag string) error {
 	// Find deployment by address across all networks
 	addressLower := strings.ToLower(address.Hex())
-	
+
 	for _, network := range m.registry.Networks {
 		if deployment, exists := network.Deployments[addressLower]; exists {
 			// Check if tag already exists
@@ -565,13 +379,13 @@ func (m *Manager) AddTag(address common.Address, tag string) error {
 					return nil // Tag already exists, no error
 				}
 			}
-			
+
 			// Add the tag
 			deployment.Tags = append(deployment.Tags, tag)
 			return nil
 		}
 	}
-	
+
 	return fmt.Errorf("deployment not found for address %s", address.Hex())
 }
 
@@ -579,7 +393,7 @@ func (m *Manager) AddTag(address common.Address, tag string) error {
 func (m *Manager) RemoveTag(address common.Address, tag string) error {
 	// Find deployment by address across all networks
 	addressLower := strings.ToLower(address.Hex())
-	
+
 	for _, network := range m.registry.Networks {
 		if deployment, exists := network.Deployments[addressLower]; exists {
 			// Find and remove the tag
@@ -594,17 +408,17 @@ func (m *Manager) RemoveTag(address common.Address, tag string) error {
 			return nil
 		}
 	}
-	
+
 	return fmt.Errorf("deployment not found for address %s", address.Hex())
 }
 
 // GetNetworkSummary returns network summary information
 func (m *Manager) GetNetworkSummary() map[string]*NetworkSummary {
 	networks := make(map[string]*NetworkSummary)
-	
+
 	for chainID, network := range m.registry.Networks {
 		contracts := make(map[string]bool)
-		
+
 		for key := range network.Deployments {
 			// Extract contract name from key (format: ContractName_env)
 			parts := strings.Split(key, "_")
@@ -612,38 +426,35 @@ func (m *Manager) GetNetworkSummary() map[string]*NetworkSummary {
 				contracts[parts[0]] = true
 			}
 		}
-		
+
 		contractNames := make([]string, 0, len(contracts))
 		for contract := range contracts {
 			contractNames = append(contractNames, contract)
 		}
-		
+
 		networks[chainID] = &NetworkSummary{
 			Name:            network.Name,
 			DeploymentCount: len(network.Deployments),
 			Contracts:       contractNames,
 		}
 	}
-	
+
 	return networks
 }
 
 // GetStatus returns overall registry status
 func (m *Manager) GetStatus() *RegistryStatus {
 	status := &RegistryStatus{
-		ProjectName:    m.registry.Project.Name,
-		ProjectVersion: m.registry.Project.Version,
-		LastUpdated:    m.registry.Project.Timestamp.Format("2006-01-02 15:04:05"),
-		NetworkCount:   len(m.registry.Networks),
+		NetworkCount: len(m.registry.Networks),
 	}
-	
+
 	// Count deployments and verification status
 	recentDeployments := make([]RecentDeploymentInfo, 0)
-	
+
 	for _, network := range m.registry.Networks {
 		for _, deployment := range network.Deployments {
 			status.TotalDeployments++
-			
+
 			// Count verification status
 			switch deployment.Verification.Status {
 			case "verified":
@@ -651,7 +462,7 @@ func (m *Manager) GetStatus() *RegistryStatus {
 			case "pending":
 				status.PendingVerification++
 			}
-			
+
 			// Add to recent deployments (limit to 5 most recent)
 			if len(recentDeployments) < 5 {
 				recentDeployments = append(recentDeployments, RecentDeploymentInfo{
@@ -666,7 +477,7 @@ func (m *Manager) GetStatus() *RegistryStatus {
 			}
 		}
 	}
-	
+
 	status.RecentDeployments = recentDeployments
 	return status
 }
@@ -674,10 +485,10 @@ func (m *Manager) GetStatus() *RegistryStatus {
 // CleanInvalidEntries removes invalid entries from the registry
 func (m *Manager) CleanInvalidEntries() int {
 	cleaned := 0
-	
+
 	for chainID, network := range m.registry.Networks {
 		toDelete := make([]string, 0)
-		
+
 		// Check if this is the old hardcoded Sepolia chainID (11155111)
 		// These are definitely dummy entries since sepolia is not configured in foundry.toml
 		if chainID == "11155111" {
@@ -686,42 +497,42 @@ func (m *Manager) CleanInvalidEntries() int {
 			cleaned += len(network.Deployments)
 			continue
 		}
-		
+
 		for key, deployment := range network.Deployments {
 			// Check for dummy entries (all zero salt and init code hash)
 			isZeroSalt := deployment.Salt == "" || deployment.Salt == "0000000000000000000000000000000000000000000000000000000000000000"
 			isZeroInitCodeHash := deployment.InitCodeHash == "" || deployment.InitCodeHash == "0000000000000000000000000000000000000000000000000000000000000000"
-			
+
 			// Mark entries with zero salt AND zero init code hash as potentially invalid
 			if isZeroSalt && isZeroInitCodeHash {
 				// Check if the broadcast file doesn't exist
 				broadcastPath := deployment.Deployment.BroadcastFile
 				shouldDelete := false
-				
+
 				if broadcastPath == "" {
 					shouldDelete = true
 				} else if !fileExists(broadcastPath) {
 					shouldDelete = true
 				}
-				
+
 				if shouldDelete {
 					toDelete = append(toDelete, key)
 				}
 			}
 		}
-		
+
 		// Delete invalid entries
 		for _, key := range toDelete {
 			delete(network.Deployments, key)
 			cleaned++
 		}
-		
+
 		// Remove empty networks
 		if len(network.Deployments) == 0 {
 			delete(m.registry.Networks, chainID)
 		}
 	}
-	
+
 	return cleaned
 }
 
@@ -731,107 +542,16 @@ func fileExists(filename string) bool {
 	return !os.IsNotExist(err)
 }
 
-// migrateFromOldFormat handles migration from byte array format to hex string format
-func (m *Manager) migrateFromOldFormat(data []byte) error {
-	// Define old format types
-	type OldDeploymentEntry struct {
-		Address       common.Address         `json:"address"`
-		Type          string                 `json:"type"`
-		Salt          [32]byte               `json:"salt"`
-		InitCodeHash  [32]byte               `json:"init_code_hash"`
-		Constructor   []interface{}          `json:"constructor_args,omitempty"`
-		Verification  types.Verification     `json:"verification"`
-		Deployment    types.DeploymentInfo   `json:"deployment"`
-		Metadata      types.ContractMetadata `json:"metadata"`
-	}
-	
-	type OldNetworkEntry struct {
-		Name        string                        `json:"name"`
-		Deployments map[string]*OldDeploymentEntry `json:"deployments"`
-	}
-	
-	type OldRegistry struct {
-		Project  ProjectMetadata           `json:"project"`
-		Networks map[string]*OldNetworkEntry `json:"networks"`
-	}
-	
-	// Parse with old format
-	var oldRegistry OldRegistry
-	if err := json.Unmarshal(data, &oldRegistry); err != nil {
-		return err
-	}
-	
-	// Convert to new format
-	m.registry = &Registry{
-		Project:  oldRegistry.Project,
-		Networks: make(map[string]*NetworkEntry),
-	}
-	
-	for chainID, oldNetwork := range oldRegistry.Networks {
-		newNetwork := &NetworkEntry{
-			Name:        oldNetwork.Name,
-			Deployments: make(map[string]*types.DeploymentEntry),
-		}
-		
-		for key, oldDeployment := range oldNetwork.Deployments {
-			newDeployment := &types.DeploymentEntry{
-				Address:       oldDeployment.Address,
-				Type:          oldDeployment.Type,
-				Salt:          hex.EncodeToString(oldDeployment.Salt[:]),
-				InitCodeHash:  hex.EncodeToString(oldDeployment.InitCodeHash[:]),
-				Verification:  oldDeployment.Verification,
-				Deployment:    oldDeployment.Deployment,
-				Metadata:      oldDeployment.Metadata,
-			}
-			newNetwork.Deployments[key] = newDeployment
-		}
-		
-		m.registry.Networks[chainID] = newNetwork
-	}
-	
-	return nil
-}
-
 // buildMetadata builds contract metadata, using values from result.Metadata if available
-func (m *Manager) buildMetadata(contract string, result *types.DeploymentResult) types.ContractMetadata {
-	// Determine contract path for compiler version lookup
-	var contractPath string
-	var deploymentType string
-	if result.Metadata != nil && result.Metadata.ContractPath != "" {
-		contractPath = result.Metadata.ContractPath
-	}
-	if result.DeploymentType != "" {
-		deploymentType = result.DeploymentType
-	} else if result.Type != "" {
-		deploymentType = result.Type
-	}
+func (m *Manager) buildMetadata(contractInfo *contracts.ContractInfo, result *types.DeploymentResult) types.ContractMetadata {
 
 	metadata := types.ContractMetadata{
 		SourceCommit: m.getGitCommit(),
-		Compiler:     m.getCompilerVersionForDeployment(contract, contractPath, deploymentType),
-		ScriptPath:   fmt.Sprintf("script/deploy/Deploy%s.s.sol", contract),
-	}
-
-	// Use provided metadata if available, otherwise calculate
-	if result.Metadata != nil {
-		if result.Metadata.SourceHash != "" {
-			metadata.SourceHash = result.Metadata.SourceHash
-		} else {
-			metadata.SourceHash = m.calculateSourceHash(contract)
-		}
-
-		if result.Metadata.ContractPath != "" {
-			metadata.ContractPath = result.Metadata.ContractPath
-		} else {
-			metadata.ContractPath = m.getContractPath(contract)
-		}
-
-		// Preserve any extra metadata
-		metadata.Extra = result.Metadata.Extra
-	} else {
-		// No metadata provided, calculate everything
-		metadata.SourceHash = m.calculateSourceHash(contract)
-		metadata.ContractPath = m.getContractPath(contract)
+		Compiler:     contractInfo.Artifact.Metadata.Compiler.Version,
+		ScriptPath:   result.Metadata.ScriptPath,
+		SourceHash:   result.Metadata.SourceHash,
+		ContractPath: contractInfo.Path,
+		Extra:        result.Metadata.Extra,
 	}
 
 	return metadata

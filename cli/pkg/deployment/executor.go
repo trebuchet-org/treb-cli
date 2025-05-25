@@ -96,9 +96,16 @@ func (e *Executor) Execute(ctx *Context) (*types.DeploymentResult, error) {
 
 	// Parse broadcast file if not predicting
 	if !ctx.Predict && deployment.SafeTxHash == (common.Hash{}) {
-		if err := e.enrichFromBroadcast(ctx, deployment); err != nil {
+		if broadcastData, err := e.loadBroadcastFile(ctx); err != nil {
 			// Log warning but don't fail
-			fmt.Printf("Warning: failed to parse broadcast file: %v\n", err)
+			fmt.Printf("Warning: failed to load broadcast file: %v\n", err)
+		} else {
+			deployment.BroadcastData = broadcastData
+			// Extract transaction details using the helper method
+			if txHash, blockNum, err := broadcastData.GetTransactionHashForAddress(deployment.Address); err == nil {
+				deployment.TxHash = txHash
+				deployment.BlockNumber = blockNum
+			}
 		}
 	}
 
@@ -122,63 +129,56 @@ func (e *Executor) checkExistingDeployment(ctx *Context, registryManager *regist
 }
 
 // buildDeploymentResult builds deployment result from parsed output
-func (e *Executor) buildDeploymentResult(ctx *Context, results map[string]string) *types.DeploymentResult {
+func (e *Executor) buildDeploymentResult(ctx *Context, results DeploymentOutput) *types.DeploymentResult {
+	// Convert hex strings to byte arrays
+	var salt [32]byte
+	var initCodeHash [32]byte
+	
+	if saltBytes, err := hex.DecodeString(strings.TrimPrefix(results.Salt, "0x")); err == nil && len(saltBytes) == 32 {
+		copy(salt[:], saltBytes)
+	}
+	
+	if hashBytes, err := hex.DecodeString(strings.TrimPrefix(results.InitCodeHash, "0x")); err == nil && len(hashBytes) == 32 {
+		copy(initCodeHash[:], hashBytes)
+	}
+
 	deployment := &types.DeploymentResult{
-		Type:           string(ctx.Type),
-		DeploymentType: string(ctx.Type),
-		Env:            ctx.Env,
-		Label:          ctx.Label,
-	}
-
-	// Set addresses
-	if addr := results["deployedAddress"]; addr != "" {
-		deployment.Address = common.HexToAddress(addr)
-	}
-
-	// Set salt and init code hash
-	if salt := results["salt"]; salt != "" {
-		// Convert hex string to [32]byte
-		saltBytes, _ := hex.DecodeString(strings.TrimPrefix(salt, "0x"))
-		copy(deployment.Salt[:], saltBytes)
-	}
-	if hash := results["initCodeHash"]; hash != "" {
-		// Convert hex string to [32]byte
-		hashBytes, _ := hex.DecodeString(strings.TrimPrefix(hash, "0x"))
-		copy(deployment.InitCodeHash[:], hashBytes)
-	}
-
-	// Set Safe transaction hash if present
-	if safeTxHash := results["safeTxHash"]; safeTxHash != "" {
-		deployment.SafeTxHash = common.HexToHash(safeTxHash)
-		// TODO: SafeAddress would need to be set from config or parsed output
+		DeploymentType:  string(ctx.Type),
+		Env:             ctx.Env,
+		Label:           ctx.Label,
+		NetworkInfo:     ctx.NetworkInfo,
+		ContractInfo:    ctx.ContractInfo,
+		Status:          results.Status,
+		Salt:            salt,
+		InitCodeHash:    initCodeHash,
+		SafeTxHash:      common.HexToHash(results.SafeTxHash),
+		Address:         common.HexToAddress(results.Address),
+		ConstructorArgs: results.ConstructorArgs,
+		Metadata: &types.ContractMetadata{
+			Compiler:     ctx.ContractInfo.Artifact.Metadata.Compiler.Version,
+			ContractPath: ctx.ContractInfo.Path,
+			ScriptPath:   ctx.ScriptPath,
+			SourceHash:   ctx.ContractInfo.GetSourceHash(),
+		},
 	}
 
 	return deployment
 }
 
-// enrichFromBroadcast enriches deployment result with broadcast data
-func (e *Executor) enrichFromBroadcast(ctx *Context, deployment *types.DeploymentResult) error {
-	// Use broadcast parser
+// loadBroadcastFile loads the broadcast file data
+func (e *Executor) loadBroadcastFile(ctx *Context) (*broadcast.BroadcastFile, error) {
+	// Use broadcast parser to get the raw broadcast file
 	parser := broadcast.NewParser(e.projectRoot)
-	broadcastResult, err := parser.ParseLatestBroadcast(filepath.Base(ctx.ScriptPath), ctx.NetworkInfo.ChainID)
-	if err != nil {
-		return err
-	}
-
-	// Copy relevant data from broadcast result
-	if broadcastResult != nil {
-		deployment.TxHash = broadcastResult.TxHash
-		deployment.BlockNumber = broadcastResult.BlockNumber
-		// Copy other relevant fields if available
-	}
-
-	return nil
+	return parser.ParseLatestBroadcast(filepath.Base(ctx.ScriptPath), ctx.NetworkInfo.ChainID)
 }
 
 // updateRegistry updates the deployment registry
 func (e *Executor) updateRegistry(ctx *Context, deployment *types.DeploymentResult, registryManager *registry.Manager) error {
-	// TODO: This needs to be updated to work with the new registry manager
-	// The registry manager expects DeploymentEntry, not DeploymentResult
-	// For now, just return nil
+	registryPath := filepath.Join(e.projectRoot, "deployments.json")
+	registryManager, err := registry.NewManager(registryPath)
+	if err != nil {
+		return nil
+	}
+	registryManager.RecordDeployment(ctx.ContractInfo, ctx.Env, deployment, ctx.NetworkInfo.ChainID)
 	return nil
 }

@@ -4,34 +4,41 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
 )
 
 type DeploymentResult struct {
-	Address         common.Address    `json:"address"`
-	TxHash          common.Hash       `json:"transaction_hash"`
-	BlockNumber     uint64            `json:"block_number"`
-	BroadcastFile   string            `json:"broadcast_file"`
-	Salt            [32]byte          `json:"salt"`            // Keep as bytes for internal use
-	InitCodeHash    [32]byte          `json:"init_code_hash"`  // Keep as bytes for internal use
-	AlreadyDeployed bool              `json:"already_deployed"`
-	
+	Address         common.Address `json:"address"`
+	TxHash          common.Hash    `json:"transaction_hash"`
+	BlockNumber     uint64         `json:"block_number"`
+	BroadcastFile   string         `json:"broadcast_file"`
+	Salt            [32]byte       `json:"salt"`           // Keep as bytes for internal use
+	InitCodeHash    [32]byte       `json:"init_code_hash"` // Keep as bytes for internal use
+	AlreadyDeployed bool           `json:"already_deployed"`
+
 	// New deployment type information
-	Type            string            `json:"type"`            // "implementation" or "proxy" 
-	DeploymentType  string            `json:"deployment_type"`  // "implementation" or "proxy"
-	TargetContract  string            `json:"target_contract,omitempty"`
-	Label           string            `json:"label,omitempty"`  // For implementation deployments
-	Tags            []string          `json:"tags,omitempty"`
-	Env             string            `json:"env,omitempty"`
-	
+	DeploymentType string               `json:"deployment_type"` // "implementation" or "proxy"
+	TargetContract string               `json:"target_contract,omitempty"`
+	Label          string               `json:"label,omitempty"` // For implementation deployments
+	Tags           []string             `json:"tags,omitempty"`
+	Env            string               `json:"env,omitempty"`
+	NetworkInfo    *network.NetworkInfo `json:"network_info,omitempty"`
+	Status         string               `json:"status"`
+
 	// Safe deployment information
-	SafeTxHash      common.Hash       `json:"safe_tx_hash,omitempty"`
-	SafeAddress     common.Address    `json:"safe_address,omitempty"`
-	
+	SafeTxHash  common.Hash    `json:"safe_tx_hash,omitempty"`
+	SafeAddress common.Address `json:"safe_address,omitempty"`
+
 	// Constructor arguments for verification
-	ConstructorArgs string         `json:"constructor_args,omitempty"`
-	
+	ConstructorArgs string `json:"constructor_args,omitempty"`
+
 	// Metadata
-	Metadata        *ContractMetadata `json:"metadata,omitempty"`
+	Metadata     *ContractMetadata       `json:"metadata,omitempty"`
+	ContractInfo *contracts.ContractInfo `json:"contract_info,omitempty"`
+	
+	// Broadcast file (linked directly, not parsed into other fields)
+	BroadcastData interface{} `json:"broadcast_data,omitempty"` // Will hold *broadcast.BroadcastFile
 }
 
 type PredictResult struct {
@@ -41,30 +48,30 @@ type PredictResult struct {
 }
 
 type DeploymentEntry struct {
-	Address       common.Address   `json:"address"`
-	ContractName  string           `json:"contract_name"`
-	Environment   string           `json:"environment"`
-	Type          string           `json:"type"` // implementation/proxy
-	Salt          string           `json:"salt"`           // hex string
-	InitCodeHash  string           `json:"init_code_hash"` // hex string
-	ConstructorArgs string           `json:"constructor_args,omitempty"` // Raw hex-encoded constructor args
-	
+	Address         common.Address `json:"address"`
+	ContractName    string         `json:"contract_name"`
+	Environment     string         `json:"environment"`
+	Type            string         `json:"type"`                       // implementation/proxy
+	Salt            string         `json:"salt"`                       // hex string
+	InitCodeHash    string         `json:"init_code_hash"`             // hex string
+	ConstructorArgs string         `json:"constructor_args,omitempty"` // Raw hex-encoded constructor args
+
 	// Label for all deployments (optional for implementations, required for proxies)
-	Label         string           `json:"label,omitempty"`
-	
+	Label string `json:"label,omitempty"`
+
 	// Proxy-specific fields
-	TargetContract string           `json:"target_contract,omitempty"` // For proxy deployments
-	
+	TargetContract string `json:"target_contract,omitempty"` // For proxy deployments
+
 	// Version tags (metadata only, not part of salt)
-	Tags          []string         `json:"tags,omitempty"`
-	
-	Verification  Verification     `json:"verification"`
-	Deployment    DeploymentInfo   `json:"deployment"`
-	Metadata      ContractMetadata `json:"metadata"`
+	Tags []string `json:"tags,omitempty"`
+
+	Verification Verification     `json:"verification"`
+	Deployment   DeploymentInfo   `json:"deployment"`
+	Metadata     ContractMetadata `json:"metadata"`
 }
 
 type Verification struct {
-	Status      string                    `json:"status"`      // verified/pending/failed/partial
+	Status      string                    `json:"status"` // verified/pending/failed/partial
 	ExplorerUrl string                    `json:"explorer_url,omitempty"`
 	Reason      string                    `json:"reason,omitempty"`
 	Verifiers   map[string]VerifierStatus `json:"verifiers,omitempty"` // etherscan, sourcify status
@@ -89,12 +96,12 @@ type DeploymentInfo struct {
 }
 
 type ContractMetadata struct {
-	SourceCommit    string                 `json:"source_commit"`
-	Compiler        string                 `json:"compiler"`
-	SourceHash      string                 `json:"source_hash"`
-	ContractPath    string                 `json:"contract_path"`  // Full path like ./src/Contract.sol:Contract
-	ScriptPath      string                 `json:"script_path"`    // Deployment script path like script/deploy/DeployCounter.s.sol
-	Extra           map[string]interface{} `json:"extra,omitempty"` // Additional metadata (e.g., proxy type, implementation address)
+	SourceCommit string                 `json:"source_commit"`
+	Compiler     string                 `json:"compiler"`
+	SourceHash   string                 `json:"source_hash"`
+	ContractPath string                 `json:"contract_path"`   // Full path like ./src/Contract.sol:Contract
+	ScriptPath   string                 `json:"script_path"`     // Deployment script path like script/deploy/DeployCounter.s.sol
+	Extra        map[string]interface{} `json:"extra,omitempty"` // Additional metadata (e.g., proxy type, implementation address)
 }
 
 // GetDisplayName returns a human-friendly name for the deployment
@@ -107,7 +114,7 @@ func (d *DeploymentEntry) GetDisplayName() string {
 		}
 		return baseName
 	}
-	
+
 	// For implementations: contractName or contractName:label
 	if d.Label != "" {
 		return d.ContractName + ":" + d.Label

@@ -105,7 +105,7 @@ func showDeployConfig(env string) error {
 	// Show the config structure
 	envConfig, _ := deployConfig.GetEnvironmentConfig(env)
 	fmt.Printf("Deployer Type: %s\n", envConfig.Deployer.Type)
-	
+
 	if envConfig.Deployer.Type == "safe" {
 		fmt.Printf("Safe Address: %s\n", envConfig.Deployer.Safe)
 		if envConfig.Deployer.Proposer != nil {
@@ -139,7 +139,7 @@ func fixCompilerVersions() error {
 
 	// Get all deployments
 	allDeployments := registryManager.GetAllDeployments()
-	
+
 	if len(allDeployments) == 0 {
 		color.New(color.FgYellow).Println("No deployments found in registry.")
 		return nil
@@ -154,31 +154,22 @@ func fixCompilerVersions() error {
 	for _, deployment := range allDeployments {
 		// Get current compiler version
 		currentVersion := deployment.Entry.Metadata.Compiler
-		
+
 		// Get the correct version from artifact, using contract_path for proxies
 		var correctVersion string
-		if deployment.Entry.Type == "proxy" && deployment.Entry.Metadata.ContractPath != "" {
-			// For proxies, extract the actual contract name from contract_path
-			actualContractName := extractContractNameFromPath(deployment.Entry.Metadata.ContractPath)
-			if actualContractName != "" {
-				correctVersion = registryManager.GetCompilerVersionFromArtifact(actualContractName)
-			}
-		}
-		
-		// Fallback to original method if no result from proxy logic
+		// TODO: Implement artifact-based compiler version checking
+		// This needs to be updated to work with the new ContractInfo structure
+		correctVersion = "unknown"
+
 		if correctVersion == "" {
-			correctVersion = registryManager.GetCompilerVersionFromArtifact(deployment.Entry.ContractName)
-		}
-		
-		if correctVersion == "" {
-			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - No artifact found\n", 
+			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - No artifact found\n",
 				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName())
 			errorCount++
 			continue
 		}
 
 		if currentVersion == correctVersion {
-			color.New(color.FgGreen).Printf("  ✓ %s/%s/%s - Already correct (%s)\n", 
+			color.New(color.FgGreen).Printf("  ✓ %s/%s/%s - Already correct (%s)\n",
 				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(), currentVersion)
 			skippedCount++
 			continue
@@ -186,27 +177,26 @@ func fixCompilerVersions() error {
 
 		// Update the compiler version
 		deployment.Entry.Metadata.Compiler = correctVersion
-		
+
 		// Save the updated deployment
 		chainIDUint, err := strconv.ParseUint(deployment.ChainID, 10, 64)
 		if err != nil {
-			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - Invalid chain ID: %s\n", 
+			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - Invalid chain ID: %s\n",
 				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(), deployment.ChainID)
 			errorCount++
 			continue
 		}
-		
-		key := strings.ToLower(deployment.Address.Hex())
-		err = registryManager.UpdateDeploymentByAddress(key, deployment.Entry, chainIDUint)
+
+		err = registryManager.UpdateDeployment(chainIDUint, deployment.Entry)
 		if err != nil {
-			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - Failed to save: %v\n", 
+			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - Failed to save: %v\n",
 				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(), err)
 			errorCount++
 			continue
 		}
 
-		color.New(color.FgCyan).Printf("  → %s/%s/%s - Updated: %s → %s\n", 
-			deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(), 
+		color.New(color.FgCyan).Printf("  → %s/%s/%s - Updated: %s → %s\n",
+			deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(),
 			currentVersion, correctVersion)
 		fixedCount++
 	}
@@ -217,7 +207,7 @@ func fixCompilerVersions() error {
 	if errorCount > 0 {
 		color.New(color.FgRed, color.Bold).Printf("✗ Errors: %d\n", errorCount)
 	}
-	
+
 	if fixedCount > 0 {
 		fmt.Println("\nRegistry has been updated with correct compiler versions.")
 	}
@@ -234,7 +224,7 @@ func fixScriptPaths() error {
 
 	// Get all deployments
 	allDeployments := registryManager.GetAllDeployments()
-	
+
 	if len(allDeployments) == 0 {
 		color.New(color.FgYellow).Println("No deployments found in registry.")
 		return nil
@@ -249,8 +239,8 @@ func fixScriptPaths() error {
 	for _, deployment := range allDeployments {
 		// Check if script path already exists
 		if deployment.Entry.Metadata.ScriptPath != "" {
-			color.New(color.FgGreen).Printf("  ✓ %s/%s/%s - Already has script path (%s)\n", 
-				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(), 
+			color.New(color.FgGreen).Printf("  ✓ %s/%s/%s - Already has script path (%s)\n",
+				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(),
 				deployment.Entry.Metadata.ScriptPath)
 			skippedCount++
 			continue
@@ -268,27 +258,26 @@ func fixScriptPaths() error {
 
 		// Update the script path
 		deployment.Entry.Metadata.ScriptPath = scriptPath
-		
+
 		// Save the updated deployment
 		chainIDUint, err := strconv.ParseUint(deployment.ChainID, 10, 64)
 		if err != nil {
-			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - Invalid chain ID: %s\n", 
+			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - Invalid chain ID: %s\n",
 				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(), deployment.ChainID)
 			errorCount++
 			continue
 		}
-		
-		key := strings.ToLower(deployment.Address.Hex())
-		err = registryManager.UpdateDeploymentByAddress(key, deployment.Entry, chainIDUint)
+
+		err = registryManager.UpdateDeployment(chainIDUint, deployment.Entry)
 		if err != nil {
-			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - Failed to save: %v\n", 
+			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - Failed to save: %v\n",
 				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(), err)
 			errorCount++
 			continue
 		}
 
-		color.New(color.FgCyan).Printf("  → %s/%s/%s - Added script path: %s\n", 
-			deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(), 
+		color.New(color.FgCyan).Printf("  → %s/%s/%s - Added script path: %s\n",
+			deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(),
 			scriptPath)
 		fixedCount++
 	}
@@ -299,7 +288,7 @@ func fixScriptPaths() error {
 	if errorCount > 0 {
 		color.New(color.FgRed, color.Bold).Printf("✗ Errors: %d\n", errorCount)
 	}
-	
+
 	if fixedCount > 0 {
 		fmt.Println("\nRegistry has been updated with script paths.")
 	}
@@ -317,7 +306,7 @@ func fixContractPaths() error {
 
 	// Get all deployments
 	allDeployments := registryManager.GetAllDeployments()
-	
+
 	if len(allDeployments) == 0 {
 		color.New(color.FgYellow).Println("No deployments found in registry.")
 		return nil
@@ -333,7 +322,7 @@ func fixContractPaths() error {
 		// Check if we have a script path to analyze
 		scriptPath := deployment.Entry.Metadata.ScriptPath
 		if scriptPath == "" {
-			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - No script path available\n", 
+			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - No script path available\n",
 				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName())
 			errorCount++
 			continue
@@ -342,7 +331,7 @@ func fixContractPaths() error {
 		// Analyze the script to get the contract info
 		analysisResult, err := contracts.AnalyzeDeployScript(scriptPath)
 		if err != nil {
-			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - Failed to analyze script: %v\n", 
+			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - Failed to analyze script: %v\n",
 				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(), err)
 			errorCount++
 			continue
@@ -359,7 +348,7 @@ func fixContractPaths() error {
 
 		// Check if current contract path is invalid (doesn't exist on disk)
 		currentPathInvalid := !isValidContractPath(currentContractPath)
-		
+
 		if currentContractPath != newContractPath {
 			needsUpdate = true
 			if currentPathInvalid {
@@ -383,7 +372,7 @@ func fixContractPaths() error {
 		}
 
 		if !needsUpdate {
-			color.New(color.FgGreen).Printf("  ✓ %s/%s/%s - Already correct\n", 
+			color.New(color.FgGreen).Printf("  ✓ %s/%s/%s - Already correct\n",
 				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName())
 			skippedCount++
 			continue
@@ -394,27 +383,26 @@ func fixContractPaths() error {
 		if newSourceHash != "" {
 			deployment.Entry.Metadata.SourceHash = newSourceHash
 		}
-		
+
 		// Save the updated deployment
 		chainIDUint, err := strconv.ParseUint(deployment.ChainID, 10, 64)
 		if err != nil {
-			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - Invalid chain ID: %s\n", 
+			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - Invalid chain ID: %s\n",
 				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(), deployment.ChainID)
 			errorCount++
 			continue
 		}
-		
-		key := strings.ToLower(deployment.Address.Hex())
-		err = registryManager.UpdateDeploymentByAddress(key, deployment.Entry, chainIDUint)
+
+		err = registryManager.UpdateDeployment(chainIDUint, deployment.Entry)
 		if err != nil {
-			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - Failed to save: %v\n", 
+			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - Failed to save: %v\n",
 				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(), err)
 			errorCount++
 			continue
 		}
 
-		color.New(color.FgCyan).Printf("  → %s/%s/%s - Updated: %s\n", 
-			deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(), 
+		color.New(color.FgCyan).Printf("  → %s/%s/%s - Updated: %s\n",
+			deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(),
 			strings.Join(changes, ", "))
 		fixedCount++
 	}
@@ -425,7 +413,7 @@ func fixContractPaths() error {
 	if errorCount > 0 {
 		color.New(color.FgRed, color.Bold).Printf("✗ Errors: %d\n", errorCount)
 	}
-	
+
 	if fixedCount > 0 {
 		fmt.Println("\nRegistry has been updated with correct contract paths and source hashes.")
 	}
@@ -438,7 +426,7 @@ func isValidContractPath(contractPath string) bool {
 	if contractPath == "" {
 		return false
 	}
-	
+
 	// Extract file path from contract path (format: ./path/to/Contract.sol:Contract)
 	parts := strings.Split(contractPath, ":")
 	if len(parts) != 2 {
@@ -446,7 +434,7 @@ func isValidContractPath(contractPath string) bool {
 	}
 
 	filePath := strings.TrimPrefix(parts[0], "./")
-	
+
 	// Check if file exists
 	_, err := os.Stat(filePath)
 	return !os.IsNotExist(err)

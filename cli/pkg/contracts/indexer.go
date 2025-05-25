@@ -20,13 +20,14 @@ var (
 
 // ContractInfo represents information about a discovered contract
 type ContractInfo struct {
-	Name         string `json:"name"`
-	Path         string `json:"path"`
-	ArtifactPath string `json:"artifactPath,omitempty"`
-	Version      string `json:"version,omitempty"`
-	IsLibrary    bool   `json:"isLibrary"`
-	IsInterface  bool   `json:"isInterface"`
-	IsAbstract   bool   `json:"isAbstract"`
+	Name         string    `json:"name"`
+	Path         string    `json:"path"`
+	ArtifactPath string    `json:"artifactPath,omitempty"`
+	Version      string    `json:"version,omitempty"`
+	IsLibrary    bool      `json:"isLibrary"`
+	IsInterface  bool      `json:"isInterface"`
+	IsAbstract   bool      `json:"isAbstract"`
+	Artifact     *Artifact `json:"artifact,omitempty"`
 }
 
 // ArtifactMetadata represents the metadata section of a Foundry artifact
@@ -34,8 +35,8 @@ type ArtifactMetadata struct {
 	Compiler struct {
 		Version string `json:"version"`
 	} `json:"compiler"`
-	Language     string `json:"language"`
-	Output       struct {
+	Language string `json:"language"`
+	Output   struct {
 		ABI      json.RawMessage `json:"abi"`
 		DevDoc   json.RawMessage `json:"devdoc"`
 		UserDoc  json.RawMessage `json:"userdoc"`
@@ -48,12 +49,12 @@ type ArtifactMetadata struct {
 
 // Artifact represents a Foundry compilation artifact
 type Artifact struct {
-	ABI          json.RawMessage   `json:"abi"`
-	Bytecode     json.RawMessage   `json:"bytecode"`
-	DeployedBytecode json.RawMessage `json:"deployedBytecode"`
+	ABI               json.RawMessage   `json:"abi"`
+	Bytecode          json.RawMessage   `json:"bytecode"`
+	DeployedBytecode  json.RawMessage   `json:"deployedBytecode"`
 	MethodIdentifiers map[string]string `json:"methodIdentifiers"`
-	RawMetadata  string            `json:"rawMetadata"`
-	Metadata     ArtifactMetadata  `json:"metadata"`
+	RawMetadata       string            `json:"rawMetadata"`
+	Metadata          ArtifactMetadata  `json:"metadata"`
 }
 
 // QueryFilter defines filtering options for contract queries
@@ -86,7 +87,7 @@ func AllFilter() QueryFilter {
 // Indexer discovers and indexes contracts and their artifacts
 type Indexer struct {
 	projectRoot   string
-	contracts     map[string]*ContractInfo // key: "path:contractName" or "contractName" if unique
+	contracts     map[string]*ContractInfo   // key: "path:contractName" or "contractName" if unique
 	contractNames map[string][]*ContractInfo // key: contract name, value: all contracts with that name
 	mu            sync.RWMutex
 }
@@ -126,10 +127,10 @@ func (i *Indexer) getLibraryPaths() []string {
 
 		// Convert to absolute path
 		absPath := filepath.Join(i.projectRoot, path)
-		
+
 		// Remove trailing slash if present
 		absPath = strings.TrimSuffix(absPath, "/")
-		
+
 		// Check if path exists
 		if info, err := os.Stat(absPath); err == nil && info.IsDir() {
 			// Avoid duplicates
@@ -149,7 +150,7 @@ func (i *Indexer) getLibraryPaths() []string {
 			if err != nil {
 				continue
 			}
-			
+
 			if strings.HasPrefix(path, "node_modules/") {
 				modulePath := filepath.Join(i.projectRoot, path)
 				if info, err := os.Stat(modulePath); err == nil && info.IsDir() {
@@ -184,7 +185,7 @@ func (i *Indexer) Index() error {
 func (i *Indexer) indexSolidityFiles() error {
 	// Collect all paths to process
 	var paths []string
-	
+
 	// Always include src/
 	srcPath := filepath.Join(i.projectRoot, "src")
 	if _, err := os.Stat(srcPath); err == nil {
@@ -294,14 +295,14 @@ func (i *Indexer) parseContractsFromFile(filePath string) ([]*ContractInfo, erro
 
 	// Parse contracts using regex
 	var contracts []*ContractInfo
-	
+
 	// Regex to match contract/library/interface definitions
 	// Handles abstract contracts and inheritance
 	contractRegex := regexp.MustCompile(`(?m)^\s*(abstract\s+)?(contract|library|interface)\s+(\w+)`)
-	
+
 	// Regex to extract pragma version
 	versionRegex := regexp.MustCompile(`pragma\s+solidity\s+([^;]+);`)
-	
+
 	// Extract version
 	version := ""
 	if matches := versionRegex.FindSubmatch(content); len(matches) > 1 {
@@ -387,6 +388,7 @@ func (i *Indexer) processArtifact(artifactPath string) error {
 				if strings.Contains(sourcePath, contract.Path) || strings.Contains(contract.Path, sourcePath) {
 					relPath, _ := filepath.Rel(i.projectRoot, artifactPath)
 					contract.ArtifactPath = relPath
+					contract.Artifact = &artifact
 					break
 				}
 			}
@@ -577,4 +579,15 @@ func GetGlobalIndexer(projectRoot string) (*Indexer, error) {
 func ResetGlobalIndexer() {
 	globalIndexer = nil
 	indexerMutex = sync.Once{}
+}
+
+// GetSourceHash returns the source hash for this contract
+func (c *ContractInfo) GetSourceHash() string {
+	if c.Artifact == nil {
+		return ""
+	}
+	
+	// For now, return a simple hash of the contract path and name
+	// In the future, this could be a more sophisticated hash of the actual source code
+	return fmt.Sprintf("%s:%s", c.Path, c.Name)
 }

@@ -80,7 +80,7 @@ func (d *Display) ShowPrediction(ctx *Context, predicted *types.PredictResult) {
 	switch ctx.Type {
 	case TypeSingleton:
 		color.New(color.FgWhite, color.Bold).Printf("Contract:     ")
-		fmt.Printf("%s/%s", ctx.Env, ctx.ContractName)
+		fmt.Printf("%s/%s", ctx.Env, ctx.ContractInfo.Name)
 		if ctx.Label != "" {
 			color.New(color.FgCyan).Printf(":%s", ctx.Label)
 		}
@@ -92,7 +92,7 @@ func (d *Display) ShowPrediction(ctx *Context, predicted *types.PredictResult) {
 		}
 	case TypeLibrary:
 		color.New(color.FgWhite, color.Bold).Printf("Library:      ")
-		fmt.Printf("%s", ctx.ContractName)
+		fmt.Printf("%s", ctx.ContractInfo.Name)
 	}
 	fmt.Println()
 
@@ -140,7 +140,7 @@ func (d *Display) printContractInfo(ctx *Context, result *types.DeploymentResult
 	switch ctx.Type {
 	case TypeSingleton:
 		color.New(color.FgWhite, color.Bold).Printf("Contract:     ")
-		fmt.Printf("%s", ctx.ContractName)
+		fmt.Printf("%s", ctx.ContractInfo.Name)
 		if ctx.Env != "" {
 			color.New(color.FgCyan).Printf(" (%s", ctx.Env)
 			if ctx.Label != "" {
@@ -172,7 +172,7 @@ func (d *Display) printContractInfo(ctx *Context, result *types.DeploymentResult
 
 	case TypeLibrary:
 		color.New(color.FgWhite, color.Bold).Printf("Library:      ")
-		fmt.Printf("%s\n", ctx.ContractName)
+		fmt.Printf("%s\n", ctx.ContractInfo.Name)
 
 		color.New(color.FgWhite, color.Bold).Printf("Address:      ")
 		color.New(color.FgGreen, color.Bold).Printf("%s\n", result.Address.Hex())

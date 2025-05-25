@@ -18,9 +18,25 @@ func NewParser() *Parser {
 	return &Parser{}
 }
 
+type DeploymentOutput struct {
+	Address               string `json:"address"`
+	PredictedAddress      string `json:"predicted_address"`
+	Salt                  string `json:"salt"`
+	InitCodeHash          string `json:"init_code_hash"`
+	Status                string `json:"status"`
+	DeploymentType        string `json:"deployment_type"`
+	Strategy              string `json:"strategy"`
+	BlockNumber           string `json:"block_number"`
+	ConstructorArgs       string `json:"constructor_args"`
+	SafeTxHash            string `json:"safe_tx_hash"`
+	ImplementationAddress string `json:"implementation_address"`
+	LibraryAddress        string `json:"library_address"`
+	ProxyInitializer      string `json:"proxy_initializer"`
+}
+
 // ParseDeploymentResult parses deployment results from script output
-func (p *Parser) ParseDeploymentResult(output string) (map[string]string, error) {
-	result := make(map[string]string)
+func (p *Parser) ParseDeploymentResult(output string) (DeploymentOutput, error) {
+	result := DeploymentOutput{}
 
 	// Parse structured output between === DEPLOYMENT_RESULT === and === END_DEPLOYMENT ===
 	startPattern := "  === DEPLOYMENT_RESULT ===\n"
@@ -49,31 +65,31 @@ func (p *Parser) ParseDeploymentResult(output string) (map[string]string, error)
 			// Map to expected field names
 			switch key {
 			case "ADDRESS":
-				result["deployedAddress"] = value
+				result.Address = value
 			case "PREDICTED":
-				result["predictedAddress"] = value
+				result.PredictedAddress = value
 			case "SALT":
-				result["salt"] = value
+				result.Salt = value
 			case "INIT_CODE_HASH":
-				result["initCodeHash"] = value
+				result.InitCodeHash = value
 			case "STATUS":
-				result["status"] = value
+				result.Status = value
 			case "DEPLOYMENT_TYPE":
-				result["deploymentType"] = value
+				result.DeploymentType = value
 			case "STRATEGY":
-				result["strategy"] = value
+				result.Strategy = value
 			case "BLOCK_NUMBER":
-				result["blockNumber"] = value
+				result.BlockNumber = value
 			case "CONSTRUCTOR_ARGS":
-				result["constructorArgs"] = value
+				result.ConstructorArgs = value
 			case "SAFE_TX_HASH":
-				result["safeTxHash"] = value
+				result.SafeTxHash = value
 			case "IMPLEMENTATION_ADDRESS":
-				result["implementationAddress"] = value
+				result.ImplementationAddress = value
 			case "LIBRARY_ADDRESS":
-				result["libraryAddress"] = value
+				result.LibraryAddress = value
 			case "PROXY_INITIALIZER":
-				result["proxyInitializer"] = value
+				result.ProxyInitializer = value
 			}
 		}
 	}
@@ -92,14 +108,14 @@ func (p *Parser) ParsePredictionOutput(output string) (*types.PredictResult, err
 	result := &types.PredictResult{}
 
 	// Get predicted address - use ADDRESS or PREDICTED field
-	if addr := parsed["deployedAddress"]; addr != "" {
+	if addr := parsed.Address; addr != "" {
 		result.Address = common.HexToAddress(addr)
-	} else if addr := parsed["predictedAddress"]; addr != "" {
+	} else if addr := parsed.PredictedAddress; addr != "" {
 		result.Address = common.HexToAddress(addr)
 	}
 
 	// Get salt
-	if salt := parsed["salt"]; salt != "" {
+	if salt := parsed.Salt; salt != "" {
 		saltBytes, _ := hex.DecodeString(strings.TrimPrefix(salt, "0x"))
 		copy(result.Salt[:], saltBytes)
 	}
@@ -116,12 +132,7 @@ func (p *Parser) ParseLibraryAddress(output string) (common.Address, error) {
 	}
 
 	// Check for library address
-	if addr := parsed["libraryAddress"]; addr != "" {
-		return common.HexToAddress(addr), nil
-	}
-
-	// Fallback to deployed address for older format
-	if addr := parsed["deployedAddress"]; addr != "" {
+	if addr := parsed.LibraryAddress; addr != "" {
 		return common.HexToAddress(addr), nil
 	}
 

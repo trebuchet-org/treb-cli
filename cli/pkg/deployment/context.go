@@ -1,6 +1,7 @@
 package deployment
 
 import (
+	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
@@ -17,7 +18,8 @@ const (
 // Context holds all deployment configuration
 type Context struct {
 	Type                Type
-	ContractName        string
+	ContractQuery       string
+	ContractInfo        *contracts.ContractInfo
 	ProxyName           string
 	ImplementationName  string
 	ImplementationLabel string
@@ -46,9 +48,9 @@ func (ctx *Context) GetIdentifier() string {
 	case TypeProxy:
 		return ctx.ProxyName
 	case TypeLibrary:
-		return ctx.ContractName
+		return ctx.ContractInfo.Name
 	default:
-		return ctx.ContractName
+		return ctx.ContractInfo.Name
 	}
 }
 
