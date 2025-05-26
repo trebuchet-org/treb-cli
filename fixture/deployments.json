@@ -15,13 +15,24 @@
           "constructor_args": "0x",
           "label": "V6",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0x7072587f595aBDFB71c7619ba3568c9a665AB00A#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0x7072587f595aBDFB71c7619ba3568c9a665AB00A#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x7072587f595aBDFB71c7619ba3568c9a665AB00A"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
             "broadcast_file": "",
             "timestamp": "2025-05-26T12:06:00.613389+02:00",
-            "status": "deployed",
+            "status": "EXECUTED",
             "safe_address": "0x0000000000000000000000000000000000000000"
           },
           "metadata": {
@@ -30,6 +41,40 @@
             "source_hash": "src/other/test/Counter.sol:Counter",
             "contract_path": "src/other/test/Counter.sol",
             "script_path": "script/deploy/other/test/DeployCounter.s.sol"
+          }
+        }
+      }
+    },
+    "11155111": {
+      "name": "sepolia",
+      "deployments": {
+        "0xa04aa44842b207c67401ea83e436d0787660f85b": {
+          "fqid": "11155111/default/src/UpgradeableCounter.sol:UpgradeableCounter",
+          "sid": "UpgradeableCounter",
+          "address": "0xa04aa44842b207c67401ea83e436d0787660f85b",
+          "contract_name": "UpgradeableCounter",
+          "environment": "default",
+          "type": "singleton",
+          "salt": "0xf1f30b69a9359c3e7c28eb76391835472e105f5c002c7bc00bfdcf8194a2a191",
+          "init_code_hash": "0x5486ce6c86ba56c7bb877d0f3b9753c251076afae58a4f9ce7fed3ae56b6732a",
+          "constructor_args": "0x",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x67218ec462df42e4e60344653a5b2175c17d6f4cefa6f937dab3f22b950ff3d3",
+            "block_number": 8410962,
+            "broadcast_file": "",
+            "timestamp": "2025-05-26T16:23:25.449703+02:00",
+            "status": "EXECUTED",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "093b4d70057b5223342b7a3d3dc7685616f7d04d",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/UpgradeableCounter.sol:UpgradeableCounter",
+            "contract_path": "src/UpgradeableCounter.sol",
+            "script_path": "script/deploy/DeployUpgradeableCounter.s.sol"
           }
         }
       }
@@ -67,7 +112,7 @@
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
             "broadcast_file": "",
             "timestamp": "2025-05-26T12:57:16.626478+02:00",
-            "status": "deployed",
+            "status": "EXECUTED",
             "safe_address": "0x0000000000000000000000000000000000000000"
           },
           "metadata": {
@@ -90,13 +135,24 @@
           "constructor_args": "0x",
           "label": "V9",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0x212392E75bD54A50Ca5ceA7BFEC7c7177160b0e5#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0x212392E75bD54A50Ca5ceA7BFEC7c7177160b0e5#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x212392E75bD54A50Ca5ceA7BFEC7c7177160b0e5"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
             "broadcast_file": "",
             "timestamp": "2025-05-26T12:56:46.65249+02:00",
-            "status": "deployed",
+            "status": "EXECUTED",
             "safe_address": "0x0000000000000000000000000000000000000000"
           },
           "metadata": {
@@ -119,13 +175,24 @@
           "constructor_args": "0x",
           "label": "V8",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0x220E155E37519387216F6276b9966938cb48a147#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0x220E155E37519387216F6276b9966938cb48a147#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x220E155E37519387216F6276b9966938cb48a147"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
             "broadcast_file": "",
             "timestamp": "2025-05-26T12:35:57.47175+02:00",
-            "status": "deployed",
+            "status": "EXECUTED",
             "safe_address": "0x0000000000000000000000000000000000000000"
           },
           "metadata": {
@@ -134,6 +201,47 @@
             "source_hash": "src/test-dir/Counter.sol:Counter",
             "contract_path": "src/test-dir/Counter.sol",
             "script_path": "script/deploy/test-dir/DeployCounter.s.sol"
+          }
+        },
+        "0x34ee246bfa3f002440feb8c29c7d79f8bca19c2f": {
+          "fqid": "44787/default/src/UpgradeableCounter.sol:UpgradeableCounterProxy",
+          "sid": "UpgradeableCounterProxy",
+          "address": "0x34ee246bfa3f002440feb8c29c7d79f8bca19c2f",
+          "contract_name": "UpgradeableCounter",
+          "environment": "default",
+          "type": "proxy",
+          "salt": "0xf1f30b69a9359c3e7c28eb76391835472e105f5c00056477a9d16ba2d801e66c",
+          "init_code_hash": "0xb0890945374965e4d28d83fd429b27dfdb231ebb2383926a6b9d462160685a38",
+          "constructor_args": "0x000000000000000000000000a04aa44842b207c67401ea83e436d0787660f85b00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000024c4d66de8000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "target_deployment_fqid": "44787/default/src/UpgradeableCounter.sol:UpgradeableCounter",
+          "verification": {
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0x34eE246bFA3F002440feB8c29c7d79f8bca19c2F#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0x34eE246bFA3F002440feB8c29c7d79f8bca19c2F#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x34eE246bFA3F002440feB8c29c7d79f8bca19c2F"
+              }
+            }
+          },
+          "deployment": {
+            "tx_hash": "0xb0eee987b7a9de1e018a098ddc976ff495300b2b9eb162fea29a0332ce667d79",
+            "block_number": 47305133,
+            "broadcast_file": "",
+            "timestamp": "2025-05-26T13:54:14.957251+02:00",
+            "status": "EXECUTED",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "093b4d70057b5223342b7a3d3dc7685616f7d04d",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/UpgradeableCounter.sol:UpgradeableCounter",
+            "contract_path": "src/UpgradeableCounter.sol",
+            "script_path": "script/deploy/DeployUpgradeableCounterProxy.s.sol"
           }
         },
         "0x580e253f624f3f07f3b8a6ea930a50a00cb285cf": {
@@ -166,7 +274,7 @@
             "block_number": 47302003,
             "broadcast_file": "",
             "timestamp": "2025-05-26T13:02:05.160929+02:00",
-            "status": "deployed",
+            "status": "EXECUTED",
             "safe_address": "0x0000000000000000000000000000000000000000"
           },
           "metadata": {
@@ -189,13 +297,24 @@
           "constructor_args": "0x",
           "label": "V7",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0x8481a8B4435a007B2812d6b61F8b97Ce81E346A9#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0x8481a8B4435a007B2812d6b61F8b97Ce81E346A9#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x8481a8B4435a007B2812d6b61F8b97Ce81E346A9"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
             "broadcast_file": "",
             "timestamp": "2025-05-26T12:13:41.897746+02:00",
-            "status": "deployed",
+            "status": "EXECUTED",
             "safe_address": "0x0000000000000000000000000000000000000000"
           },
           "metadata": {
@@ -204,6 +323,89 @@
             "source_hash": "src/Counter.sol:Counter",
             "contract_path": "src/Counter.sol",
             "script_path": "script/deploy/DeployCounter.s.sol"
+          }
+        },
+        "0x8b38e92620f8689c7d3a718a92a4c1245c1682a9": {
+          "fqid": "44787/default/src/UpgradeableCounter.sol:UpgradeableCounter:Other",
+          "sid": "UpgradeableCounter:Other",
+          "address": "0x8b38e92620f8689c7d3a718a92a4c1245c1682a9",
+          "contract_name": "UpgradeableCounter",
+          "environment": "default",
+          "type": "singleton",
+          "salt": "0xf1f30b69a9359c3e7c28eb76391835472e105f5c002934c0a100b5a4ecb38262",
+          "init_code_hash": "0x5486ce6c86ba56c7bb877d0f3b9753c251076afae58a4f9ce7fed3ae56b6732a",
+          "constructor_args": "0x",
+          "label": "Other",
+          "verification": {
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0x8B38e92620f8689c7D3A718A92A4c1245c1682A9#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0x8B38e92620f8689c7D3A718A92A4c1245c1682A9#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x8B38e92620f8689c7D3A718A92A4c1245c1682A9"
+              }
+            }
+          },
+          "deployment": {
+            "tx_hash": "0x2e5b8b859c6e4f7f28e9fc684f7d1c15efe66de049f1afbceaa6d45f51f6e2fd",
+            "block_number": 47311261,
+            "broadcast_file": "",
+            "timestamp": "2025-05-26T15:36:22.408171+02:00",
+            "status": "EXECUTED",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "093b4d70057b5223342b7a3d3dc7685616f7d04d",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/UpgradeableCounter.sol:UpgradeableCounter",
+            "contract_path": "src/UpgradeableCounter.sol",
+            "script_path": "script/deploy/DeployUpgradeableCounter.s.sol"
+          }
+        },
+        "0x8f84a4e4b22d0e7158d1945bcb406d20f8460263": {
+          "fqid": "44787/default/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:UpgradeableCounterProxy:V3",
+          "sid": "UpgradeableCounterProxy:V3",
+          "address": "0x8f84a4e4b22d0e7158d1945bcb406d20f8460263",
+          "contract_name": "ERC1967Proxy",
+          "environment": "default",
+          "type": "proxy",
+          "salt": "0xf1f30b69a9359c3e7c28eb76391835472e105f5c009f1d8758b4b58a1cbddee3",
+          "init_code_hash": "0xb0890945374965e4d28d83fd429b27dfdb231ebb2383926a6b9d462160685a38",
+          "constructor_args": "0x000000000000000000000000a04aa44842b207c67401ea83e436d0787660f85b00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000024c4d66de8000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "label": "V3",
+          "target_deployment_fqid": "44787/default/src/UpgradeableCounter.sol:UpgradeableCounter",
+          "verification": {
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0x8F84a4e4B22D0e7158D1945Bcb406D20f8460263#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0x8F84a4e4B22D0e7158D1945Bcb406D20f8460263#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x8F84a4e4B22D0e7158D1945Bcb406D20f8460263"
+              }
+            }
+          },
+          "deployment": {
+            "tx_hash": "0x076c58f85aa81f30dbde019735b0ef58db89f6fb426ef9d5f8029acc1128f431",
+            "block_number": 47310179,
+            "broadcast_file": "",
+            "timestamp": "2025-05-26T15:18:20.882004+02:00",
+            "status": "EXECUTED",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "093b4d70057b5223342b7a3d3dc7685616f7d04d",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
+            "contract_path": "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol",
+            "script_path": "script/deploy/DeployUpgradeableCounterProxy.s.sol"
           }
         },
         "0x9e8e25969b7c49ff957cef9b6b7c358c35527b39": {
@@ -218,13 +420,24 @@
           "constructor_args": "0x",
           "label": "V5",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0x9E8E25969b7c49FF957CEF9b6B7c358C35527b39#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0x9E8E25969b7c49FF957CEF9b6B7c358C35527b39#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x9E8E25969b7c49FF957CEF9b6B7c358C35527b39"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
             "broadcast_file": "",
             "timestamp": "2025-05-26T10:25:29.955379+02:00",
-            "status": "deployed",
+            "status": "EXECUTED",
             "safe_address": "0x0000000000000000000000000000000000000000"
           },
           "metadata": {
@@ -233,6 +446,130 @@
             "source_hash": "src/Counter.sol:Counter",
             "contract_path": "src/Counter.sol",
             "script_path": "script/deploy/DeployCounter.s.sol"
+          }
+        },
+        "0xa04aa44842b207c67401ea83e436d0787660f85b": {
+          "fqid": "44787/default/src/UpgradeableCounter.sol:UpgradeableCounter",
+          "sid": "UpgradeableCounter",
+          "address": "0xa04aa44842b207c67401ea83e436d0787660f85b",
+          "contract_name": "UpgradeableCounter",
+          "environment": "default",
+          "type": "singleton",
+          "salt": "0xf1f30b69a9359c3e7c28eb76391835472e105f5c002c7bc00bfdcf8194a2a191",
+          "init_code_hash": "0x5486ce6c86ba56c7bb877d0f3b9753c251076afae58a4f9ce7fed3ae56b6732a",
+          "constructor_args": "0x",
+          "verification": {
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0xA04Aa44842B207c67401eA83E436d0787660F85B#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0xA04Aa44842B207c67401eA83E436d0787660F85B#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0xA04Aa44842B207c67401eA83E436d0787660F85B"
+              }
+            }
+          },
+          "deployment": {
+            "tx_hash": "0x21616b232825257b170480ff8114f238d48a3e76a7628a0abd8a2e7eb3b38333",
+            "block_number": 47303576,
+            "broadcast_file": "",
+            "timestamp": "2025-05-26T13:28:18.408935+02:00",
+            "status": "EXECUTED",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "093b4d70057b5223342b7a3d3dc7685616f7d04d",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/UpgradeableCounter.sol:UpgradeableCounter",
+            "contract_path": "src/UpgradeableCounter.sol",
+            "script_path": "script/deploy/DeployUpgradeableCounter.s.sol"
+          }
+        },
+        "0xa939b425e89a2cf149dddd44b2c0748852fb3b95": {
+          "fqid": "44787/default/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:UpgradeableCounterProxy:V2",
+          "sid": "UpgradeableCounterProxy:V2",
+          "address": "0xa939b425e89a2cf149dddd44b2c0748852fb3b95",
+          "contract_name": "ERC1967Proxy",
+          "environment": "default",
+          "type": "proxy",
+          "salt": "0xf1f30b69a9359c3e7c28eb76391835472e105f5c00f8f12248d95531f88d6d39",
+          "init_code_hash": "0xb0890945374965e4d28d83fd429b27dfdb231ebb2383926a6b9d462160685a38",
+          "constructor_args": "0x000000000000000000000000a04aa44842b207c67401ea83e436d0787660f85b00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000024c4d66de8000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "label": "V2",
+          "target_deployment_fqid": "44787/default/src/UpgradeableCounter.sol:UpgradeableCounter",
+          "verification": {
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0xA939b425E89a2Cf149DDDD44B2C0748852fb3B95#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0xA939b425E89a2Cf149DDDD44B2C0748852fb3B95#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0xA939b425E89a2Cf149DDDD44B2C0748852fb3B95"
+              }
+            }
+          },
+          "deployment": {
+            "tx_hash": "0xedc138eecab3ea0ba7bf9cfb2fcc92c9893577706b03f7ebcd80f37d536edbcf",
+            "block_number": 47309812,
+            "broadcast_file": "",
+            "timestamp": "2025-05-26T15:12:13.615359+02:00",
+            "status": "EXECUTED",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "093b4d70057b5223342b7a3d3dc7685616f7d04d",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
+            "contract_path": "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol",
+            "script_path": "script/deploy/DeployUpgradeableCounterProxy.s.sol"
+          }
+        },
+        "0xc275c1bc6e74be4c90bbe1e56e9f0a63e2f18126": {
+          "fqid": "44787/default/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:UpgradeableCounterProxy:Magic",
+          "sid": "UpgradeableCounterProxy:Magic",
+          "address": "0xc275c1bc6e74be4c90bbe1e56e9f0a63e2f18126",
+          "contract_name": "ERC1967Proxy",
+          "environment": "default",
+          "type": "proxy",
+          "salt": "0xf1f30b69a9359c3e7c28eb76391835472e105f5c00d43db51583a7ec979f505d",
+          "init_code_hash": "0x5fee7b817c5e99c2c818c415b394e6b0a8938625d779fa94c74ff1c23d26df3e",
+          "constructor_args": "0x0000000000000000000000008b38e92620f8689c7d3a718a92a4c1245c1682a900000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000024c4d66de8000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "label": "Magic",
+          "target_deployment_fqid": "44787/default/src/UpgradeableCounter.sol:UpgradeableCounter:Other",
+          "verification": {
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0xC275C1bC6E74Be4c90bBE1E56E9F0a63E2f18126#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0xC275C1bC6E74Be4c90bBE1E56E9F0a63E2f18126#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0xC275C1bC6E74Be4c90bBE1E56E9F0a63E2f18126"
+              }
+            }
+          },
+          "deployment": {
+            "tx_hash": "0xcf19398ed54c3c2cf280ffabc7c3959a4cd355f2153d366e5fbee7dd40dedd1e",
+            "block_number": 47311305,
+            "broadcast_file": "",
+            "timestamp": "2025-05-26T15:37:07.392177+02:00",
+            "status": "EXECUTED",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "093b4d70057b5223342b7a3d3dc7685616f7d04d",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
+            "contract_path": "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol",
+            "script_path": "script/deploy/DeployUpgradeableCounterProxy.s.sol"
           }
         }
       }

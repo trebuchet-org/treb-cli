@@ -11,19 +11,11 @@ import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
-// Type represents the type of deployment
-type Type string
-
-const (
-	TypeSingleton Type = "singleton"
-	TypeProxy     Type = "proxy"
-	TypeLibrary   Type = "library"
-)
-
 type DeploymentParams struct {
-	DeploymentType      Type
+	DeploymentType      types.DeploymentType
 	ContractQuery       string
 	ImplementationQuery string
+	TargetQuery         string
 	Env                 string
 	Label               string
 	NetworkName         string
@@ -41,12 +33,12 @@ type DeploymentContext struct {
 	registryManager *registry.Manager
 	forge           *forge.Forge
 	// Deployment
-	ScriptPath   string
-	envVars      map[string]string
-	contractInfo *contracts.ContractInfo
-	networkInfo  *network.NetworkInfo
-	// Result
-	Deployment *types.DeploymentResult
+	ScriptPath           string
+	envVars              map[string]string
+	contractInfo         *contracts.ContractInfo
+	implementationInfo   *contracts.ContractInfo
+	networkInfo          *network.NetworkInfo
+	targetDeploymentFQID string
 }
 
 // NewContext creates a new deployment context
@@ -84,8 +76,14 @@ func NewContext(params DeploymentParams) (*DeploymentContext, error) {
 func (ctx *DeploymentContext) GetShortID() string {
 	var identifier string
 	switch ctx.Params.DeploymentType {
-	case TypeProxy:
-		identifier = ctx.contractInfo.Name + "Proxy"
+	case types.ProxyDeployment:
+		// For proxies, use the implementation name + "Proxy"
+		if ctx.implementationInfo != nil {
+			identifier = ctx.implementationInfo.Name + "Proxy"
+		} else {
+			// Fallback to contract name if implementation info not available
+			identifier = ctx.contractInfo.Name
+		}
 	default:
 		identifier = ctx.contractInfo.Name
 	}
@@ -99,5 +97,7 @@ func (ctx *DeploymentContext) GetShortID() string {
 
 // GetFullIdentifier returns the full deployment identifier including environment and label
 func (ctx *DeploymentContext) GetFQID() string {
+	// Always use contractInfo.Path as it represents the actual contract being deployed
+	// For proxies, this is the proxy contract path, not the implementation
 	return fmt.Sprintf("%d/%s/%s:%s", ctx.networkInfo.ChainID(), ctx.Params.Env, ctx.contractInfo.Path, ctx.GetShortID())
 }

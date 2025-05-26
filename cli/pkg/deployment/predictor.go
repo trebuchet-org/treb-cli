@@ -10,7 +10,7 @@ import (
 // Predict runs address prediction for the deployment
 func (d *DeploymentContext) Predict() (*types.PredictResult, error) {
 	switch d.Params.DeploymentType {
-	case TypeLibrary:
+	case types.LibraryDeployment:
 		return d.predictLibrary()
 	default:
 		return d.predictScript()

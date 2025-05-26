@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/verification"
 )
 
@@ -87,7 +88,7 @@ func verifyAllContracts(verificationManager *verification.Manager, registryManag
 
 	for _, deployment := range allDeployments {
 		// Skip deployments that are not yet deployed
-		if deployment.Entry.Deployment.Status != "deployed" {
+		if deployment.Entry.Deployment.Status != types.StatusExecuted {
 			skippedContracts = append(skippedContracts, deployment)
 			continue
 		}

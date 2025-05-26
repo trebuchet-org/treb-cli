@@ -82,13 +82,16 @@ func (d *DeploymentContext) ShowPrediction(predicted *types.PredictResult) {
 
 	// Contract info
 	switch d.Params.DeploymentType {
-	case TypeSingleton:
+	case types.SingletonDeployment:
 		color.New(color.FgWhite, color.Bold).Printf("Contract:     ")
 		fmt.Printf("%s", d.GetShortID())
-	case TypeProxy:
+	case types.ProxyDeployment:
 		color.New(color.FgWhite, color.Bold).Printf("Proxy:        ")
 		fmt.Printf("%s", d.GetShortID())
-	case TypeLibrary:
+		if d.contractInfo != nil {
+			fmt.Printf(" (%s)", d.contractInfo.Name)
+		}
+	case types.LibraryDeployment:
 		color.New(color.FgWhite, color.Bold).Printf("Library:      ")
 		fmt.Printf("%s", d.contractInfo.Name)
 	}
@@ -136,7 +139,7 @@ func (d *DeploymentContext) PrintError(err error) {
 
 func (d *DeploymentContext) printContractInfo(result *types.DeploymentResult) {
 	switch d.Params.DeploymentType {
-	case TypeSingleton:
+	case types.SingletonDeployment:
 		color.New(color.FgWhite, color.Bold).Printf("Contract:     ")
 		fmt.Printf("%s", d.GetShortID())
 		fmt.Println()
@@ -144,7 +147,7 @@ func (d *DeploymentContext) printContractInfo(result *types.DeploymentResult) {
 		color.New(color.FgWhite, color.Bold).Printf("Address:      ")
 		color.New(color.FgGreen, color.Bold).Printf("%s\n", result.Address.Hex())
 
-	case TypeProxy:
+	case types.ProxyDeployment:
 		color.New(color.FgWhite, color.Bold).Printf("Proxy:        ")
 		fmt.Printf("%s", d.GetShortID())
 		fmt.Println()
@@ -152,9 +155,23 @@ func (d *DeploymentContext) printContractInfo(result *types.DeploymentResult) {
 		color.New(color.FgWhite, color.Bold).Printf("Address:      ")
 		color.New(color.FgGreen, color.Bold).Printf("%s\n", result.Address.Hex())
 
-		// TODO: Add implementation address when available in result
+		// Show proxy contract details
+		if d.contractInfo != nil {
+			color.New(color.FgWhite, color.Bold).Printf("Type:         ")
+			fmt.Printf("%s\n", d.contractInfo.Name)
+		}
 
-	case TypeLibrary:
+		// Show implementation details if available
+		if d.targetDeploymentFQID != "" {
+			color.New(color.FgWhite, color.Bold).Printf("Implementation: ")
+			fmt.Printf("%s\n", d.targetDeploymentFQID)
+			if implAddress := d.envVars["IMPLEMENTATION_ADDRESS"]; implAddress != "" {
+				color.New(color.FgWhite, color.Bold).Printf("Impl Address: ")
+				color.New(color.FgBlue).Printf("%s\n", implAddress)
+			}
+		}
+
+	case types.LibraryDeployment:
 		color.New(color.FgWhite, color.Bold).Printf("Library:      ")
 		fmt.Printf("%s\n", d.contractInfo.Name)
 

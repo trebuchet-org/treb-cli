@@ -12,10 +12,10 @@ import (
 // Executor handles deployment execution
 func (d *DeploymentContext) Execute() (*types.DeploymentResult, error) {
 	// Check for existing deployment
-	deployment := d.registryManager.GetDeployment(d.GetFQID())
-	if deployment != nil {
-		d.printExistingDeployment(deployment)
-		return nil, fmt.Errorf("deployment already exists")
+	entry := d.registryManager.GetDeployment(d.GetFQID())
+	if entry != nil {
+		d.printExistingDeployment(entry)
+		return nil, fmt.Errorf("entry already exists")
 	}
 
 	output, err := d.runScript()
@@ -30,51 +30,52 @@ func (d *DeploymentContext) Execute() (*types.DeploymentResult, error) {
 	}
 
 	// Build deployment result
-	d.Deployment = d.buildDeploymentResult(results)
+	deployment := d.buildDeploymentResult(results)
 
 	// Parse broadcast file if not predicting
-	if !d.Params.Predict && d.Deployment.Status == types.StatusExecuted {
+	if !d.Params.Predict && deployment.Status == types.StatusExecuted {
 		if broadcastData, err := d.loadBroadcastFile(); err != nil {
 			// Log warning but don't fail
 			fmt.Printf("Warning: failed to load broadcast file: %v\n", err)
 		} else {
-			d.Deployment.BroadcastData = broadcastData
+			deployment.BroadcastData = broadcastData
 			// Extract transaction details using the helper method
-			if txHash, blockNum, err := broadcastData.GetTransactionHashForAddress(d.Deployment.Address); err == nil {
-				d.Deployment.TxHash = txHash
-				d.Deployment.BlockNumber = blockNum
+			if txHash, blockNum, err := broadcastData.GetTransactionHashForAddress(deployment.Address); err == nil {
+				deployment.TxHash = txHash
+				deployment.BlockNumber = blockNum
 			}
 		}
 	}
 
 	// Update registry if deployment was executed
 	if !d.Params.Predict {
-		if err := d.updateRegistry(); err != nil {
+		if err := d.updateRegistry(deployment); err != nil {
 			// Log warning but don't fail
 			fmt.Printf("Warning: failed to update registry: %v\n", err)
 		}
 	}
 
-	return d.Deployment, nil
+	return deployment, nil
 }
 
 // buildDeploymentResult builds deployment result from parsed output
 func (d *DeploymentContext) buildDeploymentResult(result DeploymentOutput) *types.DeploymentResult {
 	// Convert hex strings to byte arrays
 	deployment := &types.DeploymentResult{
-		FQID:            d.GetFQID(),
-		ShortID:         d.GetShortID(),
-		DeploymentType:  string(d.Params.DeploymentType),
-		Env:             d.Params.Env,
-		Label:           d.Params.Label,
-		NetworkInfo:     d.networkInfo,
-		ContractInfo:    d.contractInfo,
-		Status:          result.Status,
-		Salt:            result.Salt,
-		InitCodeHash:    result.InitCodeHash,
-		SafeTxHash:      common.HexToHash(result.SafeTxHash),
-		Address:         common.HexToAddress(result.Address),
-		ConstructorArgs: result.ConstructorArgs,
+		FQID:                 d.GetFQID(),
+		ShortID:              d.GetShortID(),
+		TargetDeploymentFQID: d.targetDeploymentFQID,
+		DeploymentType:       d.Params.DeploymentType,
+		Env:                  d.Params.Env,
+		Label:                d.Params.Label,
+		NetworkInfo:          d.networkInfo,
+		ContractInfo:         d.contractInfo,
+		Status:               result.Status,
+		Salt:                 result.Salt,
+		InitCodeHash:         result.InitCodeHash,
+		SafeTxHash:           common.HexToHash(result.SafeTxHash),
+		Address:              common.HexToAddress(result.Address),
+		ConstructorArgs:      result.ConstructorArgs,
 		Metadata: &types.ContractMetadata{
 			Compiler:     d.contractInfo.Artifact.Metadata.Compiler.Version,
 			ContractPath: d.contractInfo.Path,
@@ -94,8 +95,8 @@ func (d *DeploymentContext) loadBroadcastFile() (*broadcast.BroadcastFile, error
 }
 
 // updateRegistry updates the deployment registry
-func (d *DeploymentContext) updateRegistry() error {
-	d.registryManager.RecordDeployment(d.contractInfo, d.Params.Env, d.Deployment, d.networkInfo.ChainID())
+func (d *DeploymentContext) updateRegistry(deployment *types.DeploymentResult) error {
+	d.registryManager.RecordDeployment(d.contractInfo, d.Params.Env, deployment, d.networkInfo.ChainID())
 	return nil
 }
 

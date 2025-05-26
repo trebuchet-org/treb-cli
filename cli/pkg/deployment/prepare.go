@@ -9,6 +9,7 @@ import (
 	forgeExec "github.com/trebuchet-org/treb-cli/cli/pkg/forge"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/interactive"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
 // ValidateDeploymentConfig validates the deployment configuration
@@ -42,7 +43,7 @@ func (d *DeploymentContext) ValidateDeploymentConfig() error {
 	if networkInfo.RpcUrl != "" {
 		envVars["RPC_URL"] = networkInfo.RpcUrl
 	}
-	envVars["CHAIN_ID"] = fmt.Sprintf("%d", networkInfo.ChainID)
+	envVars["CHAIN_ID"] = fmt.Sprintf("%d", networkInfo.ChainID())
 
 	// Add deployment label if specified
 	if d.Params.Label != "" {
@@ -114,17 +115,17 @@ func (d *DeploymentContext) PrepareContractDeployment() (bool, error) {
 // PrepareProxyDeployment validates a proxy deployment
 func (d *DeploymentContext) PrepareProxyDeployment() error {
 	// Resolve the contract
-	contractInfo, err := interactive.ResolveContract(d.Params.ContractQuery, contracts.DefaultFilter())
+	implementationInfo, err := interactive.ResolveContract(d.Params.ImplementationQuery, contracts.DefaultFilter())
 	if err != nil {
 		return fmt.Errorf("failed to resolve contract: %w", err)
 	}
 
 	// Update context with resolved contract name
-	d.contractInfo = contractInfo
+	d.implementationInfo = implementationInfo
 
 	// Check if proxy deploy script exists
 	generator := contracts.NewGenerator(d.projectRoot)
-	scriptPath := generator.GetProxyScriptPath(contractInfo)
+	scriptPath := generator.GetProxyScriptPath(implementationInfo)
 	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
 		return fmt.Errorf("proxy deploy script not found: %s", scriptPath)
 	}
@@ -132,22 +133,51 @@ func (d *DeploymentContext) PrepareProxyDeployment() error {
 	// Set script path
 	d.ScriptPath = scriptPath
 
-	// // Get implementation info from registry
-	// if ctx.ImplementationLabel == "" {
-	// 	ctx.ImplementationLabel = "default"
-	// }
+	// Parse the proxy artifact path from the deployment script
+	proxyArtifactPath, err := parseProxyArtifactPath(scriptPath)
+	if err != nil {
+		return fmt.Errorf("failed to parse proxy artifact from script: %w", err)
+	}
 
-	// // Determine implementation identifier
-	// implIdentifier := ctx.ImplementationName
-	// if ctx.Env != "" {
-	// 	implIdentifier = fmt.Sprintf("%s/%s", ctx.Env, ctx.ImplementationName)
-	// }
-	// if ctx.ImplementationLabel != "default" {
-	// 	implIdentifier = fmt.Sprintf("%s:%s", implIdentifier, ctx.ImplementationLabel)
-	// }
+	// Get proxy contract info using the artifact path
+	indexer, err := contracts.GetGlobalIndexer(d.projectRoot)
+	if err != nil {
+		return fmt.Errorf("failed to initialize contract indexer: %w", err)
+	}
 
-	// TODO: Validate implementation exists in registry
-	// This would require access to the registry manager
+	proxyContractInfo, err := indexer.GetContract(proxyArtifactPath)
+	if err != nil {
+		return fmt.Errorf("failed to get proxy contract info for %s: %w", proxyArtifactPath, err)
+	}
+
+	// Set the proxy contract as the contract being deployed
+	d.contractInfo = proxyContractInfo
+
+	// Pass current network and environment context to narrow down results
+	// Use ResolveImplementationDeployment to filter out proxy deployments
+	deployment, err := interactive.ResolveImplementationDeployment(d.Params.TargetQuery, d.registryManager, d.networkInfo.ChainID(), d.Params.Env)
+	if err != nil {
+		return fmt.Errorf("failed to resolve target deployment: %w", err)
+	}
+
+	// Verify the deployment is on the same network (double-check since query should handle this)
+	deploymentChainID := deployment.ChainID
+	currentChainID := fmt.Sprintf("%d", d.networkInfo.ChainID())
+	if deploymentChainID != currentChainID {
+		return fmt.Errorf("target deployment is on network %s (chain %s) but deploying to network %s (chain %s)",
+			deployment.NetworkName, deploymentChainID, d.networkInfo.Name, currentChainID)
+	}
+
+	// Filter to only deployed contracts
+	if deployment.Entry.Deployment.Status != types.StatusExecuted {
+		return fmt.Errorf("target deployment %s is not yet deployed (status: %s)", deployment.Entry.FQID, deployment.Entry.Deployment.Status)
+	}
+
+	// Set IMPLEMENTATION_ADDRESS environment variable
+	d.envVars["IMPLEMENTATION_ADDRESS"] = deployment.Entry.Address.Hex()
+	d.targetDeploymentFQID = deployment.Entry.FQID
+
+	fmt.Printf("Using implementation: %s at %s\n", deployment.Entry.ShortID, deployment.Entry.Address.Hex())
 
 	return nil
 }

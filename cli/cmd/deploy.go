@@ -6,15 +6,16 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/deployment"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
 var (
-	env                 string
-	networkName         string
-	label               string
-	debug               bool
-	implementationLabel string
-	predict             bool
+	env         string
+	networkName string
+	label       string
+	debug       bool
+	predict     bool
+	target      string
 )
 
 var deployCmd = &cobra.Command{
@@ -42,7 +43,7 @@ Examples:
 	Aliases: []string{"singleton"},
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, err := deployment.NewContext(deployment.DeploymentParams{
-			DeploymentType: deployment.TypeSingleton,
+			DeploymentType: types.SingletonDeployment,
 			ContractQuery:  args[0],
 			Env:            env,
 			Label:          label,
@@ -68,17 +69,24 @@ deployed first. Supports UUPS, Transparent, and custom proxy patterns.
 
 Examples:
   treb deploy proxy Counter
-  treb deploy proxy Token --impl-label v1`,
+  treb deploy proxy Token --target seploia/default/Token:V2 --label MyToken`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		var targetQuery string
+		if target == "" {
+			targetQuery = args[0]
+		} else {
+			targetQuery = target
+		}
 		if ctx, err := deployment.NewContext(deployment.DeploymentParams{
-			DeploymentType: deployment.TypeProxy,
-			ContractQuery:  args[0],
-			Env:            env,
-			Label:          label,
-			Predict:        predict,
-			Debug:          debug,
-			NetworkName:    networkName,
+			DeploymentType:      types.ProxyDeployment,
+			TargetQuery:         targetQuery,
+			ImplementationQuery: args[0],
+			Env:                 env,
+			Label:               label,
+			Predict:             predict,
+			Debug:               debug,
+			NetworkName:         networkName,
 		}); err != nil {
 			checkError(err)
 		} else {
@@ -101,7 +109,7 @@ Examples:
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if ctx, err := deployment.NewContext(deployment.DeploymentParams{
-			DeploymentType: deployment.TypeLibrary,
+			DeploymentType: types.LibraryDeployment,
 			ContractQuery:  args[0],
 			Label:          label,
 			Predict:        predict,
@@ -164,7 +172,7 @@ func init() {
 
 	deployProxyCmd.Flags().StringVar(&env, "env", "default", "Deployment environment")
 	deployProxyCmd.Flags().StringVar(&label, "label", "", "Deployment label (affects address)")
-	deployProxyCmd.Flags().StringVar(&implementationLabel, "impl-label", "", "Implementation label to use")
+	deployProxyCmd.Flags().StringVar(&target, "target", "", "Target deployment to proxy to")
 }
 
 func runDeployment(ctx *deployment.DeploymentContext) error {
@@ -188,7 +196,7 @@ func runDeployment(ctx *deployment.DeploymentContext) error {
 
 	// Now do type-specific validation (may be interactive)
 	switch ctx.Params.DeploymentType {
-	case deployment.TypeSingleton:
+	case types.SingletonDeployment:
 		generated, err := ctx.PrepareContractDeployment()
 		if err != nil {
 			return err
@@ -197,11 +205,11 @@ func runDeployment(ctx *deployment.DeploymentContext) error {
 			fmt.Println("\nScript generated, update it if necessary and run again.")
 			return nil
 		}
-	case deployment.TypeProxy:
+	case types.ProxyDeployment:
 		if err := ctx.PrepareProxyDeployment(); err != nil {
 			return err
 		}
-	case deployment.TypeLibrary:
+	case types.LibraryDeployment:
 		if err := ctx.PrepareLibraryDeployment(); err != nil {
 			return err
 		}

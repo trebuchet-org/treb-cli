@@ -10,13 +10,15 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
 type Manager struct {
-	registryPath string
-	registry     *Registry
-	index        map[string]*types.DeploymentEntry
+	registryPath    string
+	networkResolver *network.Resolver
+	registry        *Registry
+	index           map[string]*types.DeploymentEntry
 }
 
 type Registry struct {
@@ -33,6 +35,8 @@ func NewManager(registryPath string) (*Manager, error) {
 	manager := &Manager{
 		registryPath: registryPath,
 	}
+
+	manager.networkResolver = network.NewResolver(".")
 
 	if err := manager.load(); err != nil {
 		return nil, err
@@ -71,6 +75,25 @@ func (m *Manager) load() error {
 	for _, network := range m.registry.Networks {
 		for _, deployment := range network.Deployments {
 			m.index[deployment.FQID] = deployment
+			if deployment.NetworkInfo == nil {
+				networkInfo, err := m.networkResolver.ResolveNetwork(network.Name)
+				if err != nil {
+					return fmt.Errorf("failed to resolve network %s: %w", network.Name, err)
+				}
+				deployment.NetworkInfo = networkInfo
+			}
+		}
+	}
+
+	for _, library := range m.registry.Libraries {
+		m.index[library.FQID] = library
+	}
+
+	for _, chain := range m.registry.Networks {
+		for _, deployment := range chain.Deployments {
+			if deployment.Type == types.ProxyDeployment {
+				deployment.Target = m.index[deployment.TargetDeploymentFQID]
+			}
 		}
 	}
 
@@ -127,7 +150,7 @@ func (m *Manager) RecordDeployment(contractInfo *contracts.ContractInfo, env str
 		Label: result.Label,
 
 		// Proxy-specific fields
-		TargetContract: result.TargetContract,
+		TargetDeploymentFQID: result.TargetDeploymentFQID,
 
 		// Version tags
 		Tags: result.Tags,
@@ -221,6 +244,79 @@ func (m *Manager) GetAllLibraries() map[string]*types.DeploymentEntry {
 
 func (m *Manager) GetDeployment(identifier string) *types.DeploymentEntry {
 	return m.index[identifier]
+}
+
+// QueryDeployments finds deployments matching the given query string
+// Query can be:
+// - Full FQID: "chainID/env/contractPath:shortID"
+// - ShortID: "contract:label"
+// - Contract name: "MyToken"
+// If chainID and env are provided, they are used to narrow down results
+func (m *Manager) QueryDeployments(query string, chainID uint64, env string) []*DeploymentInfo {
+	var results []*DeploymentInfo
+	queryLower := strings.ToLower(query)
+
+	// First, check for exact FQID match
+	for cID, network := range m.registry.Networks {
+		for _, deployment := range network.Deployments {
+			if strings.EqualFold(deployment.FQID, query) {
+				return []*DeploymentInfo{{
+					Address:     deployment.Address,
+					NetworkName: network.Name,
+					ChainID:     cID,
+					Entry:       deployment,
+				}}
+			}
+		}
+	}
+
+	// If chainID is provided, only search within that network
+	chainIDStr := ""
+	if chainID > 0 {
+		chainIDStr = fmt.Sprintf("%d", chainID)
+	}
+
+	// Search for partial matches
+	for cID, network := range m.registry.Networks {
+		// Skip if chainID is specified and doesn't match
+		if chainIDStr != "" && cID != chainIDStr {
+			continue
+		}
+
+		for _, deployment := range network.Deployments {
+			// Skip if env is specified and doesn't match
+			if env != "" && deployment.Environment != env {
+				continue
+			}
+
+			matched := false
+
+			// Check if ShortID matches exactly
+			if strings.EqualFold(deployment.ShortID, query) {
+				matched = true
+			} else if strings.EqualFold(deployment.ContractName, query) {
+				// Check if contract name matches exactly
+				matched = true
+			} else if strings.Contains(strings.ToLower(deployment.ShortID), queryLower) {
+				// Check if ShortID contains the query
+				matched = true
+			} else if strings.Contains(strings.ToLower(deployment.ContractName), queryLower) {
+				// Check if contract name contains the query
+				matched = true
+			}
+
+			if matched {
+				results = append(results, &DeploymentInfo{
+					Address:     deployment.Address,
+					NetworkName: network.Name,
+					ChainID:     cID,
+					Entry:       deployment,
+				})
+			}
+		}
+	}
+
+	return results
 }
 
 // GetDeploymentWithLabel gets a deployment by contract, env, and label
@@ -332,13 +428,13 @@ type RegistryStatus struct {
 
 // RecentDeploymentInfo represents recent deployment information
 type RecentDeploymentInfo struct {
-	Contract    string `json:"contract"`
-	Environment string `json:"environment"`
-	Label       string `json:"label"`
-	Address     string `json:"address"`
-	Network     string `json:"network"`
-	Timestamp   string `json:"timestamp"`
-	Type        string `json:"type"` // implementation/proxy
+	Contract    string               `json:"contract"`
+	Environment string               `json:"environment"`
+	Label       string               `json:"label"`
+	Address     string               `json:"address"`
+	Network     string               `json:"network"`
+	Timestamp   string               `json:"timestamp"`
+	Type        types.DeploymentType `json:"type"` // implementation/proxy
 }
 
 // GetAllDeployments returns all deployments across networks

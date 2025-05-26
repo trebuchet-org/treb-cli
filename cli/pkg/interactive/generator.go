@@ -110,11 +110,6 @@ func (g *Generator) pickContract(contractNameOrPath string) (*contracts.Contract
 		IsLibrary: selected.IsLibrary,
 	}
 
-	fmt.Printf("Selected: %s\n", selected.Name)
-	if selected.Path != "" {
-		fmt.Printf("Path: %s\n", selected.Path)
-	}
-
 	return contractInfo, nil
 }
 
@@ -127,7 +122,7 @@ func (g *Generator) pickProxyContract() (*contracts.ContractInfo, error) {
 	}
 
 	// Get all proxy contracts (including from libraries)
-	filter := contracts.AllFilter() // Include libraries for proxy contracts
+	filter := contracts.DefaultFilter() // Include libraries for proxy contracts
 	proxyContracts := indexer.GetProxyContractsFiltered(filter)
 	if len(proxyContracts) == 0 {
 		return nil, fmt.Errorf("no proxy contracts found. Make sure you have proxy contracts in your project")
@@ -149,39 +144,8 @@ func (g *Generator) pickProxyContract() (*contracts.ContractInfo, error) {
 	}
 
 	selected := proxyContracts[selectedIndex]
-	fmt.Printf("Selected proxy: %s\n", selected.Name)
-	if selected.Path != "" {
-		fmt.Printf("Path: %s\n", selected.Path)
-	}
 
 	return selected, nil
-}
-
-// pickProxyType selects a proxy type for proxy deployments
-func (g *Generator) pickProxyType() (contracts.ProxyType, error) {
-	proxyTypes := []string{
-		"OZ-TransparentUpgradeable - OpenZeppelin Transparent Upgradeable Proxy",
-		"OZ-UUPSUpgradeable - OpenZeppelin UUPS Upgradeable Proxy",
-		"Custom - Custom proxy implementation",
-	}
-
-	proxyTypeStr, proxyTypeIndex, err := g.selector.SelectOption("Select proxy type:", proxyTypes, 0)
-	if err != nil {
-		return "", fmt.Errorf("proxy type selection failed: %w", err)
-	}
-
-	var proxyType contracts.ProxyType
-	switch proxyTypeIndex {
-	case 0:
-		proxyType = contracts.ProxyTypeOZTransparent
-	case 1:
-		proxyType = contracts.ProxyTypeOZUUPS
-	case 2:
-		proxyType = contracts.ProxyTypeCustom
-	}
-
-	fmt.Printf("Selected proxy type: %s\n", proxyTypeStr)
-	return proxyType, nil
 }
 
 // pickDeploymentStrategy selects a deployment strategy (CREATE2 or CREATE3)
@@ -224,7 +188,6 @@ func (g *Generator) GenerateDeployScript(contractNameOrPath string) error {
 		return fmt.Errorf("script generation failed: %w", err)
 	}
 
-	fmt.Printf("Deploy script generated successfully!\n")
 	fmt.Printf("Strategy: %s\n", strategy)
 
 	// Show constructor info
@@ -255,7 +218,6 @@ func (g *Generator) GenerateDeployScriptForContract(contractInfo *contracts.Cont
 		return fmt.Errorf("script generation failed: %w", err)
 	}
 
-	fmt.Printf("Deploy script generated successfully!\n")
 	fmt.Printf("Strategy: %s\n", strategy)
 
 	// Show constructor info
@@ -297,11 +259,10 @@ func (g *Generator) GenerateProxyDeployScript(contractName string) error {
 
 	// Step 5: Generate the script
 	generator := contracts.NewGenerator(g.projectRoot)
-	if err := generator.GenerateProxyDeployScriptV2(contractInfo, proxyInfo, strategy, proxyType); err != nil {
+	if err := generator.GenerateProxyDeployScript(contractInfo, proxyInfo, strategy, proxyType); err != nil {
 		return fmt.Errorf("proxy script generation failed: %w", err)
 	}
 
-	fmt.Printf("Proxy deploy script generated successfully!\n")
 	fmt.Printf("Implementation: %s\n", contractInfo.Name)
 	fmt.Printf("Proxy: %s\n", proxyInfo.Name)
 	fmt.Printf("Strategy: %s\n", strategy)

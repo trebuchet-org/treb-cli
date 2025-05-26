@@ -89,26 +89,47 @@ func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
 	}
 
 	// Show proxy implementation details
-	//	if deployment.Entry.Type == "proxy" && deployment.Entry.TargetContract != "" {
-	//		labelStyle.Print("Implementation:")
-	//		fmt.Println()
-	//
-	//		// Find the implementation deployment
-	//		registryManager, _ := registry.NewManager("deployments.json")
-	//		chainIDUint, _ := strconv.ParseUint(deployment.ChainID, 10, 64)
-	//		if impl := registryManager.GetDeployment(deployment.Entry.TargetContract, deployment.Entry.Environment, chainIDUint); impl != nil {
-	//			labelStyle.Print("  Contract:   ")
-	//			fmt.Println(deployment.Entry.TargetContract)
-	//			labelStyle.Print("  Address:    ")
-	//			addressStyle.Println(impl.Address.Hex())
-	//			labelStyle.Print("  Identifier: ")
-	//			fmt.Printf("%s/%s/%s\n", networkInfo.Name, deployment.Entry.Environment, deployment.Entry.TargetContract)
-	//		} else {
-	//			labelStyle.Print("  Contract:   ")
-	//			fmt.Printf("%s (not found in registry)\n", deployment.Entry.TargetContract)
-	//		}
-	//	}
-	//
+	if deployment.Entry.Type == types.ProxyDeployment && deployment.Entry.TargetDeploymentFQID != "" {
+		fmt.Println()
+		labelStyle.Print("Implementation:\n")
+		
+		if deployment.Entry.Target != nil {
+			// We have the target deployment details
+			target := deployment.Entry.Target
+			labelStyle.Print("  Contract:     ")
+			fmt.Println(target.ContractName)
+			labelStyle.Print("  Address:      ")
+			addressStyle.Println(target.Address.Hex())
+			labelStyle.Print("  Environment:  ")
+			fmt.Println(target.Environment)
+			if target.Label != "" {
+				labelStyle.Print("  Label:        ")
+				color.New(color.FgMagenta).Println(target.Label)
+			}
+			labelStyle.Print("  ShortID:      ")
+			fmt.Println(target.ShortID)
+			
+			// Show implementation deployment status
+			if target.Deployment.Status == types.StatusQueued {
+				labelStyle.Print("  Status:       ")
+				warningStyle.Println("⚠️  Implementation pending Safe execution")
+			}
+			
+			// Show implementation verification status
+			if target.Verification.Status == "verified" {
+				labelStyle.Print("  Verified:     ")
+				successStyle.Println("✓")
+			} else {
+				labelStyle.Print("  Verified:     ")
+				warningStyle.Println("✗ Not verified")
+			}
+		} else {
+			// Target not loaded, just show the FQID
+			labelStyle.Print("  FQID:         ")
+			fmt.Println(deployment.Entry.TargetDeploymentFQID)
+			warningStyle.Println("  (Implementation details not available)")
+		}
+	}
 	// Network section
 	fmt.Println()
 	sectionStyle.Println("NETWORK")

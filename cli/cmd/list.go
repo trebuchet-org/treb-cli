@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"slices"
 	"sort"
-	"strconv"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/fatih/color"
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -24,6 +22,29 @@ var (
 	filterNetwork  string
 	filterContract string
 	showLibraries  bool
+)
+
+// Package-level color styles
+var (
+	envBg              = color.BgYellow
+	chainBg            = color.BgCyan
+	envHeader          = color.New(envBg, color.FgBlack)
+	envHeaderBold      = color.New(envBg, color.FgBlack, color.Bold)
+	chainHeader        = color.New(chainBg, color.FgBlack)
+	chainHeaderBold    = color.New(chainBg, color.FgBlack, color.Bold)
+	addressStyle       = color.New(color.FgWhite)
+	timestampStyle     = color.New(color.Faint)
+	pendingStyle       = color.New(color.FgYellow)
+	tagsStyle          = color.New(color.FgCyan)
+	verifiedStyle      = color.New(color.FgGreen)
+	notVerifiedStyle   = color.New(color.FgRed)
+	sectionHeaderStyle = color.New(color.Bold, color.FgHiWhite)
+	implPrefixStyle    = color.New(color.Faint)
+
+	// Library-specific styles
+	libraryNameStyle    = color.New(color.Bold)
+	libraryAddressStyle = color.New(color.Bold, color.FgHiWhite)
+	foundryStyle        = color.New(color.FgCyan)
 )
 
 var listCmd = &cobra.Command{
@@ -64,7 +85,6 @@ type columnWidths struct {
 	address   int
 	verified  int
 	timestamp int
-	status    int
 }
 
 func listDeployments() error {
@@ -92,32 +112,24 @@ func listDeployments() error {
 		return nil
 	}
 
-	// Create color styles
-	envBg := color.BgYellow
-	chainBg := color.BgCyan
-	envHeader := color.New(envBg, color.FgBlack)
-	envHeaderBold := color.New(envBg, color.FgBlack, color.Bold)
-	chainHeader := color.New(chainBg, color.FgBlack)
-	chainHeaderBold := color.New(chainBg, color.FgBlack, color.Bold)
-	contractNameStyle := color.New(color.Bold)
-	addressStyle := color.New(color.Bold, color.FgHiWhite)
-	timestampStyle := color.New(color.Faint)
-	pendingStyle := color.New(color.FgYellow)
-	tagsStyle := color.New(color.FgCyan)
-	verifiedStyle := color.New(color.FgGreen)
-	notVerifiedStyle := color.New(color.FgRed)
-
 	fmt.Printf("Deployments (%d total):\n\n", len(deployments))
 
-	groups := make(map[string]map[string][]*registry.DeploymentInfo)
+	// Calculate global column widths for all deployments
+	globalWidths := calculateColumnWidthsForRows(deployments)
 
-	// First pass: collect all environments per network and calculate max widths
+	// Group deployments and display them
+	if err := displayDeployments(deployments, deployConfig, globalWidths); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func displayDeployments(deployments []*registry.DeploymentInfo, deployConfig *config.DeployConfig, globalWidths columnWidths) error {
+
+	groups := make(map[string]map[string][]*registry.DeploymentInfo)
 	envs := make([]string, 0)
 	networks := make([]string, 0)
-	envsByNetwork := make(map[string][]string)
-
-	// Calculate max widths across all deployments
-	widths := calculateColumnWidths(deployments)
 
 	for _, deployment := range deployments {
 		env := deployment.Entry.Environment
@@ -129,14 +141,6 @@ func listDeployments() error {
 
 		if !slices.Contains(envs, env) {
 			envs = append(envs, env)
-		}
-
-		if envsByNetwork[network] == nil {
-			envsByNetwork[network] = make([]string, 0)
-		}
-
-		if !slices.Contains(envsByNetwork[network], env) {
-			envsByNetwork[network] = append(envsByNetwork[network], env)
 		}
 
 		if groups[deployment.NetworkName] == nil {
@@ -168,13 +172,16 @@ func listDeployments() error {
 			}
 		}
 
-		// Always show environment header when there are deployments
-		// Environment header with colored environment name only
-		envHeader.Print("   ◎ environment ")
-		envHeaderBold.Printf(" %-*s ", 35, strings.ToUpper(env))
-		envHeader.Printf("  deployer ")
-		envHeaderBold.Printf("%s ", deployerAddress)
-		fmt.Println()
+		// Environment header
+		tableWidth := globalWidths.contract + globalWidths.address + globalWidths.verified + globalWidths.timestamp + 2
+		envHeaderPrefix := envHeader.Sprintf("   ◎ environment  %s", envHeaderBold.Sprint(strings.ToUpper(env)))
+		envHeader.Printf(
+			"%s%s%s\n",
+			envHeaderPrefix,
+			envHeader.Sprintf("%*s", tableWidth-len(envHeaderPrefix), "deployer:"),
+			envHeaderBold.Sprint(deployerAddress),
+		)
+
 		// Filter networks to only show those with deployments for this env
 		networksWithDeployments := []string{}
 		for _, network := range networks {
@@ -186,11 +193,6 @@ func listDeployments() error {
 		for netIdx, network := range networksWithDeployments {
 			deployments := groups[network][env]
 
-			// Sort deployments by timestamp (newest first)
-			sort.Slice(deployments, func(i, j int) bool {
-				return deployments[i].Entry.Deployment.Timestamp.After(deployments[j].Entry.Deployment.Timestamp)
-			})
-
 			// Determine if this is the last network for tree drawing
 			isLastNetwork := netIdx == len(networksWithDeployments)-1
 			treePrefix := "├─"
@@ -200,81 +202,44 @@ func listDeployments() error {
 				continuationPrefix = "  "
 			}
 
-			// Create table with chain header as the first row
-			t := table.NewWriter()
-			t.SetStyle(table.StyleLight)
-			t.Style().Options.SeparateRows = false
-			t.Style().Options.DrawBorder = false
-			t.Style().Options.SeparateHeader = false
-			t.Style().Options.SeparateColumns = false
-			t.Style().Box = table.BoxStyle{
-				PaddingLeft:  "",
-				PaddingRight: "  ",
-			}
-
-			// Configure column styles with calculated widths
-			t.SetColumnConfigs([]table.ColumnConfig{
-				{Number: 1, Align: text.AlignLeft, WidthMin: widths.contract, WidthMax: widths.contract},
-				{Number: 2, Align: text.AlignLeft, WidthMin: widths.address, WidthMax: widths.address},
-				{Number: 3, Align: text.AlignLeft, WidthMin: widths.verified, WidthMax: widths.verified},
-				{Number: 4, Align: text.AlignLeft, WidthMin: widths.timestamp, WidthMax: widths.timestamp},
-			})
-
-			// Add chain header with proper tree character
+			// Chain header
 			chainHeaderRow := fmt.Sprintf("%s%s%s",
 				treePrefix,
 				chainHeader.Sprint(" ⛓ chain       "),
 				chainHeaderBold.Sprintf(" %s ", strings.ToUpper(network)))
 
-			// Print the chain header outside the table
 			fmt.Println(chainHeaderRow)
-			fmt.Println(continuationPrefix) // Continue the tree line
+			fmt.Println(continuationPrefix)
+
+			// Separate proxies and singletons within this env/network group
+			proxies := make([]*registry.DeploymentInfo, 0)
+			singletons := make([]*registry.DeploymentInfo, 0)
 
 			for _, deployment := range deployments {
-				displayName := deployment.Entry.GetDisplayName()
-				timestamp := deployment.Entry.Deployment.Timestamp.Format("2006-01-02 15:04:05")
-
-				// Build contract name with tags
-				contractCell := contractNameStyle.Sprint(displayName)
-				if len(deployment.Entry.Tags) > 0 {
-					contractCell += " " + tagsStyle.Sprintf("(%s)", deployment.Entry.Tags[0])
-				}
-
-				// Address cell
-				addressCell := addressStyle.Sprint(deployment.Address.Hex())
-
-				// Verified status or pending safe status
-				verifiedCell := ""
-				if deployment.Entry.Deployment.Status == "pending_safe" {
-					verifiedCell = pendingStyle.Sprint("⧖ deploy queued")
+				if deployment.Entry.Type == "proxy" {
+					proxies = append(proxies, deployment)
 				} else {
-					switch deployment.Entry.Verification.Status {
-					case "verified":
-						verifiedCell = verifiedStyle.Sprint("✓ verified")
-					case "partial":
-						verifiedCell = color.New(color.FgYellow).Sprint("⚠ partial")
-					case "failed":
-						verifiedCell = notVerifiedStyle.Sprint("✗ failed")
-					default:
-						verifiedCell = notVerifiedStyle.Sprint("✗ not verified")
-					}
+					singletons = append(singletons, deployment)
 				}
-
-				// Timestamp
-				timestampCell := timestampStyle.Sprint(timestamp)
-
-				t.AppendRow(table.Row{
-					continuationPrefix + " " + contractCell, // Add tree continuation and single space
-					addressCell,
-					verifiedCell,
-					timestampCell,
-				})
 			}
 
-			fmt.Print(t.Render())
-			fmt.Println() // Extra newline for spacing between sections
+			// Display proxies section first
+			if len(proxies) > 0 {
+				fmt.Printf("%s%s\n", continuationPrefix, sectionHeaderStyle.Sprint("PROXIES"))
+				displayDeploymentRows(proxies, globalWidths, continuationPrefix)
+			}
+
+			// Display singletons section
+			if len(singletons) > 0 {
+				if len(proxies) > 0 {
+					fmt.Println(continuationPrefix)
+				}
+				fmt.Printf("%s%s\n", continuationPrefix, sectionHeaderStyle.Sprint("SINGLETONS"))
+				displayDeploymentRows(singletons, globalWidths, continuationPrefix)
+			}
+
 			if !isLastNetwork {
-				fmt.Println(continuationPrefix) // Continue the tree line
+				fmt.Println(continuationPrefix)
 			} else {
 				fmt.Println()
 			}
@@ -284,32 +249,151 @@ func listDeployments() error {
 	return nil
 }
 
-// calculateColumnWidths calculates the max width needed for each column across all deployments
-func calculateColumnWidths(deployments []*registry.DeploymentInfo) columnWidths {
+func displayDeploymentRows(deployments []*registry.DeploymentInfo, widths columnWidths, continuationPrefix string) {
+
+	// Sort deployments by timestamp (newest first)
+	sort.Slice(deployments, func(i, j int) bool {
+		return deployments[i].Entry.Deployment.Timestamp.After(deployments[j].Entry.Deployment.Timestamp)
+	})
+
+	// Create table
+	t := table.NewWriter()
+	t.SetStyle(table.StyleLight)
+	t.Style().Options.SeparateRows = false
+	t.Style().Options.DrawBorder = false
+	t.Style().Options.SeparateHeader = false
+	t.Style().Options.SeparateColumns = false
+	t.Style().Box = table.BoxStyle{
+		PaddingRight: "   ",
+	}
+
+	// Configure column styles with calculated widths
+	t.SetColumnConfigs([]table.ColumnConfig{
+		{Number: 1, Align: text.AlignLeft, WidthMin: widths.contract, WidthMax: widths.contract},
+		{Number: 2, Align: text.AlignLeft, WidthMin: widths.address, WidthMax: widths.address},
+		{Number: 3, Align: text.AlignLeft, WidthMin: widths.verified, WidthMax: widths.verified},
+		{Number: 4, Align: text.AlignLeft, WidthMin: widths.timestamp, WidthMax: widths.timestamp},
+	})
+
+	for _, deployment := range deployments {
+		// Add main deployment row
+		coloredDisplayName := deployment.Entry.GetColoredDisplayName()
+		timestamp := deployment.Entry.Deployment.Timestamp.Format("2006-01-02 15:04:05")
+
+		contractCell := coloredDisplayName
+		if len(deployment.Entry.Tags) > 0 {
+			contractCell += " " + tagsStyle.Sprintf("(%s)", deployment.Entry.Tags[0])
+		}
+
+		addressCell := addressStyle.Sprint(deployment.Address.Hex())
+
+		verifiedCell := ""
+		if deployment.Entry.Deployment.Status == "pending_safe" {
+			verifiedCell = pendingStyle.Sprint("⧖ deploy queued")
+		} else {
+			switch deployment.Entry.Verification.Status {
+			case "verified":
+				verifiedCell = verifiedStyle.Sprint("✓ verified")
+			case "partial":
+				verifiedCell = color.New(color.FgYellow).Sprint("⚠ partial")
+			case "failed":
+				verifiedCell = notVerifiedStyle.Sprint("✗ failed")
+			default:
+				verifiedCell = notVerifiedStyle.Sprint("✗ not verified")
+			}
+		}
+
+		timestampCell := timestampStyle.Sprint(timestamp)
+
+		t.AppendRow(table.Row{
+			continuationPrefix + contractCell, // 6 spaces for alignment
+			addressCell,
+			verifiedCell,
+			timestampCell,
+		})
+
+		// If this is a proxy and we're showing implementations, add implementation row
+		if deployment.Entry.Type == "proxy" && deployment.Entry.Target != nil {
+			implDisplayName := deployment.Entry.Target.GetColoredDisplayName()
+			implTimestamp := deployment.Entry.Target.Deployment.Timestamp.Format("2006-01-02 15:04:05")
+
+			// Build implementation row with └─ prefix
+			implContractCell := implPrefixStyle.Sprint("└─ ") + implDisplayName
+			if len(deployment.Entry.Target.Tags) > 0 {
+				implContractCell += " " + tagsStyle.Sprintf("(%s)", deployment.Entry.Target.Tags[0])
+			}
+
+			implAddressCell := addressStyle.Sprint(deployment.Entry.Target.Address.Hex())
+
+			implVerifiedCell := ""
+			switch deployment.Entry.Target.Verification.Status {
+			case "verified":
+				implVerifiedCell = verifiedStyle.Sprint("✓ verified")
+			case "partial":
+				implVerifiedCell = color.New(color.FgYellow).Sprint("⚠ partial")
+			case "failed":
+				implVerifiedCell = notVerifiedStyle.Sprint("✗ failed")
+			default:
+				implVerifiedCell = notVerifiedStyle.Sprint("✗ not verified")
+			}
+
+			implTimestampCell := timestampStyle.Sprint(implTimestamp)
+
+			t.AppendRow(table.Row{
+				continuationPrefix + " " + implContractCell,
+				implAddressCell,
+				implVerifiedCell,
+				implTimestampCell,
+			})
+		}
+	}
+
+	fmt.Print(t.Render())
+	fmt.Println()
+}
+
+// calculateColumnWidthsForRows calculates widths based on actual rendered content
+func calculateColumnWidthsForRows(deployments []*registry.DeploymentInfo) columnWidths {
 	widths := columnWidths{
 		contract:  20, // Minimum width
 		address:   42, // Fixed for addresses
 		verified:  15, // Fixed for "⧖ deploy queued"
 		timestamp: 19, // Fixed for timestamp format
-		status:    0,  // Not used anymore
 	}
 
-	// Calculate max contract name width (including tags)
+	// Calculate max contract name width based on actual rendered content
 	for _, deployment := range deployments {
+		// Main deployment row: "      " + displayName + optional tag
 		displayName := deployment.Entry.GetDisplayName()
-		contractLen := len(displayName) + 3 // +3 for tree prefix and space ("│ " or "  ")
+		contractLen := len(displayName) // 6 spaces + display name
 		if len(deployment.Entry.Tags) > 0 {
-			// Add space for tag like " (v1.0.0)"
-			contractLen += len(deployment.Entry.Tags[0]) + 3
+			contractLen += len(deployment.Entry.Tags[0]) + 3 // " (tag)"
 		}
 		if contractLen > widths.contract {
 			widths.contract = contractLen
 		}
+
+		if deployment.Entry.Type == "proxy" && deployment.Entry.Target != nil {
+			// Implementation row: "        └─ " + displayName + optional tag
+			implContractLen := 0
+
+			// Try to get implementation display name
+			if deployment.Entry.Target != nil {
+				implDisplayName := deployment.Entry.Target.GetDisplayName()
+				implContractLen += len(implDisplayName)
+				if len(deployment.Entry.Target.Tags) > 0 {
+					implContractLen += len(deployment.Entry.Target.Tags[0]) + 3 // " (tag)"
+				}
+				if implContractLen > widths.contract {
+					widths.contract = implContractLen
+				}
+			}
+		}
 	}
 
 	// Cap the contract column at a reasonable max
-	if widths.contract > 50 {
-		widths.contract = 50
+	if widths.contract > 70 {
+		widths.contract = 70
 	}
 
 	return widths
@@ -386,46 +470,19 @@ func listLibraries() error {
 		return nil
 	}
 
-	// Create library info structure
-	type LibraryInfo struct {
-		Name    string
-		Entry   *types.DeploymentEntry
-		ChainID uint64
-		Address common.Address
-	}
-
 	// Group libraries by chain
-	librariesByChain := make(map[uint64][]*LibraryInfo)
-	chains := make([]uint64, 0)
-	allLibraries := make([]*LibraryInfo, 0)
+	librariesByChain := make(map[string][]*types.DeploymentEntry)
+	chains := make([]string, 0)
+	allLibraries := make([]*types.DeploymentEntry, 0)
 
 	// Parse library keys (format: "chainID-libraryName")
-	for key, entry := range libraries {
-		parts := strings.Split(key, "-")
-		if len(parts) < 2 {
-			continue
+	for _, entry := range libraries {
+		allLibraries = append(allLibraries, entry)
+
+		if !slices.Contains(chains, entry.NetworkInfo.Name) {
+			chains = append(chains, entry.NetworkInfo.Name)
 		}
-
-		chainID, err := parseUint64(parts[0])
-		if err != nil {
-			continue
-		}
-
-		libraryName := strings.Join(parts[1:], "-") // Handle library names with dashes
-
-		libInfo := &LibraryInfo{
-			Name:    libraryName,
-			Entry:   entry,
-			ChainID: chainID,
-			Address: entry.Address,
-		}
-
-		allLibraries = append(allLibraries, libInfo)
-
-		if !slices.Contains(chains, chainID) {
-			chains = append(chains, chainID)
-		}
-		librariesByChain[chainID] = append(librariesByChain[chainID], libInfo)
+		librariesByChain[entry.NetworkInfo.Name] = append(librariesByChain[entry.NetworkInfo.Name], entry)
 	}
 
 	// Sort chains
@@ -433,23 +490,16 @@ func listLibraries() error {
 		return chains[i] < chains[j]
 	})
 
-	// Create color styles
-	chainBg := color.BgCyan
-	chainHeader := color.New(chainBg, color.FgBlack)
-	chainHeaderBold := color.New(chainBg, color.FgBlack, color.Bold)
-	libraryNameStyle := color.New(color.Bold)
-	addressStyle := color.New(color.Bold, color.FgHiWhite)
-	timestampStyle := color.New(color.Faint)
-	foundryStyle := color.New(color.FgCyan)
+	// Use package-level color styles
 
 	fmt.Printf("Libraries (%d total):\n\n", len(libraries))
 
-	for _, chainID := range chains {
-		chainLibs := librariesByChain[chainID]
+	for _, chainName := range chains {
+		chainLibs := librariesByChain[chainName]
 
 		// Sort libraries by timestamp (newest first)
 		sort.Slice(chainLibs, func(i, j int) bool {
-			return chainLibs[i].Entry.Deployment.Timestamp.After(chainLibs[j].Entry.Deployment.Timestamp)
+			return chainLibs[i].Deployment.Timestamp.After(chainLibs[j].Deployment.Timestamp)
 		})
 
 		// Create table
@@ -473,7 +523,6 @@ func listLibraries() error {
 		})
 
 		// Add chain header
-		chainName := getChainName(chainID)
 		chainHeaderRow := fmt.Sprintf("%s%s",
 			chainHeader.Sprint(" ⛓ chain       "),
 			chainHeaderBold.Sprintf(" %s ", strings.ToUpper(chainName)))
@@ -482,14 +531,14 @@ func listLibraries() error {
 		fmt.Println()
 
 		for _, lib := range chainLibs {
-			libraryName := lib.Name
-			timestamp := lib.Entry.Deployment.Timestamp.Format("2006-01-02 15:04:05")
+			libraryName := lib.ContractName
+			timestamp := lib.Deployment.Timestamp.Format("2006-01-02 15:04:05")
 
 			// Build library name cell
 			libraryCell := libraryNameStyle.Sprint(libraryName)
 
 			// Address cell
-			addressCell := addressStyle.Sprint(lib.Address.Hex())
+			addressCell := libraryAddressStyle.Sprint(lib.Address.Hex())
 
 			// Foundry.toml format
 			foundryCell := foundryStyle.Sprintf("\"src/%s.sol:%s:%s\"", libraryName, libraryName, lib.Address.Hex())
@@ -515,54 +564,9 @@ func listLibraries() error {
 	color.New(color.FgCyan).Println("[profile.default]")
 	color.New(color.FgCyan).Println("libraries = [")
 	for _, lib := range allLibraries {
-		color.New(color.FgCyan).Printf("  \"src/%s.sol:%s:%s\",\n", lib.Name, lib.Name, lib.Address.Hex())
+		color.New(color.FgCyan).Printf("  \"src/%s.sol:%s:%s\",\n", lib.ContractName, lib.ContractName, lib.Address.Hex())
 	}
 	color.New(color.FgCyan).Println("]")
 
 	return nil
-}
-
-// getChainName returns the chain name for a given chain ID
-func getChainName(chainID uint64) string {
-	// Common chain names
-	chainNames := map[uint64]string{
-		1:        "mainnet",
-		5:        "goerli",
-		11155111: "sepolia",
-		17000:    "holesky",
-		10:       "optimism",
-		420:      "optimism-goerli",
-		11155420: "optimism-sepolia",
-		42161:    "arbitrum",
-		421613:   "arbitrum-goerli",
-		421614:   "arbitrum-sepolia",
-		137:      "polygon",
-		80001:    "mumbai",
-		80002:    "amoy",
-		8453:     "base",
-		84531:    "base-goerli",
-		84532:    "base-sepolia",
-		43114:    "avalanche",
-		43113:    "fuji",
-		56:       "bsc",
-		97:       "bsc-testnet",
-		100:      "gnosis",
-		10200:    "chiado",
-		42220:    "celo",
-		44787:    "alfajores",
-		62320:    "baklava",
-		534351:   "scroll-sepolia",
-		534352:   "scroll",
-	}
-
-	if name, ok := chainNames[chainID]; ok {
-		return name
-	}
-
-	return fmt.Sprintf("chain-%d", chainID)
-}
-
-// parseUint64 parses a string to uint64
-func parseUint64(s string) (uint64, error) {
-	return strconv.ParseUint(s, 10, 64)
 }

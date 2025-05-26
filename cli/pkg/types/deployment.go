@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/fatih/color"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/broadcast"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
@@ -16,6 +17,14 @@ const (
 	StatusExecuted Status = "EXECUTED"
 	StatusQueued   Status = "PENDING_SAFE"
 	StatusUnknown  Status = "UNKNOWN"
+)
+
+type DeploymentType string
+
+const (
+	SingletonDeployment DeploymentType = "singleton"
+	ProxyDeployment     DeploymentType = "proxy"
+	LibraryDeployment   DeploymentType = "library"
 )
 
 func ParseStatus(status string) (Status, error) {
@@ -41,13 +50,13 @@ type DeploymentResult struct {
 	AlreadyDeployed bool           `json:"already_deployed"`
 
 	// New deployment type information
-	DeploymentType string               `json:"deployment_type"` // "implementation" or "proxy"
-	TargetContract string               `json:"target_contract,omitempty"`
-	Label          string               `json:"label,omitempty"` // For implementation deployments
-	Tags           []string             `json:"tags,omitempty"`
-	Env            string               `json:"env,omitempty"`
-	NetworkInfo    *network.NetworkInfo `json:"network_info,omitempty"`
-	Status         Status               `json:"status"`
+	DeploymentType       DeploymentType       `json:"deployment_type"`                  // "implementation" or "proxy"
+	TargetDeploymentFQID string               `json:"target_deployment_fqid,omitempty"` // only for proxy deployments
+	Label                string               `json:"label,omitempty"`                  // For implementation deployments
+	Tags                 []string             `json:"tags,omitempty"`
+	Env                  string               `json:"env,omitempty"`
+	NetworkInfo          *network.NetworkInfo `json:"network_info,omitempty"`
+	Status               Status               `json:"status"`
 
 	// Safe deployment information
 	SafeTxHash  common.Hash    `json:"safe_tx_hash,omitempty"`
@@ -76,7 +85,7 @@ type DeploymentEntry struct {
 	Address         common.Address `json:"address"`
 	ContractName    string         `json:"contract_name"`
 	Environment     string         `json:"environment"`
-	Type            string         `json:"type"`                       // implementation/proxy
+	Type            DeploymentType `json:"type"`                       // implementation/proxy
 	Salt            string         `json:"salt"`                       // hex string
 	InitCodeHash    string         `json:"init_code_hash"`             // hex string
 	ConstructorArgs string         `json:"constructor_args,omitempty"` // Raw hex-encoded constructor args
@@ -85,14 +94,16 @@ type DeploymentEntry struct {
 	Label string `json:"label,omitempty"`
 
 	// Proxy-specific fields
-	TargetContract string `json:"target_contract,omitempty"` // For proxy deployments
+	TargetDeploymentFQID string `json:"target_deployment_fqid,omitempty"` // For proxy deployments
 
 	// Version tags (metadata only, not part of salt)
 	Tags []string `json:"tags,omitempty"`
 
-	Verification Verification     `json:"verification"`
-	Deployment   DeploymentInfo   `json:"deployment"`
-	Metadata     ContractMetadata `json:"metadata"`
+	Verification Verification         `json:"verification"`
+	Deployment   DeploymentInfo       `json:"deployment"`
+	Metadata     ContractMetadata     `json:"metadata"`
+	Target       *DeploymentEntry     `json:"-"`
+	NetworkInfo  *network.NetworkInfo `json:"-"`
 }
 
 type Verification struct {
@@ -131,36 +142,61 @@ type ContractMetadata struct {
 
 // GetDisplayName returns a human-friendly name for the deployment
 func (d *DeploymentEntry) GetDisplayName() string {
-	if d.Type == "proxy" {
-		// For proxies: targetContractProxy or targetContractProxy:label
-		baseName := d.TargetContract + "Proxy"
-		if d.Label != "" {
-			return baseName + ":" + d.Label
-		}
-		return baseName
-	}
-
-	// For implementations: contractName or contractName:label
-	if d.Label != "" {
-		return d.ContractName + ":" + d.Label
-	}
-	return d.ContractName
-}
-
-func (d *DeploymentEntry) GetIdentifier() string {
 	switch d.Type {
-	case "proxy":
-		return d.TargetContract + "Proxy"
-	case "library":
-		return d.ContractName
+	case ProxyDeployment:
+		if d.Target != nil {
+			displayName := fmt.Sprintf("%s:%s", d.ContractName, d.Target.GetDisplayName())
+			if d.Label != "" {
+				return fmt.Sprintf("%s:%s", displayName, d.Label)
+			}
+			return displayName
+		} else {
+			return d.ShortID
+		}
+	default:
+		return d.ShortID
 	}
-
-	if d.Label != "" {
-		return d.ContractName + ":" + d.Label
-	}
-	return d.ContractName
 }
 
-func (d *DeploymentEntry) GetFullIdentifier(networkName string) string {
-	return d.Environment + "/" + networkName + "/" + d.GetIdentifier()
+// GetColoredDisplayName returns a colored version of the display name for use in tables
+// - ContractName is default (white/bold)
+// - "Proxy" suffix and ":" separators are faint
+// - Labels are cyan
+func (d *DeploymentEntry) GetColoredDisplayName() string {
+	// Create color styles
+	faintStyle := color.New(color.Faint)
+	cyanStyle := color.New(color.FgCyan)
+
+	switch d.Type {
+	case ProxyDeployment:
+		// Build colored proxy name
+		result := faintStyle.Sprint(d.ContractName)
+
+		// Recursively add target display name
+		if d.Target != nil {
+			result += faintStyle.Sprint(":")
+			// Get the target's colored display name recursively
+			targetDisplay := d.Target.ContractName
+			result += targetDisplay
+		}
+
+		// Add label if present
+		if d.Label != "" {
+			result += faintStyle.Sprint(":")
+			result += cyanStyle.Sprint(d.Label)
+		}
+
+		return result
+	default:
+		// For non-proxy deployments
+		result := d.ContractName
+
+		// Add label if present
+		if d.Label != "" {
+			result += faintStyle.Sprint(":")
+			result += cyanStyle.Sprint(d.Label)
+		}
+
+		return result
+	}
 }
