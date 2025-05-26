@@ -14,8 +14,8 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
-	"github.com/trebuchet-org/treb-cli/cli/internal/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
@@ -79,10 +79,10 @@ func listDeployments() error {
 		return fmt.Errorf("failed to load deploy config: %w", err)
 	}
 	allDeployments := registryManager.GetAllDeployments()
-	
+
 	// Apply filters
 	deployments := filterDeployments(allDeployments)
-	
+
 	if len(deployments) == 0 {
 		if len(allDeployments) > 0 {
 			fmt.Println("No deployments found matching the filters")
@@ -320,20 +320,20 @@ func filterDeployments(deployments []*registry.DeploymentInfo) []*registry.Deplo
 	if filterEnv == "" && filterNetwork == "" && filterContract == "" {
 		return deployments
 	}
-	
+
 	filtered := make([]*registry.DeploymentInfo, 0)
-	
+
 	for _, deployment := range deployments {
 		// Filter by environment (exact match, case-insensitive)
 		if filterEnv != "" && !strings.EqualFold(deployment.Entry.Environment, filterEnv) {
 			continue
 		}
-		
+
 		// Filter by network (exact match, case-insensitive)
 		if filterNetwork != "" && !strings.EqualFold(deployment.NetworkName, filterNetwork) {
 			continue
 		}
-		
+
 		// Filter by contract (partial match, case-insensitive)
 		if filterContract != "" {
 			contractName := deployment.Entry.ContractName
@@ -341,10 +341,10 @@ func filterDeployments(deployments []*registry.DeploymentInfo) []*registry.Deplo
 				continue
 			}
 		}
-		
+
 		filtered = append(filtered, deployment)
 	}
-	
+
 	return filtered
 }
 
@@ -380,7 +380,7 @@ func listLibraries() error {
 	}
 
 	libraries := registryManager.GetAllLibraries()
-	
+
 	if len(libraries) == 0 {
 		fmt.Println("No libraries found")
 		return nil
@@ -398,36 +398,36 @@ func listLibraries() error {
 	librariesByChain := make(map[uint64][]*LibraryInfo)
 	chains := make([]uint64, 0)
 	allLibraries := make([]*LibraryInfo, 0)
-	
+
 	// Parse library keys (format: "chainID-libraryName")
 	for key, entry := range libraries {
 		parts := strings.Split(key, "-")
 		if len(parts) < 2 {
 			continue
 		}
-		
+
 		chainID, err := parseUint64(parts[0])
 		if err != nil {
 			continue
 		}
-		
+
 		libraryName := strings.Join(parts[1:], "-") // Handle library names with dashes
-		
+
 		libInfo := &LibraryInfo{
 			Name:    libraryName,
 			Entry:   entry,
 			ChainID: chainID,
 			Address: entry.Address,
 		}
-		
+
 		allLibraries = append(allLibraries, libInfo)
-		
+
 		if !slices.Contains(chains, chainID) {
 			chains = append(chains, chainID)
 		}
 		librariesByChain[chainID] = append(librariesByChain[chainID], libInfo)
 	}
-	
+
 	// Sort chains
 	sort.Slice(chains, func(i, j int) bool {
 		return chains[i] < chains[j]
@@ -446,12 +446,12 @@ func listLibraries() error {
 
 	for _, chainID := range chains {
 		chainLibs := librariesByChain[chainID]
-		
+
 		// Sort libraries by timestamp (newest first)
 		sort.Slice(chainLibs, func(i, j int) bool {
 			return chainLibs[i].Entry.Deployment.Timestamp.After(chainLibs[j].Entry.Deployment.Timestamp)
 		})
-		
+
 		// Create table
 		t := table.NewWriter()
 		t.SetStyle(table.StyleLight)
@@ -477,26 +477,26 @@ func listLibraries() error {
 		chainHeaderRow := fmt.Sprintf("%s%s",
 			chainHeader.Sprint(" ⛓ chain       "),
 			chainHeaderBold.Sprintf(" %s ", strings.ToUpper(chainName)))
-		
+
 		fmt.Println(chainHeaderRow)
 		fmt.Println()
 
 		for _, lib := range chainLibs {
 			libraryName := lib.Name
 			timestamp := lib.Entry.Deployment.Timestamp.Format("2006-01-02 15:04:05")
-			
+
 			// Build library name cell
 			libraryCell := libraryNameStyle.Sprint(libraryName)
-			
+
 			// Address cell
 			addressCell := addressStyle.Sprint(lib.Address.Hex())
-			
+
 			// Foundry.toml format
 			foundryCell := foundryStyle.Sprintf("\"src/%s.sol:%s:%s\"", libraryName, libraryName, lib.Address.Hex())
-			
+
 			// Timestamp
 			timestampCell := timestampStyle.Sprint(timestamp)
-			
+
 			t.AppendRow(table.Row{
 				"  " + libraryCell,
 				addressCell,
@@ -504,12 +504,12 @@ func listLibraries() error {
 				timestampCell,
 			})
 		}
-		
+
 		fmt.Print(t.Render())
 		fmt.Println()
 		fmt.Println()
 	}
-	
+
 	// Show foundry.toml configuration tip
 	fmt.Println("To use these libraries, add the library entries to your foundry.toml:")
 	color.New(color.FgCyan).Println("[profile.default]")
@@ -518,7 +518,7 @@ func listLibraries() error {
 		color.New(color.FgCyan).Printf("  \"src/%s.sol:%s:%s\",\n", lib.Name, lib.Name, lib.Address.Hex())
 	}
 	color.New(color.FgCyan).Println("]")
-	
+
 	return nil
 }
 
@@ -554,11 +554,11 @@ func getChainName(chainID uint64) string {
 		534351:   "scroll-sepolia",
 		534352:   "scroll",
 	}
-	
+
 	if name, ok := chainNames[chainID]; ok {
 		return name
 	}
-	
+
 	return fmt.Sprintf("chain-%d", chainID)
 }
 

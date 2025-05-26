@@ -1,1 +1,130 @@
-{}
+{
+  "networks": {
+    "0": {
+      "name": "celo-alfajores",
+      "deployments": {
+        "0x7072587f595abdfb71c7619ba3568c9a665ab00a": {
+          "fqid": "0/default/Counter:V6",
+          "sid": "Counter:V6",
+          "address": "0x7072587f595abdfb71c7619ba3568c9a665ab00a",
+          "contract_name": "Counter",
+          "environment": "default",
+          "type": "singleton",
+          "salt": "0xf1f30b69a9359c3e7c28eb76391835472e105f5c003d5329dcb2c970e66da4a5",
+          "init_code_hash": "0x3947564314c1851e9808711b792ad845bd973d461570cde813351241d8067bf9",
+          "constructor_args": "0x",
+          "label": "V6",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "broadcast_file": "",
+            "timestamp": "2025-05-26T12:06:00.613389+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "e413d45db86bfcdc3835dacb4875b00134666b64",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/other/test/Counter.sol:Counter",
+            "contract_path": "src/other/test/Counter.sol",
+            "script_path": "script/deploy/other/test/DeployCounter.s.sol"
+          }
+        }
+      }
+    },
+    "44787": {
+      "name": "celo-alfajores",
+      "deployments": {
+        "0x220e155e37519387216f6276b9966938cb48a147": {
+          "fqid": "44787/default/src/test-dir/Counter.sol:Counter:V8",
+          "sid": "Counter:V8",
+          "address": "0x220e155e37519387216f6276b9966938cb48a147",
+          "contract_name": "Counter",
+          "environment": "default",
+          "type": "singleton",
+          "salt": "0xf1f30b69a9359c3e7c28eb76391835472e105f5c001494ad606e0b7a9b06e657",
+          "init_code_hash": "0x115a45b6ae30302929da58321cc56b3c4314d96df28ceb1d19e783a465a0af7e",
+          "constructor_args": "0x",
+          "label": "V8",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "broadcast_file": "",
+            "timestamp": "2025-05-26T12:35:57.47175+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "e413d45db86bfcdc3835dacb4875b00134666b64",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/test-dir/Counter.sol:Counter",
+            "contract_path": "src/test-dir/Counter.sol",
+            "script_path": "script/deploy/test-dir/DeployCounter.s.sol"
+          }
+        },
+        "0x8481a8b4435a007b2812d6b61f8b97ce81e346a9": {
+          "fqid": "44787/default/Counter:V7",
+          "sid": "Counter:V7",
+          "address": "0x8481a8b4435a007b2812d6b61f8b97ce81e346a9",
+          "contract_name": "Counter",
+          "environment": "default",
+          "type": "singleton",
+          "salt": "0xf1f30b69a9359c3e7c28eb76391835472e105f5c00cdee21a40911b1645ec6e6",
+          "init_code_hash": "0xac335e6949b4d514740c93402952f022b1d7bce40ede5c34341c83abfb49665b",
+          "constructor_args": "0x",
+          "label": "V7",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "broadcast_file": "",
+            "timestamp": "2025-05-26T12:13:41.897746+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "e413d45db86bfcdc3835dacb4875b00134666b64",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/Counter.sol:Counter",
+            "contract_path": "src/Counter.sol",
+            "script_path": "script/deploy/DeployCounter.s.sol"
+          }
+        },
+        "0x9e8e25969b7c49ff957cef9b6b7c358c35527b39": {
+          "fqid": "",
+          "sid": "",
+          "address": "0x9e8e25969b7c49ff957cef9b6b7c358c35527b39",
+          "contract_name": "Counter",
+          "environment": "default",
+          "type": "singleton",
+          "salt": "f1f30b69a9359c3e7c28eb76391835472e105f5c00c68bfddb8ee459918f2493",
+          "init_code_hash": "ac335e6949b4d514740c93402952f022b1d7bce40ede5c34341c83abfb49665b",
+          "constructor_args": "0x",
+          "label": "V5",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "broadcast_file": "",
+            "timestamp": "2025-05-26T10:25:29.955379+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "e413d45db86bfcdc3835dacb4875b00134666b64",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/Counter.sol:Counter",
+            "contract_path": "src/Counter.sol",
+            "script_path": "script/deploy/DeployCounter.s.sol"
+          }
+        }
+      }
+    }
+  }
+}

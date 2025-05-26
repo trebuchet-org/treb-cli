@@ -205,9 +205,9 @@ func (g *Generator) GenerateDeployScript(contractNameOrPath string) error {
 	// Step 1: Pick or resolve contract
 	var contractInfo *contracts.ContractInfo
 	var err error
-	
+
 	// Try to resolve the contract by name or path
-	contractInfo, err = ResolveContract(contractNameOrPath)
+	contractInfo, err = ResolveContract(contractNameOrPath, contracts.ProjectFilter())
 	if err != nil {
 		return fmt.Errorf("failed to resolve contract: %w", err)
 	}

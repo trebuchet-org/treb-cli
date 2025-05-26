@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/trebuchet-org/treb-cli/cli/internal/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/interactive"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 )
 
 // pickDeployment finds and allows selection of deployments matching the identifier

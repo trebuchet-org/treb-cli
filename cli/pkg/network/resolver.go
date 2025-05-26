@@ -17,15 +17,16 @@ import (
 
 // NetworkInfo contains resolved network details
 type NetworkInfo struct {
-	Name    string
-	RpcUrl  string
-	ChainID uint64
+	Name   string
+	RpcUrl string
 }
 
 // Resolver handles network resolution from foundry.toml and chain ID extraction
 type Resolver struct {
 	projectRoot string
 }
+
+var chainIDMap = make(map[string]uint64)
 
 // NewResolver creates a new network resolver
 func NewResolver(projectRoot string) *Resolver {
@@ -49,59 +50,21 @@ func (r *Resolver) ResolveNetwork(network string) (*NetworkInfo, error) {
 		return nil, fmt.Errorf("failed to resolve network %s: %w", network, err)
 	}
 
-	// Extract chain ID from RPC endpoint
-	chainID, err := r.getChainID(rpcUrl)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get chain ID for network %s: %w", network, err)
-	}
-
 	return &NetworkInfo{
-		Name:    network,
-		RpcUrl:  rpcUrl,
-		ChainID: chainID,
+		Name:   network,
+		RpcUrl: rpcUrl,
 	}, nil
 }
 
-// ResolveNetworkByChainID resolves network information by chain ID
-func (r *Resolver) ResolveNetworkByChainID(chainIDStr string) (*NetworkInfo, error) {
-	// Parse chain ID
-	chainID, err := strconv.ParseUint(chainIDStr, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("invalid chain ID: %w", err)
+func (n *NetworkInfo) ChainID() uint64 {
+	if chainIDMap[n.Name] == 0 {
+		chainID, err := n.getChainID()
+		if err != nil {
+			panic(err)
+		}
+		chainIDMap[n.Name] = chainID
 	}
-
-	// Known chain IDs to network names
-	chainIDMap := map[uint64]string{
-		1:        "mainnet",
-		11155111: "sepolia",
-		421614:   "arbitrum_sepolia",
-		44787:    "celo-alfajores",
-		42220:    "celo",
-		// Add more as needed
-	}
-
-	networkName, ok := chainIDMap[chainID]
-	if !ok {
-		// Return a generic network info
-		return &NetworkInfo{
-			Name:    fmt.Sprintf("chain-%d", chainID),
-			RpcUrl:  "",
-			ChainID: chainID,
-		}, nil
-	}
-
-	// Try to get full network info
-	info, err := r.ResolveNetwork(networkName)
-	if err != nil {
-		// Return basic info
-		return &NetworkInfo{
-			Name:    networkName,
-			RpcUrl:  "",
-			ChainID: chainID,
-		}, nil
-	}
-
-	return info, nil
+	return chainIDMap[n.Name]
 }
 
 // getRpcUrlFromFoundry extracts RPC URL from foundry.toml
@@ -181,7 +144,7 @@ func (r *Resolver) substituteEnvVars(value string) string {
 }
 
 // getChainID extracts chain ID from RPC endpoint
-func (r *Resolver) getChainID(rpcUrl string) (uint64, error) {
+func (n *NetworkInfo) getChainID() (uint64, error) {
 	// Create HTTP client with timeout
 	client := &http.Client{
 		Timeout: 10 * time.Second,
@@ -190,7 +153,7 @@ func (r *Resolver) getChainID(rpcUrl string) (uint64, error) {
 	// Prepare eth_chainId JSON-RPC request
 	requestBody := `{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}`
 
-	resp, err := client.Post(rpcUrl, "application/json", strings.NewReader(requestBody))
+	resp, err := client.Post(n.RpcUrl, "application/json", strings.NewReader(requestBody))
 	if err != nil {
 		return 0, fmt.Errorf("failed to make RPC request: %w", err)
 	}

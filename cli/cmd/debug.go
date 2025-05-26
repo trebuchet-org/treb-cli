@@ -8,9 +8,8 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
-	"github.com/trebuchet-org/treb-cli/cli/internal/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 )
 
 var debugCmd = &cobra.Command{
@@ -60,26 +59,10 @@ field based on the contract name and type (implementation or proxy).`,
 	},
 }
 
-var debugFixContractPathCmd = &cobra.Command{
-	Use:   "fix-contract-path",
-	Short: "Fix contract paths in deployment registry",
-	Long: `Fix contract paths in the deployment registry by analyzing deployment scripts.
-
-This command iterates through all deployments, analyzes their deployment scripts
-to determine the actual contract being deployed, and updates the contract_path
-and source_hash metadata fields accordingly.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		if err := fixContractPaths(); err != nil {
-			checkError(err)
-		}
-	},
-}
-
 func init() {
 	debugCmd.AddCommand(debugConfigCmd)
 	debugCmd.AddCommand(debugFixCompilerCmd)
 	debugCmd.AddCommand(debugFixScriptPathCmd)
-	debugCmd.AddCommand(debugFixContractPathCmd)
 }
 
 func showDeployConfig(env string) error {
@@ -291,131 +274,6 @@ func fixScriptPaths() error {
 
 	if fixedCount > 0 {
 		fmt.Println("\nRegistry has been updated with script paths.")
-	}
-
-	return nil
-}
-
-func fixContractPaths() error {
-	// Import contracts package for analysis
-	// Initialize registry manager
-	registryManager, err := registry.NewManager("deployments.json")
-	if err != nil {
-		return fmt.Errorf("failed to initialize registry: %w", err)
-	}
-
-	// Get all deployments
-	allDeployments := registryManager.GetAllDeployments()
-
-	if len(allDeployments) == 0 {
-		color.New(color.FgYellow).Println("No deployments found in registry.")
-		return nil
-	}
-
-	color.New(color.FgCyan, color.Bold).Printf("Analyzing deployment scripts to fix contract paths for %d deployments...\n\n", len(allDeployments))
-
-	fixedCount := 0
-	skippedCount := 0
-	errorCount := 0
-
-	for _, deployment := range allDeployments {
-		// Check if we have a script path to analyze
-		scriptPath := deployment.Entry.Metadata.ScriptPath
-		if scriptPath == "" {
-			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - No script path available\n",
-				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName())
-			errorCount++
-			continue
-		}
-
-		// Analyze the script to get the contract info
-		analysisResult, err := contracts.AnalyzeDeployScript(scriptPath)
-		if err != nil {
-			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - Failed to analyze script: %v\n",
-				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(), err)
-			errorCount++
-			continue
-		}
-
-		// Check if contract path needs updating
-		currentContractPath := deployment.Entry.Metadata.ContractPath
-		newContractPath := analysisResult.ContractPath
-		currentSourceHash := deployment.Entry.Metadata.SourceHash
-		newSourceHash := analysisResult.SourceHash
-
-		needsUpdate := false
-		changes := []string{}
-
-		// Check if current contract path is invalid (doesn't exist on disk)
-		currentPathInvalid := !isValidContractPath(currentContractPath)
-
-		if currentContractPath != newContractPath {
-			needsUpdate = true
-			if currentPathInvalid {
-				changes = append(changes, fmt.Sprintf("contract_path: %s (INVALID) → %s", currentContractPath, newContractPath))
-			} else {
-				changes = append(changes, fmt.Sprintf("contract_path: %s → %s", currentContractPath, newContractPath))
-			}
-		} else if currentPathInvalid {
-			// Even if paths are the same, if current path is invalid, we should try to update
-			needsUpdate = true
-			changes = append(changes, fmt.Sprintf("contract_path: %s (INVALID, recalculated)", currentContractPath))
-		}
-
-		if currentSourceHash != newSourceHash && newSourceHash != "" {
-			needsUpdate = true
-			if currentSourceHash == "" {
-				changes = append(changes, fmt.Sprintf("source_hash: (empty) → %s", newSourceHash[:8]+"..."))
-			} else {
-				changes = append(changes, fmt.Sprintf("source_hash: %s → %s", currentSourceHash[:8]+"...", newSourceHash[:8]+"..."))
-			}
-		}
-
-		if !needsUpdate {
-			color.New(color.FgGreen).Printf("  ✓ %s/%s/%s - Already correct\n",
-				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName())
-			skippedCount++
-			continue
-		}
-
-		// Update the metadata
-		deployment.Entry.Metadata.ContractPath = newContractPath
-		if newSourceHash != "" {
-			deployment.Entry.Metadata.SourceHash = newSourceHash
-		}
-
-		// Save the updated deployment
-		chainIDUint, err := strconv.ParseUint(deployment.ChainID, 10, 64)
-		if err != nil {
-			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - Invalid chain ID: %s\n",
-				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(), deployment.ChainID)
-			errorCount++
-			continue
-		}
-
-		err = registryManager.UpdateDeployment(chainIDUint, deployment.Entry)
-		if err != nil {
-			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - Failed to save: %v\n",
-				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(), err)
-			errorCount++
-			continue
-		}
-
-		color.New(color.FgCyan).Printf("  → %s/%s/%s - Updated: %s\n",
-			deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(),
-			strings.Join(changes, ", "))
-		fixedCount++
-	}
-
-	fmt.Printf("\n" + strings.Repeat("=", 50) + "\n")
-	color.New(color.FgGreen, color.Bold).Printf("✓ Fixed: %d\n", fixedCount)
-	color.New(color.FgYellow, color.Bold).Printf("⚪ Skipped (already correct): %d\n", skippedCount)
-	if errorCount > 0 {
-		color.New(color.FgRed, color.Bold).Printf("✗ Errors: %d\n", errorCount)
-	}
-
-	if fixedCount > 0 {
-		fmt.Println("\nRegistry has been updated with correct contract paths and source hashes.")
 	}
 
 	return nil

@@ -75,6 +75,16 @@ func DefaultFilter() QueryFilter {
 	}
 }
 
+// DefaultFilter returns a filter that includes only deployable contracts (no libs, interfaces, or abstract)
+func ProjectFilter() QueryFilter {
+	return QueryFilter{
+		IncludeLibraries: false,
+		IncludeAbstract:  false,
+		IncludeInterface: false,
+		PathPattern:      "^src/.*$",
+	}
+}
+
 // AllFilter returns a filter that includes everything
 func AllFilter() QueryFilter {
 	return QueryFilter{
@@ -108,23 +118,9 @@ func (i *Indexer) getLibraryPaths() []string {
 
 	// Load foundry config to get remappings
 	foundryManager := config.NewFoundryManager(i.projectRoot)
-	remappings, err := foundryManager.GetRemappings("default")
-	if err != nil {
-		// If we can't load remappings, fall back to lib/ directory
-		libPath := filepath.Join(i.projectRoot, "lib")
-		if _, err := os.Stat(libPath); err == nil {
-			return []string{libPath}
-		}
-		return paths
-	}
-
+	remappings := foundryManager.GetRemappings()
 	// Parse remappings to find library paths
-	for _, remapping := range remappings {
-		_, path, err := config.ParseRemapping(remapping)
-		if err != nil {
-			continue
-		}
-
+	for _, path := range remappings {
 		// Convert to absolute path
 		absPath := filepath.Join(i.projectRoot, path)
 
@@ -141,29 +137,27 @@ func (i *Indexer) getLibraryPaths() []string {
 		}
 	}
 
-	// Also check for node_modules if not already included
-	nodeModulesPath := filepath.Join(i.projectRoot, "node_modules")
-	if _, err := os.Stat(nodeModulesPath); err == nil && !seen[nodeModulesPath] {
-		// Only add specific directories from node_modules that are in remappings
-		for _, remapping := range remappings {
-			_, path, err := config.ParseRemapping(remapping)
-			if err != nil {
-				continue
+	normalizedPaths := make([]string, 0)
+	for _, path := range paths {
+		skip := false
+		for i, normalizedPath := range normalizedPaths {
+			if strings.HasPrefix(path, normalizedPath) {
+				skip = true
+			} else if strings.HasPrefix(normalizedPath, path) {
+				normalizedPaths[i] = path
+				skip = true
 			}
 
-			if strings.HasPrefix(path, "node_modules/") {
-				modulePath := filepath.Join(i.projectRoot, path)
-				if info, err := os.Stat(modulePath); err == nil && info.IsDir() {
-					if !seen[modulePath] {
-						seen[modulePath] = true
-						paths = append(paths, modulePath)
-					}
-				}
+			if skip {
+				break
 			}
+		}
+		if !skip {
+			normalizedPaths = append(normalizedPaths, path)
 		}
 	}
 
-	return paths
+	return normalizedPaths
 }
 
 // Index discovers all contracts and artifacts
@@ -343,6 +337,10 @@ func (i *Indexer) indexArtifacts() error {
 			return nil // Skip errors
 		}
 
+		if strings.HasPrefix(path, "out/build-info") {
+			return nil
+		}
+
 		// Look for .json files that aren't .dbg.json
 		if !d.IsDir() && strings.HasSuffix(path, ".json") && !strings.HasSuffix(path, ".dbg.json") {
 			if err := i.processArtifact(path); err != nil {
@@ -378,6 +376,7 @@ func (i *Indexer) processArtifact(artifactPath string) error {
 		if contract, exists := i.contracts[key]; exists {
 			relPath, _ := filepath.Rel(i.projectRoot, artifactPath)
 			contract.ArtifactPath = relPath
+			contract.Artifact = &artifact
 			continue
 		}
 
@@ -586,7 +585,7 @@ func (c *ContractInfo) GetSourceHash() string {
 	if c.Artifact == nil {
 		return ""
 	}
-	
+
 	// For now, return a simple hash of the contract path and name
 	// In the future, this could be a more sophisticated hash of the actual source code
 	return fmt.Sprintf("%s:%s", c.Path, c.Name)

@@ -1,8 +1,13 @@
 package deployment
 
 import (
+	"fmt"
+	"path/filepath"
+
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/forge"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
@@ -15,56 +20,84 @@ const (
 	TypeLibrary   Type = "library"
 )
 
-// Context holds all deployment configuration
-type Context struct {
-	Type                Type
+type DeploymentParams struct {
+	DeploymentType      Type
 	ContractQuery       string
-	ContractInfo        *contracts.ContractInfo
-	ProxyName           string
-	ImplementationName  string
-	ImplementationLabel string
+	ImplementationQuery string
 	Env                 string
 	Label               string
+	NetworkName         string
 	Predict             bool
 	Debug               bool
-	NetworkName         string
-	NetworkInfo         *network.NetworkInfo
-	EnvVars             map[string]string
-	ScriptPath          string
-	Deployment          *types.DeploymentResult
+}
+
+// DeploymentContext holds all deployment configuration
+type DeploymentContext struct {
+	// Config
+	Params      DeploymentParams
+	projectRoot string
+	// Services
+	generator       *contracts.Generator
+	registryManager *registry.Manager
+	forge           *forge.Forge
+	// Deployment
+	ScriptPath   string
+	envVars      map[string]string
+	contractInfo *contracts.ContractInfo
+	networkInfo  *network.NetworkInfo
+	// Result
+	Deployment *types.DeploymentResult
 }
 
 // NewContext creates a new deployment context
-func NewContext(deployType Type) *Context {
-	return &Context{
-		Type:    deployType,
-		EnvVars: make(map[string]string),
+func NewContext(params DeploymentParams) (*DeploymentContext, error) {
+	ctx := &DeploymentContext{
+		Params:      params,
+		envVars:     make(map[string]string),
+		projectRoot: ".",
 	}
+
+	registryPath := filepath.Join(".", "deployments.json")
+	registryManager, err := registry.NewManager(registryPath)
+	if err != nil {
+		return nil, err
+	}
+	ctx.registryManager = registryManager
+
+	generator := contracts.NewGenerator(".")
+	ctx.generator = generator
+
+	networkResolver := network.NewResolver(".")
+	networkInfo, err := networkResolver.ResolveNetwork(ctx.Params.NetworkName)
+	if err != nil {
+		return nil, err
+	}
+	ctx.networkInfo = networkInfo
+
+	forgeExecutor := forge.NewForge(".")
+	ctx.forge = forgeExecutor
+
+	return ctx, nil
 }
 
 // GetIdentifier returns the deployment identifier based on type
-func (ctx *Context) GetIdentifier() string {
-	switch ctx.Type {
+func (ctx *DeploymentContext) GetShortID() string {
+	var identifier string
+	switch ctx.Params.DeploymentType {
 	case TypeProxy:
-		return ctx.ProxyName
-	case TypeLibrary:
-		return ctx.ContractInfo.Name
+		identifier = ctx.contractInfo.Name + "Proxy"
 	default:
-		return ctx.ContractInfo.Name
-	}
-}
-
-// GetFullIdentifier returns the full deployment identifier including environment and label
-func (ctx *Context) GetFullIdentifier() string {
-	identifier := ctx.GetIdentifier()
-
-	if ctx.Type != TypeLibrary && ctx.Env != "" {
-		identifier = ctx.Env + "/" + identifier
+		identifier = ctx.contractInfo.Name
 	}
 
-	if ctx.Label != "" {
-		identifier += ":" + ctx.Label
+	if ctx.Params.Label != "" {
+		identifier += ":" + ctx.Params.Label
 	}
 
 	return identifier
+}
+
+// GetFullIdentifier returns the full deployment identifier including environment and label
+func (ctx *DeploymentContext) GetFQID() string {
+	return fmt.Sprintf("%d/%s/%s:%s", ctx.networkInfo.ChainID(), ctx.Params.Env, ctx.contractInfo.Path, ctx.GetShortID())
 }

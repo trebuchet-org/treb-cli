@@ -4,17 +4,20 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/broadcast"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
 )
 
 type DeploymentResult struct {
+	FQID            string         `json:"fqid"` // Fully qualified identifier
+	ShortID         string         `json:"sid"`  // Short identifier
 	Address         common.Address `json:"address"`
 	TxHash          common.Hash    `json:"transaction_hash"`
 	BlockNumber     uint64         `json:"block_number"`
 	BroadcastFile   string         `json:"broadcast_file"`
-	Salt            [32]byte       `json:"salt"`           // Keep as bytes for internal use
-	InitCodeHash    [32]byte       `json:"init_code_hash"` // Keep as bytes for internal use
+	Salt            string         `json:"salt"`           // Keep as bytes for internal use
+	InitCodeHash    string         `json:"init_code_hash"` // Keep as bytes for internal use
 	AlreadyDeployed bool           `json:"already_deployed"`
 
 	// New deployment type information
@@ -36,18 +39,20 @@ type DeploymentResult struct {
 	// Metadata
 	Metadata     *ContractMetadata       `json:"metadata,omitempty"`
 	ContractInfo *contracts.ContractInfo `json:"contract_info,omitempty"`
-	
+
 	// Broadcast file (linked directly, not parsed into other fields)
-	BroadcastData interface{} `json:"broadcast_data,omitempty"` // Will hold *broadcast.BroadcastFile
+	BroadcastData *broadcast.BroadcastFile `json:"broadcast_data,omitempty"` // Will hold *broadcast.BroadcastFile
 }
 
 type PredictResult struct {
 	Address      common.Address `json:"address"`
-	Salt         [32]byte       `json:"salt"`
-	InitCodeHash [32]byte       `json:"init_code_hash"`
+	Salt         string         `json:"salt"`
+	InitCodeHash string         `json:"init_code_hash"`
 }
 
 type DeploymentEntry struct {
+	FQID            string         `json:"fqid"` // Fully qualified identifier
+	ShortID         string         `json:"sid"`  // Short identifier
 	Address         common.Address `json:"address"`
 	ContractName    string         `json:"contract_name"`
 	Environment     string         `json:"environment"`
@@ -120,4 +125,22 @@ func (d *DeploymentEntry) GetDisplayName() string {
 		return d.ContractName + ":" + d.Label
 	}
 	return d.ContractName
+}
+
+func (d *DeploymentEntry) GetIdentifier() string {
+	switch d.Type {
+	case "proxy":
+		return d.TargetContract + "Proxy"
+	case "library":
+		return d.ContractName
+	}
+
+	if d.Label != "" {
+		return d.ContractName + ":" + d.Label
+	}
+	return d.ContractName
+}
+
+func (d *DeploymentEntry) GetFullIdentifier(networkName string) string {
+	return d.Environment + "/" + networkName + "/" + d.GetIdentifier()
 }

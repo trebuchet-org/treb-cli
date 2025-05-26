@@ -2,11 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"path/filepath"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
-	"github.com/trebuchet-org/treb-cli/cli/internal/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/deployment"
 )
@@ -44,15 +41,20 @@ Examples:
 	Args:    cobra.ExactArgs(1),
 	Aliases: []string{"singleton"},
 	Run: func(cmd *cobra.Command, args []string) {
-		ctx := deployment.NewContext(deployment.TypeSingleton)
-		ctx.ContractQuery = args[0]
-		ctx.Env = env
-		ctx.Label = label
-		ctx.Predict = predict
-		ctx.Debug = debug
-		ctx.NetworkName = networkName
+		ctx, err := deployment.NewContext(deployment.DeploymentParams{
+			DeploymentType: deployment.TypeSingleton,
+			ContractQuery:  args[0],
+			Env:            env,
+			Label:          label,
+			Predict:        predict,
+			Debug:          debug,
+			NetworkName:    networkName,
+		})
+		if err != nil {
+			checkError(err)
+		}
 
-		if err := runDeployment(ctx); err != nil {
+		if err = runDeployment(ctx); err != nil {
 			checkError(err)
 		}
 	},
@@ -69,18 +71,20 @@ Examples:
   treb deploy proxy Token --impl-label v1`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		ctx := deployment.NewContext(deployment.TypeProxy)
-		ctx.ImplementationName = args[0]
-		ctx.ProxyName = args[0] + "Proxy"
-		ctx.ImplementationLabel = implementationLabel
-		ctx.Env = env
-		ctx.Label = label
-		ctx.Predict = predict
-		ctx.Debug = debug
-		ctx.NetworkName = networkName
-
-		if err := runDeployment(ctx); err != nil {
+		if ctx, err := deployment.NewContext(deployment.DeploymentParams{
+			DeploymentType: deployment.TypeProxy,
+			ContractQuery:  args[0],
+			Env:            env,
+			Label:          label,
+			Predict:        predict,
+			Debug:          debug,
+			NetworkName:    networkName,
+		}); err != nil {
 			checkError(err)
+		} else {
+			if err := runDeployment(ctx); err != nil {
+				checkError(err)
+			}
 		}
 	},
 }
@@ -96,14 +100,19 @@ Examples:
   treb deploy library StringUtils --network mainnet`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		ctx := deployment.NewContext(deployment.TypeLibrary)
-		ctx.ContractQuery = args[0]
-		ctx.Predict = predict
-		ctx.Debug = debug
-		ctx.NetworkName = networkName
-
-		if err := runDeployment(ctx); err != nil {
+		if ctx, err := deployment.NewContext(deployment.DeploymentParams{
+			DeploymentType: deployment.TypeLibrary,
+			ContractQuery:  args[0],
+			Label:          label,
+			Predict:        predict,
+			Debug:          debug,
+			NetworkName:    networkName,
+		}); err != nil {
 			checkError(err)
+		} else {
+			if err := runDeployment(ctx); err != nil {
+				checkError(err)
+			}
 		}
 	},
 }
@@ -158,91 +167,61 @@ func init() {
 	deployProxyCmd.Flags().StringVar(&implementationLabel, "impl-label", "", "Implementation label to use")
 }
 
-func runDeployment(ctx *deployment.Context) error {
-	display := deployment.NewDisplay()
-	validator := deployment.NewValidator(".")
-
+func runDeployment(ctx *deployment.DeploymentContext) error {
 	// Validate deployment config first (non-interactive)
-	s := display.CreateSpinner("Validating deployment configuration...")
-	if err := validator.ValidateDeploymentConfig(ctx); err != nil {
+	s := ctx.CreateSpinner("Validating deployment configuration...")
+	if err := ctx.ValidateDeploymentConfig(); err != nil {
 		s.Stop()
 		return err
 	}
 	s.Stop()
-	display.PrintStep("Validated deployment configuration")
+	ctx.PrintStep("Validated deployment configuration")
 
 	// Build contracts
-	s = display.CreateSpinner("Building contracts...")
-	if err := validator.BuildContracts(); err != nil {
+	s = ctx.CreateSpinner("Building contracts...")
+	if err := ctx.BuildContracts(); err != nil {
 		s.Stop()
 		return err
 	}
 	s.Stop()
-	display.PrintStep("Built contracts")
+	ctx.PrintStep("Built contracts")
 
 	// Now do type-specific validation (may be interactive)
-	var scriptGenerated bool
-	switch ctx.Type {
+	switch ctx.Params.DeploymentType {
 	case deployment.TypeSingleton:
-		generated, err := validator.ValidateContractWithGeneration(ctx)
+		generated, err := ctx.PrepareContractDeployment()
 		if err != nil {
 			return err
 		}
-		scriptGenerated = generated
+		if generated {
+			fmt.Println("\nScript generated, update it if necessary and run again.")
+			return nil
+		}
 	case deployment.TypeProxy:
-		if err := validator.ValidateProxyDeployment(ctx); err != nil {
+		if err := ctx.PrepareProxyDeployment(); err != nil {
 			return err
 		}
 	case deployment.TypeLibrary:
-		if err := validator.ValidateLibrary(ctx); err != nil {
+		if err := ctx.PrepareLibraryDeployment(); err != nil {
 			return err
 		}
-	}
-
-	// If script was generated, restart the deployment
-	if scriptGenerated {
-		fmt.Println("\nScript generated, update it if necessary and run again.")
-		return nil
 	}
 
 	// Show deployment summary after validation
-	display.PrintSummary(ctx)
+	ctx.PrintSummary()
 
 	// Handle prediction mode
-	if ctx.Predict {
-		predictor := deployment.NewPredictor(".")
-
-		// Show script path for debugging
-		if ctx.Debug {
-			fmt.Printf("\n[%s]\n\n", ctx.ScriptPath)
-		}
-
-		s := display.CreateSpinner("Calculating deployment address...")
-		result, err := predictor.Predict(ctx)
-		if err != nil {
-			s.Stop()
-			return err
-		}
-		s.Stop()
-
-		// Check if already deployed
-		registryPath := filepath.Join(".", "deployments.json")
-		registryManager, err := registry.NewManager(registryPath)
-		if err == nil {
-			if existing := predictor.GetExistingAddress(ctx, registryManager); existing != (common.Address{}) {
-				return fmt.Errorf("contract already deployed at %s", existing.Hex())
-			}
-		}
-
-		display.ShowPrediction(ctx, result)
-		return nil
+	if ctx.Params.Predict {
+		return predictDeployment(ctx)
+	} else {
+		return executeDeployment(ctx)
 	}
 
-	// Execute deployment
-	executor := deployment.NewExecutor(".")
+}
 
-	s = display.CreateSpinner("Executing deployment script...")
-	result, err := executor.Execute(ctx)
+func executeDeployment(ctx *deployment.DeploymentContext) error {
+	s := ctx.CreateSpinner("Executing deployment script...")
+	result, err := ctx.Execute()
 	if err != nil {
 		s.Stop()
 		return err
@@ -250,7 +229,25 @@ func runDeployment(ctx *deployment.Context) error {
 	s.Stop()
 
 	// Show success
-	display.ShowSuccess(ctx, result)
+	ctx.ShowSuccess(result)
 
+	return nil
+}
+
+func predictDeployment(ctx *deployment.DeploymentContext) error {
+	// Show script path for debugging
+	if ctx.Params.Debug {
+		fmt.Printf("\n[%s]\n\n", ctx.ScriptPath)
+	}
+
+	s := ctx.CreateSpinner("Calculating deployment address...")
+	result, err := ctx.Predict()
+	if err != nil {
+		s.Stop()
+		return err
+	}
+	s.Stop()
+
+	ctx.ShowPrediction(result)
 	return nil
 }

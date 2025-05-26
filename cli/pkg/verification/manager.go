@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/trebuchet-org/treb-cli/cli/internal/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
@@ -32,7 +32,7 @@ func (vm *Manager) VerifyContract(deployment *registry.DeploymentInfo) error {
 func (vm *Manager) VerifyContractWithDebug(deployment *registry.DeploymentInfo, debug bool) error {
 
 	// Get network info
-	networkInfo, err := vm.networkResolver.ResolveNetworkByChainID(deployment.ChainID)
+	networkInfo, err := vm.networkResolver.ResolveNetwork(deployment.NetworkName)
 	if err != nil {
 		return fmt.Errorf("failed to resolve network: %w", err)
 	}
@@ -293,7 +293,7 @@ func (vm *Manager) VerifyPendingContracts(chainID uint64) error {
 
 // CheckVerificationStatus checks if contracts are verified using forge verify-check
 func (vm *Manager) CheckVerificationStatus(deployment *registry.DeploymentInfo) error {
-	networkInfo, err := vm.networkResolver.ResolveNetworkByChainID(deployment.ChainID)
+	networkInfo, err := vm.networkResolver.ResolveNetwork(deployment.NetworkName)
 	if err != nil {
 		return err
 	}

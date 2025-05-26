@@ -1,7 +1,6 @@
 package registry
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -17,6 +16,7 @@ import (
 type Manager struct {
 	registryPath string
 	registry     *Registry
+	index        map[string]*types.DeploymentEntry
 }
 
 type Registry struct {
@@ -67,6 +67,14 @@ func (m *Manager) load() error {
 		m.registry.Networks = make(map[string]*NetworkEntry)
 	}
 
+	m.index = make(map[string]*types.DeploymentEntry)
+	for _, network := range m.registry.Networks {
+		for _, deployment := range network.Deployments {
+			fmt.Printf("recording deployment: %+v\n", deployment.FQID)
+			m.index[deployment.FQID] = deployment
+		}
+	}
+
 	return nil
 }
 
@@ -104,12 +112,14 @@ func (m *Manager) RecordDeployment(contractInfo *contracts.ContractInfo, env str
 	}
 
 	entry := &types.DeploymentEntry{
+		FQID:         result.FQID,
+		ShortID:      result.ShortID,
 		Address:      result.Address,
 		ContractName: contractInfo.Name,
 		Environment:  env,
-		Type:         result.DeploymentType,                      // Now comes from structured output
-		Salt:         hex.EncodeToString(result.Salt[:]),         // Convert to hex string
-		InitCodeHash: hex.EncodeToString(result.InitCodeHash[:]), // Convert to hex string
+		Type:         result.DeploymentType, // Now comes from structured output
+		Salt:         result.Salt,
+		InitCodeHash: result.InitCodeHash,
 
 		// Constructor arguments for verification
 		ConstructorArgs: result.ConstructorArgs,
@@ -164,8 +174,8 @@ func (m *Manager) RecordLibraryDeployment(contractInfo *contracts.ContractInfo, 
 		ContractName: contractInfo.Name,
 		Environment:  "global", // Libraries are global
 		Type:         "library",
-		Salt:         hex.EncodeToString(result.Salt[:]),
-		InitCodeHash: hex.EncodeToString(result.InitCodeHash[:]),
+		Salt:         result.Salt,
+		InitCodeHash: result.InitCodeHash,
 
 		// No constructor args for libraries typically
 		ConstructorArgs: result.ConstructorArgs,
@@ -210,24 +220,8 @@ func (m *Manager) GetAllLibraries() map[string]*types.DeploymentEntry {
 	return m.registry.Libraries
 }
 
-func (m *Manager) GetDeployment(contract, env string, chainID uint64) *types.DeploymentEntry {
-	chainIDStr := fmt.Sprintf("%d", chainID)
-
-	// Default environment to "default" if not provided
-	if env == "" {
-		env = "default"
-	}
-
-	if network := m.registry.Networks[chainIDStr]; network != nil {
-		// Search through deployments to find matching contract and env
-		for _, deployment := range network.Deployments {
-			if deployment.ContractName == contract && deployment.Environment == env {
-				return deployment
-			}
-		}
-	}
-
-	return nil
+func (m *Manager) GetDeployment(identifier string) *types.DeploymentEntry {
+	return m.index[identifier]
 }
 
 // GetDeploymentWithLabel gets a deployment by contract, env, and label

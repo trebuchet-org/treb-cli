@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -95,7 +96,7 @@ func (fm *FoundryManager) AddLibrary(profile, libraryPath, libraryName, address 
 	// Look for the profile section
 	profilePattern := fmt.Sprintf(`\[profile\.%s\]`, regexp.QuoteMeta(profile))
 	profileRegex := regexp.MustCompile(profilePattern)
-	
+
 	profileMatch := profileRegex.FindStringIndex(fileContent)
 	if profileMatch == nil {
 		// Profile doesn't exist, need to add it at the end
@@ -109,7 +110,7 @@ func (fm *FoundryManager) AddLibrary(profile, libraryPath, libraryName, address 
 	// Find the libraries array within this profile
 	// Start searching from the profile position
 	searchStart := profileMatch[1]
-	
+
 	// Find the next profile section or end of file
 	nextProfileRegex := regexp.MustCompile(`\n\[`)
 	nextProfileMatch := nextProfileRegex.FindStringIndex(fileContent[searchStart:])
@@ -117,26 +118,26 @@ func (fm *FoundryManager) AddLibrary(profile, libraryPath, libraryName, address 
 	if nextProfileMatch != nil {
 		searchEnd = searchStart + nextProfileMatch[0]
 	}
-	
+
 	profileSection := fileContent[searchStart:searchEnd]
-	
+
 	// Look for existing libraries array
 	librariesRegex := regexp.MustCompile(`(?m)^libraries\s*=\s*\[([^\]]*)\]`)
 	librariesMatch := librariesRegex.FindStringSubmatchIndex(profileSection)
-	
+
 	if librariesMatch != nil {
 		// Libraries array exists, update it
 		arrayStart := searchStart + librariesMatch[2]
 		arrayEnd := searchStart + librariesMatch[3]
 		currentLibraries := strings.TrimSpace(fileContent[arrayStart:arrayEnd])
-		
+
 		// Check if library already exists
 		if strings.Contains(currentLibraries, ":"+libraryName+":") {
 			// Replace existing library
 			libraryPattern := fmt.Sprintf(`"[^"]*:%s:[^"]*"`, regexp.QuoteMeta(libraryName))
 			libraryRegex := regexp.MustCompile(libraryPattern)
 			updatedLibraries := libraryRegex.ReplaceAllString(currentLibraries, libraryEntry)
-			
+
 			fileContent = fileContent[:arrayStart] + updatedLibraries + fileContent[arrayEnd:]
 		} else {
 			// Add new library
@@ -155,7 +156,7 @@ func (fm *FoundryManager) AddLibrary(profile, libraryPath, libraryName, address 
 		for insertPos < len(fileContent) && fileContent[insertPos] == '\n' {
 			insertPos++
 		}
-		
+
 		librariesArray := fmt.Sprintf("\nlibraries = [\n    %s\n]\n", libraryEntry)
 		fileContent = fileContent[:insertPos] + librariesArray + fileContent[insertPos:]
 	}
@@ -173,43 +174,69 @@ func (fm *FoundryManager) UpdateLibraryAddress(profile, libraryName, newAddress 
 	}
 
 	fileContent := string(content)
-	
+
 	// Pattern to find the library entry
 	libraryPattern := fmt.Sprintf(`"([^"]*:%s:)[^"]*"`, regexp.QuoteMeta(libraryName))
 	libraryRegex := regexp.MustCompile(libraryPattern)
-	
+
 	// Check if library exists
 	if !libraryRegex.MatchString(fileContent) {
 		return fmt.Errorf("library '%s' not found", libraryName)
 	}
-	
+
 	// Replace with new address
 	replacement := fmt.Sprintf("\"${1}%s\"", newAddress)
 	updatedContent := libraryRegex.ReplaceAllString(fileContent, replacement)
-	
+
 	// Write back to file
 	return os.WriteFile(fm.configPath, []byte(updatedContent), 0644)
 }
 
-// GetRemappings returns all remappings for a profile
-func (fm *FoundryManager) GetRemappings(profile string) ([]string, error) {
-	config, err := fm.Load()
-	if err != nil {
-		return nil, err
-	}
+// getForgeRemappings gets remappings from forge remappings command
+func (fm *FoundryManager) GetRemappings() map[string]string {
+	remappings := make(map[string]string)
 
-	if profileConfig, exists := config.Profile[profile]; exists {
-		return profileConfig.Remappings, nil
-	}
+	// Try to run forge remappings command
+	cmd := exec.Command("forge", "remappings")
+	cmd.Dir = fm.projectRoot
+	output, err := cmd.Output()
 
-	// If profile doesn't exist, check default
-	if profile != "default" {
-		if defaultProfile, exists := config.Profile["default"]; exists {
-			return defaultProfile.Remappings, nil
+	if err == nil {
+		// Parse forge remappings output
+		lines := strings.Split(string(output), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+			parts := strings.SplitN(line, "=", 2)
+			if len(parts) == 2 {
+				from := strings.TrimSpace(parts[0])
+				to := strings.TrimSpace(parts[1])
+				remappings[from] = to
+			}
+		}
+	} else {
+		// Fallback to reading remappings.txt if forge command fails
+		remappingsFile := filepath.Join(fm.projectRoot, "remappings.txt")
+		if content, err := os.ReadFile(remappingsFile); err == nil {
+			lines := strings.Split(string(content), "\n")
+			for _, line := range lines {
+				line = strings.TrimSpace(line)
+				if line == "" || strings.HasPrefix(line, "#") {
+					continue
+				}
+				parts := strings.SplitN(line, "=", 2)
+				if len(parts) == 2 {
+					from := strings.TrimSpace(parts[0])
+					to := strings.TrimSpace(parts[1])
+					remappings[from] = to
+				}
+			}
 		}
 	}
 
-	return nil, nil
+	return remappings
 }
 
 // ParseRemapping parses a remapping string and returns the mapping name and path
@@ -246,24 +273,24 @@ func (fm *FoundryManager) RemoveLibrary(profile, libraryName string) error {
 	}
 
 	fileContent := string(content)
-	
+
 	// Pattern to find the library entry (including potential comma and whitespace)
 	libraryPattern := fmt.Sprintf(`\s*,?\s*"[^"]*:%s:[^"]*",?\s*`, regexp.QuoteMeta(libraryName))
 	libraryRegex := regexp.MustCompile(libraryPattern)
-	
+
 	// Check if library exists
 	if !libraryRegex.MatchString(fileContent) {
 		return fmt.Errorf("library '%s' not found", libraryName)
 	}
-	
+
 	// Remove the library entry
 	updatedContent := libraryRegex.ReplaceAllString(fileContent, "")
-	
+
 	// Clean up any double commas or trailing commas
 	updatedContent = regexp.MustCompile(`,\s*,`).ReplaceAllString(updatedContent, ",")
 	updatedContent = regexp.MustCompile(`\[\s*,`).ReplaceAllString(updatedContent, "[")
 	updatedContent = regexp.MustCompile(`,\s*\]`).ReplaceAllString(updatedContent, "]")
-	
+
 	// Write back to file
 	return os.WriteFile(fm.configPath, []byte(updatedContent), 0644)
 }
@@ -301,7 +328,7 @@ func findLibrarySourcePath(projectRoot, libraryName string) (string, error) {
 			if err != nil {
 				return nil // Skip errors
 			}
-			
+
 			if !info.IsDir() && libraryFilePattern.MatchString(info.Name()) {
 				// Make path relative to project root
 				relPath, err := filepath.Rel(projectRoot, path)

@@ -10,50 +10,54 @@ import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
-// Display handles deployment UI output
-type Display struct{}
-
-// NewDisplay creates a new deployment display handler
-func NewDisplay() *Display {
-	return &Display{}
-}
-
 // PrintSummary prints the deployment summary header
-func (d *Display) PrintSummary(ctx *Context) {
+func (d *DeploymentContext) PrintSummary() {
 	// Clear any previous output
 	fmt.Println()
 
 	// Determine action
 	action := "Deploying"
-	if ctx.Predict {
+	if d.Params.Predict {
 		action = "Predicting address for"
 	}
 
 	// Build identifier
-	identifier := ctx.GetFullIdentifier()
+	identifier := d.GetShortID()
 
 	// Print header
 	color.New(color.FgCyan, color.Bold).Printf("%s ", action)
 	color.New(color.FgWhite, color.Bold).Printf("%s ", identifier)
-	if ctx.NetworkInfo != nil {
+	if d.networkInfo != nil {
 		color.New(color.FgCyan).Printf("to ")
-		color.New(color.FgMagenta, color.Bold).Printf("%s\n\n", ctx.NetworkInfo.Name)
+		color.New(color.FgMagenta, color.Bold).Printf("%s\n\n", d.networkInfo.Name)
 	} else {
 		fmt.Println()
 	}
 }
 
+func (d *DeploymentContext) printExistingDeployment(deployment *types.DeploymentEntry) {
+	fmt.Println()
+	color.New(color.FgYellow, color.Bold).Printf("🔄 Deployment Already Exists\n")
+	color.New(color.FgWhite, color.Bold).Printf("Address:      ")
+	color.New(color.FgGreen, color.Bold).Printf("%s\n", deployment.Address.Hex())
+	color.New(color.FgWhite, color.Bold).Printf("Network:      ")
+	color.New(color.FgMagenta).Printf("%s\n", d.networkInfo.Name)
+	color.New(color.FgWhite, color.Bold).Printf("Transaction:  ")
+	color.New(color.FgMagenta).Printf("%s\n", deployment.Deployment.TxHash.Hex())
+	fmt.Println()
+}
+
 // ShowSuccess shows deployment success details
-func (d *Display) ShowSuccess(ctx *Context, result *types.DeploymentResult) {
+func (d *DeploymentContext) ShowSuccess(result *types.DeploymentResult) {
 	fmt.Println()
 	color.New(color.FgGreen, color.Bold).Printf("🚀 Deployment Successful!\n")
 	fmt.Println()
 
 	// Contract info
-	d.printContractInfo(ctx, result)
+	d.printContractInfo(result)
 
 	// Network info
-	d.printNetworkInfo(ctx, result)
+	d.printNetworkInfo(result)
 
 	// Transaction info (if available)
 	if result.TxHash != (common.Hash{}) {
@@ -65,47 +69,41 @@ func (d *Display) ShowSuccess(ctx *Context, result *types.DeploymentResult) {
 		d.printSafeInfo(result)
 	}
 
-	d.printVerificationInfo(ctx, result)
+	d.printVerificationInfo(result)
 
 	fmt.Println()
 }
 
 // ShowPrediction shows predicted deployment address
-func (d *Display) ShowPrediction(ctx *Context, predicted *types.PredictResult) {
+func (d *DeploymentContext) ShowPrediction(predicted *types.PredictResult) {
 	fmt.Println()
 	color.New(color.FgGreen, color.Bold).Printf("🎯 Predicted Deployment Address\n")
 	fmt.Println()
 
 	// Contract info
-	switch ctx.Type {
+	switch d.Params.DeploymentType {
 	case TypeSingleton:
 		color.New(color.FgWhite, color.Bold).Printf("Contract:     ")
-		fmt.Printf("%s/%s", ctx.Env, ctx.ContractInfo.Name)
-		if ctx.Label != "" {
-			color.New(color.FgCyan).Printf(":%s", ctx.Label)
-		}
+		fmt.Printf("%s", d.GetShortID())
 	case TypeProxy:
 		color.New(color.FgWhite, color.Bold).Printf("Proxy:        ")
-		fmt.Printf("%s/%s", ctx.Env, ctx.ProxyName)
-		if ctx.Label != "" {
-			color.New(color.FgCyan).Printf(":%s", ctx.Label)
-		}
+		fmt.Printf("%s", d.GetShortID())
 	case TypeLibrary:
 		color.New(color.FgWhite, color.Bold).Printf("Library:      ")
-		fmt.Printf("%s", ctx.ContractInfo.Name)
+		fmt.Printf("%s", d.contractInfo.Name)
 	}
 	fmt.Println()
 
 	// Network info
 	color.New(color.FgWhite, color.Bold).Printf("Network:      ")
-	color.New(color.FgMagenta).Printf("%s\n", ctx.NetworkInfo.Name)
+	color.New(color.FgMagenta).Printf("%s\n", d.networkInfo.Name)
 
 	// Address
 	color.New(color.FgWhite, color.Bold).Printf("Address:      ")
 	color.New(color.FgGreen, color.Bold).Printf("%s\n", predicted.Address.Hex())
 
 	// Salt (if available)
-	if predicted.Salt != [32]byte{} {
+	if predicted.Salt != "" {
 		color.New(color.FgWhite, color.Bold).Printf("Salt:         ")
 		fmt.Printf("%x\n", predicted.Salt)
 	}
@@ -114,7 +112,7 @@ func (d *Display) ShowPrediction(ctx *Context, predicted *types.PredictResult) {
 }
 
 // CreateSpinner creates a new spinner with the given message
-func (d *Display) CreateSpinner(message string) *spinner.Spinner {
+func (d *DeploymentContext) CreateSpinner(message string) *spinner.Spinner {
 	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
 	s.Suffix = " " + message
 	s.Color("cyan", "bold")
@@ -123,31 +121,24 @@ func (d *Display) CreateSpinner(message string) *spinner.Spinner {
 }
 
 // PrintStep prints a step completion message
-func (d *Display) PrintStep(message string) {
+func (d *DeploymentContext) PrintStep(message string) {
 	color.New(color.FgGreen).Printf("✓ ")
 	fmt.Printf("%s\n", message)
 }
 
 // PrintError prints an error message
-func (d *Display) PrintError(err error) {
+func (d *DeploymentContext) PrintError(err error) {
 	color.New(color.FgRed).Printf("✗ ")
 	fmt.Printf("Error: %v\n", err)
 }
 
 // Helper methods
 
-func (d *Display) printContractInfo(ctx *Context, result *types.DeploymentResult) {
-	switch ctx.Type {
+func (d *DeploymentContext) printContractInfo(result *types.DeploymentResult) {
+	switch d.Params.DeploymentType {
 	case TypeSingleton:
 		color.New(color.FgWhite, color.Bold).Printf("Contract:     ")
-		fmt.Printf("%s", ctx.ContractInfo.Name)
-		if ctx.Env != "" {
-			color.New(color.FgCyan).Printf(" (%s", ctx.Env)
-			if ctx.Label != "" {
-				fmt.Printf(":%s", ctx.Label)
-			}
-			fmt.Printf(")")
-		}
+		fmt.Printf("%s", d.GetShortID())
 		fmt.Println()
 
 		color.New(color.FgWhite, color.Bold).Printf("Address:      ")
@@ -155,14 +146,7 @@ func (d *Display) printContractInfo(ctx *Context, result *types.DeploymentResult
 
 	case TypeProxy:
 		color.New(color.FgWhite, color.Bold).Printf("Proxy:        ")
-		fmt.Printf("%s", ctx.ProxyName)
-		if ctx.Env != "" {
-			color.New(color.FgCyan).Printf(" (%s", ctx.Env)
-			if ctx.Label != "" {
-				fmt.Printf(":%s", ctx.Label)
-			}
-			fmt.Printf(")")
-		}
+		fmt.Printf("%s", d.GetShortID())
 		fmt.Println()
 
 		color.New(color.FgWhite, color.Bold).Printf("Address:      ")
@@ -172,23 +156,23 @@ func (d *Display) printContractInfo(ctx *Context, result *types.DeploymentResult
 
 	case TypeLibrary:
 		color.New(color.FgWhite, color.Bold).Printf("Library:      ")
-		fmt.Printf("%s\n", ctx.ContractInfo.Name)
+		fmt.Printf("%s\n", d.contractInfo.Name)
 
 		color.New(color.FgWhite, color.Bold).Printf("Address:      ")
 		color.New(color.FgGreen, color.Bold).Printf("%s\n", result.Address.Hex())
 	}
 }
 
-func (d *Display) printNetworkInfo(ctx *Context, result *types.DeploymentResult) {
+func (d *DeploymentContext) printNetworkInfo(result *types.DeploymentResult) {
 	color.New(color.FgWhite, color.Bold).Printf("Network:      ")
-	color.New(color.FgMagenta).Printf("%s", ctx.NetworkInfo.Name)
-	if ctx.NetworkInfo.ChainID > 0 {
-		fmt.Printf(" (chain ID: %d)", ctx.NetworkInfo.ChainID)
+	color.New(color.FgMagenta).Printf("%s", d.networkInfo.Name)
+	if d.networkInfo.ChainID() > 0 {
+		fmt.Printf(" (chain ID: %d)", d.networkInfo.ChainID)
 	}
 	fmt.Println()
 }
 
-func (d *Display) printTransactionInfo(result *types.DeploymentResult) {
+func (d *DeploymentContext) printTransactionInfo(result *types.DeploymentResult) {
 	color.New(color.FgWhite, color.Bold).Printf("Transaction:  ")
 	fmt.Printf("%s\n", result.TxHash.Hex())
 
@@ -200,7 +184,7 @@ func (d *Display) printTransactionInfo(result *types.DeploymentResult) {
 	// TODO: Add deployer address when available in result
 }
 
-func (d *Display) printSafeInfo(result *types.DeploymentResult) {
+func (d *DeploymentContext) printSafeInfo(result *types.DeploymentResult) {
 	fmt.Println()
 	color.New(color.FgYellow, color.Bold).Printf("⏳ Pending Safe Execution\n")
 
@@ -214,7 +198,7 @@ func (d *Display) printSafeInfo(result *types.DeploymentResult) {
 	fmt.Printf("3. Run 'treb sync' to update the deployment status\n")
 }
 
-func (d *Display) printVerificationInfo(ctx *Context, result *types.DeploymentResult) {
+func (d *DeploymentContext) printVerificationInfo(result *types.DeploymentResult) {
 	// TODO: Add verification status and explorer URL when available
 	fmt.Println()
 	color.New(color.FgWhite).Printf("Contract deployed. Run 'treb verify' to verify on block explorer.\n")

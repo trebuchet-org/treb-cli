@@ -47,13 +47,13 @@ func SelectContract(matches []*contracts.ContractInfo, prompt string) (*contract
 }
 
 // ResolveContract finds and potentially disambiguates a contract by name or path
-func ResolveContract(nameOrPath string) (*contracts.ContractInfo, error) {
+func ResolveContract(nameOrPath string, filter contracts.QueryFilter) (*contracts.ContractInfo, error) {
 	// Use the global indexer
 	indexer, err := contracts.GetGlobalIndexer(".")
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize contract indexer: %w", err)
 	}
-	
+
 	// First try to get by exact key (path:name format)
 	if strings.Contains(nameOrPath, ":") {
 		if contract, err := indexer.GetContract(nameOrPath); err == nil {
@@ -63,16 +63,9 @@ func ResolveContract(nameOrPath string) (*contracts.ContractInfo, error) {
 			}
 		}
 	}
-	
+
 	// Find matching contracts using deployable filter
-	matches := indexer.FindContractByName(nameOrPath, contracts.DefaultFilter())
-	
-	// If no exact matches, search by pattern
-	if len(matches) == 0 {
-		filter := contracts.DefaultFilter()
-		filter.NamePattern = ".*" + nameOrPath + ".*"
-		matches = indexer.QueryContracts(filter)
-	}
+	matches := indexer.FindContractByName(nameOrPath, filter)
 
 	if len(matches) == 0 {
 		return nil, fmt.Errorf("contract '%s' not found", nameOrPath)
@@ -96,8 +89,8 @@ func formatContractOptions(contracts []*contracts.ContractInfo) []string {
 		if strings.HasPrefix(relPath, "src/") {
 			relPath = strings.TrimPrefix(relPath, "src/")
 		}
-		
-		options[i] = fmt.Sprintf("%s (%s)", 
+
+		options[i] = fmt.Sprintf("%s (%s)",
 			color.New(color.FgWhite, color.Bold).Sprint(contract.Name),
 			color.New(color.FgBlue).Sprint(relPath),
 		)

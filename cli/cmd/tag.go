@@ -5,7 +5,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
-	"github.com/trebuchet-org/treb-cli/cli/internal/registry"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 )
 
 var (
@@ -76,14 +76,14 @@ func showDeploymentTags(deployment *registry.DeploymentInfo) error {
 	labelStyle := color.New(color.FgWhite, color.Bold)
 	addressStyle := color.New(color.FgGreen, color.Bold)
 	tagStyle := color.New(color.FgCyan)
-	
+
 	displayName := deployment.Entry.GetDisplayName()
 	fmt.Println()
 	titleStyle.Printf("Deployment: %s/%s/%s\n", deployment.NetworkName, deployment.Entry.Environment, displayName)
-	
+
 	labelStyle.Print("Address: ")
 	addressStyle.Println(deployment.Address.Hex())
-	
+
 	labelStyle.Print("Tags:    ")
 	if len(deployment.Entry.Tags) == 0 {
 		color.New(color.Faint).Println("No tags")
@@ -97,7 +97,7 @@ func showDeploymentTags(deployment *registry.DeploymentInfo) error {
 		fmt.Println()
 	}
 	fmt.Println()
-	
+
 	return nil
 }
 
@@ -109,25 +109,25 @@ func addDeploymentTag(deployment *registry.DeploymentInfo, tag string, registryM
 			return nil
 		}
 	}
-	
+
 	// Add the tag
 	if err := registryManager.AddTag(deployment.Address, tag); err != nil {
 		return fmt.Errorf("failed to add tag: %w", err)
 	}
-	
+
 	// Save changes
 	if err := registryManager.Save(); err != nil {
 		return fmt.Errorf("failed to save registry: %w", err)
 	}
-	
+
 	// Show success
-	color.New(color.FgGreen).Printf("✅ Added tag '%s' to %s/%s/%s\n", 
-		tag, 
-		deployment.NetworkName, 
-		deployment.Entry.Environment, 
+	color.New(color.FgGreen).Printf("✅ Added tag '%s' to %s/%s/%s\n",
+		tag,
+		deployment.NetworkName,
+		deployment.Entry.Environment,
 		deployment.Entry.GetDisplayName(),
 	)
-	
+
 	// Show all tags
 	fmt.Print("\nCurrent tags: ")
 	tagStyle := color.New(color.FgCyan)
@@ -139,7 +139,7 @@ func addDeploymentTag(deployment *registry.DeploymentInfo, tag string, registryM
 		tagStyle.Print(t)
 	}
 	fmt.Println()
-	
+
 	return nil
 }
 
@@ -152,30 +152,30 @@ func removeDeploymentTag(deployment *registry.DeploymentInfo, tag string, regist
 			break
 		}
 	}
-	
+
 	if !found {
 		color.New(color.FgYellow).Printf("⚠️  Deployment doesn't have tag '%s'\n", tag)
 		return nil
 	}
-	
+
 	// Remove the tag
 	if err := registryManager.RemoveTag(deployment.Address, tag); err != nil {
 		return fmt.Errorf("failed to remove tag: %w", err)
 	}
-	
+
 	// Save changes
 	if err := registryManager.Save(); err != nil {
 		return fmt.Errorf("failed to save registry: %w", err)
 	}
-	
+
 	// Show success
-	color.New(color.FgGreen).Printf("✅ Removed tag '%s' from %s/%s/%s\n", 
-		tag, 
-		deployment.NetworkName, 
-		deployment.Entry.Environment, 
+	color.New(color.FgGreen).Printf("✅ Removed tag '%s' from %s/%s/%s\n",
+		tag,
+		deployment.NetworkName,
+		deployment.Entry.Environment,
 		deployment.Entry.GetDisplayName(),
 	)
-	
+
 	// Show remaining tags
 	fmt.Print("\nRemaining tags: ")
 	if len(deployment.Entry.Tags) == 1 {
@@ -192,6 +192,6 @@ func removeDeploymentTag(deployment *registry.DeploymentInfo, tag string, regist
 		}
 	}
 	fmt.Println()
-	
+
 	return nil
 }
