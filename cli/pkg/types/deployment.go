@@ -1,6 +1,7 @@
 package types
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -8,6 +9,25 @@ import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
 )
+
+type Status string
+
+const (
+	StatusExecuted Status = "EXECUTED"
+	StatusQueued   Status = "PENDING_SAFE"
+	StatusUnknown  Status = "UNKNOWN"
+)
+
+func ParseStatus(status string) (Status, error) {
+	switch status {
+	case "EXECUTED":
+		return StatusExecuted, nil
+	case "PENDING_SAFE":
+		return StatusQueued, nil
+	default:
+		return StatusUnknown, fmt.Errorf("unknown status: %s", status)
+	}
+}
 
 type DeploymentResult struct {
 	FQID            string         `json:"fqid"` // Fully qualified identifier
@@ -27,7 +47,7 @@ type DeploymentResult struct {
 	Tags           []string             `json:"tags,omitempty"`
 	Env            string               `json:"env,omitempty"`
 	NetworkInfo    *network.NetworkInfo `json:"network_info,omitempty"`
-	Status         string               `json:"status"`
+	Status         Status               `json:"status"`
 
 	// Safe deployment information
 	SafeTxHash  common.Hash    `json:"safe_tx_hash,omitempty"`
@@ -94,7 +114,7 @@ type DeploymentInfo struct {
 	BlockNumber   uint64       `json:"block_number,omitempty"`
 	BroadcastFile string       `json:"broadcast_file"`
 	Timestamp     time.Time    `json:"timestamp"`
-	Status        string       `json:"status"` // "deployed", "pending_safe"
+	Status        Status       `json:"status"` // "deployed", "pending_safe"
 	SafeAddress   string       `json:"safe_address,omitempty"`
 	SafeNonce     uint64       `json:"safe_nonce,omitempty"`
 	Deployer      string       `json:"deployer,omitempty"` // Address that deployed the contract

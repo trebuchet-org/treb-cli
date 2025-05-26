@@ -44,6 +44,12 @@ make dev-setup
 
 # Clean build artifacts
 make clean
+
+# Watch for changes and rebuild automatically
+make watch
+
+# Install Foundry if not present
+make install-forge
 ```
 
 ### Foundry Library (treb-sol)
@@ -56,6 +62,18 @@ cd treb-sol && forge test
 
 # Test address prediction
 cd treb-sol && forge script script/PredictAddress.s.sol --sig "predict(string,string)" "MyContract" "staging"
+```
+
+### Testing Individual Components
+```bash
+# Run specific Go test
+go test -v ./cli/pkg/safe/
+
+# Run Foundry tests with verbose output
+cd treb-sol && forge test -vvv
+
+# Test deployment locally with fixture project
+cd fixture && treb deploy Counter --network local
 ```
 
 ### Project Setup Workflow
@@ -146,3 +164,44 @@ treb deploy Counter --label v2
 # Deploy with version tag (metadata only)
 treb deploy Counter --tag 1.0.0
 ```
+
+## CLI Commands
+
+### Main Commands
+- `treb init <project-name>`: Initialize a new treb project with deployment configuration
+- `treb deploy <contract>`: Deploy a contract using its deployment script
+- `treb list`: List all deployments in the registry
+- `treb show <contract>`: Show detailed deployment information for a contract
+- `treb verify <contract>`: Verify deployed contracts on block explorers
+- `treb generate <contract>`: Generate deployment script for a contract
+
+### Management Commands  
+- `treb tag <contract> <tag>`: Tag a deployment with a version or label
+- `treb sync`: Sync deployment registry with on-chain state
+- `treb config`: Manage deployment configuration
+
+### Additional Commands
+- `treb debug <command>`: Debug deployment issues
+- `treb version`: Show treb version information
+
+## Important File Locations
+
+### Go CLI Structure
+- `cli/cmd/`: Command implementations (deploy.go, init.go, etc.)
+- `cli/pkg/deployment/`: Core deployment logic and execution
+- `cli/pkg/forge/`: Forge command execution and integration
+- `cli/pkg/registry/`: Deployment registry management
+- `cli/pkg/broadcast/`: Broadcast file parsing
+- `cli/pkg/verification/`: Contract verification logic
+- `cli/pkg/safe/`: Safe multisig integration
+
+### Solidity Base Contracts (treb-sol/)
+- `src/Deployment.sol`: Base deployment contract with structured logging
+- `src/ProxyDeployment.sol`: Proxy deployment patterns
+- `src/LibraryDeployment.sol`: Library deployment patterns
+- `src/internal/`: Internal utilities and registry contracts
+
+### Configuration Files
+- `foundry.toml`: Foundry configuration with deploy profiles
+- `deployments.json`: Deployment registry tracking all deployments
+- `.env`: Environment variables for RPC URLs, keys, etc.

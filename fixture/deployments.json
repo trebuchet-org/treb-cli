@@ -37,6 +37,76 @@
     "44787": {
       "name": "celo-alfajores",
       "deployments": {
+        "0x18a02f759081e07aea91982adbb31096e32a22b0": {
+          "fqid": "44787/default/src/test-dir/Counter.sol:Counter:V10",
+          "sid": "Counter:V10",
+          "address": "0x18a02f759081e07aea91982adbb31096e32a22b0",
+          "contract_name": "Counter",
+          "environment": "default",
+          "type": "singleton",
+          "salt": "0xf1f30b69a9359c3e7c28eb76391835472e105f5c0049bc7c0e6e8f0219d72577",
+          "init_code_hash": "0x115a45b6ae30302929da58321cc56b3c4314d96df28ceb1d19e783a465a0af7e",
+          "constructor_args": "0x",
+          "label": "V10",
+          "verification": {
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0x18A02f759081E07AeA91982aDbb31096e32a22B0#code",
+            "reason": "etherscan: etherscan verification failed: error: invalid value 'src/test-dir/Counter.sol' for '[CONTRACT]': contract source info format must be `\u003cpath\u003e:\u003ccontractname\u003e` or `\u003ccontractname\u003e`\n\nFor more information, try '--help'.\n; sourcify: sourcify verification failed: error: invalid value 'src/test-dir/Counter.sol' for '[CONTRACT]': contract source info format must be `\u003cpath\u003e:\u003ccontractname\u003e` or `\u003ccontractname\u003e`\n\nFor more information, try '--help'.\n",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0x18A02f759081E07AeA91982aDbb31096e32a22B0#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x18A02f759081E07AeA91982aDbb31096e32a22B0"
+              }
+            }
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "broadcast_file": "",
+            "timestamp": "2025-05-26T12:57:16.626478+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "b85278adae29a20b2e24f8d548e14c81cb6126f8",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/test-dir/Counter.sol:Counter",
+            "contract_path": "src/test-dir/Counter.sol",
+            "script_path": "script/deploy/test-dir/DeployCounter.s.sol"
+          }
+        },
+        "0x212392e75bd54a50ca5cea7bfec7c7177160b0e5": {
+          "fqid": "44787/default/src/test-dir/Counter.sol:Counter:V9",
+          "sid": "Counter:V9",
+          "address": "0x212392e75bd54a50ca5cea7bfec7c7177160b0e5",
+          "contract_name": "Counter",
+          "environment": "default",
+          "type": "singleton",
+          "salt": "0xf1f30b69a9359c3e7c28eb76391835472e105f5c00bdbba7e8dd05c4aca417be",
+          "init_code_hash": "0x115a45b6ae30302929da58321cc56b3c4314d96df28ceb1d19e783a465a0af7e",
+          "constructor_args": "0x",
+          "label": "V9",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "broadcast_file": "",
+            "timestamp": "2025-05-26T12:56:46.65249+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "b85278adae29a20b2e24f8d548e14c81cb6126f8",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/test-dir/Counter.sol:Counter",
+            "contract_path": "src/test-dir/Counter.sol",
+            "script_path": "script/deploy/test-dir/DeployCounter.s.sol"
+          }
+        },
         "0x220e155e37519387216f6276b9966938cb48a147": {
           "fqid": "44787/default/src/test-dir/Counter.sol:Counter:V8",
           "sid": "Counter:V8",
@@ -60,6 +130,47 @@
           },
           "metadata": {
             "source_commit": "e413d45db86bfcdc3835dacb4875b00134666b64",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/test-dir/Counter.sol:Counter",
+            "contract_path": "src/test-dir/Counter.sol",
+            "script_path": "script/deploy/test-dir/DeployCounter.s.sol"
+          }
+        },
+        "0x580e253f624f3f07f3b8a6ea930a50a00cb285cf": {
+          "fqid": "44787/default/src/test-dir/Counter.sol:Counter:V11",
+          "sid": "Counter:V11",
+          "address": "0x580e253f624f3f07f3b8a6ea930a50a00cb285cf",
+          "contract_name": "Counter",
+          "environment": "default",
+          "type": "singleton",
+          "salt": "0xf1f30b69a9359c3e7c28eb76391835472e105f5c00e4028c7f6d8aea3e0746ee",
+          "init_code_hash": "0x115a45b6ae30302929da58321cc56b3c4314d96df28ceb1d19e783a465a0af7e",
+          "constructor_args": "0x",
+          "label": "V11",
+          "verification": {
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0x580e253F624f3f07f3b8a6eA930A50a00cb285cf#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0x580e253F624f3f07f3b8a6eA930A50a00cb285cf#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x580e253F624f3f07f3b8a6eA930A50a00cb285cf"
+              }
+            }
+          },
+          "deployment": {
+            "tx_hash": "0xe5cf3b8ee87d676dcef02dce90f43030e30171ea1cee418ade1deb961be4b1f8",
+            "block_number": 47302003,
+            "broadcast_file": "",
+            "timestamp": "2025-05-26T13:02:05.160929+02:00",
+            "status": "deployed",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "b85278adae29a20b2e24f8d548e14c81cb6126f8",
             "compiler": "0.8.27+commit.40a35a09",
             "source_hash": "src/test-dir/Counter.sol:Counter",
             "contract_path": "src/test-dir/Counter.sol",

@@ -97,16 +97,11 @@ func (vm *Manager) VerifyContractWithDebug(deployment *registry.DeploymentInfo, 
 	return nil
 }
 
-// verifyOnEtherscan verifies contract on Etherscan-compatible explorers
-func (vm *Manager) verifyOnEtherscan(deployment *registry.DeploymentInfo, networkInfo *network.NetworkInfo) error {
-	return vm.verifyOnEtherscanWithDebug(deployment, networkInfo, false)
-}
-
 func (vm *Manager) verifyOnEtherscanWithDebug(deployment *registry.DeploymentInfo, networkInfo *network.NetworkInfo, debug bool) error {
 	cmd := []string{
 		"forge", "verify-contract",
 		deployment.Address.Hex(),
-		deployment.Entry.Metadata.ContractPath,
+		fmt.Sprintf("%s:%s", deployment.Entry.Metadata.ContractPath, deployment.Entry.ContractName),
 		"--chain", networkInfo.Name,
 	}
 
@@ -143,17 +138,12 @@ func (vm *Manager) verifyOnEtherscanWithDebug(deployment *registry.DeploymentInf
 	return nil
 }
 
-// verifyOnSourceify verifies contract on Sourcify
-func (vm *Manager) verifyOnSourceify(deployment *registry.DeploymentInfo, networkInfo *network.NetworkInfo) error {
-	return vm.verifyOnSourceifyWithDebug(deployment, networkInfo, false)
-}
-
 func (vm *Manager) verifyOnSourceifyWithDebug(deployment *registry.DeploymentInfo, networkInfo *network.NetworkInfo, debug bool) error {
 	// Build forge verify-contract command for Sourcify
 	cmd := []string{
 		"forge", "verify-contract",
 		deployment.Address.Hex(),
-		deployment.Entry.Metadata.ContractPath,
+		fmt.Sprintf("%s:%s", deployment.Entry.Metadata.ContractPath, deployment.Entry.ContractName),
 		"--chain", networkInfo.Name,
 		"--verifier", "sourcify",
 	}

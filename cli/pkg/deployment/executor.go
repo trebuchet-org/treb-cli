@@ -33,7 +33,7 @@ func (d *DeploymentContext) Execute() (*types.DeploymentResult, error) {
 	d.Deployment = d.buildDeploymentResult(results)
 
 	// Parse broadcast file if not predicting
-	if !d.Params.Predict && d.Deployment.Status == "deployed" {
+	if !d.Params.Predict && d.Deployment.Status == types.StatusExecuted {
 		if broadcastData, err := d.loadBroadcastFile(); err != nil {
 			// Log warning but don't fail
 			fmt.Printf("Warning: failed to load broadcast file: %v\n", err)

@@ -9,19 +9,19 @@ import (
 )
 
 type DeploymentOutput struct {
-	Address               string `json:"address"`
-	PredictedAddress      string `json:"predicted_address"`
-	Salt                  string `json:"salt"`
-	InitCodeHash          string `json:"init_code_hash"`
-	Status                string `json:"status"`
-	DeploymentType        string `json:"deployment_type"`
-	Strategy              string `json:"strategy"`
-	BlockNumber           string `json:"block_number"`
-	ConstructorArgs       string `json:"constructor_args"`
-	SafeTxHash            string `json:"safe_tx_hash"`
-	ImplementationAddress string `json:"implementation_address"`
-	LibraryAddress        string `json:"library_address"`
-	ProxyInitializer      string `json:"proxy_initializer"`
+	Address               string       `json:"address"`
+	PredictedAddress      string       `json:"predicted_address"`
+	Salt                  string       `json:"salt"`
+	InitCodeHash          string       `json:"init_code_hash"`
+	Status                types.Status `json:"status"`
+	DeploymentType        string       `json:"deployment_type"`
+	Strategy              string       `json:"strategy"`
+	BlockNumber           string       `json:"block_number"`
+	ConstructorArgs       string       `json:"constructor_args"`
+	SafeTxHash            string       `json:"safe_tx_hash"`
+	ImplementationAddress string       `json:"implementation_address"`
+	LibraryAddress        string       `json:"library_address"`
+	ProxyInitializer      string       `json:"proxy_initializer"`
 }
 
 // parseDeploymentResult parses deployment results from script output
@@ -63,7 +63,11 @@ func parseDeploymentResult(output string) (DeploymentOutput, error) {
 			case "INIT_CODE_HASH":
 				result.InitCodeHash = value
 			case "STATUS":
-				result.Status = value
+				sts, err := types.ParseStatus(value)
+				if err != nil {
+					return result, fmt.Errorf("failed to parse status: %w", err)
+				}
+				result.Status = sts
 			case "DEPLOYMENT_TYPE":
 				result.DeploymentType = value
 			case "STRATEGY":

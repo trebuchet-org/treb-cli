@@ -70,7 +70,6 @@ func (m *Manager) load() error {
 	m.index = make(map[string]*types.DeploymentEntry)
 	for _, network := range m.registry.Networks {
 		for _, deployment := range network.Deployments {
-			fmt.Printf("recording deployment: %+v\n", deployment.FQID)
 			m.index[deployment.FQID] = deployment
 		}
 	}
@@ -142,7 +141,7 @@ func (m *Manager) RecordDeployment(contractInfo *contracts.ContractInfo, env str
 			BlockNumber:   result.BlockNumber,
 			BroadcastFile: result.BroadcastFile,
 			Timestamp:     time.Now(),
-			Status:        m.getDeploymentStatus(result),
+			Status:        result.Status,
 			SafeAddress:   result.SafeAddress.String(),
 			SafeTxHash:    m.getSafeTxHash(result),
 			SafeNonce:     m.getSafeNonce(result),
@@ -560,14 +559,6 @@ func extractContractNameFromPath(contractPath string) string {
 		return strings.TrimSpace(parts[1])
 	}
 	return ""
-}
-
-// getDeploymentStatus determines the status based on deployment result
-func (m *Manager) getDeploymentStatus(result *types.DeploymentResult) string {
-	if result.SafeTxHash != (common.Hash{}) {
-		return "pending_safe"
-	}
-	return "deployed"
 }
 
 // getSafeTxHash returns the safe tx hash if it exists

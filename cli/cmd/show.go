@@ -10,6 +10,7 @@ import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/safe"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
 var showCmd = &cobra.Command{
@@ -144,9 +145,9 @@ func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
 	labelStyle.Print("Status:       ")
 
 	switch status {
-	case "deployed":
+	case types.StatusExecuted:
 		successStyle.Println("Deployed ✓")
-	case "pending_safe":
+	case types.StatusQueued:
 		warningStyle.Println("Pending Safe Execution ⏳")
 	default:
 		fmt.Println(status)
