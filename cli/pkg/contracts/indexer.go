@@ -49,9 +49,9 @@ type ArtifactMetadata struct {
 
 // BytecodeObject represents the bytecode section of an artifact
 type BytecodeObject struct {
-	Object         string                              `json:"object"`
-	LinkReferences map[string]map[string][]LinkRef     `json:"linkReferences"`
-	SourceMap      string                              `json:"sourceMap"`
+	Object         string                          `json:"object"`
+	LinkReferences map[string]map[string][]LinkRef `json:"linkReferences"`
+	SourceMap      string                          `json:"sourceMap"`
 }
 
 // LinkRef represents a library link reference
@@ -556,7 +556,7 @@ func (i *Indexer) QueryContracts(filter QueryFilter) []*ContractInfo {
 
 // FindContractByName finds a contract by exact name match, using filter
 func (i *Indexer) FindContractByName(name string, filter QueryFilter) []*ContractInfo {
-	filter.NamePattern = "^" + regexp.QuoteMeta(name) + "$"
+	filter.NamePattern = regexp.QuoteMeta(name)
 	return i.QueryContracts(filter)
 }
 
