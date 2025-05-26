@@ -59,7 +59,18 @@
           "init_code_hash": "0x5486ce6c86ba56c7bb877d0f3b9753c251076afae58a4f9ce7fed3ae56b6732a",
           "constructor_args": "0x",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://sepolia.etherscan.io/address/0xA04Aa44842B207c67401eA83E436d0787660F85B#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://sepolia.etherscan.io/address/0xA04Aa44842B207c67401eA83E436d0787660F85B#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0xA04Aa44842B207c67401eA83E436d0787660F85B"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x67218ec462df42e4e60344653a5b2175c17d6f4cefa6f937dab3f22b950ff3d3",

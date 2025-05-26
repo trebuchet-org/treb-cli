@@ -115,6 +115,7 @@ Examples:
 			Predict:        predict,
 			Debug:          debug,
 			NetworkName:    networkName,
+			Env:            "default",
 		}); err != nil {
 			checkError(err)
 		} else {
