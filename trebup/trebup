@@ -107,7 +107,7 @@ main() {
 
   # Install by downloading binaries
   if [[ "$TREBUP_REPO" == "trebuchet-org/treb-cli" && -z "$TREBUP_BRANCH" && -z "$TREBUP_COMMIT" ]]; then
-    TREBUP_VERSION=${TREBUP_VERSION:-stable}
+    TREBUP_VERSION=${TREBUP_VERSION:-nightly}
     TREBUP_TAG=$TREBUP_VERSION
 
     # Normalize versions (handle channels, versions without v prefix)
@@ -177,7 +177,7 @@ The installer for Treb.
 
 Update or revert to a specific Treb version with ease.
 
-By default, the latest stable version is installed from pre-built binaries.
+By default, the latest nightly version is installed from pre-built binaries.
 
 USAGE:
     trebup [OPTIONS]
@@ -198,7 +198,7 @@ OPTIONS:
     --platform          Override target platform
 
 EXAMPLES:
-    # Install the latest stable release
+    # Install the latest nightly release
     trebup
 
     # Install a specific version
@@ -252,16 +252,30 @@ list() {
     exit 0
   fi
 
-  current_version=$(readlink "$TREB_BIN_DIR/treb" 2>/dev/null | sed 's|.*/versions/\([^/]*\)/.*|\1|')
+  # Since we copy binaries directly instead of using symlinks, 
+  # we need a different way to track the current version
+  current_version=""
+  if [ -f "$TREB_BIN_DIR/treb" ]; then
+    # Try to get version from the binary itself
+    current_version=$("$TREB_BIN_DIR/treb" version 2>/dev/null | grep -o '[v0-9][0-9a-zA-Z.-]*' | head -1 || echo "")
+  fi
 
   say "installed versions:"
-  for version in $(ls "$TREB_VERSIONS_DIR"); do
-    if [[ "$version" == "$current_version" ]]; then
-      echo "  * $version (current)"
-    else
-      echo "    $version"
+  for version in $(ls "$TREB_VERSIONS_DIR" | sort -V); do
+    marker="  "
+    # Check if this version matches the current binary version
+    if [[ -n "$current_version" && "$version" == "$current_version" ]]; then
+      marker="* "
+    elif [[ -n "$current_version" && "$current_version" =~ ^"$version" ]]; then
+      marker="* "
     fi
+    echo "  $marker$version"
   done
+
+  if [[ -n "$current_version" ]]; then
+    echo ""
+    echo "Current version: $current_version"
+  fi
 }
 
 use() {
