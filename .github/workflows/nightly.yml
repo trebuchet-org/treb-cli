@@ -1,0 +1,160 @@
+name: Nightly Build
+
+on:
+  schedule:
+    # Run at 2 AM UTC every day
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  nightly:
+    name: Build Nightly
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux builds
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+          
+          # macOS builds  
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+          
+          # Windows builds
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            binary_suffix: .exe
+          - os: windows-latest
+            goos: windows
+            goarch: arm64
+            binary_suffix: .exe
+    
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      
+      - name: Get version info
+        id: version
+        shell: bash
+        run: |
+          echo "version=nightly-$(date +%Y%m%d)" >> $GITHUB_OUTPUT
+          echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+      
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          go build \
+            -ldflags="-s -w -X main.version=${{ steps.version.outputs.version }} -X main.commit=${{ steps.version.outputs.commit }} -X main.date=${{ steps.version.outputs.date }}" \
+            -o treb${{ matrix.binary_suffix }} \
+            ./cli
+      
+      - name: Create archive (Unix)
+        if: matrix.goos != 'windows'
+        run: |
+          tar czf treb_nightly_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz treb
+      
+      - name: Create archive (Windows)
+        if: matrix.goos == 'windows'
+        run: |
+          7z a treb_nightly_${{ matrix.goos }}_${{ matrix.goarch }}.zip treb.exe
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: treb_nightly_${{ matrix.goos }}_${{ matrix.goarch }}
+          path: treb_nightly_*
+          retention-days: 7
+
+  release:
+    name: Update Nightly Release
+    needs: nightly
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      
+      - name: Generate checksums
+        run: |
+          sha256sum treb_nightly_*.{tar.gz,zip} > checksums.txt
+          cat checksums.txt
+      
+      - name: Get version info
+        id: version
+        run: |
+          echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+          echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+      
+      - name: Delete existing nightly release
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete nightly --yes || true
+          git push origin --delete nightly || true
+      
+      - name: Create nightly release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          name: Nightly Build
+          files: |
+            treb_nightly_*.tar.gz
+            treb_nightly_*.zip
+            checksums.txt
+          draft: false
+          prerelease: true
+          body: |
+            # Nightly Build
+            
+            **Build Date:** ${{ steps.version.outputs.date }}
+            **Commit:** [`${{ steps.version.outputs.commit }}`](https://github.com/${{ github.repository }}/commit/${{ steps.version.outputs.commit }})
+            
+            This is an automated nightly build from the main branch. Use at your own risk.
+            
+            ## Installation
+            
+            ### Quick install with trebup
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/trebuchet-org/treb-cli/main/trebup/install | bash
+            trebup install nightly
+            ```
+            
+            ### Manual installation
+            Download the appropriate binary for your platform from the assets below.
+            
+            ### Checksums
+            Verify downloads with the checksums.txt file.
