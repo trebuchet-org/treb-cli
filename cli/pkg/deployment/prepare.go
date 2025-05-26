@@ -109,6 +109,13 @@ func (d *DeploymentContext) PrepareContractDeployment() (bool, error) {
 	// Set script path
 	d.ScriptPath = scriptPath
 
+	// Check and resolve required libraries
+	resolvedLibs, err := d.checkAndResolveLibraries(contractInfo)
+	if err != nil {
+		return false, fmt.Errorf("failed to resolve libraries: %w", err)
+	}
+	d.resolvedLibraries = resolvedLibs
+
 	return false, nil
 }
 
@@ -152,6 +159,13 @@ func (d *DeploymentContext) PrepareProxyDeployment() error {
 
 	// Set the proxy contract as the contract being deployed
 	d.contractInfo = proxyContractInfo
+
+	// Check and resolve required libraries for the proxy contract
+	resolvedLibs, err := d.checkAndResolveLibraries(proxyContractInfo)
+	if err != nil {
+		return fmt.Errorf("failed to resolve libraries: %w", err)
+	}
+	d.resolvedLibraries = resolvedLibs
 
 	// Pass current network and environment context to narrow down results
 	// Use ResolveImplementationDeployment to filter out proxy deployments
@@ -204,7 +218,7 @@ func (d *DeploymentContext) PrepareLibraryDeployment() error {
 	d.contractInfo = contractInfo
 
 	// Set the script path to the standard library deployment script
-	d.ScriptPath = "lib/treb-sol/src/LibraryDeployment.s.sol:LibraryDeployment"
+	d.ScriptPath = "script/deploy/DeployLibrary.s.sol"
 
 	// Set required environment variables for library deployment
 	d.envVars["LIBRARY_NAME"] = contractInfo.Name

@@ -39,27 +39,34 @@ type DeploymentContext struct {
 	implementationInfo   *contracts.ContractInfo
 	networkInfo          *network.NetworkInfo
 	targetDeploymentFQID string
+	resolvedLibraries    []LibraryInfo
+}
+
+// NewDeploymentContext creates a new deployment context with explicit registry manager
+func NewDeploymentContext(projectRoot string, params *DeploymentParams, registryManager *registry.Manager) *DeploymentContext {
+	return &DeploymentContext{
+		Params:          *params,
+		projectRoot:     projectRoot,
+		envVars:         make(map[string]string),
+		registryManager: registryManager,
+		generator:       contracts.NewGenerator(projectRoot),
+		forge:           forge.NewForge(projectRoot),
+	}
 }
 
 // NewContext creates a new deployment context
 func NewContext(params DeploymentParams) (*DeploymentContext, error) {
-	ctx := &DeploymentContext{
-		Params:      params,
-		envVars:     make(map[string]string),
-		projectRoot: ".",
-	}
-
-	registryPath := filepath.Join(".", "deployments.json")
+	projectRoot := "."
+	
+	registryPath := filepath.Join(projectRoot, "deployments.json")
 	registryManager, err := registry.NewManager(registryPath)
 	if err != nil {
 		return nil, err
 	}
-	ctx.registryManager = registryManager
+	
+	ctx := NewDeploymentContext(projectRoot, &params, registryManager)
 
-	generator := contracts.NewGenerator(".")
-	ctx.generator = generator
-
-	networkResolver := network.NewResolver(".")
+	networkResolver := network.NewResolver(projectRoot)
 	networkInfo, err := networkResolver.ResolveNetwork(ctx.Params.NetworkName)
 	if err != nil {
 		return nil, err

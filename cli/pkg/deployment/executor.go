@@ -118,6 +118,12 @@ func (d *DeploymentContext) runScript() (string, error) {
 		flags = append(flags, "--broadcast")
 	}
 
+	// Add library flags if any
+	if len(d.resolvedLibraries) > 0 {
+		libFlags := generateLibraryFlags(d.resolvedLibraries)
+		flags = append(flags, libFlags...)
+	}
+
 	output, err := d.forge.RunScript(d.ScriptPath, flags, d.envVars)
 	if err != nil {
 		if d.Params.Debug {

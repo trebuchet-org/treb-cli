@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./StringUtils.sol";
+import "./StringUtilsV2.sol";
 
 contract MessageStorageV08 {
-    using StringUtils for string;
+    using StringUtilsV2 for string;
     
     struct MessageInfo {
         string content;
@@ -20,7 +20,7 @@ contract MessageStorageV08 {
     
     // Store a message with timestamp
     function storeMessage(string calldata message) external {
-        uint256 msgLength = StringUtils.length(message);
+        uint256 msgLength = StringUtilsV2.length(message);
         
         // Store in history before updating
         if (bytes(userMessages[msg.sender].content).length > 0) {
@@ -50,15 +50,15 @@ contract MessageStorageV08 {
     function combineMessages(address user1, address user2) external view returns (string memory) {
         string memory message1 = userMessages[user1].content;
         string memory message2 = userMessages[user2].content;
-        return StringUtils.concat(message1, message2);
+        return StringUtilsV2.concat(message1, message2);
     }
     
     // Store a formatted message
     function storeFormattedMessage(string calldata prefix, string calldata message, string calldata suffix) external {
-        string memory formatted = StringUtils.concat(prefix, message);
-        formatted = StringUtils.concat(formatted, suffix);
+        string memory formatted = StringUtilsV2.concat(prefix, message);
+        formatted = StringUtilsV2.concat(formatted, suffix);
         
-        uint256 msgLength = StringUtils.length(formatted);
+        uint256 msgLength = StringUtilsV2.length(formatted);
         
         userMessages[msg.sender] = MessageInfo({
             content: formatted,
@@ -71,7 +71,7 @@ contract MessageStorageV08 {
     
     // Compare messages between two users
     function compareMessages(address user1, address user2) external returns (bool) {
-        bool areEqual = StringUtils.equal(
+        bool areEqual = StringUtilsV2.equal(
             userMessages[user1].content,
             userMessages[user2].content
         );
@@ -85,8 +85,8 @@ contract MessageStorageV08 {
         require(bytes(message).length > 0, "Message cannot be empty");
         require(bytes(message).length <= 256, "Message too long");
         
-        string memory upperMessage = StringUtils.toUpperCase(message);
-        uint256 msgLength = StringUtils.length(upperMessage);
+        string memory upperMessage = StringUtilsV2.toUpperCase(message);
+        uint256 msgLength = StringUtilsV2.length(upperMessage);
         
         userMessages[msg.sender] = MessageInfo({
             content: upperMessage,

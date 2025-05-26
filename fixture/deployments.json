@@ -230,7 +230,7 @@
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
             "broadcast_file": "",
             "timestamp": "2025-05-26T17:24:11.241326+02:00",
-            "status": "",
+            "status": "EXECUTED",
             "safe_address": "0x0000000000000000000000000000000000000000"
           },
           "metadata": {
@@ -321,6 +321,35 @@
             "source_hash": "src/test-dir/Counter.sol:Counter",
             "contract_path": "src/test-dir/Counter.sol",
             "script_path": "script/deploy/test-dir/DeployCounter.s.sol"
+          }
+        },
+        "0x78b09a4243c1b5bf3f98f26d3933f7a956036038": {
+          "fqid": "44787/default/src/MessageStorageV08.sol:MessageStorageV08",
+          "sid": "MessageStorageV08",
+          "address": "0x78b09a4243c1b5bf3f98f26d3933f7a956036038",
+          "contract_name": "MessageStorageV08",
+          "environment": "default",
+          "type": "singleton",
+          "salt": "0xf1f30b69a9359c3e7c28eb76391835472e105f5c00c4a8bbec50917452dc1c09",
+          "init_code_hash": "0xd0a4614a20111f9cd8a136f73124bf1600a7f6e4b899fdabc15e8ec1b43f3f3f",
+          "constructor_args": "0x",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x935b8f1ee37b3596c74354deac7420cb59dc62e7a1a1b7ab7285f7c45c0d3bce",
+            "block_number": 47320608,
+            "broadcast_file": "",
+            "timestamp": "2025-05-26T18:12:09.336862+02:00",
+            "status": "EXECUTED",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "9079c8a1bbc9873359f6a9b540e67a9c5f4c082e",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/MessageStorageV08.sol:MessageStorageV08",
+            "contract_path": "src/MessageStorageV08.sol",
+            "script_path": "script/deploy/DeployMessageStorageV08.s.sol"
           }
         },
         "0x8481a8b4435a007b2812d6b61f8b97ce81e346a9": {
@@ -568,6 +597,34 @@
             "script_path": "script/deploy/DeployUpgradeableCounterProxy.s.sol"
           }
         },
+        "0xc1cf3bc0455e9cf60fc8780bc0abf55790c49b11": {
+          "fqid": "44787/default/src/StringUtilsV2.sol:StringUtilsV2",
+          "sid": "StringUtilsV2",
+          "address": "0xc1cf3bc0455e9cf60fc8780bc0abf55790c49b11",
+          "contract_name": "StringUtilsV2",
+          "environment": "default",
+          "type": "library",
+          "salt": "",
+          "init_code_hash": "",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x8390353db872cb8c2642d7f5cae715f684aaa6cba202f80647e9558bdf6cc104",
+            "block_number": 47320590,
+            "broadcast_file": "",
+            "timestamp": "2025-05-26T18:11:52.164664+02:00",
+            "status": "EXECUTED",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "9079c8a1bbc9873359f6a9b540e67a9c5f4c082e",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/StringUtilsV2.sol:StringUtilsV2",
+            "contract_path": "src/StringUtilsV2.sol",
+            "script_path": "script/deploy/DeployLibrary.s.sol"
+          }
+        },
         "0xc275c1bc6e74be4c90bbe1e56e9f0a63e2f18126": {
           "fqid": "44787/default/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:UpgradeableCounterProxy:Magic",
           "sid": "UpgradeableCounterProxy:Magic",
@@ -608,6 +665,46 @@
             "source_hash": "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
             "contract_path": "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol",
             "script_path": "script/deploy/DeployUpgradeableCounterProxy.s.sol"
+          }
+        },
+        "0xcc0bdd975d392d1dd37ab8831c910688d22c591e": {
+          "fqid": "44787/default/src/MessageStorageV07.sol:MessageStorageV07",
+          "sid": "MessageStorageV07",
+          "address": "0xcc0bdd975d392d1dd37ab8831c910688d22c591e",
+          "contract_name": "MessageStorageV07",
+          "environment": "default",
+          "type": "singleton",
+          "salt": "0xf1f30b69a9359c3e7c28eb76391835472e105f5c00bc754e5bba91d3b7589e79",
+          "init_code_hash": "0xfaa1ca6b1c8698a42526481c9e22778998c9ccaaf0f823338704b9c32692ff7f",
+          "constructor_args": "0x",
+          "verification": {
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0xcc0bDd975d392d1dD37AB8831c910688D22c591e#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0xcc0bDd975d392d1dD37AB8831c910688D22c591e#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0xcc0bDd975d392d1dD37AB8831c910688D22c591e"
+              }
+            }
+          },
+          "deployment": {
+            "tx_hash": "0xfd73720910bb0bc1ab73192f2eac3f3c4c538cd4d6446531c71fe4913eefda3b",
+            "block_number": 47320387,
+            "broadcast_file": "",
+            "timestamp": "2025-05-26T18:08:28.736518+02:00",
+            "status": "EXECUTED",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "9079c8a1bbc9873359f6a9b540e67a9c5f4c082e",
+            "compiler": "0.7.6+commit.7338295f",
+            "source_hash": "src/MessageStorageV07.sol:MessageStorageV07",
+            "contract_path": "src/MessageStorageV07.sol",
+            "script_path": "script/deploy/DeployMessageStorageV07.s.sol"
           }
         }
       }

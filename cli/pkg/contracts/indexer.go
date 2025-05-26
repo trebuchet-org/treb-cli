@@ -47,11 +47,24 @@ type ArtifactMetadata struct {
 	} `json:"settings"`
 }
 
+// BytecodeObject represents the bytecode section of an artifact
+type BytecodeObject struct {
+	Object         string                              `json:"object"`
+	LinkReferences map[string]map[string][]LinkRef     `json:"linkReferences"`
+	SourceMap      string                              `json:"sourceMap"`
+}
+
+// LinkRef represents a library link reference
+type LinkRef struct {
+	Start  int `json:"start"`
+	Length int `json:"length"`
+}
+
 // Artifact represents a Foundry compilation artifact
 type Artifact struct {
 	ABI               json.RawMessage   `json:"abi"`
-	Bytecode          json.RawMessage   `json:"bytecode"`
-	DeployedBytecode  json.RawMessage   `json:"deployedBytecode"`
+	Bytecode          BytecodeObject    `json:"bytecode"`
+	DeployedBytecode  BytecodeObject    `json:"deployedBytecode"`
 	MethodIdentifiers map[string]string `json:"methodIdentifiers"`
 	RawMetadata       string            `json:"rawMetadata"`
 	Metadata          ArtifactMetadata  `json:"metadata"`
@@ -589,4 +602,50 @@ func (c *ContractInfo) GetSourceHash() string {
 	// For now, return a simple hash of the contract path and name
 	// In the future, this could be a more sophisticated hash of the actual source code
 	return fmt.Sprintf("%s:%s", c.Path, c.Name)
+}
+
+// LibraryRequirement represents a library dependency
+type LibraryRequirement struct {
+	Path string
+	Name string
+}
+
+// GetRequiredLibraries returns the libraries required by this contract
+func (c *ContractInfo) GetRequiredLibraries() []LibraryRequirement {
+	if c.Artifact == nil {
+		return nil
+	}
+
+	var libs []LibraryRequirement
+	seen := make(map[string]bool)
+
+	// Check bytecode link references
+	for path, libMap := range c.Artifact.Bytecode.LinkReferences {
+		for libName := range libMap {
+			key := fmt.Sprintf("%s:%s", path, libName)
+			if !seen[key] {
+				seen[key] = true
+				libs = append(libs, LibraryRequirement{
+					Path: path,
+					Name: libName,
+				})
+			}
+		}
+	}
+
+	// Also check deployed bytecode link references
+	for path, libMap := range c.Artifact.DeployedBytecode.LinkReferences {
+		for libName := range libMap {
+			key := fmt.Sprintf("%s:%s", path, libName)
+			if !seen[key] {
+				seen[key] = true
+				libs = append(libs, LibraryRequirement{
+					Path: path,
+					Name: libName,
+				})
+			}
+		}
+	}
+
+	return libs
 }
