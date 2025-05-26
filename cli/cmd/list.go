@@ -3,6 +3,7 @@ package cmd
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"regexp"
 	"slices"
 	"sort"
 	"strings"
@@ -79,6 +80,15 @@ func init() {
 	listCmd.Flags().BoolVar(&showLibraries, "libraries", false, "Show deployed libraries instead of contracts")
 }
 
+// TableData represents a table as a 2D array of strings
+type TableData [][]string
+
+// TableSet represents multiple tables that need to be rendered together
+type TableSet struct {
+	Tables       []TableData
+	ColumnWidths []int
+}
+
 // columnWidths stores the calculated column widths for consistent table rendering
 type columnWidths struct {
 	contract  int
@@ -114,18 +124,15 @@ func listDeployments() error {
 
 	fmt.Printf("Deployments (%d total):\n\n", len(deployments))
 
-	// Calculate global column widths for all deployments
-	globalWidths := calculateColumnWidthsForRows(deployments)
-
 	// Group deployments and display them
-	if err := displayDeployments(deployments, deployConfig, globalWidths); err != nil {
+	if err := displayDeployments(deployments, deployConfig); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func displayDeployments(deployments []*registry.DeploymentInfo, deployConfig *config.DeployConfig, globalWidths columnWidths) error {
+func displayDeployments(deployments []*registry.DeploymentInfo, deployConfig *config.DeployConfig) error {
 
 	groups := make(map[string]map[string][]*registry.DeploymentInfo)
 	envs := make([]string, 0)
@@ -153,6 +160,43 @@ func displayDeployments(deployments []*registry.DeploymentInfo, deployConfig *co
 	slices.Sort(envs)
 	slices.Sort(networks)
 
+	// Build all tables first to calculate consistent column widths
+	allTables := make([]TableData, 0)
+	for _, env := range envs {
+		for _, network := range networks {
+			if len(groups[network][env]) == 0 {
+				continue
+			}
+			deployments := groups[network][env]
+
+			// Separate proxies and singletons within this env/network group
+			proxies := make([]*registry.DeploymentInfo, 0)
+			singletons := make([]*registry.DeploymentInfo, 0)
+
+			for _, deployment := range deployments {
+				if deployment.Entry.Type == "proxy" {
+					proxies = append(proxies, deployment)
+				} else {
+					singletons = append(singletons, deployment)
+				}
+			}
+
+			// Build tables for proxies and singletons
+			if len(proxies) > 0 {
+				proxyTable := buildDeploymentTable(proxies)
+				allTables = append(allTables, proxyTable)
+			}
+			if len(singletons) > 0 {
+				singletonTable := buildDeploymentTable(singletons)
+				allTables = append(allTables, singletonTable)
+			}
+		}
+	}
+
+	// Calculate global column widths for all tables
+	globalColumnWidths := calculateTableColumnWidths(allTables)
+	headerWidth := calculateEnvironmentHeaderWidth(globalColumnWidths)
+
 	// Display groups
 	for _, env := range envs {
 		envConfig, err := deployConfig.GetEnvironmentConfig(env)
@@ -173,13 +217,20 @@ func displayDeployments(deployments []*registry.DeploymentInfo, deployConfig *co
 		}
 
 		// Environment header
-		tableWidth := globalWidths.contract + globalWidths.address + globalWidths.verified + globalWidths.timestamp + 2
 		envHeaderPrefix := envHeader.Sprintf("   ◎ environment  %s", envHeaderBold.Sprint(strings.ToUpper(env)))
+		// Strip ANSI codes from header prefix to calculate padding correctly
+		envHeaderPrefixPlain := stripAnsiEscapes(envHeaderPrefix)
+		envHeaderSuffix := envHeader.Sprintf("deployer:%s", envHeaderBold.Sprint(deployerAddress))
+		envHeaderSuffixPlain := stripAnsiEscapes(envHeaderSuffix)
+		deployerPadding := headerWidth - len(envHeaderPrefixPlain) - len(envHeaderSuffixPlain) + 2
+		if deployerPadding < 1 {
+			deployerPadding = 1
+		}
 		envHeader.Printf(
 			"%s%s%s\n",
 			envHeaderPrefix,
-			envHeader.Sprintf("%*s", tableWidth-len(envHeaderPrefix), "deployer:"),
-			envHeaderBold.Sprint(deployerAddress),
+			envHeader.Sprintf("%*s", deployerPadding, ""),
+			envHeaderSuffix,
 		)
 
 		// Filter networks to only show those with deployments for this env
@@ -226,7 +277,9 @@ func displayDeployments(deployments []*registry.DeploymentInfo, deployConfig *co
 			// Display proxies section first
 			if len(proxies) > 0 {
 				fmt.Printf("%s%s\n", continuationPrefix, sectionHeaderStyle.Sprint("PROXIES"))
-				displayDeploymentRows(proxies, globalWidths, continuationPrefix)
+				proxyTable := buildDeploymentTable(proxies)
+				fmt.Print(renderTableWithWidths(proxyTable, globalColumnWidths, continuationPrefix))
+				fmt.Println()
 			}
 
 			// Display singletons section
@@ -235,7 +288,9 @@ func displayDeployments(deployments []*registry.DeploymentInfo, deployConfig *co
 					fmt.Println(continuationPrefix)
 				}
 				fmt.Printf("%s%s\n", continuationPrefix, sectionHeaderStyle.Sprint("SINGLETONS"))
-				displayDeploymentRows(singletons, globalWidths, continuationPrefix)
+				singletonTable := buildDeploymentTable(singletons)
+				fmt.Print(renderTableWithWidths(singletonTable, globalColumnWidths, continuationPrefix))
+				fmt.Println()
 			}
 
 			if !isLastNetwork {
@@ -247,156 +302,6 @@ func displayDeployments(deployments []*registry.DeploymentInfo, deployConfig *co
 	}
 
 	return nil
-}
-
-func displayDeploymentRows(deployments []*registry.DeploymentInfo, widths columnWidths, continuationPrefix string) {
-
-	// Sort deployments by timestamp (newest first)
-	sort.Slice(deployments, func(i, j int) bool {
-		return deployments[i].Entry.Deployment.Timestamp.After(deployments[j].Entry.Deployment.Timestamp)
-	})
-
-	// Create table
-	t := table.NewWriter()
-	t.SetStyle(table.StyleLight)
-	t.Style().Options.SeparateRows = false
-	t.Style().Options.DrawBorder = false
-	t.Style().Options.SeparateHeader = false
-	t.Style().Options.SeparateColumns = false
-	t.Style().Box = table.BoxStyle{
-		PaddingRight: "   ",
-	}
-
-	// Configure column styles with calculated widths
-	t.SetColumnConfigs([]table.ColumnConfig{
-		{Number: 1, Align: text.AlignLeft, WidthMin: widths.contract, WidthMax: widths.contract},
-		{Number: 2, Align: text.AlignLeft, WidthMin: widths.address, WidthMax: widths.address},
-		{Number: 3, Align: text.AlignLeft, WidthMin: widths.verified, WidthMax: widths.verified},
-		{Number: 4, Align: text.AlignLeft, WidthMin: widths.timestamp, WidthMax: widths.timestamp},
-	})
-
-	for _, deployment := range deployments {
-		// Add main deployment row
-		coloredDisplayName := deployment.Entry.GetColoredDisplayName()
-		timestamp := deployment.Entry.Deployment.Timestamp.Format("2006-01-02 15:04:05")
-
-		contractCell := coloredDisplayName
-		if len(deployment.Entry.Tags) > 0 {
-			contractCell += " " + tagsStyle.Sprintf("(%s)", deployment.Entry.Tags[0])
-		}
-
-		addressCell := addressStyle.Sprint(deployment.Address.Hex())
-
-		verifiedCell := ""
-		if deployment.Entry.Deployment.Status == "pending_safe" {
-			verifiedCell = pendingStyle.Sprint("⧖ deploy queued")
-		} else {
-			switch deployment.Entry.Verification.Status {
-			case "verified":
-				verifiedCell = verifiedStyle.Sprint("✓ verified")
-			case "partial":
-				verifiedCell = color.New(color.FgYellow).Sprint("⚠ partial")
-			case "failed":
-				verifiedCell = notVerifiedStyle.Sprint("✗ failed")
-			default:
-				verifiedCell = notVerifiedStyle.Sprint("✗ not verified")
-			}
-		}
-
-		timestampCell := timestampStyle.Sprint(timestamp)
-
-		t.AppendRow(table.Row{
-			continuationPrefix + contractCell, // 6 spaces for alignment
-			addressCell,
-			verifiedCell,
-			timestampCell,
-		})
-
-		// If this is a proxy and we're showing implementations, add implementation row
-		if deployment.Entry.Type == "proxy" && deployment.Entry.Target != nil {
-			implDisplayName := deployment.Entry.Target.GetColoredDisplayName()
-			implTimestamp := deployment.Entry.Target.Deployment.Timestamp.Format("2006-01-02 15:04:05")
-
-			// Build implementation row with └─ prefix
-			implContractCell := implPrefixStyle.Sprint("└─ ") + implDisplayName
-			if len(deployment.Entry.Target.Tags) > 0 {
-				implContractCell += " " + tagsStyle.Sprintf("(%s)", deployment.Entry.Target.Tags[0])
-			}
-
-			implAddressCell := addressStyle.Sprint(deployment.Entry.Target.Address.Hex())
-
-			implVerifiedCell := ""
-			switch deployment.Entry.Target.Verification.Status {
-			case "verified":
-				implVerifiedCell = verifiedStyle.Sprint("✓ verified")
-			case "partial":
-				implVerifiedCell = color.New(color.FgYellow).Sprint("⚠ partial")
-			case "failed":
-				implVerifiedCell = notVerifiedStyle.Sprint("✗ failed")
-			default:
-				implVerifiedCell = notVerifiedStyle.Sprint("✗ not verified")
-			}
-
-			implTimestampCell := timestampStyle.Sprint(implTimestamp)
-
-			t.AppendRow(table.Row{
-				continuationPrefix + " " + implContractCell,
-				implAddressCell,
-				implVerifiedCell,
-				implTimestampCell,
-			})
-		}
-	}
-
-	fmt.Print(t.Render())
-	fmt.Println()
-}
-
-// calculateColumnWidthsForRows calculates widths based on actual rendered content
-func calculateColumnWidthsForRows(deployments []*registry.DeploymentInfo) columnWidths {
-	widths := columnWidths{
-		contract:  20, // Minimum width
-		address:   42, // Fixed for addresses
-		verified:  15, // Fixed for "⧖ deploy queued"
-		timestamp: 19, // Fixed for timestamp format
-	}
-
-	// Calculate max contract name width based on actual rendered content
-	for _, deployment := range deployments {
-		// Main deployment row: "      " + displayName + optional tag
-		displayName := deployment.Entry.GetDisplayName()
-		contractLen := len(displayName) // 6 spaces + display name
-		if len(deployment.Entry.Tags) > 0 {
-			contractLen += len(deployment.Entry.Tags[0]) + 3 // " (tag)"
-		}
-		if contractLen > widths.contract {
-			widths.contract = contractLen
-		}
-
-		if deployment.Entry.Type == "proxy" && deployment.Entry.Target != nil {
-			// Implementation row: "        └─ " + displayName + optional tag
-			implContractLen := 0
-
-			// Try to get implementation display name
-			if deployment.Entry.Target != nil {
-				implDisplayName := deployment.Entry.Target.GetDisplayName()
-				implContractLen += len(implDisplayName)
-				if len(deployment.Entry.Target.Tags) > 0 {
-					implContractLen += len(deployment.Entry.Target.Tags[0]) + 3 // " (tag)"
-				}
-				if implContractLen > widths.contract {
-					widths.contract = implContractLen
-				}
-			}
-		}
-	}
-
-	// Cap the contract column at a reasonable max
-	if widths.contract > 70 {
-		widths.contract = 70
-	}
-
-	return widths
 }
 
 // filterDeployments applies the command-line filters to the deployment list
@@ -467,7 +372,7 @@ func listLibraries() error {
 	// Get all deployments and filter for libraries
 	allDeployments := registryManager.GetAllDeployments()
 	libraries := make([]*registry.DeploymentInfo, 0)
-	
+
 	for _, deployment := range allDeployments {
 		if deployment.Entry.Type == types.LibraryDeployment {
 			libraries = append(libraries, deployment)
@@ -485,7 +390,7 @@ func listLibraries() error {
 
 	for _, lib := range libraries {
 		chainName := lib.NetworkName
-		
+
 		if !slices.Contains(chains, chainName) {
 			chains = append(chains, chainName)
 		}
@@ -499,34 +404,21 @@ func listLibraries() error {
 
 	// Use package-level color styles
 
+	// Build all library tables first to calculate consistent column widths
+	allLibraryTables := make([]TableData, 0)
+	for _, chainName := range chains {
+		chainLibs := librariesByChain[chainName]
+		libraryTable := buildLibraryTable(chainLibs)
+		allLibraryTables = append(allLibraryTables, libraryTable)
+	}
+
+	// Calculate global column widths for all library tables
+	globalLibraryColumnWidths := calculateTableColumnWidths(allLibraryTables)
+
 	fmt.Printf("Libraries (%d total):\n\n", len(libraries))
 
 	for _, chainName := range chains {
 		chainLibs := librariesByChain[chainName]
-
-		// Sort libraries by timestamp (newest first)
-		sort.Slice(chainLibs, func(i, j int) bool {
-			return chainLibs[i].Entry.Deployment.Timestamp.After(chainLibs[j].Entry.Deployment.Timestamp)
-		})
-
-		// Create table
-		t := table.NewWriter()
-		t.SetStyle(table.StyleLight)
-		t.Style().Options.SeparateRows = false
-		t.Style().Options.DrawBorder = false
-		t.Style().Options.SeparateHeader = false
-		t.Style().Options.SeparateColumns = false
-		t.Style().Box = table.BoxStyle{
-			PaddingLeft:  "",
-			PaddingRight: "  ",
-		}
-
-		// Configure column styles
-		t.SetColumnConfigs([]table.ColumnConfig{
-			{Number: 1, Align: text.AlignLeft, WidthMin: 20, WidthMax: 30},
-			{Number: 2, Align: text.AlignLeft, WidthMin: 42, WidthMax: 42},
-			{Number: 3, Align: text.AlignLeft, WidthMin: 19, WidthMax: 19},
-		})
 
 		// Add chain header
 		chainHeaderRow := fmt.Sprintf("%s%s",
@@ -536,27 +428,9 @@ func listLibraries() error {
 		fmt.Println(chainHeaderRow)
 		fmt.Println()
 
-		for _, lib := range chainLibs {
-			libraryName := lib.Entry.ContractName
-			timestamp := lib.Entry.Deployment.Timestamp.Format("2006-01-02 15:04:05")
-
-			// Build library name cell
-			libraryCell := libraryNameStyle.Sprint(libraryName)
-
-			// Address cell
-			addressCell := libraryAddressStyle.Sprint(lib.Entry.Address.Hex())
-
-			// Timestamp
-			timestampCell := timestampStyle.Sprint(timestamp)
-
-			t.AppendRow(table.Row{
-				"  " + libraryCell,
-				addressCell,
-				timestampCell,
-			})
-		}
-
-		fmt.Print(t.Render())
+		// Build and render table
+		libraryTable := buildLibraryTable(chainLibs)
+		fmt.Print(renderTableWithWidths(libraryTable, globalLibraryColumnWidths, ""))
 		fmt.Println()
 		fmt.Println()
 	}
@@ -580,4 +454,222 @@ func listLibraries() error {
 	color.New(color.FgCyan).Println("]")
 
 	return nil
+}
+
+// stripAnsiEscapes removes ANSI escape sequences to get the actual string length
+func stripAnsiEscapes(s string) string {
+	// Regex to match ANSI escape sequences
+	ansiRegex := regexp.MustCompile(`\x1b\[[0-9;]*[mGKHF]`)
+	return ansiRegex.ReplaceAllString(s, "")
+}
+
+// calculateTableColumnWidths calculates column widths for multiple tables
+func calculateTableColumnWidths(tables []TableData) []int {
+	if len(tables) == 0 {
+		return nil
+	}
+
+	// Find the maximum number of columns across all tables
+	maxCols := 0
+	for _, table := range tables {
+		for _, row := range table {
+			if len(row) > maxCols {
+				maxCols = len(row)
+			}
+		}
+	}
+
+	widths := make([]int, maxCols)
+
+	// Calculate maximum width for each column across all tables
+	for _, table := range tables {
+		for _, row := range table {
+			for colIdx, cell := range row {
+				// Strip ANSI escape sequences and calculate actual length
+				actualLength := len(stripAnsiEscapes(cell))
+				if actualLength > widths[colIdx] {
+					widths[colIdx] = actualLength
+				}
+			}
+		}
+	}
+
+	widths[0] += 2
+	return widths
+}
+
+// buildDeploymentTable creates a TableData for a list of deployments
+func buildDeploymentTable(deployments []*registry.DeploymentInfo) TableData {
+	tableData := make(TableData, 0)
+
+	// Sort deployments by timestamp (newest first)
+	sort.Slice(deployments, func(i, j int) bool {
+		return deployments[i].Entry.Deployment.Timestamp.After(deployments[j].Entry.Deployment.Timestamp)
+	})
+
+	for _, deployment := range deployments {
+		// Add main deployment row
+		coloredDisplayName := deployment.Entry.GetColoredDisplayName()
+		timestamp := deployment.Entry.Deployment.Timestamp.Format("2006-01-02 15:04:05")
+
+		contractCell := coloredDisplayName
+		if len(deployment.Entry.Tags) > 0 {
+			contractCell += " " + tagsStyle.Sprintf("(%s)", deployment.Entry.Tags[0])
+		}
+
+		addressCell := addressStyle.Sprint(deployment.Address.Hex())
+
+		verifiedCell := ""
+		if deployment.Entry.Deployment.Status == "pending_safe" {
+			verifiedCell = pendingStyle.Sprint("⧖ deploy queued")
+		} else {
+			switch deployment.Entry.Verification.Status {
+			case "verified":
+				verifiedCell = verifiedStyle.Sprint("✓ verified")
+			case "partial":
+				verifiedCell = color.New(color.FgYellow).Sprint("⚠ partial")
+			case "failed":
+				verifiedCell = notVerifiedStyle.Sprint("✗ failed")
+			default:
+				verifiedCell = notVerifiedStyle.Sprint("✗ not verified")
+			}
+		}
+
+		timestampCell := timestampStyle.Sprint(timestamp)
+
+		tableData = append(tableData, []string{
+			contractCell,
+			addressCell,
+			verifiedCell,
+			timestampCell,
+		})
+
+		// If this is a proxy and we're showing implementations, add implementation row
+		if deployment.Entry.Type == "proxy" && deployment.Entry.Target != nil {
+			implDisplayName := deployment.Entry.Target.GetColoredDisplayName()
+			implTimestamp := deployment.Entry.Target.Deployment.Timestamp.Format("2006-01-02 15:04:05")
+
+			// Build implementation row with └─ prefix
+			implContractCell := implPrefixStyle.Sprint("└─ ") + implDisplayName
+			if len(deployment.Entry.Target.Tags) > 0 {
+				implContractCell += " " + tagsStyle.Sprintf("(%s)", deployment.Entry.Target.Tags[0])
+			}
+
+			implAddressCell := addressStyle.Sprint(deployment.Entry.Target.Address.Hex())
+
+			implVerifiedCell := ""
+			switch deployment.Entry.Target.Verification.Status {
+			case "verified":
+				implVerifiedCell = verifiedStyle.Sprint("✓ verified")
+			case "partial":
+				implVerifiedCell = color.New(color.FgYellow).Sprint("⚠ partial")
+			case "failed":
+				implVerifiedCell = notVerifiedStyle.Sprint("✗ failed")
+			default:
+				implVerifiedCell = notVerifiedStyle.Sprint("✗ not verified")
+			}
+
+			implTimestampCell := timestampStyle.Sprint(implTimestamp)
+
+			tableData = append(tableData, []string{
+				implContractCell,
+				implAddressCell,
+				implVerifiedCell,
+				implTimestampCell,
+			})
+		}
+	}
+
+	return tableData
+}
+
+// buildLibraryTable creates a TableData for a list of libraries
+func buildLibraryTable(libraries []*registry.DeploymentInfo) TableData {
+	tableData := make(TableData, 0)
+
+	// Sort libraries by timestamp (newest first)
+	sort.Slice(libraries, func(i, j int) bool {
+		return libraries[i].Entry.Deployment.Timestamp.After(libraries[j].Entry.Deployment.Timestamp)
+	})
+
+	for _, lib := range libraries {
+		libraryName := lib.Entry.ContractName
+		timestamp := lib.Entry.Deployment.Timestamp.Format("2006-01-02 15:04:05")
+
+		// Build library name cell
+		libraryCell := libraryNameStyle.Sprint(libraryName)
+
+		// Address cell
+		addressCell := libraryAddressStyle.Sprint(lib.Entry.Address.Hex())
+
+		// Timestamp
+		timestampCell := timestampStyle.Sprint(timestamp)
+
+		tableData = append(tableData, []string{
+			"  " + libraryCell,
+			addressCell,
+			timestampCell,
+		})
+	}
+
+	return tableData
+}
+
+// renderTableWithWidths renders a TableData using the go-pretty library with specified column widths
+func renderTableWithWidths(tableData TableData, columnWidths []int, continuationPrefix string) string {
+	if len(tableData) == 0 {
+		return ""
+	}
+
+	t := table.NewWriter()
+	t.SetStyle(table.StyleLight)
+	t.Style().Options.SeparateRows = false
+	t.Style().Options.DrawBorder = false
+	t.Style().Options.SeparateHeader = false
+	t.Style().Options.SeparateColumns = false
+	t.Style().Box = table.BoxStyle{
+		PaddingRight: "   ",
+	}
+
+	// Configure column styles with calculated widths
+	colConfigs := make([]table.ColumnConfig, len(columnWidths))
+	for i, width := range columnWidths {
+		colConfigs[i] = table.ColumnConfig{
+			Number:   i + 1,
+			Align:    text.AlignLeft,
+			WidthMin: width,
+			WidthMax: width,
+		}
+	}
+	t.SetColumnConfigs(colConfigs)
+
+	// Add all rows to the table
+	for _, row := range tableData {
+		// Convert []string to table.Row
+		tableRow := make(table.Row, len(row))
+		for i, cell := range row {
+			if i == 0 {
+				tableRow[i] = continuationPrefix + cell
+			} else {
+				tableRow[i] = cell
+			}
+		}
+		t.AppendRow(tableRow)
+	}
+
+	return t.Render()
+}
+
+// calculateEnvironmentHeaderWidth calculates the width needed for environment headers
+func calculateEnvironmentHeaderWidth(columnWidths []int) int {
+	// Calculate total table width: sum of columns + padding between columns
+	totalWidth := 0
+	for _, width := range columnWidths {
+		totalWidth += width
+	}
+	// Add padding (3 spaces between each column)
+	if len(columnWidths) > 1 {
+		totalWidth += (len(columnWidths) - 1) * 3
+	}
+	return totalWidth
 }
