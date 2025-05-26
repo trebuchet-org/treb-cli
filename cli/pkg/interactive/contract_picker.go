@@ -67,6 +67,26 @@ func ResolveContract(nameOrPath string, filter contracts.QueryFilter) (*contract
 	// Find matching contracts using deployable filter
 	matches := indexer.FindContractByName(nameOrPath, filter)
 
+	// If no exact matches, try searching for partial matches
+	if len(matches) == 0 {
+		matches = indexer.SearchContracts(nameOrPath)
+		// Apply the filter manually since SearchContracts doesn't use filters
+		var filteredMatches []*contracts.ContractInfo
+		for _, contract := range matches {
+			if !filter.IncludeLibraries && contract.IsLibrary {
+				continue
+			}
+			if !filter.IncludeInterface && contract.IsInterface {
+				continue
+			}
+			if !filter.IncludeAbstract && contract.IsAbstract {
+				continue
+			}
+			filteredMatches = append(filteredMatches, contract)
+		}
+		matches = filteredMatches
+	}
+
 	if len(matches) == 0 {
 		return nil, fmt.Errorf("contract '%s' not found", nameOrPath)
 	}

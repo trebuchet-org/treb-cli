@@ -184,14 +184,33 @@ func (d *DeploymentContext) PrepareProxyDeployment() error {
 
 // PrepareLibraryDeployment validates a library deployment
 func (d *DeploymentContext) PrepareLibraryDeployment() error {
-	// Resolve the library
-	contractInfo, err := interactive.ResolveContract(d.Params.ContractQuery, contracts.DefaultFilter())
+	// Resolve the library - use AllFilter to include libraries
+	libraryFilter := contracts.QueryFilter{
+		IncludeLibraries: true,
+		IncludeAbstract:  false,
+		IncludeInterface: false,
+	}
+	contractInfo, err := interactive.ResolveContract(d.Params.ContractQuery, libraryFilter)
 	if err != nil {
 		return fmt.Errorf("failed to resolve library: %w", err)
 	}
 
+	// Verify it's actually a library
+	if !contractInfo.IsLibrary {
+		return fmt.Errorf("contract '%s' is not a library", contractInfo.Name)
+	}
+
 	// Update context with resolved contract name
 	d.contractInfo = contractInfo
+
+	// Set the script path to the standard library deployment script
+	d.ScriptPath = "lib/treb-sol/src/LibraryDeployment.s.sol:LibraryDeployment"
+
+	// Set required environment variables for library deployment
+	d.envVars["LIBRARY_NAME"] = contractInfo.Name
+	// For vm.getCode(), we need the format "filename.sol:ContractName"
+	// d.envVars["LIBRARY_ARTIFACT_PATH"] = fmt.Sprintf("%s:%s", contractInfo.Path, contractInfo.Name)
+	d.envVars["LIBRARY_ARTIFACT_PATH"] = contractInfo.ArtifactPath
 
 	return nil
 }

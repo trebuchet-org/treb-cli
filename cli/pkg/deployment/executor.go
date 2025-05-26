@@ -60,6 +60,14 @@ func (d *DeploymentContext) Execute() (*types.DeploymentResult, error) {
 
 // buildDeploymentResult builds deployment result from parsed output
 func (d *DeploymentContext) buildDeploymentResult(result DeploymentOutput) *types.DeploymentResult {
+	// Determine the address based on deployment type
+	var address common.Address
+	if d.Params.DeploymentType == types.LibraryDeployment && result.LibraryAddress != "" {
+		address = common.HexToAddress(result.LibraryAddress)
+	} else if result.Address != "" {
+		address = common.HexToAddress(result.Address)
+	}
+
 	// Convert hex strings to byte arrays
 	deployment := &types.DeploymentResult{
 		FQID:                 d.GetFQID(),
@@ -74,7 +82,7 @@ func (d *DeploymentContext) buildDeploymentResult(result DeploymentOutput) *type
 		Salt:                 result.Salt,
 		InitCodeHash:         result.InitCodeHash,
 		SafeTxHash:           common.HexToHash(result.SafeTxHash),
-		Address:              common.HexToAddress(result.Address),
+		Address:              address,
 		ConstructorArgs:      result.ConstructorArgs,
 		Metadata: &types.ContractMetadata{
 			Compiler:     d.contractInfo.Artifact.Metadata.Compiler.Version,

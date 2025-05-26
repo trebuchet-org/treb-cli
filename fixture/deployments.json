@@ -214,6 +214,33 @@
             "script_path": "script/deploy/test-dir/DeployCounter.s.sol"
           }
         },
+        "0x2e76ce88df86c37b0f2caa7718c411cd77996188": {
+          "fqid": "44787/default/src/StringUtils.sol:StringUtils",
+          "sid": "StringUtils",
+          "address": "0x2e76ce88df86c37b0f2caa7718c411cd77996188",
+          "contract_name": "StringUtils",
+          "environment": "default",
+          "type": "library",
+          "salt": "",
+          "init_code_hash": "",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "broadcast_file": "",
+            "timestamp": "2025-05-26T17:24:11.241326+02:00",
+            "status": "",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "10e0fe200515ca1e657444329fb39375022fc3bb",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/StringUtils.sol:StringUtils",
+            "contract_path": "src/StringUtils.sol",
+            "script_path": "lib/treb-sol/src/LibraryDeployment.s.sol:LibraryDeployment"
+          }
+        },
         "0x34ee246bfa3f002440feb8c29c7d79f8bca19c2f": {
           "fqid": "44787/default/src/UpgradeableCounter.sol:UpgradeableCounterProxy",
           "sid": "UpgradeableCounterProxy",

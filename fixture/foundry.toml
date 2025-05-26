@@ -6,6 +6,10 @@ test = "test"
 script = "script"
 optimizer_runs = 0
 
+[profile.local.deployer]
+type = "private_key"
+private_key = "${DEPLOYER_PRIVATE_KEY}"
+
 [profile.default.deployer]
 type = "private_key"
 private_key = "${DEPLOYER_PRIVATE_KEY}"
@@ -30,6 +34,7 @@ mainnet = "https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_API_KEY}"
 polygon = "https://polygon-rpc.com"
 celo = "https://forno.celo.org"
 sepolia = "https://sepolia.infura.io/v3/${INFURA_API_KEY}"
+local = "http://localhost:8545"
 
 [etherscan]
 sepolia = { key = "${ETHERSCAN_MAIN_API_KEY}" }
