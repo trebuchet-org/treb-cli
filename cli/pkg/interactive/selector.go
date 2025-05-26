@@ -55,8 +55,8 @@ func (s *Selector) SimpleSelect(prompt string, options []string, defaultIndex in
 // PromptString provides an interactive text input prompt
 func (s *Selector) PromptString(prompt string, defaultValue string) (string, error) {
 	promptInput := promptui.Prompt{
-		Label:     prompt,
-		Default:   defaultValue,
+		Label:   prompt,
+		Default: defaultValue,
 		Templates: &promptui.PromptTemplates{
 			Prompt:  "{{ . | bold }}{{ if .Default }} ({{ .Default }}){{ end }}: ",
 			Valid:   "{{ . | green }} ✓ ",
@@ -76,22 +76,21 @@ func (s *Selector) PromptString(prompt string, defaultValue string) (string, err
 // PromptConfirm provides a yes/no confirmation prompt
 func (s *Selector) PromptConfirm(prompt string, defaultValue bool) (bool, error) {
 	label := prompt
+	var defaultString string
 	if defaultValue {
-		label += " (Y/n)"
+		defaultString = "y"
 	} else {
-		label += " (y/N)"
+		defaultString = "n"
 	}
 
 	promptConfirm := promptui.Prompt{
 		Label:     label,
 		IsConfirm: true,
-		Templates: &promptui.PromptTemplates{
-			Prompt:  "{{ . | bold }}: ",
-			Success: "{{ . | faint }}: {{ if .Result }}{{ \"Yes\" | green }}{{ else }}{{ \"No\" | red }}{{ end }}",
-		},
+		Default:   defaultString,
 	}
 
 	result, err := promptConfirm.Run()
+
 	if err != nil {
 		// If user pressed Enter without input, use default
 		if err == promptui.ErrAbort {
@@ -100,6 +99,9 @@ func (s *Selector) PromptConfirm(prompt string, defaultValue bool) (bool, error)
 		return false, fmt.Errorf("confirmation cancelled: %w", err)
 	}
 
-	// promptui.IsConfirm returns "y" for yes, "" for no
-	return result == "y", nil
+	if result == "" {
+		return defaultValue, nil
+	} else {
+		return result == "y", nil
+	}
 }

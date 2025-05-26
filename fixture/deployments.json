@@ -48,6 +48,45 @@
     "11155111": {
       "name": "sepolia",
       "deployments": {
+        "0x4c032fe72fff3de1329002db95d2e2d58bc4e3df": {
+          "fqid": "11155111/default/src/TestWithNewLib.sol:MathUtils",
+          "sid": "MathUtils",
+          "address": "0x4c032fe72fff3de1329002db95d2e2d58bc4e3df",
+          "contract_name": "MathUtils",
+          "environment": "default",
+          "type": "library",
+          "salt": "",
+          "init_code_hash": "",
+          "verification": {
+            "status": "verified",
+            "explorer_url": "https://sepolia.etherscan.io/address/0x4C032FE72FFF3De1329002DB95d2e2d58bC4e3dF#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://sepolia.etherscan.io/address/0x4C032FE72FFF3De1329002DB95d2e2d58bC4e3dF#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x4C032FE72FFF3De1329002DB95d2e2d58bC4e3dF"
+              }
+            }
+          },
+          "deployment": {
+            "tx_hash": "0xcbec2b4c665dc347e52b35d886537abc146831fd54da3f6fc9cca055a7191aa7",
+            "block_number": 8411572,
+            "broadcast_file": "",
+            "timestamp": "2025-05-26T18:25:37.979824+02:00",
+            "status": "EXECUTED",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "01b159f567f13a9061e33922ebfc564efe33675a",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/TestWithNewLib.sol:MathUtils",
+            "contract_path": "src/TestWithNewLib.sol",
+            "script_path": "script/deploy/DeployLibrary.s.sol"
+          }
+        },
         "0xa04aa44842b207c67401ea83e436d0787660f85b": {
           "fqid": "11155111/default/src/UpgradeableCounter.sol:UpgradeableCounter",
           "sid": "UpgradeableCounter",
@@ -86,6 +125,128 @@
             "source_hash": "src/UpgradeableCounter.sol:UpgradeableCounter",
             "contract_path": "src/UpgradeableCounter.sol",
             "script_path": "script/deploy/DeployUpgradeableCounter.s.sol"
+          }
+        },
+        "0xe339a44b6c9cb030bb172044a0157f2f7fe332b2": {
+          "fqid": "11155111/default/src/TestWithNewLib.sol:TestWithNewLib",
+          "sid": "TestWithNewLib",
+          "address": "0xe339a44b6c9cb030bb172044a0157f2f7fe332b2",
+          "contract_name": "TestWithNewLib",
+          "environment": "default",
+          "type": "singleton",
+          "salt": "0xf1f30b69a9359c3e7c28eb76391835472e105f5c0040622b3e1ef1d1189abb2b",
+          "init_code_hash": "0xddb1efdc34df550b884c1a63ea191a873636ea779e3ddc340c12711b39caa25e",
+          "constructor_args": "0x",
+          "verification": {
+            "status": "verified",
+            "explorer_url": "https://sepolia.etherscan.io/address/0xE339A44b6c9cB030BB172044A0157F2F7FE332B2#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://sepolia.etherscan.io/address/0xE339A44b6c9cB030BB172044A0157F2F7FE332B2#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0xE339A44b6c9cB030BB172044A0157F2F7FE332B2"
+              }
+            }
+          },
+          "deployment": {
+            "tx_hash": "0x33cc24ffd237b05162cf1edd775cf40158313111cba96f43369cfeb622e97024",
+            "block_number": 8411574,
+            "broadcast_file": "",
+            "timestamp": "2025-05-26T18:26:02.556027+02:00",
+            "status": "EXECUTED",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "01b159f567f13a9061e33922ebfc564efe33675a",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/TestWithNewLib.sol:TestWithNewLib",
+            "contract_path": "src/TestWithNewLib.sol",
+            "script_path": "script/deploy/DeployTestWithNewLib.s.sol"
+          }
+        }
+      }
+    },
+    "31337": {
+      "name": "local",
+      "deployments": {
+        "0x4c032fe72fff3de1329002db95d2e2d58bc4e3df": {
+          "fqid": "31337/default/src/TestWithNewLib.sol:MathUtils",
+          "sid": "MathUtils",
+          "address": "0x4c032fe72fff3de1329002db95d2e2d58bc4e3df",
+          "contract_name": "MathUtils",
+          "environment": "default",
+          "type": "library",
+          "salt": "",
+          "init_code_hash": "",
+          "verification": {
+            "status": "failed",
+            "reason": "etherscan: etherscan verification failed: error: invalid value 'local' for '--chain \u003cCHAIN\u003e'\n  [possible values: mainnet, morden, ropsten, rinkeby, goerli, kovan, holesky, hoodi, sepolia, odyssey, optimism, optimism-kovan, optimism-goerli, optimism-sepolia, bob, bob-sepolia, arbitrum, arbitrum-testnet, arbitrum-goerli, arbitrum-sepolia, arbitrum-nova, cronos, cronos-testnet, rsk, telos, telos-testnet, crab, darwinia, koi, bsc, bsc-testnet, poa, sokol, scroll, scroll-sepolia, metis, cfx-testnet, cfx, xdai, polygon, mumbai, amoy, polygon-zkevm, polygon-zkevm-testnet, fantom, fantom-testnet, moonbeam, moonbeam-dev, moonriver, moonbase, dev, anvil-hardhat, gravity-alpha-mainnet, gravity-alpha-testnet-sepolia, evmos, evmos-testnet, chiado, oasis, emerald, emerald-testnet, filecoin-mainnet, filecoin-calibration-testnet, avalanche, fuji, celo, celo-alfajores, celo-baklava, aurora, aurora-testnet, canto, canto-testnet, boba, base, base-goerli, base-sepolia, syndr, syndr-sepolia, shimmer, ink, ink-sepolia, fraxtal, fraxtal-testnet, blast, blast-sepolia, linea, linea-goerli, linea-sepolia, zksync, zksync-testnet, mantle, mantle-testnet, mantle-sepolia, xai, xai-sepolia, happychain-testnet, viction, zora, zora-sepolia, pgn, pgn-sepolia, mode, mode-sepolia, elastos, kakarot-sepolia, etherlink, etherlink-testnet, degen, opbnb-mainnet, opbnb-testnet, ronin, ronin-testnet, taiko, taiko-hekla, autonomys-nova-testnet, flare, flare-coston2, acala, acala-mandala-testnet, acala-testnet, karura, karura-testnet, pulsechain, pulsechain-testnet, immutable, immutable-testnet, soneium, soneium-minato-testnet, world, world-sepolia, iotex, core, merlin, bitlayer, vana, zeta, kaia, story, unichain, unichain-sepolia, apechain, curtis, sonic-blaze, sonic-testnet, sonic, treasure, treasure-topaz, berachain-bepolia, berachain-bartio, berachain-artio, berachain, superposition-testnet, superposition, monad-testnet, hyperliquid, abstract]\n\n  tip: a similar value exists: 'celo-baklava'\n\nFor more information, try '--help'.\n; sourcify: sourcify verification failed: error: invalid value 'local' for '--chain \u003cCHAIN\u003e'\n  [possible values: mainnet, morden, ropsten, rinkeby, goerli, kovan, holesky, hoodi, sepolia, odyssey, optimism, optimism-kovan, optimism-goerli, optimism-sepolia, bob, bob-sepolia, arbitrum, arbitrum-testnet, arbitrum-goerli, arbitrum-sepolia, arbitrum-nova, cronos, cronos-testnet, rsk, telos, telos-testnet, crab, darwinia, koi, bsc, bsc-testnet, poa, sokol, scroll, scroll-sepolia, metis, cfx-testnet, cfx, xdai, polygon, mumbai, amoy, polygon-zkevm, polygon-zkevm-testnet, fantom, fantom-testnet, moonbeam, moonbeam-dev, moonriver, moonbase, dev, anvil-hardhat, gravity-alpha-mainnet, gravity-alpha-testnet-sepolia, evmos, evmos-testnet, chiado, oasis, emerald, emerald-testnet, filecoin-mainnet, filecoin-calibration-testnet, avalanche, fuji, celo, celo-alfajores, celo-baklava, aurora, aurora-testnet, canto, canto-testnet, boba, base, base-goerli, base-sepolia, syndr, syndr-sepolia, shimmer, ink, ink-sepolia, fraxtal, fraxtal-testnet, blast, blast-sepolia, linea, linea-goerli, linea-sepolia, zksync, zksync-testnet, mantle, mantle-testnet, mantle-sepolia, xai, xai-sepolia, happychain-testnet, viction, zora, zora-sepolia, pgn, pgn-sepolia, mode, mode-sepolia, elastos, kakarot-sepolia, etherlink, etherlink-testnet, degen, opbnb-mainnet, opbnb-testnet, ronin, ronin-testnet, taiko, taiko-hekla, autonomys-nova-testnet, flare, flare-coston2, acala, acala-mandala-testnet, acala-testnet, karura, karura-testnet, pulsechain, pulsechain-testnet, immutable, immutable-testnet, soneium, soneium-minato-testnet, world, world-sepolia, iotex, core, merlin, bitlayer, vana, zeta, kaia, story, unichain, unichain-sepolia, apechain, curtis, sonic-blaze, sonic-testnet, sonic, treasure, treasure-topaz, berachain-bepolia, berachain-bartio, berachain-artio, berachain, superposition-testnet, superposition, monad-testnet, hyperliquid, abstract]\n\n  tip: a similar value exists: 'celo-baklava'\n\nFor more information, try '--help'.\n",
+            "verifiers": {
+              "etherscan": {
+                "status": "failed",
+                "reason": "etherscan verification failed: error: invalid value 'local' for '--chain \u003cCHAIN\u003e'\n  [possible values: mainnet, morden, ropsten, rinkeby, goerli, kovan, holesky, hoodi, sepolia, odyssey, optimism, optimism-kovan, optimism-goerli, optimism-sepolia, bob, bob-sepolia, arbitrum, arbitrum-testnet, arbitrum-goerli, arbitrum-sepolia, arbitrum-nova, cronos, cronos-testnet, rsk, telos, telos-testnet, crab, darwinia, koi, bsc, bsc-testnet, poa, sokol, scroll, scroll-sepolia, metis, cfx-testnet, cfx, xdai, polygon, mumbai, amoy, polygon-zkevm, polygon-zkevm-testnet, fantom, fantom-testnet, moonbeam, moonbeam-dev, moonriver, moonbase, dev, anvil-hardhat, gravity-alpha-mainnet, gravity-alpha-testnet-sepolia, evmos, evmos-testnet, chiado, oasis, emerald, emerald-testnet, filecoin-mainnet, filecoin-calibration-testnet, avalanche, fuji, celo, celo-alfajores, celo-baklava, aurora, aurora-testnet, canto, canto-testnet, boba, base, base-goerli, base-sepolia, syndr, syndr-sepolia, shimmer, ink, ink-sepolia, fraxtal, fraxtal-testnet, blast, blast-sepolia, linea, linea-goerli, linea-sepolia, zksync, zksync-testnet, mantle, mantle-testnet, mantle-sepolia, xai, xai-sepolia, happychain-testnet, viction, zora, zora-sepolia, pgn, pgn-sepolia, mode, mode-sepolia, elastos, kakarot-sepolia, etherlink, etherlink-testnet, degen, opbnb-mainnet, opbnb-testnet, ronin, ronin-testnet, taiko, taiko-hekla, autonomys-nova-testnet, flare, flare-coston2, acala, acala-mandala-testnet, acala-testnet, karura, karura-testnet, pulsechain, pulsechain-testnet, immutable, immutable-testnet, soneium, soneium-minato-testnet, world, world-sepolia, iotex, core, merlin, bitlayer, vana, zeta, kaia, story, unichain, unichain-sepolia, apechain, curtis, sonic-blaze, sonic-testnet, sonic, treasure, treasure-topaz, berachain-bepolia, berachain-bartio, berachain-artio, berachain, superposition-testnet, superposition, monad-testnet, hyperliquid, abstract]\n\n  tip: a similar value exists: 'celo-baklava'\n\nFor more information, try '--help'.\n"
+              },
+              "sourcify": {
+                "status": "failed",
+                "reason": "sourcify verification failed: error: invalid value 'local' for '--chain \u003cCHAIN\u003e'\n  [possible values: mainnet, morden, ropsten, rinkeby, goerli, kovan, holesky, hoodi, sepolia, odyssey, optimism, optimism-kovan, optimism-goerli, optimism-sepolia, bob, bob-sepolia, arbitrum, arbitrum-testnet, arbitrum-goerli, arbitrum-sepolia, arbitrum-nova, cronos, cronos-testnet, rsk, telos, telos-testnet, crab, darwinia, koi, bsc, bsc-testnet, poa, sokol, scroll, scroll-sepolia, metis, cfx-testnet, cfx, xdai, polygon, mumbai, amoy, polygon-zkevm, polygon-zkevm-testnet, fantom, fantom-testnet, moonbeam, moonbeam-dev, moonriver, moonbase, dev, anvil-hardhat, gravity-alpha-mainnet, gravity-alpha-testnet-sepolia, evmos, evmos-testnet, chiado, oasis, emerald, emerald-testnet, filecoin-mainnet, filecoin-calibration-testnet, avalanche, fuji, celo, celo-alfajores, celo-baklava, aurora, aurora-testnet, canto, canto-testnet, boba, base, base-goerli, base-sepolia, syndr, syndr-sepolia, shimmer, ink, ink-sepolia, fraxtal, fraxtal-testnet, blast, blast-sepolia, linea, linea-goerli, linea-sepolia, zksync, zksync-testnet, mantle, mantle-testnet, mantle-sepolia, xai, xai-sepolia, happychain-testnet, viction, zora, zora-sepolia, pgn, pgn-sepolia, mode, mode-sepolia, elastos, kakarot-sepolia, etherlink, etherlink-testnet, degen, opbnb-mainnet, opbnb-testnet, ronin, ronin-testnet, taiko, taiko-hekla, autonomys-nova-testnet, flare, flare-coston2, acala, acala-mandala-testnet, acala-testnet, karura, karura-testnet, pulsechain, pulsechain-testnet, immutable, immutable-testnet, soneium, soneium-minato-testnet, world, world-sepolia, iotex, core, merlin, bitlayer, vana, zeta, kaia, story, unichain, unichain-sepolia, apechain, curtis, sonic-blaze, sonic-testnet, sonic, treasure, treasure-topaz, berachain-bepolia, berachain-bartio, berachain-artio, berachain, superposition-testnet, superposition, monad-testnet, hyperliquid, abstract]\n\n  tip: a similar value exists: 'celo-baklava'\n\nFor more information, try '--help'.\n"
+              }
+            }
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "broadcast_file": "",
+            "timestamp": "2025-05-26T18:46:15.094584+02:00",
+            "status": "EXECUTED",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "01b159f567f13a9061e33922ebfc564efe33675a",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/TestWithNewLib.sol:MathUtils",
+            "contract_path": "src/TestWithNewLib.sol",
+            "script_path": "script/deploy/DeployLibrary.s.sol"
+          }
+        },
+        "0xe339a44b6c9cb030bb172044a0157f2f7fe332b2": {
+          "fqid": "31337/default/src/TestWithNewLib.sol:TestWithNewLib",
+          "sid": "TestWithNewLib",
+          "address": "0xe339a44b6c9cb030bb172044a0157f2f7fe332b2",
+          "contract_name": "TestWithNewLib",
+          "environment": "default",
+          "type": "singleton",
+          "salt": "0xf1f30b69a9359c3e7c28eb76391835472e105f5c0040622b3e1ef1d1189abb2b",
+          "init_code_hash": "0xddb1efdc34df550b884c1a63ea191a873636ea779e3ddc340c12711b39caa25e",
+          "constructor_args": "0x",
+          "verification": {
+            "status": "failed",
+            "reason": "etherscan: etherscan verification failed: error: invalid value 'local' for '--chain \u003cCHAIN\u003e'\n  [possible values: mainnet, morden, ropsten, rinkeby, goerli, kovan, holesky, hoodi, sepolia, odyssey, optimism, optimism-kovan, optimism-goerli, optimism-sepolia, bob, bob-sepolia, arbitrum, arbitrum-testnet, arbitrum-goerli, arbitrum-sepolia, arbitrum-nova, cronos, cronos-testnet, rsk, telos, telos-testnet, crab, darwinia, koi, bsc, bsc-testnet, poa, sokol, scroll, scroll-sepolia, metis, cfx-testnet, cfx, xdai, polygon, mumbai, amoy, polygon-zkevm, polygon-zkevm-testnet, fantom, fantom-testnet, moonbeam, moonbeam-dev, moonriver, moonbase, dev, anvil-hardhat, gravity-alpha-mainnet, gravity-alpha-testnet-sepolia, evmos, evmos-testnet, chiado, oasis, emerald, emerald-testnet, filecoin-mainnet, filecoin-calibration-testnet, avalanche, fuji, celo, celo-alfajores, celo-baklava, aurora, aurora-testnet, canto, canto-testnet, boba, base, base-goerli, base-sepolia, syndr, syndr-sepolia, shimmer, ink, ink-sepolia, fraxtal, fraxtal-testnet, blast, blast-sepolia, linea, linea-goerli, linea-sepolia, zksync, zksync-testnet, mantle, mantle-testnet, mantle-sepolia, xai, xai-sepolia, happychain-testnet, viction, zora, zora-sepolia, pgn, pgn-sepolia, mode, mode-sepolia, elastos, kakarot-sepolia, etherlink, etherlink-testnet, degen, opbnb-mainnet, opbnb-testnet, ronin, ronin-testnet, taiko, taiko-hekla, autonomys-nova-testnet, flare, flare-coston2, acala, acala-mandala-testnet, acala-testnet, karura, karura-testnet, pulsechain, pulsechain-testnet, immutable, immutable-testnet, soneium, soneium-minato-testnet, world, world-sepolia, iotex, core, merlin, bitlayer, vana, zeta, kaia, story, unichain, unichain-sepolia, apechain, curtis, sonic-blaze, sonic-testnet, sonic, treasure, treasure-topaz, berachain-bepolia, berachain-bartio, berachain-artio, berachain, superposition-testnet, superposition, monad-testnet, hyperliquid, abstract]\n\n  tip: a similar value exists: 'celo-baklava'\n\nFor more information, try '--help'.\n; sourcify: sourcify verification failed: error: invalid value 'local' for '--chain \u003cCHAIN\u003e'\n  [possible values: mainnet, morden, ropsten, rinkeby, goerli, kovan, holesky, hoodi, sepolia, odyssey, optimism, optimism-kovan, optimism-goerli, optimism-sepolia, bob, bob-sepolia, arbitrum, arbitrum-testnet, arbitrum-goerli, arbitrum-sepolia, arbitrum-nova, cronos, cronos-testnet, rsk, telos, telos-testnet, crab, darwinia, koi, bsc, bsc-testnet, poa, sokol, scroll, scroll-sepolia, metis, cfx-testnet, cfx, xdai, polygon, mumbai, amoy, polygon-zkevm, polygon-zkevm-testnet, fantom, fantom-testnet, moonbeam, moonbeam-dev, moonriver, moonbase, dev, anvil-hardhat, gravity-alpha-mainnet, gravity-alpha-testnet-sepolia, evmos, evmos-testnet, chiado, oasis, emerald, emerald-testnet, filecoin-mainnet, filecoin-calibration-testnet, avalanche, fuji, celo, celo-alfajores, celo-baklava, aurora, aurora-testnet, canto, canto-testnet, boba, base, base-goerli, base-sepolia, syndr, syndr-sepolia, shimmer, ink, ink-sepolia, fraxtal, fraxtal-testnet, blast, blast-sepolia, linea, linea-goerli, linea-sepolia, zksync, zksync-testnet, mantle, mantle-testnet, mantle-sepolia, xai, xai-sepolia, happychain-testnet, viction, zora, zora-sepolia, pgn, pgn-sepolia, mode, mode-sepolia, elastos, kakarot-sepolia, etherlink, etherlink-testnet, degen, opbnb-mainnet, opbnb-testnet, ronin, ronin-testnet, taiko, taiko-hekla, autonomys-nova-testnet, flare, flare-coston2, acala, acala-mandala-testnet, acala-testnet, karura, karura-testnet, pulsechain, pulsechain-testnet, immutable, immutable-testnet, soneium, soneium-minato-testnet, world, world-sepolia, iotex, core, merlin, bitlayer, vana, zeta, kaia, story, unichain, unichain-sepolia, apechain, curtis, sonic-blaze, sonic-testnet, sonic, treasure, treasure-topaz, berachain-bepolia, berachain-bartio, berachain-artio, berachain, superposition-testnet, superposition, monad-testnet, hyperliquid, abstract]\n\n  tip: a similar value exists: 'celo-baklava'\n\nFor more information, try '--help'.\n",
+            "verifiers": {
+              "etherscan": {
+                "status": "failed",
+                "reason": "etherscan verification failed: error: invalid value 'local' for '--chain \u003cCHAIN\u003e'\n  [possible values: mainnet, morden, ropsten, rinkeby, goerli, kovan, holesky, hoodi, sepolia, odyssey, optimism, optimism-kovan, optimism-goerli, optimism-sepolia, bob, bob-sepolia, arbitrum, arbitrum-testnet, arbitrum-goerli, arbitrum-sepolia, arbitrum-nova, cronos, cronos-testnet, rsk, telos, telos-testnet, crab, darwinia, koi, bsc, bsc-testnet, poa, sokol, scroll, scroll-sepolia, metis, cfx-testnet, cfx, xdai, polygon, mumbai, amoy, polygon-zkevm, polygon-zkevm-testnet, fantom, fantom-testnet, moonbeam, moonbeam-dev, moonriver, moonbase, dev, anvil-hardhat, gravity-alpha-mainnet, gravity-alpha-testnet-sepolia, evmos, evmos-testnet, chiado, oasis, emerald, emerald-testnet, filecoin-mainnet, filecoin-calibration-testnet, avalanche, fuji, celo, celo-alfajores, celo-baklava, aurora, aurora-testnet, canto, canto-testnet, boba, base, base-goerli, base-sepolia, syndr, syndr-sepolia, shimmer, ink, ink-sepolia, fraxtal, fraxtal-testnet, blast, blast-sepolia, linea, linea-goerli, linea-sepolia, zksync, zksync-testnet, mantle, mantle-testnet, mantle-sepolia, xai, xai-sepolia, happychain-testnet, viction, zora, zora-sepolia, pgn, pgn-sepolia, mode, mode-sepolia, elastos, kakarot-sepolia, etherlink, etherlink-testnet, degen, opbnb-mainnet, opbnb-testnet, ronin, ronin-testnet, taiko, taiko-hekla, autonomys-nova-testnet, flare, flare-coston2, acala, acala-mandala-testnet, acala-testnet, karura, karura-testnet, pulsechain, pulsechain-testnet, immutable, immutable-testnet, soneium, soneium-minato-testnet, world, world-sepolia, iotex, core, merlin, bitlayer, vana, zeta, kaia, story, unichain, unichain-sepolia, apechain, curtis, sonic-blaze, sonic-testnet, sonic, treasure, treasure-topaz, berachain-bepolia, berachain-bartio, berachain-artio, berachain, superposition-testnet, superposition, monad-testnet, hyperliquid, abstract]\n\n  tip: a similar value exists: 'celo-baklava'\n\nFor more information, try '--help'.\n"
+              },
+              "sourcify": {
+                "status": "failed",
+                "reason": "sourcify verification failed: error: invalid value 'local' for '--chain \u003cCHAIN\u003e'\n  [possible values: mainnet, morden, ropsten, rinkeby, goerli, kovan, holesky, hoodi, sepolia, odyssey, optimism, optimism-kovan, optimism-goerli, optimism-sepolia, bob, bob-sepolia, arbitrum, arbitrum-testnet, arbitrum-goerli, arbitrum-sepolia, arbitrum-nova, cronos, cronos-testnet, rsk, telos, telos-testnet, crab, darwinia, koi, bsc, bsc-testnet, poa, sokol, scroll, scroll-sepolia, metis, cfx-testnet, cfx, xdai, polygon, mumbai, amoy, polygon-zkevm, polygon-zkevm-testnet, fantom, fantom-testnet, moonbeam, moonbeam-dev, moonriver, moonbase, dev, anvil-hardhat, gravity-alpha-mainnet, gravity-alpha-testnet-sepolia, evmos, evmos-testnet, chiado, oasis, emerald, emerald-testnet, filecoin-mainnet, filecoin-calibration-testnet, avalanche, fuji, celo, celo-alfajores, celo-baklava, aurora, aurora-testnet, canto, canto-testnet, boba, base, base-goerli, base-sepolia, syndr, syndr-sepolia, shimmer, ink, ink-sepolia, fraxtal, fraxtal-testnet, blast, blast-sepolia, linea, linea-goerli, linea-sepolia, zksync, zksync-testnet, mantle, mantle-testnet, mantle-sepolia, xai, xai-sepolia, happychain-testnet, viction, zora, zora-sepolia, pgn, pgn-sepolia, mode, mode-sepolia, elastos, kakarot-sepolia, etherlink, etherlink-testnet, degen, opbnb-mainnet, opbnb-testnet, ronin, ronin-testnet, taiko, taiko-hekla, autonomys-nova-testnet, flare, flare-coston2, acala, acala-mandala-testnet, acala-testnet, karura, karura-testnet, pulsechain, pulsechain-testnet, immutable, immutable-testnet, soneium, soneium-minato-testnet, world, world-sepolia, iotex, core, merlin, bitlayer, vana, zeta, kaia, story, unichain, unichain-sepolia, apechain, curtis, sonic-blaze, sonic-testnet, sonic, treasure, treasure-topaz, berachain-bepolia, berachain-bartio, berachain-artio, berachain, superposition-testnet, superposition, monad-testnet, hyperliquid, abstract]\n\n  tip: a similar value exists: 'celo-baklava'\n\nFor more information, try '--help'.\n"
+              }
+            }
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "broadcast_file": "",
+            "timestamp": "2025-05-26T18:46:16.077164+02:00",
+            "status": "EXECUTED",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "01b159f567f13a9061e33922ebfc564efe33675a",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/TestWithNewLib.sol:TestWithNewLib",
+            "contract_path": "src/TestWithNewLib.sol",
+            "script_path": "script/deploy/DeployTestWithNewLib.s.sol"
           }
         }
       }
@@ -224,7 +385,17 @@
           "salt": "",
           "init_code_hash": "",
           "verification": {
-            "status": "pending"
+            "status": "partial",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0x2E76ce88Df86C37b0f2CAA7718C411cD77996188#code"
+              },
+              "sourcify": {
+                "status": "failed",
+                "reason": "sourcify verification failed: Error: Compiler version has to be set in `foundry.toml`. If the project was not deployed with foundry, specify the version through `--compiler-version` flag.\n"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -282,6 +453,45 @@
             "script_path": "script/deploy/DeployUpgradeableCounterProxy.s.sol"
           }
         },
+        "0x4c032fe72fff3de1329002db95d2e2d58bc4e3df": {
+          "fqid": "44787/default/src/TestWithNewLib.sol:MathUtils",
+          "sid": "MathUtils",
+          "address": "0x4c032fe72fff3de1329002db95d2e2d58bc4e3df",
+          "contract_name": "MathUtils",
+          "environment": "default",
+          "type": "library",
+          "salt": "",
+          "init_code_hash": "",
+          "verification": {
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0x4C032FE72FFF3De1329002DB95d2e2d58bC4e3dF#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0x4C032FE72FFF3De1329002DB95d2e2d58bC4e3dF#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x4C032FE72FFF3De1329002DB95d2e2d58bC4e3dF"
+              }
+            }
+          },
+          "deployment": {
+            "tx_hash": "0x4703482af3b9b4b530e9bcfee70933bc437910c7c955942f596cc9b8263d3241",
+            "block_number": 47321386,
+            "broadcast_file": "",
+            "timestamp": "2025-05-26T18:25:08.436916+02:00",
+            "status": "EXECUTED",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "01b159f567f13a9061e33922ebfc564efe33675a",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/TestWithNewLib.sol:MathUtils",
+            "contract_path": "src/TestWithNewLib.sol",
+            "script_path": "script/deploy/DeployLibrary.s.sol"
+          }
+        },
         "0x580e253f624f3f07f3b8a6ea930a50a00cb285cf": {
           "fqid": "44787/default/src/test-dir/Counter.sol:Counter:V11",
           "sid": "Counter:V11",
@@ -334,7 +544,18 @@
           "init_code_hash": "0xd0a4614a20111f9cd8a136f73124bf1600a7f6e4b899fdabc15e8ec1b43f3f3f",
           "constructor_args": "0x",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0x78b09a4243c1b5bF3f98f26D3933F7A956036038#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0x78b09a4243c1b5bF3f98f26D3933F7A956036038#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0x78b09a4243c1b5bF3f98f26D3933F7A956036038"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x935b8f1ee37b3596c74354deac7420cb59dc62e7a1a1b7ab7285f7c45c0d3bce",
@@ -607,7 +828,18 @@
           "salt": "",
           "init_code_hash": "",
           "verification": {
-            "status": "pending"
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0xC1cF3BC0455e9cf60FC8780BC0aBF55790c49b11#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0xC1cF3BC0455e9cf60FC8780BC0aBF55790c49b11#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0xC1cF3BC0455e9cf60FC8780BC0aBF55790c49b11"
+              }
+            }
           },
           "deployment": {
             "tx_hash": "0x8390353db872cb8c2642d7f5cae715f684aaa6cba202f80647e9558bdf6cc104",
@@ -705,6 +937,46 @@
             "source_hash": "src/MessageStorageV07.sol:MessageStorageV07",
             "contract_path": "src/MessageStorageV07.sol",
             "script_path": "script/deploy/DeployMessageStorageV07.s.sol"
+          }
+        },
+        "0xe339a44b6c9cb030bb172044a0157f2f7fe332b2": {
+          "fqid": "44787/default/src/TestWithNewLib.sol:TestWithNewLib",
+          "sid": "TestWithNewLib",
+          "address": "0xe339a44b6c9cb030bb172044a0157f2f7fe332b2",
+          "contract_name": "TestWithNewLib",
+          "environment": "default",
+          "type": "singleton",
+          "salt": "0xf1f30b69a9359c3e7c28eb76391835472e105f5c0040622b3e1ef1d1189abb2b",
+          "init_code_hash": "0x408a6164e697c81d187f3b6795b01336c89515bdf0a5b18d1f40a1bc6c1cc3d8",
+          "constructor_args": "0x",
+          "verification": {
+            "status": "verified",
+            "explorer_url": "https://alfajores.celoscan.io/address/0xE339A44b6c9cB030BB172044A0157F2F7FE332B2#code",
+            "verifiers": {
+              "etherscan": {
+                "status": "verified",
+                "url": "https://alfajores.celoscan.io/address/0xE339A44b6c9cB030BB172044A0157F2F7FE332B2#code"
+              },
+              "sourcify": {
+                "status": "verified",
+                "url": "https://sourcify.dev/#/lookup/0xE339A44b6c9cB030BB172044A0157F2F7FE332B2"
+              }
+            }
+          },
+          "deployment": {
+            "tx_hash": "0xe8dab494b5d877517a49e07cfec06c1ebf7edb8f749d28bce0cae441b751e6ee",
+            "block_number": 47321238,
+            "broadcast_file": "",
+            "timestamp": "2025-05-26T18:22:39.641709+02:00",
+            "status": "EXECUTED",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "01b159f567f13a9061e33922ebfc564efe33675a",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/TestWithNewLib.sol:TestWithNewLib",
+            "contract_path": "src/TestWithNewLib.sol",
+            "script_path": "script/deploy/DeployTestWithNewLib.s.sol"
           }
         }
       }

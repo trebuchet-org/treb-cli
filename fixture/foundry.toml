@@ -8,7 +8,7 @@ optimizer_runs = 0
 
 [profile.local.deployer]
 type = "private_key"
-private_key = "${DEPLOYER_PRIVATE_KEY}"
+private_key = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 
 [profile.default.deployer]
 type = "private_key"

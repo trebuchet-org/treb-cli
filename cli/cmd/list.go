@@ -401,13 +401,14 @@ func calculateColumnWidthsForRows(deployments []*registry.DeploymentInfo) column
 
 // filterDeployments applies the command-line filters to the deployment list
 func filterDeployments(deployments []*registry.DeploymentInfo) []*registry.DeploymentInfo {
-	if filterEnv == "" && filterNetwork == "" && filterContract == "" {
-		return deployments
-	}
-
 	filtered := make([]*registry.DeploymentInfo, 0)
 
 	for _, deployment := range deployments {
+		// Always filter out libraries from regular deployment list
+		if deployment.Entry.Type == types.LibraryDeployment {
+			continue
+		}
+
 		// Filter by environment (exact match, case-insensitive)
 		if filterEnv != "" && !strings.EqualFold(deployment.Entry.Environment, filterEnv) {
 			continue
@@ -463,7 +464,15 @@ func listLibraries() error {
 		return fmt.Errorf("failed to initialize registry: %w", err)
 	}
 
-	libraries := registryManager.GetAllLibraries()
+	// Get all deployments and filter for libraries
+	allDeployments := registryManager.GetAllDeployments()
+	libraries := make([]*registry.DeploymentInfo, 0)
+	
+	for _, deployment := range allDeployments {
+		if deployment.Entry.Type == types.LibraryDeployment {
+			libraries = append(libraries, deployment)
+		}
+	}
 
 	if len(libraries) == 0 {
 		fmt.Println("No libraries found")
@@ -471,18 +480,16 @@ func listLibraries() error {
 	}
 
 	// Group libraries by chain
-	librariesByChain := make(map[string][]*types.DeploymentEntry)
+	librariesByChain := make(map[string][]*registry.DeploymentInfo)
 	chains := make([]string, 0)
-	allLibraries := make([]*types.DeploymentEntry, 0)
 
-	// Parse library keys (format: "chainID-libraryName")
-	for _, entry := range libraries {
-		allLibraries = append(allLibraries, entry)
-
-		if !slices.Contains(chains, entry.NetworkInfo.Name) {
-			chains = append(chains, entry.NetworkInfo.Name)
+	for _, lib := range libraries {
+		chainName := lib.NetworkName
+		
+		if !slices.Contains(chains, chainName) {
+			chains = append(chains, chainName)
 		}
-		librariesByChain[entry.NetworkInfo.Name] = append(librariesByChain[entry.NetworkInfo.Name], entry)
+		librariesByChain[chainName] = append(librariesByChain[chainName], lib)
 	}
 
 	// Sort chains
@@ -499,7 +506,7 @@ func listLibraries() error {
 
 		// Sort libraries by timestamp (newest first)
 		sort.Slice(chainLibs, func(i, j int) bool {
-			return chainLibs[i].Deployment.Timestamp.After(chainLibs[j].Deployment.Timestamp)
+			return chainLibs[i].Entry.Deployment.Timestamp.After(chainLibs[j].Entry.Deployment.Timestamp)
 		})
 
 		// Create table
@@ -518,8 +525,7 @@ func listLibraries() error {
 		t.SetColumnConfigs([]table.ColumnConfig{
 			{Number: 1, Align: text.AlignLeft, WidthMin: 20, WidthMax: 30},
 			{Number: 2, Align: text.AlignLeft, WidthMin: 42, WidthMax: 42},
-			{Number: 3, Align: text.AlignLeft, WidthMin: 50, WidthMax: 80},
-			{Number: 4, Align: text.AlignLeft, WidthMin: 19, WidthMax: 19},
+			{Number: 3, Align: text.AlignLeft, WidthMin: 19, WidthMax: 19},
 		})
 
 		// Add chain header
@@ -531,17 +537,14 @@ func listLibraries() error {
 		fmt.Println()
 
 		for _, lib := range chainLibs {
-			libraryName := lib.ContractName
-			timestamp := lib.Deployment.Timestamp.Format("2006-01-02 15:04:05")
+			libraryName := lib.Entry.ContractName
+			timestamp := lib.Entry.Deployment.Timestamp.Format("2006-01-02 15:04:05")
 
 			// Build library name cell
 			libraryCell := libraryNameStyle.Sprint(libraryName)
 
 			// Address cell
-			addressCell := libraryAddressStyle.Sprint(lib.Address.Hex())
-
-			// Foundry.toml format
-			foundryCell := foundryStyle.Sprintf("\"src/%s.sol:%s:%s\"", libraryName, libraryName, lib.Address.Hex())
+			addressCell := libraryAddressStyle.Sprint(lib.Entry.Address.Hex())
 
 			// Timestamp
 			timestampCell := timestampStyle.Sprint(timestamp)
@@ -549,7 +552,6 @@ func listLibraries() error {
 			t.AppendRow(table.Row{
 				"  " + libraryCell,
 				addressCell,
-				foundryCell,
 				timestampCell,
 			})
 		}
@@ -559,12 +561,21 @@ func listLibraries() error {
 		fmt.Println()
 	}
 
-	// Show foundry.toml configuration tip
-	fmt.Println("To use these libraries, add the library entries to your foundry.toml:")
+	// Show library usage information
+	fmt.Println("ℹ️  Library Usage Information:")
+	fmt.Println("• Treb automatically injects library addresses on demand for contracts that need them")
+	fmt.Println("• No manual configuration needed in foundry.toml")
+	fmt.Println()
+	fmt.Println("⚠️  Warning: Adding libraries to foundry.toml will:")
+	fmt.Println("• Include library addresses in metadata of ALL contracts (even those that don't use them)")
+	fmt.Println("• Change the compilation bytecode hash")
+	fmt.Println("• Potentially cause verification difficulties")
+	fmt.Println()
+	fmt.Println("If you still need to add them to foundry.toml:")
 	color.New(color.FgCyan).Println("[profile.default]")
 	color.New(color.FgCyan).Println("libraries = [")
-	for _, lib := range allLibraries {
-		color.New(color.FgCyan).Printf("  \"src/%s.sol:%s:%s\",\n", lib.ContractName, lib.ContractName, lib.Address.Hex())
+	for _, lib := range libraries {
+		color.New(color.FgCyan).Printf("  \"src/%s.sol:%s:%s\",\n", lib.Entry.ContractName, lib.Entry.ContractName, lib.Entry.Address.Hex())
 	}
 	color.New(color.FgCyan).Println("]")
 

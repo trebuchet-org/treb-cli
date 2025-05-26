@@ -2,8 +2,11 @@ package deployment
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/briandowns/spinner"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/fatih/color"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/interactive"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
@@ -15,6 +18,40 @@ type LibraryInfo struct {
 	Address     common.Address
 }
 
+// librarySpinner wraps the spinner functionality
+type librarySpinner struct {
+	s *spinner.Spinner
+}
+
+func newLibrarySpinner() *librarySpinner {
+	s := spinner.New(spinner.CharSets[11], 100*time.Millisecond)
+	s.HideCursor = true
+	return &librarySpinner{s: s}
+}
+
+func (ls *librarySpinner) Start(message string) {
+	ls.s.Suffix = " " + message
+	ls.s.Start()
+}
+
+func (ls *librarySpinner) Success(message string) {
+	ls.s.Stop()
+	color.New(color.FgGreen).Printf("✓ ")
+	fmt.Println(message)
+}
+
+func (ls *librarySpinner) Warning(message string) {
+	ls.s.Stop()
+	color.New(color.FgYellow).Printf("⚠ ")
+	fmt.Println(message)
+}
+
+func (ls *librarySpinner) Fail(message string) {
+	ls.s.Stop()
+	color.New(color.FgRed).Printf("✗ ")
+	fmt.Println(message)
+}
+
 // checkAndResolveLibraries checks if required libraries are deployed and prompts to deploy missing ones
 func (d *DeploymentContext) checkAndResolveLibraries(contractInfo *contracts.ContractInfo) ([]LibraryInfo, error) {
 	libs := contractInfo.GetRequiredLibraries()
@@ -22,57 +59,61 @@ func (d *DeploymentContext) checkAndResolveLibraries(contractInfo *contracts.Con
 		return nil, nil
 	}
 
-	fmt.Printf("\n📚 Contract requires %d libraries:\n", len(libs))
+	// Start spinner for library check
+	spinner := newLibrarySpinner()
+	spinner.Start(fmt.Sprintf("Checking %d required libraries", len(libs)))
 
 	var resolvedLibs []LibraryInfo
 	var missingLibs []contracts.LibraryRequirement
 
 	// Check each library
 	for _, lib := range libs {
-		fmt.Printf("   - %s (%s)\n", lib.Name, lib.Path)
-
 		// Look up library deployment on current chain (libraries don't have env)
 		entry := d.findLibraryDeployment(lib.Name)
 		if entry != nil {
-			fmt.Printf("     ✓ Found at %s\n", entry.Address.Hex())
 			resolvedLibs = append(resolvedLibs, LibraryInfo{
 				Requirement: lib,
 				Address:     entry.Address,
 			})
 		} else {
-			fmt.Printf("     ✗ Not deployed on %s\n", d.networkInfo.Name)
 			missingLibs = append(missingLibs, lib)
 		}
 	}
 
-	// If all libraries are deployed, return
+	// Stop spinner with result
 	if len(missingLibs) == 0 {
+		spinner.Success("All libraries found")
 		return resolvedLibs, nil
 	}
 
-	// Ask user if they want to deploy missing libraries
-	fmt.Printf("\n⚠️  Missing %d libraries on %s\n", len(missingLibs), d.networkInfo.Name)
+	spinner.Warning(fmt.Sprintf("Missing %d of %d libraries on %s", len(missingLibs), len(libs), d.networkInfo.Name))
 
+	// Ask user if they want to deploy missing libraries
+	fmt.Println()
 	selector := interactive.NewSelector()
-	shouldDeploy, err := selector.PromptConfirm("Would you like to deploy the missing libraries now?", true)
+	shouldDeploy, err := selector.PromptConfirm("Would you like to deploy the missing libraries now", true)
 	if err != nil || !shouldDeploy {
 		return nil, fmt.Errorf("required libraries not deployed")
 	}
 
 	// Deploy missing libraries
-	fmt.Println("\n🚀 Deploying missing libraries...")
-	for _, lib := range missingLibs {
-		fmt.Printf("\nDeploying %s...\n", lib.Name)
+	fmt.Println()
+	deploySpinner := newLibrarySpinner()
+
+	for i, lib := range missingLibs {
+		deploySpinner.Start(fmt.Sprintf("Deploying library %s (%d/%d)", lib.Name, i+1, len(missingLibs)))
 
 		// Create a nested deployment context for the library
 		libCtx, err := d.createLibraryDeploymentContext(lib.Name)
 		if err != nil {
+			deploySpinner.Fail(fmt.Sprintf("Failed to prepare %s deployment", lib.Name))
 			return nil, fmt.Errorf("failed to create library deployment context: %w", err)
 		}
 
 		// Execute the library deployment
 		result, err := libCtx.Execute()
 		if err != nil {
+			deploySpinner.Fail(fmt.Sprintf("Failed to deploy %s", lib.Name))
 			return nil, fmt.Errorf("failed to deploy library %s: %w", lib.Name, err)
 		}
 
@@ -82,7 +123,7 @@ func (d *DeploymentContext) checkAndResolveLibraries(contractInfo *contracts.Con
 			Address:     result.Address,
 		})
 
-		fmt.Printf("✅ Deployed %s at %s\n", lib.Name, result.Address.Hex())
+		deploySpinner.Success(fmt.Sprintf("Deployed %s at %s", lib.Name, result.Address.Hex()))
 	}
 
 	return resolvedLibs, nil
@@ -96,8 +137,8 @@ func (d *DeploymentContext) findLibraryDeployment(libraryName string) *types.Dep
 	for _, deployment := range d.registryManager.GetAllDeployments() {
 		if deployment.ChainID == chainID &&
 			deployment.Entry.ContractName == libraryName &&
-			deployment.Entry.Deployment.Status == types.StatusExecuted &&
 			deployment.Entry.Type == types.LibraryDeployment {
+			// For libraries, we just check if the address exists (they might have empty status)
 			if deployment.Entry.Address != (common.Address{}) {
 				return deployment.Entry
 			}

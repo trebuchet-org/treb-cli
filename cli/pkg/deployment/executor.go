@@ -112,6 +112,7 @@ func (d *DeploymentContext) runScript() (string, error) {
 	flags := []string{
 		"--rpc-url", d.networkInfo.RpcUrl,
 		"-vvvv",
+		"--non-interactive", // Prevent TTY-related errors
 	}
 
 	if !d.Params.Predict {

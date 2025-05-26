@@ -1,5 +1,5 @@
 {
   "environment": "default",
-  "network": "celo-alfajores",
-  "verify": false
+  "network": "sepolia",
+  "verify": true
 }
