@@ -1,0 +1,378 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+# NOTE: if you make modifications to this script, please increment the version number.
+TREBUP_INSTALLER_VERSION="0.1.0"
+
+BASE_DIR=${XDG_CONFIG_HOME:-$HOME}
+TREB_DIR=${TREB_DIR:-"$BASE_DIR/.treb"}
+TREB_VERSIONS_DIR="$TREB_DIR/versions"
+TREB_BIN_DIR="$TREB_DIR/bin"
+TREBUP_BIN_URL="https://raw.githubusercontent.com/trebuchet-org/treb-cli/main/trebup/trebup"
+TREBUP_BIN_PATH="$TREB_BIN_DIR/trebup"
+
+BINS=(treb)
+
+main() {
+  need_cmd git
+  need_cmd curl
+
+  while [[ -n $1 ]]; do
+    case $1 in
+      --)               shift; break;;
+
+      -v|--version)     shift; version;;
+      -U|--update)      shift; update;;
+      -r|--repo)        shift; TREBUP_REPO=$1;;
+      -b|--branch)      shift; TREBUP_BRANCH=$1;;
+      -i|--install)     shift; TREBUP_VERSION=$1;;
+      -l|--list)        shift; list;;
+      -u|--use)         shift; TREBUP_VERSION=$1; use;;
+      -p|--path)        shift; TREBUP_LOCAL_REPO=$1;;
+      -P|--pr)          shift; TREBUP_PR=$1;;
+      -C|--commit)      shift; TREBUP_COMMIT=$1;;
+      --arch)           shift; TREBUP_ARCH=$1;;
+      --platform)       shift; TREBUP_PLATFORM=$1;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        warn "unknown option: $1"
+        usage
+        exit 1
+    esac; shift
+  done
+
+  # Print the banner after successfully parsing args
+  banner
+
+  if [ -n "$TREBUP_PR" ]; then
+    if [ -z "$TREBUP_BRANCH" ]; then
+      TREBUP_BRANCH="refs/pull/$TREBUP_PR/head"
+    else
+      err "can't use --pr and --branch at the same time"
+    fi
+  fi
+
+  check_bins_in_use
+
+  # Build from source if --path, --branch, --pr, or --commit provided
+  if [[ -n "$TREBUP_LOCAL_REPO" ]] || [[ -n "$TREBUP_BRANCH" ]] || [[ -n "$TREBUP_COMMIT" ]]; then
+    need_cmd go
+
+    if [[ -n "$TREBUP_LOCAL_REPO" ]]; then
+      cd "$TREBUP_LOCAL_REPO"
+      say "installing from $TREBUP_LOCAL_REPO"
+    else
+      TREBUP_REPO=${TREBUP_REPO:-trebuchet-org/treb-cli}
+      CLONE_DIR="$TREB_DIR/cache"
+      REPO_PATH="$CLONE_DIR/treb-cli"
+
+      # Clone or update the repository
+      if [ ! -d "$REPO_PATH" ]; then
+        say "cloning $TREBUP_REPO..."
+        ensure mkdir -p "$CLONE_DIR"
+        ensure git clone "https://github.com/$TREBUP_REPO" "$REPO_PATH"
+      fi
+
+      cd "$REPO_PATH"
+
+      # Fetch and checkout the requested version
+      ensure git fetch origin
+      if [ -n "$TREBUP_BRANCH" ]; then
+        say "installing from branch $TREBUP_BRANCH"
+        ensure git checkout "$TREBUP_BRANCH"
+      elif [ -n "$TREBUP_COMMIT" ]; then
+        say "installing from commit $TREBUP_COMMIT"
+        ensure git checkout "$TREBUP_COMMIT"
+      fi
+    fi
+
+    # Build treb
+    say "building treb..."
+    ensure make build
+
+    # Install to bin directory
+    for bin in "${BINS[@]}"; do
+      rm -f "$TREB_BIN_DIR/$bin"
+      ensure cp "bin/$bin" "$TREB_BIN_DIR/$bin"
+    done
+
+    say "done! treb installed to $TREB_BIN_DIR"
+    exit 0
+  fi
+
+  TREBUP_REPO=${TREBUP_REPO:-trebuchet-org/treb-cli}
+
+  # Install by downloading binaries
+  if [[ "$TREBUP_REPO" == "trebuchet-org/treb-cli" && -z "$TREBUP_BRANCH" && -z "$TREBUP_COMMIT" ]]; then
+    TREBUP_VERSION=${TREBUP_VERSION:-stable}
+    TREBUP_TAG=$TREBUP_VERSION
+
+    # Normalize versions (handle channels, versions without v prefix)
+    if [[ "$TREBUP_VERSION" =~ ^nightly ]]; then
+      TREBUP_VERSION="nightly"
+    elif [[ "$TREBUP_VERSION" == [[:digit:]]* ]]; then
+      # Add v prefix
+      TREBUP_VERSION="v${TREBUP_VERSION}"
+      TREBUP_TAG="${TREBUP_VERSION}"
+    fi
+
+    say "installing treb (version ${TREBUP_VERSION}, tag ${TREBUP_TAG})"
+
+    uname_s=$(uname -s)
+    PLATFORM=$(tolower "${TREBUP_PLATFORM:-$uname_s}")
+    EXT="tar.gz"
+    case $PLATFORM in
+      linux) ;;
+      darwin|mac*)
+        PLATFORM="darwin"
+        ;;
+      mingw*|win*)
+        EXT="zip"
+        PLATFORM="windows"
+        ;;
+      *)
+        err "unsupported platform: $PLATFORM"
+        ;;
+    esac
+
+    uname_m=$(uname -m)
+    ARCHITECTURE=$(tolower "${TREBUP_ARCH:-$uname_m}")
+    if [ "${ARCHITECTURE}" = "x86_64" ]; then
+      # Redirect stderr to /dev/null to avoid printing errors if non Rosetta.
+      if [ "$(sysctl -n sysctl.proc_translated 2>/dev/null)" = "1" ]; then
+        ARCHITECTURE="arm64" # Rosetta.
+      else
+        ARCHITECTURE="amd64" # Intel.
+      fi
+    elif [ "${ARCHITECTURE}" = "arm64" ] || [ "${ARCHITECTURE}" = "aarch64" ] ; then
+      ARCHITECTURE="arm64" # Arm.
+    else
+      ARCHITECTURE="amd64" # Amd.
+    fi
+
+    # Compute the URL of the release tarball in the Treb repository.
+    RELEASE_URL="https://github.com/${TREBUP_REPO}/releases/download/${TREBUP_TAG}/"
+    BIN_ARCHIVE_NAME="treb_${TREBUP_TAG}_${PLATFORM}_${ARCHITECTURE}.$EXT"
+    BIN_ARCHIVE_URL="${RELEASE_URL}${BIN_ARCHIVE_NAME}"
+
+    VERSION_DIR="$TREB_VERSIONS_DIR/$TREBUP_VERSION"
+
+    # Download and extract the binaries
+    download_and_extract "$BIN_ARCHIVE_URL" "$BIN_ARCHIVE_NAME" "$VERSION_DIR"
+
+    install "$TREBUP_VERSION"
+
+    say "done! treb ${TREBUP_VERSION} installed"
+  else
+    err "building from source not supported for custom repos. Use --path for local builds."
+  fi
+}
+
+usage() {
+  cat <<EOF
+The installer for Treb.
+
+Update or revert to a specific Treb version with ease.
+
+By default, the latest stable version is installed from pre-built binaries.
+
+USAGE:
+    trebup [OPTIONS]
+
+OPTIONS:
+    -h, --help          Print help information
+    -v, --version       Print version information
+    -U, --update        Update trebup itself
+    -i, --install       Install a specific version (can be a tag or 'stable'/'nightly')
+    -u, --use           Use a specific version that's already installed
+    -l, --list          List all installed versions
+    -p, --path          Install from a local repository path (for development)
+    -b, --branch        Install from a git branch
+    -P, --pr            Install from a pull request
+    -C, --commit        Install from a git commit
+    -r, --repo          Install from a custom GitHub repo (org/repo format)
+    --arch              Override target architecture
+    --platform          Override target platform
+
+EXAMPLES:
+    # Install the latest stable release
+    trebup
+
+    # Install a specific version
+    trebup --install v0.2.0
+
+    # Install from a local repo
+    trebup --path ./path/to/treb-cli
+
+    # Install from a branch
+    trebup --branch feature/new-feature
+
+    # List installed versions
+    trebup --list
+
+    # Switch to an installed version
+    trebup --use v0.1.0
+
+    # Update trebup itself
+    trebup --update
+EOF
+}
+
+banner() {
+  cat <<'EOF'
+  _           _
+ | |_ _ __ ___| |__  _   _ _ __
+ | __| '__/ _ \ '_ \| | | | '_ \
+ | |_| | |  __/ |_) | |_| | |_) |
+  \__|_|  \___|_.__/ \__,_| .__/
+                          |_|
+
+EOF
+}
+
+version() {
+  echo "trebup $TREBUP_INSTALLER_VERSION"
+}
+
+update() {
+  say "updating trebup..."
+  ensure curl -sSf -L "$TREBUP_BIN_URL" -o "$TREBUP_BIN_PATH.tmp"
+  ensure chmod +x "$TREBUP_BIN_PATH.tmp"
+  ensure mv "$TREBUP_BIN_PATH.tmp" "$TREBUP_BIN_PATH"
+  say "updated trebup to latest version"
+  exit 0
+}
+
+list() {
+  if [ ! -d "$TREB_VERSIONS_DIR" ]; then
+    say "no versions installed"
+    exit 0
+  fi
+
+  current_version=$(readlink "$TREB_BIN_DIR/treb" 2>/dev/null | sed 's|.*/versions/\([^/]*\)/.*|\1|')
+
+  say "installed versions:"
+  for version in $(ls "$TREB_VERSIONS_DIR"); do
+    if [[ "$version" == "$current_version" ]]; then
+      echo "  * $version (current)"
+    else
+      echo "    $version"
+    fi
+  done
+}
+
+use() {
+  if [ -z "$TREBUP_VERSION" ]; then
+    err "version not specified"
+  fi
+
+  VERSION_DIR="$TREB_VERSIONS_DIR/$TREBUP_VERSION"
+  if [ ! -d "$VERSION_DIR" ]; then
+    err "version $TREBUP_VERSION not installed"
+  fi
+
+  install "$TREBUP_VERSION"
+  say "switched to treb $TREBUP_VERSION"
+}
+
+install() {
+  local version=$1
+  local version_dir="$TREB_VERSIONS_DIR/$version"
+
+  # Create bin directory if it doesn't exist
+  ensure mkdir -p "$TREB_BIN_DIR"
+
+  # Copy binaries to bin directory
+  for bin in "${BINS[@]}"; do
+    local bin_path="$version_dir/$bin"
+    if [ ! -f "$bin_path" ]; then
+      err "$bin not found in $version_dir"
+    fi
+    ensure rm -f "$TREB_BIN_DIR/$bin"
+    ensure cp "$bin_path" "$TREB_BIN_DIR/$bin"
+    ensure chmod +x "$TREB_BIN_DIR/$bin"
+  done
+}
+
+download_and_extract() {
+  local url=$1
+  local archive_name=$2
+  local extract_dir=$3
+
+  # Create temporary directory for download
+  local tmp_dir=$(mktemp -d)
+  local archive_path="$tmp_dir/$archive_name"
+
+  say "downloading $archive_name..."
+  if ! curl -#L "$url" -o "$archive_path"; then
+    rm -rf "$tmp_dir"
+    err "failed to download $url"
+  fi
+
+  # Create version directory
+  ensure mkdir -p "$extract_dir"
+
+  # Extract based on file extension
+  if [[ "$archive_name" =~ \.tar\.gz$ ]]; then
+    ensure tar -xzf "$archive_path" -C "$extract_dir"
+  elif [[ "$archive_name" =~ \.zip$ ]]; then
+    ensure unzip -q "$archive_path" -d "$extract_dir"
+  else
+    rm -rf "$tmp_dir"
+    err "unknown archive format: $archive_name"
+  fi
+
+  # Clean up
+  rm -rf "$tmp_dir"
+}
+
+check_bins_in_use() {
+  local in_use=()
+
+  for bin in "${BINS[@]}"; do
+    if pgrep -x "$bin" >/dev/null 2>&1; then
+      in_use+=("$bin")
+    fi
+  done
+
+  if [ ${#in_use[@]} -gt 0 ]; then
+    err "the following binaries are in use: ${in_use[*]}"
+  fi
+}
+
+# Helper functions
+need_cmd() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    err "need '$1' (command not found)"
+  fi
+}
+
+say() {
+  echo "trebup: $*"
+}
+
+warn() {
+  echo "trebup: warning: $*" >&2
+}
+
+err() {
+  echo "trebup: error: $*" >&2
+  exit 1
+}
+
+ensure() {
+  "$@"
+  local status=$?
+  if [ $status -ne 0 ]; then
+    err "command failed: $*"
+  fi
+}
+
+tolower() {
+  echo "$1" | tr '[:upper:]' '[:lower:]'
+}
+
+main "$@"

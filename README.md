@@ -4,9 +4,9 @@
 
 ## Overview
 
-treb is a CLI tool that orchestrates Foundry script execution for deterministic smart contract deployments using CreateX. It follows a "Go orchestrates, Solidity executes" pattern where:
+treb is a CLI tool that orchestrates Foundry script execution for deterministic smart contract deployments using CreateX. It follows a "CLI orchestrates, Foundry executes" pattern where:
 
-- **Go** handles configuration, planning, and registry management
+- **the CLI** handles configuration, planning, and registry management
 - **Foundry scripts** handle all chain interactions using proven patterns
 - **CreateX** provides deterministic addresses across chains
 

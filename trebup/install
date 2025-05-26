@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+echo "Installing trebup..."
+
+BASE_DIR="${XDG_CONFIG_HOME:-$HOME}"
+TREB_DIR="${TREB_DIR:-"$BASE_DIR/.treb"}"
+TREB_BIN_DIR="$TREB_DIR/bin"
+
+BIN_URL="https://raw.githubusercontent.com/trebuchet-org/treb-cli/main/trebup/trebup"
+BIN_PATH="$TREB_BIN_DIR/trebup"
+
+# Create the .treb bin directory and trebup binary if it doesn't exist.
+mkdir -p "$TREB_BIN_DIR"
+curl -sSf -L "$BIN_URL" -o "$BIN_PATH"
+chmod +x "$BIN_PATH"
+
+# Store the correct profile file (i.e. .profile for bash or .zshenv for ZSH).
+case $SHELL in
+*/zsh)
+    PROFILE="${ZDOTDIR-"$HOME"}/.zshenv"
+    PREF_SHELL=zsh
+    ;;
+*/bash)
+    PROFILE=$HOME/.bashrc
+    PREF_SHELL=bash
+    ;;
+*/fish)
+    PROFILE=$HOME/.config/fish/config.fish
+    PREF_SHELL=fish
+    ;;
+*/ash)
+    PROFILE=$HOME/.profile
+    PREF_SHELL=ash
+    ;;
+*)
+    echo "trebup: could not detect shell, manually add ${TREB_BIN_DIR} to your PATH."
+    exit 1
+esac
+
+# Only add trebup if it isn't already in PATH.
+if [[ ":$PATH:" != *":${TREB_BIN_DIR}:"* ]]; then
+    # Add the trebup directory to the path and ensure the old PATH variables remain.
+    # If the shell is fish, echo fish_add_path instead of export.
+    if [[ "$PREF_SHELL" == "fish" ]]; then
+        echo >> "$PROFILE" && echo "fish_add_path -a $TREB_BIN_DIR" >> "$PROFILE"
+    else
+        echo >> "$PROFILE" && echo "export PATH=\"\$PATH:$TREB_BIN_DIR\"" >> "$PROFILE"
+    fi
+fi
+
+echo
+echo "Detected your preferred shell is $PREF_SHELL and added trebup to PATH."
+echo "Run 'source $PROFILE' or start a new terminal session to use trebup."
+echo "Then, simply run 'trebup' to install Treb."
