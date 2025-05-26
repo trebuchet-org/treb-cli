@@ -237,7 +237,7 @@ func (g *Generator) GenerateDeployScriptForContract(contractInfo *contracts.Cont
 // GenerateProxyDeployScript interactively generates a proxy deploy script
 func (g *Generator) GenerateProxyDeployScript(contractName string) error {
 	// Step 1: Pick implementation contract
-	contractInfo, err := g.pickContract(contractName)
+	contractInfo, err := ResolveContract(contractName, contracts.ProjectFilter())
 	if err != nil {
 		return err
 	}

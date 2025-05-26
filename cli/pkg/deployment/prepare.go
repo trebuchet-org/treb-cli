@@ -122,7 +122,7 @@ func (d *DeploymentContext) PrepareContractDeployment() (bool, error) {
 // PrepareProxyDeployment validates a proxy deployment
 func (d *DeploymentContext) PrepareProxyDeployment() error {
 	// Resolve the contract
-	implementationInfo, err := interactive.ResolveContract(d.Params.ImplementationQuery, contracts.DefaultFilter())
+	implementationInfo, err := interactive.ResolveContract(d.Params.ImplementationQuery, contracts.ProjectFilter())
 	if err != nil {
 		return fmt.Errorf("failed to resolve contract: %w", err)
 	}
@@ -134,7 +134,20 @@ func (d *DeploymentContext) PrepareProxyDeployment() error {
 	generator := contracts.NewGenerator(d.projectRoot)
 	scriptPath := generator.GetProxyScriptPath(implementationInfo)
 	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
-		return fmt.Errorf("proxy deploy script not found: %s", scriptPath)
+		// Ask if user wants to generate the script
+		selector := interactive.NewSelector()
+		shouldGenerate, err := selector.PromptConfirm("Would you like to generate a deploy script?", true)
+		if err != nil || !shouldGenerate {
+			return fmt.Errorf("proxy deploy script not found: %s", scriptPath)
+		}
+
+		// Generate the script interactively
+		fmt.Printf("\nStarting interactive script generation...\n\n")
+		interactiveGenerator := interactive.NewGenerator(d.projectRoot)
+		if err := interactiveGenerator.GenerateProxyDeployScript(implementationInfo.Path); err != nil {
+			return fmt.Errorf("script generation failed: %w", err)
+		}
+		return nil
 	}
 
 	// Set script path
