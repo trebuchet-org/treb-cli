@@ -220,7 +220,11 @@ func displayDeployments(deployments []*registry.DeploymentInfo, deployConfig *co
 		envHeaderPrefix := envHeader.Sprintf("   ◎ environment  %s", envHeaderBold.Sprint(strings.ToUpper(env)))
 		// Strip ANSI codes from header prefix to calculate padding correctly
 		envHeaderPrefixPlain := stripAnsiEscapes(envHeaderPrefix)
-		envHeaderSuffix := envHeader.Sprintf("deployer:%s", envHeaderBold.Sprint(deployerAddress))
+		envHeaderSuffix := envHeader.Sprintf(
+			"deployer:%s%s",
+			envHeaderBold.Sprint(deployerAddress),
+			envHeader.Sprint(" "),
+		)
 		envHeaderSuffixPlain := stripAnsiEscapes(envHeaderSuffix)
 		deployerPadding := headerWidth - len(envHeaderPrefixPlain) - len(envHeaderSuffixPlain) + 2
 		if deployerPadding < 1 {
