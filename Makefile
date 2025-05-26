@@ -1,9 +1,15 @@
 .PHONY: build install test clean dev-setup watch release-build release-clean
 
+# Version information
+VERSION ?= $(shell git describe --tags --always --dirty)
+COMMIT ?= $(shell git rev-parse HEAD)
+DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+LDFLAGS = -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)
+
 # Build the CLI binary
 build:
 	@echo "🔨 Building treb..."
-	@go build -o bin/treb ./cli
+	@go build -ldflags="$(LDFLAGS)" -o bin/treb ./cli
 
 # Install globally
 install: build
@@ -67,10 +73,7 @@ watch: build
 	done
 
 # Release build targets
-VERSION ?= $(shell git describe --tags --always --dirty)
-COMMIT ?= $(shell git rev-parse HEAD)
-DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
-LDFLAGS = -s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)
+RELEASE_LDFLAGS = -s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)
 
 # Build all platform binaries for release
 release-build: release-clean
@@ -78,27 +81,27 @@ release-build: release-clean
 	@mkdir -p release
 	
 	@echo "📦 Building Linux amd64..."
-	@GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o release/treb_linux_amd64 ./cli
+	@GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$(RELEASE_LDFLAGS)" -o release/treb_linux_amd64 ./cli
 	@cd release && tar czf treb_$(VERSION)_linux_amd64.tar.gz treb_linux_amd64 && rm treb_linux_amd64
 	
 	@echo "📦 Building Linux arm64..."
-	@GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o release/treb_linux_arm64 ./cli
+	@GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$(RELEASE_LDFLAGS)" -o release/treb_linux_arm64 ./cli
 	@cd release && tar czf treb_$(VERSION)_linux_arm64.tar.gz treb_linux_arm64 && rm treb_linux_arm64
 	
 	@echo "📦 Building macOS amd64..."
-	@GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o release/treb_darwin_amd64 ./cli
+	@GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$(RELEASE_LDFLAGS)" -o release/treb_darwin_amd64 ./cli
 	@cd release && tar czf treb_$(VERSION)_darwin_amd64.tar.gz treb_darwin_amd64 && rm treb_darwin_amd64
 	
 	@echo "📦 Building macOS arm64..."
-	@GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o release/treb_darwin_arm64 ./cli
+	@GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$(RELEASE_LDFLAGS)" -o release/treb_darwin_arm64 ./cli
 	@cd release && tar czf treb_$(VERSION)_darwin_arm64.tar.gz treb_darwin_arm64 && rm treb_darwin_arm64
 	
 	@echo "📦 Building Windows amd64..."
-	@GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o release/treb_windows_amd64.exe ./cli
+	@GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$(RELEASE_LDFLAGS)" -o release/treb_windows_amd64.exe ./cli
 	@cd release && zip treb_$(VERSION)_windows_amd64.zip treb_windows_amd64.exe && rm treb_windows_amd64.exe
 	
 	@echo "📦 Building Windows arm64..."
-	@GOOS=windows GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o release/treb_windows_arm64.exe ./cli
+	@GOOS=windows GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$(RELEASE_LDFLAGS)" -o release/treb_windows_arm64.exe ./cli
 	@cd release && zip treb_$(VERSION)_windows_arm64.zip treb_windows_arm64.exe && rm treb_windows_arm64.exe
 	
 	@echo "🔐 Generating checksums..."
@@ -121,7 +124,7 @@ release-platform:
 	fi
 	@echo "🔨 Building $(GOOS)/$(GOARCH)..."
 	@mkdir -p release
-	@GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o release/treb_$(GOOS)_$(GOARCH)$(if $(filter windows,$(GOOS)),.exe) ./cli
+	@GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=0 go build -ldflags="$(RELEASE_LDFLAGS)" -o release/treb_$(GOOS)_$(GOARCH)$(if $(filter windows,$(GOOS)),.exe) ./cli
 	@echo "✅ Built release/treb_$(GOOS)_$(GOARCH)$(if $(filter windows,$(GOOS)),.exe)"
 
 # Clean release artifacts
