@@ -102,7 +102,11 @@ release-build: release-clean
 	@cd release && zip treb_$(VERSION)_windows_arm64.zip treb_windows_arm64.exe && rm treb_windows_arm64.exe
 	
 	@echo "🔐 Generating checksums..."
-	@cd release && sha256sum treb_$(VERSION)_*.{tar.gz,zip} > checksums.txt
+	@cd release && if command -v sha256sum >/dev/null 2>&1; then \
+		sha256sum treb_$(VERSION)_*.{tar.gz,zip} > checksums.txt; \
+	else \
+		shasum -a 256 treb_$(VERSION)_*.{tar.gz,zip} > checksums.txt; \
+	fi
 	
 	@echo "✅ Release binaries built in ./release/"
 	@echo "📊 Release contents:"

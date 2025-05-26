@@ -117,7 +117,11 @@ jobs:
       
       - name: Generate checksums
         run: |
-          sha256sum treb_*.{tar.gz,zip} > checksums.txt
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum treb_*.{tar.gz,zip} > checksums.txt
+          else
+            shasum -a 256 treb_*.{tar.gz,zip} > checksums.txt
+          fi
           cat checksums.txt
       
       - name: Create Release

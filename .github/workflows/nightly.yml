@@ -109,7 +109,11 @@ jobs:
       
       - name: Generate checksums
         run: |
-          sha256sum treb_nightly_*.{tar.gz,zip} > checksums.txt
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum treb_nightly_*.{tar.gz,zip} > checksums.txt
+          else
+            shasum -a 256 treb_nightly_*.{tar.gz,zip} > checksums.txt
+          fi
           cat checksums.txt
       
       - name: Get version info

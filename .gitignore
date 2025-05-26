@@ -19,6 +19,7 @@ go.work
 
 # Binaries
 bin/
+release/
 
 # Registry (should be committed)
 !deployments.json
