@@ -114,7 +114,7 @@ func syncPendingSafeTransactions(registryManager *registry.Manager) error {
 			if debugSync {
 				fmt.Printf("    [DEBUG] Deployment address: %s\n", deployment.Address.Hex())
 				fmt.Printf("    [DEBUG] Safe address: %s\n", deployment.Entry.Deployment.SafeAddress)
-				fmt.Printf("    [DEBUG] Environment: %s\n", deployment.Entry.Environment)
+				fmt.Printf("    [DEBUG] Namespace: %s\n", deployment.Entry.Namespace)
 			}
 
 			// Check if transaction is executed

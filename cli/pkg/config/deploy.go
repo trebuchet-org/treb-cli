@@ -14,21 +14,17 @@ type DeployConfig struct {
 }
 
 type ProfileConfig struct {
-	Deployer DeployerConfig `toml:"deployer"`
+	// New structure: senders are defined at profile level
+	Senders         map[string]SenderConfig `toml:"senders"`
+	LibraryDeployer string                  `toml:"library_deployer,omitempty"`
 }
 
-type DeployerConfig struct {
-	Type       string          `toml:"type"`
-	PrivateKey string          `toml:"private_key,omitempty"`
-	Safe       string          `toml:"safe,omitempty"`
-	Proposer   *ProposerConfig `toml:"proposer,omitempty"`
-}
-
-type ProposerConfig struct {
+type SenderConfig struct {
 	Type           string `toml:"type"`
 	PrivateKey     string `toml:"private_key,omitempty"`
-	Address        string `toml:"address,omitempty"`
-	DerivationPath string `toml:"derivation_path,omitempty"`
+	Safe           string `toml:"safe,omitempty"`
+	Signer         string `toml:"signer,omitempty"` // For Safe senders
+	DerivationPath string `toml:"derivation_path,omitempty"` // For Ledger senders
 }
 
 // LoadDeployConfig loads deploy configuration from foundry.toml
@@ -64,117 +60,114 @@ func LoadDeployConfig(projectPath string) (*DeployConfig, error) {
 	return &config, nil
 }
 
-// GetEnvironmentConfig returns the deploy config for a specific environment
-func (dc *DeployConfig) GetEnvironmentConfig(env string) (*ProfileConfig, error) {
-	if profileConfig, exists := dc.Profile[env]; exists {
+// GetProfileConfig returns the deploy config for a specific profile (usually "treb")
+func (dc *DeployConfig) GetProfileConfig(profile string) (*ProfileConfig, error) {
+	if profileConfig, exists := dc.Profile[profile]; exists {
 		return &profileConfig, nil
 	}
-	return nil, fmt.Errorf("profile configuration for environment '%s' not found", env)
+	return nil, fmt.Errorf("profile configuration '%s' not found", profile)
 }
 
-// GetDeployer returns the deployer configuration for a specific environment
-func (dc *DeployConfig) GetDeployer(env string) *DeployerConfig {
-	if profileConfig, exists := dc.Profile[env]; exists {
-		return &profileConfig.Deployer
+// GetSender returns the sender configuration for a specific sender name
+func (dc *DeployConfig) GetSender(profile, senderName string) (*SenderConfig, error) {
+	profileConfig, err := dc.GetProfileConfig(profile)
+	if err != nil {
+		return nil, err
 	}
+	
+	if sender, exists := profileConfig.Senders[senderName]; exists {
+		return &sender, nil
+	}
+	return nil, fmt.Errorf("sender '%s' not found in profile '%s'", senderName, profile)
+}
+
+// Validate checks if the deploy configuration is valid for a given sender
+func (dc *DeployConfig) Validate(namespace string) error {
+	// For now, we don't validate namespace since it's created on-demand
+	// We'll validate the sender when it's actually used
 	return nil
 }
 
-// Validate checks if the deploy configuration is valid
-func (dc *DeployConfig) Validate(env string) error {
-	envConfig, err := dc.GetEnvironmentConfig(env)
+// ValidateSender checks if a specific sender configuration is valid
+func (dc *DeployConfig) ValidateSender(profile, senderName string) error {
+	sender, err := dc.GetSender(profile, senderName)
 	if err != nil {
 		return err
 	}
-
-	deployer := envConfig.Deployer
 	
-	switch deployer.Type {
+	switch sender.Type {
 	case "private_key":
-		if deployer.PrivateKey == "" {
-			return fmt.Errorf("private_key deployer requires 'private_key' field")
+		if sender.PrivateKey == "" {
+			return fmt.Errorf("private_key sender requires 'private_key' field")
 		}
 		// Check if environment variable wasn't expanded
-		if strings.Contains(deployer.PrivateKey, "${") {
-			return fmt.Errorf("environment variable not expanded in private_key: %s", deployer.PrivateKey)
+		if strings.Contains(sender.PrivateKey, "${") {
+			return fmt.Errorf("environment variable not expanded in private_key: %s", sender.PrivateKey)
 		}
 		// Validate private key format (basic check)
-		if !strings.HasPrefix(deployer.PrivateKey, "0x") || len(deployer.PrivateKey) != 66 {
-			return fmt.Errorf("invalid private key format (should be 0x... with 64 hex chars), got: '%s' (length: %d)", deployer.PrivateKey, len(deployer.PrivateKey))
+		if !strings.HasPrefix(sender.PrivateKey, "0x") || len(sender.PrivateKey) != 66 {
+			return fmt.Errorf("invalid private key format (should be 0x... with 64 hex chars), got: '%s' (length: %d)", sender.PrivateKey, len(sender.PrivateKey))
 		}
 	case "safe":
-		if deployer.Safe == "" {
-			return fmt.Errorf("safe deployer requires 'safe' field")
+		if sender.Safe == "" {
+			return fmt.Errorf("safe sender requires 'safe' field")
 		}
-		if deployer.Proposer == nil {
-			return fmt.Errorf("safe deployer requires 'proposer' configuration")
+		if sender.Signer == "" {
+			return fmt.Errorf("safe sender requires 'signer' field")
 		}
-		
-		// Validate proposer
-		switch deployer.Proposer.Type {
-		case "private_key":
-			if deployer.Proposer.PrivateKey == "" {
-				return fmt.Errorf("private_key proposer requires 'private_key' field")
-			}
-		case "ledger":
-			if deployer.Proposer.DerivationPath == "" {
-				return fmt.Errorf("ledger proposer requires 'derivation_path' field")
-			}
-		default:
-			return fmt.Errorf("unsupported proposer type: %s", deployer.Proposer.Type)
+	case "ledger":
+		if sender.DerivationPath == "" {
+			return fmt.Errorf("ledger sender requires 'derivation_path' field")
 		}
 	default:
-		return fmt.Errorf("unsupported deployer type: %s", deployer.Type)
+		return fmt.Errorf("unsupported sender type: %s", sender.Type)
 	}
 
 	return nil
 }
 
 // GenerateEnvVars generates environment variables for the forge script
-func (dc *DeployConfig) GenerateEnvVars(env string) (map[string]string, error) {
-	envConfig, err := dc.GetEnvironmentConfig(env)
+func (dc *DeployConfig) GenerateEnvVars(namespace string) (map[string]string, error) {
+	// For now, we'll use the "treb" profile by default
+	// In the future, this could be configurable
+	envVars := make(map[string]string)
+	
+	// Set namespace (previously environment)
+	envVars["DEPLOYMENT_NAMESPACE"] = namespace
+	
+	// Note: Sender configuration will be handled separately when needed
+	// since it's no longer tied to namespace
+	
+	return envVars, nil
+}
+
+// GenerateSenderEnvVars generates environment variables for a specific sender
+func (dc *DeployConfig) GenerateSenderEnvVars(profile, senderName string) (map[string]string, error) {
+	sender, err := dc.GetSender(profile, senderName)
 	if err != nil {
 		return nil, err
 	}
-
+	
 	envVars := make(map[string]string)
-	deployer := envConfig.Deployer
 
-	// Set common environment
-	envVars["DEPLOYMENT_ENV"] = env
-
-	switch deployer.Type {
+	switch sender.Type {
 	case "private_key":
-		envVars["DEPLOYER_TYPE"] = "private_key"
-		envVars["DEPLOYER_PRIVATE_KEY"] = deployer.PrivateKey
+		envVars["SENDER_TYPE"] = "private_key"
+		envVars["SENDER_PRIVATE_KEY"] = sender.PrivateKey
 	case "safe":
-		envVars["DEPLOYER_TYPE"] = "safe"
-		envVars["DEPLOYER_SAFE_ADDRESS"] = deployer.Safe
+		envVars["SENDER_TYPE"] = "safe"
+		envVars["SENDER_SAFE_ADDRESS"] = sender.Safe
+		envVars["SENDER_SIGNER"] = sender.Signer
+	case "ledger":
+		envVars["SENDER_TYPE"] = "ledger"
+		envVars["SENDER_DERIVATION_PATH"] = sender.DerivationPath
 		
-		// Set proposer information
-		if deployer.Proposer != nil {
-			switch deployer.Proposer.Type {
-			case "private_key":
-				envVars["PROPOSER_TYPE"] = "private_key"
-				envVars["PROPOSER_PRIVATE_KEY"] = deployer.Proposer.PrivateKey
-			case "ledger":
-				envVars["PROPOSER_TYPE"] = "ledger"
-				envVars["PROPOSER_DERIVATION_PATH"] = deployer.Proposer.DerivationPath
-				
-				// Dynamically resolve the ledger address
-				if deployer.Proposer.Address != "" {
-					// Use explicitly provided address if available
-					envVars["PROPOSER_ADDRESS"] = deployer.Proposer.Address
-				} else {
-					// Resolve address dynamically using cast
-					address, err := GetLedgerAddress(deployer.Proposer.DerivationPath)
-					if err != nil {
-						return nil, fmt.Errorf("failed to resolve ledger address: %w", err)
-					}
-					envVars["PROPOSER_ADDRESS"] = address
-				}
-			}
+		// Resolve address dynamically using cast
+		address, err := GetLedgerAddress(sender.DerivationPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve ledger address: %w", err)
 		}
+		envVars["SENDER_ADDRESS"] = address
 	}
 
 	return envVars, nil
@@ -185,25 +178,28 @@ func expandEnvVars(config *DeployConfig) error {
 	envVarRegex := regexp.MustCompile(`\$\{([^}]+)\}`)
 	
 	for profileName, profileConfig := range config.Profile {
-		// Expand deployer fields
-		if profileConfig.Deployer.PrivateKey != "" {
-			profileConfig.Deployer.PrivateKey = expandString(profileConfig.Deployer.PrivateKey, envVarRegex)
-		}
-		if profileConfig.Deployer.Safe != "" {
-			profileConfig.Deployer.Safe = expandString(profileConfig.Deployer.Safe, envVarRegex)
+		// Expand library deployer
+		if profileConfig.LibraryDeployer != "" {
+			profileConfig.LibraryDeployer = expandString(profileConfig.LibraryDeployer, envVarRegex)
 		}
 		
-		// Expand proposer fields
-		if profileConfig.Deployer.Proposer != nil {
-			if profileConfig.Deployer.Proposer.PrivateKey != "" {
-				profileConfig.Deployer.Proposer.PrivateKey = expandString(profileConfig.Deployer.Proposer.PrivateKey, envVarRegex)
+		// Expand sender fields
+		for senderName, sender := range profileConfig.Senders {
+			if sender.PrivateKey != "" {
+				sender.PrivateKey = expandString(sender.PrivateKey, envVarRegex)
 			}
-			if profileConfig.Deployer.Proposer.Address != "" {
-				profileConfig.Deployer.Proposer.Address = expandString(profileConfig.Deployer.Proposer.Address, envVarRegex)
+			if sender.Safe != "" {
+				sender.Safe = expandString(sender.Safe, envVarRegex)
 			}
-			if profileConfig.Deployer.Proposer.DerivationPath != "" {
-				profileConfig.Deployer.Proposer.DerivationPath = expandString(profileConfig.Deployer.Proposer.DerivationPath, envVarRegex)
+			if sender.Signer != "" {
+				sender.Signer = expandString(sender.Signer, envVarRegex)
 			}
+			if sender.DerivationPath != "" {
+				sender.DerivationPath = expandString(sender.DerivationPath, envVarRegex)
+			}
+			
+			// Update the sender in the map
+			profileConfig.Senders[senderName] = sender
 		}
 		
 		// Update the config

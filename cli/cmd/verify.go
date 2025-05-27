@@ -112,7 +112,7 @@ func verifyAllContracts(verificationManager *verification.Manager, registryManag
 		color.New(color.FgCyan, color.Bold).Printf("Skipping %d pending deployments:\n", len(skippedContracts))
 		for _, deployment := range skippedContracts {
 			displayName := deployment.Entry.GetDisplayName()
-			fmt.Printf("  ⏭️  %s/%s/%s (Status: %s)\n", deployment.NetworkName, deployment.Entry.Environment, displayName, deployment.Entry.Deployment.Status)
+			fmt.Printf("  ⏭️  %s/%s/%s (Status: %s)\n", deployment.NetworkName, deployment.Entry.Namespace, displayName, deployment.Entry.Deployment.Status)
 		}
 		fmt.Println()
 	}
@@ -152,7 +152,7 @@ func verifyAllContracts(verificationManager *verification.Manager, registryManag
 			statusIcon = "🆕" // New verification
 		}
 
-		fmt.Printf("  %s %s/%s/%s\n", statusIcon, deployment.NetworkName, deployment.Entry.Environment, displayName)
+		fmt.Printf("  %s %s/%s/%s\n", statusIcon, deployment.NetworkName, deployment.Entry.Namespace, displayName)
 
 		// Start spinner for verification (unless debug mode)
 		var s *spinner.Spinner
@@ -225,7 +225,7 @@ func verifySpecificContract(identifier string, verificationManager *verification
 	var s *spinner.Spinner
 	if !debugFlag {
 		s = createSpinner(fmt.Sprintf("Verifying %s/%s/%s...",
-			deployment.NetworkName, deployment.Entry.Environment, displayName))
+			deployment.NetworkName, deployment.Entry.Namespace, displayName))
 	}
 
 	if debugFlag {

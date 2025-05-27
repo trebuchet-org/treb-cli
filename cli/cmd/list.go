@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	filterEnv      string
+	filterNamespace string
 	filterNetwork  string
 	filterContract string
 	showLibraries  bool
@@ -27,10 +27,10 @@ var (
 
 // Package-level color styles
 var (
-	envBg              = color.BgYellow
+	nsBg               = color.BgYellow
 	chainBg            = color.BgCyan
-	envHeader          = color.New(envBg, color.FgBlack)
-	envHeaderBold      = color.New(envBg, color.FgBlack, color.Bold)
+	nsHeader           = color.New(nsBg, color.FgBlack)
+	nsHeaderBold       = color.New(nsBg, color.FgBlack, color.Bold)
 	chainHeader        = color.New(chainBg, color.FgBlack)
 	chainHeaderBold    = color.New(chainBg, color.FgBlack, color.Bold)
 	addressStyle       = color.New(color.FgWhite)
@@ -52,14 +52,14 @@ var listCmd = &cobra.Command{
 	Use:     "list",
 	Aliases: []string{"ls"},
 	Short:   "List all deployments",
-	Long: `Display deployments organized by environment and network.
+	Long: `Display deployments organized by namespace and network.
 Shows contract addresses, deployment status, and version tags.
 
 Filters:
-  --filter-env      Filter by environment (exact match, case-insensitive)
+  --filter-ns       Filter by namespace (exact match, case-insensitive)
   --filter-network  Filter by network (exact match, case-insensitive)
   --filter-contract Filter by contract name (partial match, case-insensitive)
-  --libraries        Show deployed libraries instead of contracts`,
+  --libraries       Show deployed libraries instead of contracts`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if showLibraries {
 			if err := listLibraries(); err != nil {
@@ -74,7 +74,7 @@ Filters:
 }
 
 func init() {
-	listCmd.Flags().StringVar(&filterEnv, "filter-env", "", "Filter by environment")
+	listCmd.Flags().StringVarP(&filterNamespace, "filter-ns", "n", "", "Filter by namespace")
 	listCmd.Flags().StringVar(&filterNetwork, "filter-network", "", "Filter by network")
 	listCmd.Flags().StringVar(&filterContract, "filter-contract", "", "Filter by contract name (partial match)")
 	listCmd.Flags().BoolVar(&showLibraries, "libraries", false, "Show deployed libraries instead of contracts")
@@ -135,41 +135,41 @@ func listDeployments() error {
 func displayDeployments(deployments []*registry.DeploymentInfo, deployConfig *config.DeployConfig) error {
 
 	groups := make(map[string]map[string][]*registry.DeploymentInfo)
-	envs := make([]string, 0)
+	namespaces := make([]string, 0)
 	networks := make([]string, 0)
 
 	for _, deployment := range deployments {
-		env := deployment.Entry.Environment
+		ns := deployment.Entry.Namespace
 		network := deployment.NetworkName
 
 		if !slices.Contains(networks, network) {
 			networks = append(networks, network)
 		}
 
-		if !slices.Contains(envs, env) {
-			envs = append(envs, env)
+		if !slices.Contains(namespaces, ns) {
+			namespaces = append(namespaces, ns)
 		}
 
 		if groups[deployment.NetworkName] == nil {
 			groups[deployment.NetworkName] = make(map[string][]*registry.DeploymentInfo)
 		}
 
-		groups[deployment.NetworkName][env] = append(groups[deployment.NetworkName][env], deployment)
+		groups[deployment.NetworkName][ns] = append(groups[deployment.NetworkName][ns], deployment)
 	}
 
-	slices.Sort(envs)
+	slices.Sort(namespaces)
 	slices.Sort(networks)
 
 	// Build all tables first to calculate consistent column widths
 	allTables := make([]TableData, 0)
-	for _, env := range envs {
+	for _, ns := range namespaces {
 		for _, network := range networks {
-			if len(groups[network][env]) == 0 {
+			if len(groups[network][ns]) == 0 {
 				continue
 			}
-			deployments := groups[network][env]
+			deployments := groups[network][ns]
 
-			// Separate proxies and singletons within this env/network group
+			// Separate proxies and singletons within this namespace/network group
 			proxies := make([]*registry.DeploymentInfo, 0)
 			singletons := make([]*registry.DeploymentInfo, 0)
 
@@ -195,58 +195,27 @@ func displayDeployments(deployments []*registry.DeploymentInfo, deployConfig *co
 
 	// Calculate global column widths for all tables
 	globalColumnWidths := calculateTableColumnWidths(allTables)
-	headerWidth := calculateEnvironmentHeaderWidth(globalColumnWidths)
 
 	// Display groups
-	for _, env := range envs {
-		envConfig, err := deployConfig.GetEnvironmentConfig(env)
-		if err != nil {
-			return fmt.Errorf("failed to get environment config: %w", err)
-		}
+	for _, ns := range namespaces {
 
-		deployerAddress := "<unknown>"
-		if envConfig.Deployer.Type == "safe" {
-			deployerAddress = envConfig.Deployer.Safe
-		} else if envConfig.Deployer.Type == "private_key" {
-			// Convert private key to address for display
-			if addr, err := privateKeyToAddress(envConfig.Deployer.PrivateKey); err == nil {
-				deployerAddress = addr
-			} else {
-				deployerAddress = "<invalid>"
-			}
-		}
+		// Namespace header
+		nsLabel := fmt.Sprintf("%-12s", "namespace:")
+		nsValue := fmt.Sprintf("%-30s", strings.ToUpper(ns))
+		nsHeaderPrefix := nsHeader.Sprintf("   ◎ %s %s", nsLabel, nsHeaderBold.Sprint(nsValue))
+		// For now, we won't show sender in the header
+		nsHeader.Printf("%s\n", nsHeaderPrefix)
 
-		// Environment header
-		envHeaderPrefix := envHeader.Sprintf("   ◎ environment  %s", envHeaderBold.Sprint(strings.ToUpper(env)))
-		// Strip ANSI codes from header prefix to calculate padding correctly
-		envHeaderPrefixPlain := stripAnsiEscapes(envHeaderPrefix)
-		envHeaderSuffix := envHeader.Sprintf(
-			"deployer:%s%s",
-			envHeaderBold.Sprint(deployerAddress),
-			envHeader.Sprint(" "),
-		)
-		envHeaderSuffixPlain := stripAnsiEscapes(envHeaderSuffix)
-		deployerPadding := headerWidth - len(envHeaderPrefixPlain) - len(envHeaderSuffixPlain) + 2
-		if deployerPadding < 1 {
-			deployerPadding = 1
-		}
-		envHeader.Printf(
-			"%s%s%s\n",
-			envHeaderPrefix,
-			envHeader.Sprintf("%*s", deployerPadding, ""),
-			envHeaderSuffix,
-		)
-
-		// Filter networks to only show those with deployments for this env
+		// Filter networks to only show those with deployments for this namespace
 		networksWithDeployments := []string{}
 		for _, network := range networks {
-			if len(groups[network][env]) > 0 {
+			if len(groups[network][ns]) > 0 {
 				networksWithDeployments = append(networksWithDeployments, network)
 			}
 		}
 
 		for netIdx, network := range networksWithDeployments {
-			deployments := groups[network][env]
+			deployments := groups[network][ns]
 
 			// Determine if this is the last network for tree drawing
 			isLastNetwork := netIdx == len(networksWithDeployments)-1
@@ -258,15 +227,17 @@ func displayDeployments(deployments []*registry.DeploymentInfo, deployConfig *co
 			}
 
 			// Chain header
+			chainLabel := fmt.Sprintf("%-12s", "chain:")
+			chainValue := fmt.Sprintf("%-30s", strings.ToUpper(network))
 			chainHeaderRow := fmt.Sprintf("%s%s%s",
 				treePrefix,
-				chainHeader.Sprint(" ⛓ chain       "),
-				chainHeaderBold.Sprintf(" %s ", strings.ToUpper(network)))
+				chainHeader.Sprintf(" ⛓ %s ", chainLabel),
+				chainHeaderBold.Sprint(chainValue))
 
 			fmt.Println(chainHeaderRow)
 			fmt.Println(continuationPrefix)
 
-			// Separate proxies and singletons within this env/network group
+			// Separate proxies and singletons within this namespace/network group
 			proxies := make([]*registry.DeploymentInfo, 0)
 			singletons := make([]*registry.DeploymentInfo, 0)
 
@@ -318,8 +289,8 @@ func filterDeployments(deployments []*registry.DeploymentInfo) []*registry.Deplo
 			continue
 		}
 
-		// Filter by environment (exact match, case-insensitive)
-		if filterEnv != "" && !strings.EqualFold(deployment.Entry.Environment, filterEnv) {
+		// Filter by namespace (exact match, case-insensitive)
+		if filterNamespace != "" && !strings.EqualFold(deployment.Entry.Namespace, filterNamespace) {
 			continue
 		}
 
@@ -664,8 +635,8 @@ func renderTableWithWidths(tableData TableData, columnWidths []int, continuation
 	return t.Render()
 }
 
-// calculateEnvironmentHeaderWidth calculates the width needed for environment headers
-func calculateEnvironmentHeaderWidth(columnWidths []int) int {
+// calculateNamespaceHeaderWidth calculates the width needed for namespace headers
+func calculateNamespaceHeaderWidth(columnWidths []int) int {
 	// Calculate total table width: sum of columns + padding between columns
 	totalWidth := 0
 	for _, width := range columnWidths {

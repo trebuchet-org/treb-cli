@@ -54,7 +54,7 @@ type DeploymentResult struct {
 	TargetDeploymentFQID string               `json:"target_deployment_fqid,omitempty"` // only for proxy deployments
 	Label                string               `json:"label,omitempty"`                  // For implementation deployments
 	Tags                 []string             `json:"tags,omitempty"`
-	Env                  string               `json:"env,omitempty"`
+	Namespace            string               `json:"namespace,omitempty"`
 	NetworkInfo          *network.NetworkInfo `json:"network_info,omitempty"`
 	Status               Status               `json:"status"`
 
@@ -84,7 +84,7 @@ type DeploymentEntry struct {
 	ShortID         string         `json:"sid"`  // Short identifier
 	Address         common.Address `json:"address"`
 	ContractName    string         `json:"contract_name"`
-	Environment     string         `json:"environment"`
+	Namespace       string         `json:"namespace"`
 	Type            DeploymentType `json:"type"`                       // implementation/proxy
 	Salt            string         `json:"salt"`                       // hex string
 	InitCodeHash    string         `json:"init_code_hash"`             // hex string

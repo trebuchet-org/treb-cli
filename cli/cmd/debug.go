@@ -19,13 +19,14 @@ var debugCmd = &cobra.Command{
 }
 
 var debugConfigCmd = &cobra.Command{
-	Use:   "config [environment]",
+	Use:   "config [namespace] [sender]",
 	Short: "Show resolved deployment configuration",
-	Long:  `Show the resolved deployment configuration for a specific environment, including environment variables that would be passed to forge scripts.`,
-	Args:  cobra.ExactArgs(1),
+	Long:  `Show the resolved deployment configuration for a specific namespace and sender, including environment variables that would be passed to forge scripts.`,
+	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		env := args[0]
-		if err := showDeployConfig(env); err != nil {
+		namespace := args[0]
+		sender := args[1]
+		if err := showDeployConfig(namespace, sender); err != nil {
 			checkError(err)
 		}
 	},
@@ -65,41 +66,52 @@ func init() {
 	debugCmd.AddCommand(debugFixScriptPathCmd)
 }
 
-func showDeployConfig(env string) error {
+func showDeployConfig(namespace, sender string) error {
 	// Load deploy configuration
 	deployConfig, err := config.LoadDeployConfig(".")
 	if err != nil {
 		return fmt.Errorf("failed to load deploy configuration: %w", err)
 	}
 
-	// Validate configuration
-	if err := deployConfig.Validate(env); err != nil {
-		return fmt.Errorf("invalid deploy configuration for environment '%s': %w", env, err)
+	// Validate sender configuration
+	if err := deployConfig.ValidateSender("treb", sender); err != nil {
+		return fmt.Errorf("invalid sender configuration '%s': %w", sender, err)
 	}
 
 	// Generate environment variables
-	envVars, err := deployConfig.GenerateEnvVars(env)
+	envVars, err := deployConfig.GenerateEnvVars(namespace)
 	if err != nil {
 		return fmt.Errorf("failed to generate environment variables: %w", err)
 	}
+	
+	// Generate sender environment variables
+	senderEnvVars, err := deployConfig.GenerateSenderEnvVars("treb", sender)
+	if err != nil {
+		return fmt.Errorf("failed to generate sender environment variables: %w", err)
+	}
+	
+	// Merge sender env vars
+	for k, v := range senderEnvVars {
+		envVars[k] = v
+	}
 
-	fmt.Printf("🔧 Deploy Configuration for '%s' environment:\n\n", env)
+	fmt.Printf("🔧 Deploy Configuration for namespace '%s' with sender '%s':\n\n", namespace, sender)
 
-	// Show the config structure
-	envConfig, _ := deployConfig.GetEnvironmentConfig(env)
-	fmt.Printf("Deployer Type: %s\n", envConfig.Deployer.Type)
+	// Show the sender config structure
+	senderConfig, _ := deployConfig.GetSender("treb", sender)
+	fmt.Printf("Sender Type: %s\n", senderConfig.Type)
 
-	if envConfig.Deployer.Type == "safe" {
-		fmt.Printf("Safe Address: %s\n", envConfig.Deployer.Safe)
-		if envConfig.Deployer.Proposer != nil {
-			fmt.Printf("Proposer Type: %s\n", envConfig.Deployer.Proposer.Type)
-		}
+	if senderConfig.Type == "safe" {
+		fmt.Printf("Safe Address: %s\n", senderConfig.Safe)
+		fmt.Printf("Signer: %s\n", senderConfig.Signer)
+	} else if senderConfig.Type == "ledger" {
+		fmt.Printf("Derivation Path: %s\n", senderConfig.DerivationPath)
 	}
 
 	fmt.Printf("\n📋 Environment Variables (passed to forge scripts):\n")
 	for key, value := range envVars {
 		// Mask private keys for security
-		if key == "DEPLOYER_PRIVATE_KEY" || key == "PROPOSER_PRIVATE_KEY" {
+		if key == "SENDER_PRIVATE_KEY" {
 			if len(value) > 10 {
 				fmt.Printf("  %s=%s...%s\n", key, value[:6], value[len(value)-4:])
 			} else {
@@ -146,14 +158,14 @@ func fixCompilerVersions() error {
 
 		if correctVersion == "" {
 			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - No artifact found\n",
-				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName())
+				deployment.NetworkName, deployment.Entry.Namespace, deployment.Entry.GetDisplayName())
 			errorCount++
 			continue
 		}
 
 		if currentVersion == correctVersion {
 			color.New(color.FgGreen).Printf("  ✓ %s/%s/%s - Already correct (%s)\n",
-				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(), currentVersion)
+				deployment.NetworkName, deployment.Entry.Namespace, deployment.Entry.GetDisplayName(), currentVersion)
 			skippedCount++
 			continue
 		}
@@ -165,7 +177,7 @@ func fixCompilerVersions() error {
 		chainIDUint, err := strconv.ParseUint(deployment.ChainID, 10, 64)
 		if err != nil {
 			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - Invalid chain ID: %s\n",
-				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(), deployment.ChainID)
+				deployment.NetworkName, deployment.Entry.Namespace, deployment.Entry.GetDisplayName(), deployment.ChainID)
 			errorCount++
 			continue
 		}
@@ -173,13 +185,13 @@ func fixCompilerVersions() error {
 		err = registryManager.UpdateDeployment(chainIDUint, deployment.Entry)
 		if err != nil {
 			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - Failed to save: %v\n",
-				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(), err)
+				deployment.NetworkName, deployment.Entry.Namespace, deployment.Entry.GetDisplayName(), err)
 			errorCount++
 			continue
 		}
 
 		color.New(color.FgCyan).Printf("  → %s/%s/%s - Updated: %s → %s\n",
-			deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(),
+			deployment.NetworkName, deployment.Entry.Namespace, deployment.Entry.GetDisplayName(),
 			currentVersion, correctVersion)
 		fixedCount++
 	}
@@ -223,7 +235,7 @@ func fixScriptPaths() error {
 		// Check if script path already exists
 		if deployment.Entry.Metadata.ScriptPath != "" {
 			color.New(color.FgGreen).Printf("  ✓ %s/%s/%s - Already has script path (%s)\n",
-				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(),
+				deployment.NetworkName, deployment.Entry.Namespace, deployment.Entry.GetDisplayName(),
 				deployment.Entry.Metadata.ScriptPath)
 			skippedCount++
 			continue
@@ -246,7 +258,7 @@ func fixScriptPaths() error {
 		chainIDUint, err := strconv.ParseUint(deployment.ChainID, 10, 64)
 		if err != nil {
 			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - Invalid chain ID: %s\n",
-				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(), deployment.ChainID)
+				deployment.NetworkName, deployment.Entry.Namespace, deployment.Entry.GetDisplayName(), deployment.ChainID)
 			errorCount++
 			continue
 		}
@@ -254,13 +266,13 @@ func fixScriptPaths() error {
 		err = registryManager.UpdateDeployment(chainIDUint, deployment.Entry)
 		if err != nil {
 			color.New(color.FgRed).Printf("  ✗ %s/%s/%s - Failed to save: %v\n",
-				deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(), err)
+				deployment.NetworkName, deployment.Entry.Namespace, deployment.Entry.GetDisplayName(), err)
 			errorCount++
 			continue
 		}
 
 		color.New(color.FgCyan).Printf("  → %s/%s/%s - Added script path: %s\n",
-			deployment.NetworkName, deployment.Entry.Environment, deployment.Entry.GetDisplayName(),
+			deployment.NetworkName, deployment.Entry.Namespace, deployment.Entry.GetDisplayName(),
 			scriptPath)
 		fixedCount++
 	}

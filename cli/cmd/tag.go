@@ -79,7 +79,7 @@ func showDeploymentTags(deployment *registry.DeploymentInfo) error {
 
 	displayName := deployment.Entry.GetDisplayName()
 	fmt.Println()
-	titleStyle.Printf("Deployment: %s/%s/%s\n", deployment.NetworkName, deployment.Entry.Environment, displayName)
+	titleStyle.Printf("Deployment: %s/%s/%s\n", deployment.NetworkName, deployment.Entry.Namespace, displayName)
 
 	labelStyle.Print("Address: ")
 	addressStyle.Println(deployment.Address.Hex())
@@ -124,7 +124,7 @@ func addDeploymentTag(deployment *registry.DeploymentInfo, tag string, registryM
 	color.New(color.FgGreen).Printf("✅ Added tag '%s' to %s/%s/%s\n",
 		tag,
 		deployment.NetworkName,
-		deployment.Entry.Environment,
+		deployment.Entry.Namespace,
 		deployment.Entry.GetDisplayName(),
 	)
 
@@ -172,7 +172,7 @@ func removeDeploymentTag(deployment *registry.DeploymentInfo, tag string, regist
 	color.New(color.FgGreen).Printf("✅ Removed tag '%s' from %s/%s/%s\n",
 		tag,
 		deployment.NetworkName,
-		deployment.Entry.Environment,
+		deployment.Entry.Namespace,
 		deployment.Entry.GetDisplayName(),
 	)
 

@@ -6,28 +6,6 @@ test = "test"
 script = "script"
 optimizer_runs = 0
 
-[profile.local.deployer]
-type = "private_key"
-private_key = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-
-[profile.default.deployer]
-type = "private_key"
-private_key = "${DEPLOYER_PRIVATE_KEY}"
-
-[profile.production.deployer]
-type = "safe"
-safe = "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
-propose = { type = "ledger", derivation_path = "${PROD_PROPOSER_DERIVATION_PATH}" }
-
-[profile.staging.deployer]
-type = "safe"
-safe = "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
-propose = { type = "ledger", derivation_path = "${STAGING_PROPOSER_DERIVATION_PATH}" }
-
-[profile.test.deployer]
-type = "private_key"
-private_key = "${DEPLOYER_PRIVATE_KEY}"
-
 [rpc_endpoints]
 celo-alfajores = "https://alfajores-forno.celo-testnet.org"
 mainnet = "https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_API_KEY}"
@@ -40,3 +18,23 @@ local = "http://localhost:8545"
 sepolia = { key = "${ETHERSCAN_MAIN_API_KEY}" }
 celo-alfajores = { key = "${CELOSCAN_API_KEY}", chain = 44787 }
 celo = { key = "${CELOSCAN_API_KEY}", chain = "celo" }
+
+[profile.treb]
+library_deployer =  "local"
+
+[profile.treb.senders.anvil]
+type = "private_key"
+private_key = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+
+[profile.treb.senders.local]
+type = "private_key"
+private_key = "${DEPLOYER_PRIVATE_KEY}"
+
+[profile.treb.senders.ledger]
+type = "ledger"
+derivation_path = "${PROD_PROPOSER_DERIVATION_PATH}"
+
+[profile.treb.senders.safe]
+type = "safe"
+safe = "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
+signer = "ledger"

@@ -74,7 +74,7 @@ func (d *DeploymentContext) buildDeploymentResult(result DeploymentOutput) *type
 		ShortID:              d.GetShortID(),
 		TargetDeploymentFQID: d.targetDeploymentFQID,
 		DeploymentType:       d.Params.DeploymentType,
-		Env:                  d.Params.Env,
+		Namespace:            d.Params.Namespace,
 		Label:                d.Params.Label,
 		NetworkInfo:          d.networkInfo,
 		ContractInfo:         d.contractInfo,
@@ -104,7 +104,7 @@ func (d *DeploymentContext) loadBroadcastFile() (*broadcast.BroadcastFile, error
 
 // updateRegistry updates the deployment registry
 func (d *DeploymentContext) updateRegistry(deployment *types.DeploymentResult) error {
-	d.registryManager.RecordDeployment(d.contractInfo, d.Params.Env, deployment, d.networkInfo.ChainID())
+	d.registryManager.RecordDeployment(d.contractInfo, d.Params.Namespace, deployment, d.networkInfo.ChainID())
 	return nil
 }
 

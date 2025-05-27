@@ -154,7 +154,7 @@ func (d *DeploymentContext) createLibraryDeploymentContext(libraryName string) (
 	libParams := &DeploymentParams{
 		ContractQuery:  libraryName,
 		NetworkName:    d.Params.NetworkName,
-		Env:            "default", // Libraries always use default env
+		Namespace:      "default", // Libraries always use default namespace
 		DeploymentType: types.LibraryDeployment,
 		Debug:          d.Params.Debug,
 		Predict:        false, // Always execute for nested deployments

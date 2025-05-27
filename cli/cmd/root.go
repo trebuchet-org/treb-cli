@@ -40,7 +40,7 @@ func init() {
 	// Management commands
 	tagCmd.GroupID = "management"
 	syncCmd.GroupID = "management"
-	configCmd.GroupID = "management"
+	contextCmd.GroupID = "management"
 	
 	// Additional commands (merged with other utility commands)
 	// debugCmd and versionCmd will appear in "Additional Commands" section
@@ -54,7 +54,7 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(tagCmd)
 	rootCmd.AddCommand(syncCmd)
-	rootCmd.AddCommand(configCmd)
+	rootCmd.AddCommand(contextCmd)
 	rootCmd.AddCommand(debugCmd)
 	rootCmd.AddCommand(versionCmd)
 }

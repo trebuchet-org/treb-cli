@@ -9,17 +9,17 @@ import (
 
 // Config represents the treb configuration
 type Config struct {
-	Environment string `json:"environment"`
-	Network     string `json:"network"`
-	Verify      bool   `json:"verify"`
+	Namespace string `json:"namespace"`
+	Network   string `json:"network"`
+	Sender    string `json:"sender"`
 }
 
 // DefaultConfig returns the default configuration
 func DefaultConfig() *Config {
 	return &Config{
-		Environment: "staging",
-		Network:     "alfajores",
-		Verify:      false,
+		Namespace: "default",
+		Network:   "",
+		Sender:    "",
 	}
 }
 
@@ -54,11 +54,8 @@ func (m *Manager) Load() (*Config, error) {
 
 	// Fill in any missing fields with defaults
 	defaultCfg := DefaultConfig()
-	if config.Environment == "" {
-		config.Environment = defaultCfg.Environment
-	}
-	if config.Network == "" {
-		config.Network = defaultCfg.Network
+	if config.Namespace == "" {
+		config.Namespace = defaultCfg.Namespace
 	}
 
 	return &config, nil
@@ -86,19 +83,12 @@ func (m *Manager) Set(key, value string) error {
 	}
 
 	switch key {
-	case "environment", "env":
-		config.Environment = value
+	case "namespace", "ns":
+		config.Namespace = value
 	case "network":
 		config.Network = value
-	case "verify":
-		switch value {
-		case "true", "1", "yes", "on":
-			config.Verify = true
-		case "false", "0", "no", "off":
-			config.Verify = false
-		default:
-			return fmt.Errorf("invalid verify value: %s (must be true/false)", value)
-		}
+	case "sender":
+		config.Sender = value
 	default:
 		return fmt.Errorf("unknown config key: %s", key)
 	}
@@ -114,15 +104,12 @@ func (m *Manager) Get(key string) (string, error) {
 	}
 
 	switch key {
-	case "environment", "env":
-		return config.Environment, nil
+	case "namespace", "ns":
+		return config.Namespace, nil
 	case "network":
 		return config.Network, nil
-	case "verify":
-		if config.Verify {
-			return "true", nil
-		}
-		return "false", nil
+	case "sender":
+		return config.Sender, nil
 	default:
 		return "", fmt.Errorf("unknown config key: %s", key)
 	}

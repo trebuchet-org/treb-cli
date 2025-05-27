@@ -20,8 +20,8 @@ func (d *DeploymentContext) ValidateDeploymentConfig() error {
 		return fmt.Errorf("failed to load deploy config: %w", err)
 	}
 
-	// Validate deploy config for environment
-	if err := deployConfig.Validate(d.Params.Env); err != nil {
+	// Validate deploy config for namespace
+	if err := deployConfig.Validate(d.Params.Namespace); err != nil {
 		return fmt.Errorf("invalid deploy config: %w", err)
 	}
 
@@ -34,9 +34,27 @@ func (d *DeploymentContext) ValidateDeploymentConfig() error {
 	d.networkInfo = networkInfo
 
 	// Generate environment variables
-	envVars, err := deployConfig.GenerateEnvVars(d.Params.Env)
+	envVars, err := deployConfig.GenerateEnvVars(d.Params.Namespace)
 	if err != nil {
 		return fmt.Errorf("failed to generate environment variables: %w", err)
+	}
+
+	// Add sender environment variables if sender is specified
+	if d.Params.Sender != "" {
+		// Validate sender configuration
+		if err := deployConfig.ValidateSender("treb", d.Params.Sender); err != nil {
+			return fmt.Errorf("invalid sender configuration: %w", err)
+		}
+		
+		senderEnvVars, err := deployConfig.GenerateSenderEnvVars("treb", d.Params.Sender)
+		if err != nil {
+			return fmt.Errorf("failed to generate sender environment variables: %w", err)
+		}
+		
+		// Merge sender env vars
+		for k, v := range senderEnvVars {
+			envVars[k] = v
+		}
 	}
 
 	// Add network-specific environment variables
@@ -182,7 +200,7 @@ func (d *DeploymentContext) PrepareProxyDeployment() error {
 
 	// Pass current network and environment context to narrow down results
 	// Use ResolveImplementationDeployment to filter out proxy deployments
-	deployment, err := interactive.ResolveImplementationDeployment(d.Params.TargetQuery, d.registryManager, d.networkInfo.ChainID(), d.Params.Env)
+	deployment, err := interactive.ResolveImplementationDeployment(d.Params.TargetQuery, d.registryManager, d.networkInfo.ChainID(), d.Params.Namespace)
 	if err != nil {
 		return fmt.Errorf("failed to resolve target deployment: %w", err)
 	}

@@ -113,7 +113,7 @@ func (m *Manager) Save() error {
 	return nil
 }
 
-func (m *Manager) RecordDeployment(contractInfo *contracts.ContractInfo, env string, result *types.DeploymentResult, chainID uint64) error {
+func (m *Manager) RecordDeployment(contractInfo *contracts.ContractInfo, namespace string, result *types.DeploymentResult, chainID uint64) error {
 	chainIDStr := fmt.Sprintf("%d", chainID)
 
 	// Ensure network exists
@@ -128,9 +128,9 @@ func (m *Manager) RecordDeployment(contractInfo *contracts.ContractInfo, env str
 		}
 	}
 
-	// Default environment to "default" if not provided
-	if env == "" {
-		env = "default"
+	// Default namespace to "default" if not provided
+	if namespace == "" {
+		namespace = "default"
 	}
 
 	entry := &types.DeploymentEntry{
@@ -138,7 +138,7 @@ func (m *Manager) RecordDeployment(contractInfo *contracts.ContractInfo, env str
 		ShortID:      result.ShortID,
 		Address:      result.Address,
 		ContractName: contractInfo.Name,
-		Environment:  env,
+		Namespace:    namespace,
 		Type:         result.DeploymentType, // Now comes from structured output
 		Salt:         result.Salt,
 		InitCodeHash: result.InitCodeHash,
@@ -194,7 +194,7 @@ func (m *Manager) RecordLibraryDeployment(contractInfo *contracts.ContractInfo, 
 	entry := &types.DeploymentEntry{
 		Address:      result.Address,
 		ContractName: contractInfo.Name,
-		Environment:  "global", // Libraries are global
+		Namespace:    "global", // Libraries are global
 		Type:         "library",
 		Salt:         result.Salt,
 		InitCodeHash: result.InitCodeHash,
@@ -251,8 +251,8 @@ func (m *Manager) GetDeployment(identifier string) *types.DeploymentEntry {
 // - Full FQID: "chainID/env/contractPath:shortID"
 // - ShortID: "contract:label"
 // - Contract name: "MyToken"
-// If chainID and env are provided, they are used to narrow down results
-func (m *Manager) QueryDeployments(query string, chainID uint64, env string) []*DeploymentInfo {
+// If chainID and namespace are provided, they are used to narrow down results
+func (m *Manager) QueryDeployments(query string, chainID uint64, namespace string) []*DeploymentInfo {
 	var results []*DeploymentInfo
 	queryLower := strings.ToLower(query)
 
@@ -284,8 +284,8 @@ func (m *Manager) QueryDeployments(query string, chainID uint64, env string) []*
 		}
 
 		for _, deployment := range network.Deployments {
-			// Skip if env is specified and doesn't match
-			if env != "" && deployment.Environment != env {
+			// Skip if namespace is specified and doesn't match
+			if namespace != "" && deployment.Namespace != namespace {
 				continue
 			}
 
@@ -319,19 +319,19 @@ func (m *Manager) QueryDeployments(query string, chainID uint64, env string) []*
 	return results
 }
 
-// GetDeploymentWithLabel gets a deployment by contract, env, and label
-func (m *Manager) GetDeploymentWithLabel(contract, env, label string, chainID uint64) *types.DeploymentEntry {
+// GetDeploymentWithLabel gets a deployment by contract, namespace, and label
+func (m *Manager) GetDeploymentWithLabel(contract, namespace, label string, chainID uint64) *types.DeploymentEntry {
 	chainIDStr := fmt.Sprintf("%d", chainID)
 
-	// Default environment to "default" if not provided
-	if env == "" {
-		env = "default"
+	// Default namespace to "default" if not provided
+	if namespace == "" {
+		namespace = "default"
 	}
 
 	if network := m.registry.Networks[chainIDStr]; network != nil {
 		// Search through deployments to find matching contract, env, and label
 		for _, deployment := range network.Deployments {
-			if deployment.ContractName == contract && deployment.Environment == env && deployment.Label == label {
+			if deployment.ContractName == contract && deployment.Namespace == namespace && deployment.Label == label {
 				return deployment
 			}
 		}
@@ -429,7 +429,7 @@ type RegistryStatus struct {
 // RecentDeploymentInfo represents recent deployment information
 type RecentDeploymentInfo struct {
 	Contract    string               `json:"contract"`
-	Environment string               `json:"environment"`
+	Namespace   string               `json:"namespace"`
 	Label       string               `json:"label"`
 	Address     string               `json:"address"`
 	Network     string               `json:"network"`
@@ -556,7 +556,7 @@ func (m *Manager) GetStatus() *RegistryStatus {
 			if len(recentDeployments) < 5 {
 				recentDeployments = append(recentDeployments, RecentDeploymentInfo{
 					Contract:    deployment.ContractName,
-					Environment: deployment.Environment,
+					Namespace:   deployment.Namespace,
 					Address:     deployment.Address.Hex(),
 					Network:     network.Name,
 					Timestamp:   deployment.Deployment.Timestamp.Format("2006-01-02 15:04"),

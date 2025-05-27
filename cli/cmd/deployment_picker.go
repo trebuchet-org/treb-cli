@@ -48,8 +48,8 @@ func pickDeployment(identifier string, registryManager *registry.Manager) (*regi
 		if matches[i].NetworkName != matches[j].NetworkName {
 			return matches[i].NetworkName < matches[j].NetworkName
 		}
-		if matches[i].Entry.Environment != matches[j].Entry.Environment {
-			return matches[i].Entry.Environment < matches[j].Entry.Environment
+		if matches[i].Entry.Namespace != matches[j].Entry.Namespace {
+			return matches[i].Entry.Namespace < matches[j].Entry.Namespace
 		}
 		return matches[i].Entry.ContractName < matches[j].Entry.ContractName
 	})
@@ -62,7 +62,7 @@ func pickDeployment(identifier string, registryManager *registry.Manager) (*regi
 		if len(match.Entry.Tags) > 0 {
 			displayName += fmt.Sprintf(" (%s)", match.Entry.Tags[0])
 		}
-		fullId := fmt.Sprintf("%s/%s/%s", match.NetworkName, match.Entry.Environment, displayName)
+		fullId := fmt.Sprintf("%s/%s/%s", match.NetworkName, match.Entry.Namespace, displayName)
 		if len(fullId) > maxIdLen {
 			maxIdLen = len(fullId)
 		}
@@ -76,7 +76,7 @@ func pickDeployment(identifier string, registryManager *registry.Manager) (*regi
 		if len(match.Entry.Tags) > 0 {
 			displayName += fmt.Sprintf(" (%s)", match.Entry.Tags[0])
 		}
-		fullId := fmt.Sprintf("%s/%s/%s", match.NetworkName, match.Entry.Environment, displayName)
+		fullId := fmt.Sprintf("%s/%s/%s", match.NetworkName, match.Entry.Namespace, displayName)
 		padding := strings.Repeat(" ", maxIdLen-len(fullId))
 		options[i] = fmt.Sprintf("%s%s  %s", fullId, padding, match.Address.Hex())
 	}

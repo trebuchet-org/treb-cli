@@ -73,7 +73,7 @@ func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
 	// Header
 	displayName := deployment.Entry.GetDisplayName()
 	fmt.Println()
-	titleStyle.Printf("Deployment Details: %s/%s/%s\n", networkInfo.Name, deployment.Entry.Environment, displayName)
+	titleStyle.Printf("Deployment Details: %s/%s/%s\n", networkInfo.Name, deployment.Entry.Namespace, displayName)
 	fmt.Println(strings.Repeat("=", 60))
 
 	// Contract section
@@ -100,8 +100,8 @@ func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
 			fmt.Println(target.ContractName)
 			labelStyle.Print("  Address:      ")
 			addressStyle.Println(target.Address.Hex())
-			labelStyle.Print("  Environment:  ")
-			fmt.Println(target.Environment)
+			labelStyle.Print("  Namespace:    ")
+			fmt.Println(target.Namespace)
 			if target.Label != "" {
 				labelStyle.Print("  Label:        ")
 				color.New(color.FgMagenta).Println(target.Label)
@@ -135,8 +135,8 @@ func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
 	sectionStyle.Println("NETWORK")
 	labelStyle.Print("Chain:        ")
 	fmt.Printf("%s (ID: %s)\n", networkInfo.Name, deployment.ChainID)
-	labelStyle.Print("Environment:  ")
-	fmt.Println(deployment.Entry.Environment)
+	labelStyle.Print("Namespace:    ")
+	fmt.Println(deployment.Entry.Namespace)
 
 	// Deployment section
 	fmt.Println()

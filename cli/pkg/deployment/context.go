@@ -16,9 +16,10 @@ type DeploymentParams struct {
 	ContractQuery       string
 	ImplementationQuery string
 	TargetQuery         string
-	Env                 string
+	Namespace           string
 	Label               string
 	NetworkName         string
+	Sender              string
 	Predict             bool
 	Debug               bool
 }
@@ -106,5 +107,5 @@ func (ctx *DeploymentContext) GetShortID() string {
 func (ctx *DeploymentContext) GetFQID() string {
 	// Always use contractInfo.Path as it represents the actual contract being deployed
 	// For proxies, this is the proxy contract path, not the implementation
-	return fmt.Sprintf("%d/%s/%s:%s", ctx.networkInfo.ChainID(), ctx.Params.Env, ctx.contractInfo.Path, ctx.GetShortID())
+	return fmt.Sprintf("%d/%s/%s:%s", ctx.networkInfo.ChainID(), ctx.Params.Namespace, ctx.contractInfo.Path, ctx.GetShortID())
 }

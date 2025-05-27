@@ -4,14 +4,14 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/deployment"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
 var (
-	env         string
+	namespace   string
 	networkName string
+	senderName  string
 	label       string
 	debug       bool
 	predict     bool
@@ -37,19 +37,20 @@ var deployContractCmd = &cobra.Command{
 
 Examples:
   treb deploy contract Counter
-  treb deploy contract Token --env staging --label v2
-  treb deploy contract src/Counter.sol:Counter --network sepolia`,
+  treb deploy contract Token --ns staging --label v2
+  treb deploy contract src/Counter.sol:Counter --network sepolia --sender safe`,
 	Args:    cobra.ExactArgs(1),
 	Aliases: []string{"singleton"},
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, err := deployment.NewContext(deployment.DeploymentParams{
 			DeploymentType: types.SingletonDeployment,
 			ContractQuery:  args[0],
-			Env:            env,
+			Namespace:      namespace,
 			Label:          label,
 			Predict:        predict,
 			Debug:          debug,
 			NetworkName:    networkName,
+			Sender:         senderName,
 		})
 		if err != nil {
 			checkError(err)
@@ -82,11 +83,12 @@ Examples:
 			DeploymentType:      types.ProxyDeployment,
 			TargetQuery:         targetQuery,
 			ImplementationQuery: args[0],
-			Env:                 env,
+			Namespace:           namespace,
 			Label:               label,
 			Predict:             predict,
 			Debug:               debug,
 			NetworkName:         networkName,
+			Sender:              senderName,
 		}); err != nil {
 			checkError(err)
 		} else {
@@ -115,7 +117,8 @@ Examples:
 			Predict:        predict,
 			Debug:          debug,
 			NetworkName:    networkName,
-			Env:            "default",
+			Namespace:      namespace,
+			Sender:         senderName,
 		}); err != nil {
 			checkError(err)
 		} else {
@@ -141,20 +144,8 @@ func init() {
 		return nil
 	}
 
-	// Load config defaults
-	var defaultNetwork string
-	var defaultEnv string
-	configManager := config.NewManager(".")
-	if configManager.Exists() {
-		if cfg, err := configManager.Load(); err == nil && cfg.Network != "" {
-			defaultNetwork = cfg.Network
-			if cfg.Environment == "" {
-				defaultEnv = "default"
-			} else {
-				defaultEnv = cfg.Environment
-			}
-		}
-	}
+	// Load context defaults
+	defaultNamespace, defaultNetwork, defaultSender, _ := GetContextDefaults()
 
 	// Global flags
 	deployCmd.PersistentFlags().StringVar(&networkName, "network", defaultNetwork, "Network to deploy to")
@@ -165,13 +156,17 @@ func init() {
 	deployCmd.PersistentFlags().BoolVar(&predict, "predict", false, "Predict deployment address without deploying")
 
 	// Contract/Proxy specific flags (also add to main deployCmd for bare usage)
-	deployCmd.PersistentFlags().StringVar(&env, "env", defaultEnv, "Deployment environment")
+	deployCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", defaultNamespace, "Deployment namespace")
+	deployCmd.PersistentFlags().StringVar(&senderName, "sender", defaultSender, "Transaction sender")
 	deployCmd.PersistentFlags().StringVar(&label, "label", "", "Deployment label (affects address)")
+	if defaultSender == "" {
+		deployCmd.MarkPersistentFlagRequired("sender")
+	}
 
-	deployContractCmd.Flags().StringVar(&env, "env", defaultEnv, "Deployment environment")
+	deployContractCmd.Flags().StringVarP(&namespace, "namespace", "n", defaultNamespace, "Deployment namespace")
 	deployContractCmd.Flags().StringVar(&label, "label", "", "Deployment label (affects address)")
 
-	deployProxyCmd.Flags().StringVar(&env, "env", "default", "Deployment environment")
+	deployProxyCmd.Flags().StringVarP(&namespace, "namespace", "n", defaultNamespace, "Deployment namespace")
 	deployProxyCmd.Flags().StringVar(&label, "label", "", "Deployment label (affects address)")
 	deployProxyCmd.Flags().StringVar(&target, "target", "", "Target deployment to proxy to")
 }
