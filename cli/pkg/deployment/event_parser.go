@@ -2,11 +2,7 @@ package deployment
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
 // ForgeJSONOutput represents the JSON output from forge script

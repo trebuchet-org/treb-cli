@@ -136,16 +136,19 @@ func (d *DeploymentContext) runScript() (string, error) {
 		flags = append(flags, libFlags...)
 	}
 
-	// Try to encode deployment config for new run(DeploymentConfig) method
-	functionArgs, err := d.prepareScriptArguments()
-	if err != nil {
-		// Log warning but continue - might be using legacy run() method
-		if d.Params.Debug {
-			fmt.Printf("Warning: Could not prepare script arguments: %v\n", err)
-		}
-	}
+	// For now, skip the new method and use legacy until we debug the encoding
+	var functionArgs []string
+	// TODO: Re-enable when encoding is fixed
+	// functionArgs, err := d.prepareScriptArguments()
+	// if err != nil {
+	// 	// Log warning but continue - might be using legacy run() method
+	// 	if d.Params.Debug {
+	// 		fmt.Printf("Warning: Could not prepare script arguments: %v\n", err)
+	// 	}
+	// }
 
 	var output string
+	var err error
 	if len(functionArgs) > 0 {
 		// Use new method with encoded config
 		output, err = d.forge.RunScriptWithArgs(d.ScriptPath, flags, d.envVars, functionArgs)
@@ -214,27 +217,59 @@ func (d *DeploymentContext) prepareScriptArguments() ([]string, error) {
 		return nil, nil
 	}
 	
-	// Create deployment config
+	// Create executor config
 	senderAddr := common.HexToAddress(d.envVars["SENDER_ADDRESS"])
-	chainId, _ := new(big.Int).SetString(d.networkInfo.ChainID(), 10)
 	
-	config := abi.CreateDeploymentConfig(
-		d.Params.ProjectName,
-		d.Params.Namespace,
-		d.Params.Label,
-		chainId,
-		d.networkInfo.Name,
+	// Extract private key if available
+	var privateKey *big.Int = big.NewInt(0) // Default to 0
+	if privKeyStr, exists := d.envVars["DEPLOYER_PRIVATE_KEY"]; exists && privKeyStr != "" {
+		privateKey = new(big.Int)
+		privateKey.SetString(privKeyStr, 0) // Handle 0x prefix automatically
+	}
+	
+	// Extract proposer info for Safe deployments
+	var proposer common.Address
+	var proposerType string = "private_key" // Default
+	var proposerPrivateKey *big.Int = big.NewInt(0) // Default to 0
+	var proposerLedgerPath string
+	
+	if d.envVars["SENDER_TYPE"] == "safe" {
+		if proposerAddr, exists := d.envVars["PROPOSER_ADDRESS"]; exists {
+			proposer = common.HexToAddress(proposerAddr)
+		}
+		if pType, exists := d.envVars["PROPOSER_TYPE"]; exists {
+			proposerType = pType
+		}
+		if pPrivKey, exists := d.envVars["PROPOSER_PRIVATE_KEY"]; exists && pPrivKey != "" {
+			proposerPrivateKey = new(big.Int)
+			proposerPrivateKey.SetString(pPrivKey, 0)
+		}
+		if pLedgerPath, exists := d.envVars["PROPOSER_DERIVATION_PATH"]; exists {
+			proposerLedgerPath = pLedgerPath
+		}
+	}
+	
+	executorConfig := abi.CreateExecutorConfig(
 		senderAddr,
 		d.envVars["SENDER_TYPE"],
-		common.Address{}, // Registry address - not implemented yet
-		!d.Params.Predict, // broadcast
-		d.Params.Verify,
+		privateKey,
+		d.envVars["LEDGER_DERIVATION_PATH"],
+		proposer,
+		proposerType,
+		proposerPrivateKey,
+		proposerLedgerPath,
+	)
+	
+	config := abi.CreateDeploymentConfig(
+		d.Params.Namespace,
+		d.Params.Label,
+		executorConfig,
 	)
 	
 	// Encode the config
 	encodedConfig, err := abi.EncodeDeploymentConfig(config, string(contractABI.ABI))
 	if err != nil {
-		return nil, fmt.Errorf("failed to encode deployment config: %w\nThis might indicate a version mismatch between treb-cli and treb-sol")
+		return nil, fmt.Errorf("failed to encode deployment config: %w\nThis might indicate a version mismatch between treb-cli and treb-sol", err)
 	}
 	
 	if encodedConfig == "" {
@@ -242,6 +277,8 @@ func (d *DeploymentContext) prepareScriptArguments() ([]string, error) {
 		return nil, nil
 	}
 	
-	// Return the encoded config as script argument
-	return []string{"--sig", "run((string,string,string,uint256,string,address,string,address,bool,bool))", encodedConfig}, nil
+	// Return the encoded config as script argument with new signature
+	// DeploymentConfig: (string namespace, string label, ExecutorConfig executorConfig)
+	// ExecutorConfig: (uint8 senderType, address sender, uint256 privateKey, string ledgerDerivationPath, uint8 proposerType, address proposer, uint256 proposerPrivateKey, string proposerDerivationPath)
+	return []string{"--sig", "run((string,string,(uint8,address,uint256,string,uint8,address,uint256,string)))", encodedConfig}, nil
 }
