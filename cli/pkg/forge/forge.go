@@ -45,13 +45,25 @@ func (f *Forge) CheckInstallation() error {
 }
 
 func (f *Forge) RunScript(scriptPath string, flags []string, envVars map[string]string) (string, error) {
-	cmd := exec.Command("forge", "script", scriptPath)
+	return f.RunScriptWithArgs(scriptPath, flags, envVars, nil)
+}
+
+// RunScriptWithArgs runs a forge script with optional function arguments
+func (f *Forge) RunScriptWithArgs(scriptPath string, flags []string, envVars map[string]string, functionArgs []string) (string, error) {
+	args := []string{"script", scriptPath}
+	args = append(args, flags...)
+	
+	// Add function arguments if provided
+	if len(functionArgs) > 0 {
+		args = append(args, functionArgs...)
+	}
+	
+	cmd := exec.Command("forge", args...)
 	cmd.Dir = f.projectRoot
 	cmd.Env = os.Environ()
 	for key, value := range envVars {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
 	}
-	cmd.Args = append(cmd.Args, flags...)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {

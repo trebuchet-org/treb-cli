@@ -16,12 +16,14 @@ type DeploymentParams struct {
 	ContractQuery       string
 	ImplementationQuery string
 	TargetQuery         string
+	ProjectName         string
 	Namespace           string
 	Label               string
 	NetworkName         string
 	Sender              string
 	Predict             bool
 	Debug               bool
+	Verify              bool
 }
 
 // DeploymentContext holds all deployment configuration

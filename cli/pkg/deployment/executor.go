@@ -1,10 +1,15 @@
 package deployment
 
 import (
+	"encoding/json"
 	"fmt"
+	"math/big"
+	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/abi"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/broadcast"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
@@ -23,8 +28,8 @@ func (d *DeploymentContext) Execute() (*types.DeploymentResult, error) {
 		return nil, err
 	}
 
-	// Parse deployment results
-	results, err := parseDeploymentResult(string(output))
+	// Parse deployment results - supports both JSON events and legacy logs
+	results, err := tryParseDeploymentOutput(string(output))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse deployment output: %w", err)
 	}
@@ -119,13 +124,36 @@ func (d *DeploymentContext) runScript() (string, error) {
 		flags = append(flags, "--broadcast")
 	}
 
+	// Add JSON output for event parsing when not in debug mode
+	// In debug mode, we want human-readable output
+	if !d.Params.Debug && !d.Params.Predict {
+		flags = append(flags, "--json")
+	}
+
 	// Add library flags if any
 	if len(d.resolvedLibraries) > 0 {
 		libFlags := generateLibraryFlags(d.resolvedLibraries)
 		flags = append(flags, libFlags...)
 	}
 
-	output, err := d.forge.RunScript(d.ScriptPath, flags, d.envVars)
+	// Try to encode deployment config for new run(DeploymentConfig) method
+	functionArgs, err := d.prepareScriptArguments()
+	if err != nil {
+		// Log warning but continue - might be using legacy run() method
+		if d.Params.Debug {
+			fmt.Printf("Warning: Could not prepare script arguments: %v\n", err)
+		}
+	}
+
+	var output string
+	if len(functionArgs) > 0 {
+		// Use new method with encoded config
+		output, err = d.forge.RunScriptWithArgs(d.ScriptPath, flags, d.envVars, functionArgs)
+	} else {
+		// Fall back to legacy method
+		output, err = d.forge.RunScript(d.ScriptPath, flags, d.envVars)
+	}
+
 	if err != nil {
 		if d.Params.Debug {
 			fmt.Printf("Full output:\n%s\n", output)
@@ -140,4 +168,80 @@ func (d *DeploymentContext) runScript() (string, error) {
 	}
 
 	return output, nil
+}
+
+// prepareScriptArguments prepares the encoded arguments for the script
+func (d *DeploymentContext) prepareScriptArguments() ([]string, error) {
+	// Try to read the script ABI
+	scriptName := strings.TrimSuffix(filepath.Base(d.ScriptPath), ".s.sol")
+	abiPath := filepath.Join(d.projectRoot, "out", filepath.Base(d.ScriptPath), scriptName + ".json")
+	
+	// Read the ABI file
+	abiData, err := os.ReadFile(abiPath)
+	if err != nil {
+		// ABI file doesn't exist - script might use legacy run() method
+		return nil, nil
+	}
+	
+	// Parse the ABI to check if run() method accepts DeploymentConfig
+	var contractABI struct {
+		ABI json.RawMessage `json:"abi"`
+	}
+	if err := json.Unmarshal(abiData, &contractABI); err != nil {
+		return nil, fmt.Errorf("failed to parse ABI file: %w", err)
+	}
+	
+	// Check if run method accepts DeploymentConfig
+	var abiArray []map[string]interface{}
+	if err := json.Unmarshal(contractABI.ABI, &abiArray); err != nil {
+		return nil, fmt.Errorf("failed to parse ABI array: %w", err)
+	}
+	
+	// Find the run method
+	var runMethod map[string]interface{}
+	for _, method := range abiArray {
+		if method["type"] == "function" && method["name"] == "run" {
+			inputs, ok := method["inputs"].([]interface{})
+			if ok && len(inputs) > 0 {
+				runMethod = method
+				break
+			}
+		}
+	}
+	
+	if runMethod == nil {
+		// No run method with parameters found - use legacy method
+		return nil, nil
+	}
+	
+	// Create deployment config
+	senderAddr := common.HexToAddress(d.envVars["SENDER_ADDRESS"])
+	chainId, _ := new(big.Int).SetString(d.networkInfo.ChainID(), 10)
+	
+	config := abi.CreateDeploymentConfig(
+		d.Params.ProjectName,
+		d.Params.Namespace,
+		d.Params.Label,
+		chainId,
+		d.networkInfo.Name,
+		senderAddr,
+		d.envVars["SENDER_TYPE"],
+		common.Address{}, // Registry address - not implemented yet
+		!d.Params.Predict, // broadcast
+		d.Params.Verify,
+	)
+	
+	// Encode the config
+	encodedConfig, err := abi.EncodeDeploymentConfig(config, string(contractABI.ABI))
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode deployment config: %w\nThis might indicate a version mismatch between treb-cli and treb-sol")
+	}
+	
+	if encodedConfig == "" {
+		// Legacy run() method
+		return nil, nil
+	}
+	
+	// Return the encoded config as script argument
+	return []string{"--sig", "run((string,string,string,uint256,string,address,string,address,bool,bool))", encodedConfig}, nil
 }

@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/deployment"
@@ -42,15 +44,24 @@ Examples:
 	Args:    cobra.ExactArgs(1),
 	Aliases: []string{"singleton"},
 	Run: func(cmd *cobra.Command, args []string) {
+		// Get project name from current directory
+		cwd, err := os.Getwd()
+		if err != nil {
+			checkError(err)
+		}
+		projectName := filepath.Base(cwd)
+		
 		ctx, err := deployment.NewContext(deployment.DeploymentParams{
 			DeploymentType: types.SingletonDeployment,
 			ContractQuery:  args[0],
+			ProjectName:    projectName,
 			Namespace:      namespace,
 			Label:          label,
 			Predict:        predict,
 			Debug:          debug,
 			NetworkName:    networkName,
 			Sender:         senderName,
+			Verify:         false, // TODO: add verify flag
 		})
 		if err != nil {
 			checkError(err)
@@ -73,6 +84,13 @@ Examples:
   treb deploy proxy Token --target seploia/default/Token:V2 --label MyToken`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		// Get project name from current directory
+		cwd, err := os.Getwd()
+		if err != nil {
+			checkError(err)
+		}
+		projectName := filepath.Base(cwd)
+		
 		var targetQuery string
 		if target == "" {
 			targetQuery = args[0]
@@ -83,12 +101,14 @@ Examples:
 			DeploymentType:      types.ProxyDeployment,
 			TargetQuery:         targetQuery,
 			ImplementationQuery: args[0],
+			ProjectName:         projectName,
 			Namespace:           namespace,
 			Label:               label,
 			Predict:             predict,
 			Debug:               debug,
 			NetworkName:         networkName,
 			Sender:              senderName,
+			Verify:              false, // TODO: add verify flag
 		}); err != nil {
 			checkError(err)
 		} else {
@@ -110,15 +130,24 @@ Examples:
   treb deploy library StringUtils --network mainnet`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		// Get project name from current directory
+		cwd, err := os.Getwd()
+		if err != nil {
+			checkError(err)
+		}
+		projectName := filepath.Base(cwd)
+		
 		if ctx, err := deployment.NewContext(deployment.DeploymentParams{
 			DeploymentType: types.LibraryDeployment,
 			ContractQuery:  args[0],
+			ProjectName:    projectName,
 			Label:          label,
 			Predict:        predict,
 			Debug:          debug,
 			NetworkName:    networkName,
 			Namespace:      namespace,
 			Sender:         senderName,
+			Verify:         false, // TODO: add verify flag
 		}); err != nil {
 			checkError(err)
 		} else {
