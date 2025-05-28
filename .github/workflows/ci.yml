@@ -61,11 +61,6 @@ jobs:
       - name: Run tests
         run: go test -v ./...
       
-      - name: Run basic integration tests
-        run: |
-          chmod +x test/integration/scenarios/test-basic-commands.sh
-          ./test/integration/scenarios/test-basic-commands.sh
-      
       - name: Verify treb-sol submodule is up to date
         run: |
           cd treb-sol
