@@ -120,10 +120,10 @@ func (d *DeploymentContext) checkAndResolveLibraries(contractInfo *contracts.Con
 		// Add to resolved libraries
 		resolvedLibs = append(resolvedLibs, LibraryInfo{
 			Requirement: lib,
-			Address:     result.Address,
+			Address:     result.Deployed,
 		})
 
-		deploySpinner.Success(fmt.Sprintf("Deployed %s at %s", lib.Name, result.Address.Hex()))
+		deploySpinner.Success(fmt.Sprintf("Deployed %s at %s", lib.Name, result.Deployed.Hex()))
 	}
 
 	return resolvedLibs, nil

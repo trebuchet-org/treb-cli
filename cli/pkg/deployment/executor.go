@@ -1,21 +1,17 @@
 package deployment
 
 import (
-	"encoding/json"
+	"encoding/hex"
 	"fmt"
-	"math/big"
-	"os"
-	"path/filepath"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/abi"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/broadcast"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
 // Executor handles deployment execution
-func (d *DeploymentContext) Execute() (*types.DeploymentResult, error) {
+func (d *DeploymentContext) Execute() (*ParsedDeploymentResult, error) {
 	// Check for existing deployment
 	entry := d.registryManager.GetDeployment(d.GetFQID())
 	if entry != nil {
@@ -29,88 +25,43 @@ func (d *DeploymentContext) Execute() (*types.DeploymentResult, error) {
 	}
 
 	// Parse deployment results - supports both JSON events and legacy logs
-	results, err := tryParseDeploymentOutput(string(output))
+	result, err := d.parseDeploymentOutput(string(output))
 	if err != nil {
+		if d.Params.Debug {
+			fmt.Println("======== SCRIPT OUTPUT =========")
+			fmt.Println(string(output))
+			fmt.Println("================================")
+		}
 		return nil, fmt.Errorf("failed to parse deployment output: %w", err)
 	}
 
-	// Build deployment result
-	deployment := d.buildDeploymentResult(results)
-
-	// Parse broadcast file if not predicting
-	if !d.Params.Predict && deployment.Status == types.StatusExecuted {
-		if broadcastData, err := d.loadBroadcastFile(); err != nil {
+	// Parse broadcast file if not predicting to get tx hash and block number
+	if !d.Params.Predict && result.ParsedStatus == types.StatusExecuted && result.BroadcastFile != "" {
+		parser := broadcast.NewParser(d.projectRoot)
+		if broadcastData, err := parser.ParseBroadcastFile(result.BroadcastFile); err != nil {
 			// Log warning but don't fail
 			fmt.Printf("Warning: failed to load broadcast file: %v\n", err)
 		} else {
-			deployment.BroadcastData = broadcastData
 			// Extract transaction details using the helper method
-			if txHash, blockNum, err := broadcastData.GetTransactionHashForAddress(deployment.Address); err == nil {
-				deployment.TxHash = txHash
-				deployment.BlockNumber = blockNum
+			if txHash, blockNum, err := broadcastData.GetTransactionHashForAddress(result.Deployed); err == nil {
+				result.TxHash = txHash
+				result.BlockNumber = blockNum
 			}
 		}
 	}
 
 	// Update registry if deployment was executed
 	if !d.Params.Predict {
-		if err := d.updateRegistry(deployment); err != nil {
-			// Log warning but don't fail
-			fmt.Printf("Warning: failed to update registry: %v\n", err)
+		entry, err := d.BuildDeploymentEntry(&result)
+		if err != nil {
+			return &result, fmt.Errorf("failed to build deployment entry: %w", err)
+		}
+		if err := d.registryManager.RecordDeployment(d.networkInfo.ChainID(), entry); err != nil {
+			return &result, fmt.Errorf("could not record deployed contract: %w", err)
 		}
 	}
 
-	return deployment, nil
-}
-
-// buildDeploymentResult builds deployment result from parsed output
-func (d *DeploymentContext) buildDeploymentResult(result DeploymentOutput) *types.DeploymentResult {
-	// Determine the address based on deployment type
-	var address common.Address
-	if d.Params.DeploymentType == types.LibraryDeployment && result.LibraryAddress != "" {
-		address = common.HexToAddress(result.LibraryAddress)
-	} else if result.Address != "" {
-		address = common.HexToAddress(result.Address)
-	}
-
-	// Convert hex strings to byte arrays
-	deployment := &types.DeploymentResult{
-		FQID:                 d.GetFQID(),
-		ShortID:              d.GetShortID(),
-		TargetDeploymentFQID: d.targetDeploymentFQID,
-		DeploymentType:       d.Params.DeploymentType,
-		Namespace:            d.Params.Namespace,
-		Label:                d.Params.Label,
-		NetworkInfo:          d.networkInfo,
-		ContractInfo:         d.contractInfo,
-		Status:               result.Status,
-		Salt:                 result.Salt,
-		InitCodeHash:         result.InitCodeHash,
-		SafeTxHash:           common.HexToHash(result.SafeTxHash),
-		Address:              address,
-		ConstructorArgs:      result.ConstructorArgs,
-		Metadata: &types.ContractMetadata{
-			Compiler:     d.contractInfo.Artifact.Metadata.Compiler.Version,
-			ContractPath: d.contractInfo.Path,
-			ScriptPath:   d.ScriptPath,
-			SourceHash:   d.contractInfo.GetSourceHash(),
-		},
-	}
-
-	return deployment
-}
-
-// loadBroadcastFile loads the broadcast file data
-func (d *DeploymentContext) loadBroadcastFile() (*broadcast.BroadcastFile, error) {
-	// Use broadcast parser to get the raw broadcast file
-	parser := broadcast.NewParser(d.projectRoot)
-	return parser.ParseLatestBroadcast(filepath.Base(d.ScriptPath), d.networkInfo.ChainID())
-}
-
-// updateRegistry updates the deployment registry
-func (d *DeploymentContext) updateRegistry(deployment *types.DeploymentResult) error {
-	d.registryManager.RecordDeployment(d.contractInfo, d.Params.Namespace, deployment, d.networkInfo.ChainID())
-	return nil
+	return &result, nil
 }
 
 func (d *DeploymentContext) runScript() (string, error) {
@@ -124,9 +75,8 @@ func (d *DeploymentContext) runScript() (string, error) {
 		flags = append(flags, "--broadcast")
 	}
 
-	// Add JSON output for event parsing when not in debug mode
-	// In debug mode, we want human-readable output
-	if !d.Params.Debug && !d.Params.Predict {
+	// Always use JSON output for parsing events
+	if !d.Params.Predict {
 		flags = append(flags, "--json")
 	}
 
@@ -136,38 +86,53 @@ func (d *DeploymentContext) runScript() (string, error) {
 		flags = append(flags, libFlags...)
 	}
 
-	// For now, skip the new method and use legacy until we debug the encoding
-	var functionArgs []string
-	// TODO: Re-enable when encoding is fixed
-	// functionArgs, err := d.prepareScriptArguments()
-	// if err != nil {
-	// 	// Log warning but continue - might be using legacy run() method
-	// 	if d.Params.Debug {
-	// 		fmt.Printf("Warning: Could not prepare script arguments: %v\n", err)
-	// 	}
-	// }
-
-	var output string
-	var err error
-	if len(functionArgs) > 0 {
-		// Use new method with encoded config
-		output, err = d.forge.RunScriptWithArgs(d.ScriptPath, flags, d.envVars, functionArgs)
-	} else {
-		// Fall back to legacy method
-		output, err = d.forge.RunScript(d.ScriptPath, flags, d.envVars)
+	// Try to prepare script arguments for the new method
+	functionArgs, err := d.prepareScriptArguments()
+	if err != nil {
+		// Log warning but continue - might be using legacy run() method
+		if d.Params.Debug {
+			fmt.Printf("Warning: Could not prepare script arguments: %v\n", err)
+		}
 	}
 
+	// Always use the new method with encoded config
+	if len(functionArgs) == 0 {
+		return "", fmt.Errorf("deployment script must accept DeploymentConfig parameter")
+	}
+
+	output, err := d.forge.RunScriptWithArgs(d.ScriptPath, flags, nil, functionArgs)
+
 	if err != nil {
-		if d.Params.Debug {
-			fmt.Printf("Full output:\n%s\n", output)
+		// If script failed with JSON output, rerun without JSON and broadcast to get readable error
+		if !d.Params.Predict && strings.Contains(output, "script failed") {
+			// Remove --json and --broadcast flags for error diagnosis
+			debugFlags := []string{
+				"--rpc-url", d.networkInfo.RpcUrl,
+				"-vvvv",
+				"--non-interactive",
+			}
+
+			// Add library flags if any
+			if len(d.resolvedLibraries) > 0 {
+				libFlags := generateLibraryFlags(d.resolvedLibraries)
+				debugFlags = append(debugFlags, libFlags...)
+			}
+
+			// Rerun without broadcast/json to get full error output
+			debugOutput, _ := d.forge.RunScriptWithArgs(d.ScriptPath, debugFlags, nil, functionArgs)
+
+			// Show the full error to the user
+			fmt.Printf("\n=== Script Error Details ===\n")
+			fmt.Printf("%s\n", debugOutput)
+			fmt.Printf("=== End of Error ===\n\n")
 		}
+
 		return output, err
 	}
 
 	if d.Params.Debug {
-		fmt.Printf("\n=== Full Foundry Script Output ===\n")
-		fmt.Printf("%s\n", string(output))
-		fmt.Printf("=== End of Output ===\n\n")
+		// Even in debug mode, we're using JSON, so only show full output if needed
+		fmt.Printf("\n=== Script executed successfully ===\n")
 	}
 
 	return output, nil
@@ -176,109 +141,27 @@ func (d *DeploymentContext) runScript() (string, error) {
 // prepareScriptArguments prepares the encoded arguments for the script
 func (d *DeploymentContext) prepareScriptArguments() ([]string, error) {
 	// Try to read the script ABI
-	scriptName := strings.TrimSuffix(filepath.Base(d.ScriptPath), ".s.sol")
-	abiPath := filepath.Join(d.projectRoot, "out", filepath.Base(d.ScriptPath), scriptName + ".json")
-	
-	// Read the ABI file
-	abiData, err := os.ReadFile(abiPath)
-	if err != nil {
-		// ABI file doesn't exist - script might use legacy run() method
-		return nil, nil
-	}
-	
-	// Parse the ABI to check if run() method accepts DeploymentConfig
-	var contractABI struct {
-		ABI json.RawMessage `json:"abi"`
-	}
-	if err := json.Unmarshal(abiData, &contractABI); err != nil {
-		return nil, fmt.Errorf("failed to parse ABI file: %w", err)
-	}
-	
-	// Check if run method accepts DeploymentConfig
-	var abiArray []map[string]interface{}
-	if err := json.Unmarshal(contractABI.ABI, &abiArray); err != nil {
-		return nil, fmt.Errorf("failed to parse ABI array: %w", err)
-	}
-	
-	// Find the run method
-	var runMethod map[string]interface{}
-	for _, method := range abiArray {
-		if method["type"] == "function" && method["name"] == "run" {
-			inputs, ok := method["inputs"].([]interface{})
-			if ok && len(inputs) > 0 {
-				runMethod = method
-				break
-			}
+	var calldata []byte
+	switch d.Params.DeploymentType {
+	case types.ProxyDeployment:
+		if d.proxyDeploymentConfig == nil {
+			return nil, fmt.Errorf("proxy deployment config not initialized")
 		}
-	}
-	
-	if runMethod == nil {
-		// No run method with parameters found - use legacy method
-		return nil, nil
-	}
-	
-	// Create executor config
-	senderAddr := common.HexToAddress(d.envVars["SENDER_ADDRESS"])
-	
-	// Extract private key if available
-	var privateKey *big.Int = big.NewInt(0) // Default to 0
-	if privKeyStr, exists := d.envVars["DEPLOYER_PRIVATE_KEY"]; exists && privKeyStr != "" {
-		privateKey = new(big.Int)
-		privateKey.SetString(privKeyStr, 0) // Handle 0x prefix automatically
-	}
-	
-	// Extract proposer info for Safe deployments
-	var proposer common.Address
-	var proposerType string = "private_key" // Default
-	var proposerPrivateKey *big.Int = big.NewInt(0) // Default to 0
-	var proposerLedgerPath string
-	
-	if d.envVars["SENDER_TYPE"] == "safe" {
-		if proposerAddr, exists := d.envVars["PROPOSER_ADDRESS"]; exists {
-			proposer = common.HexToAddress(proposerAddr)
+		calldata = abi.EncodeProxyDeploymentRun(d.proxyDeploymentConfig)
+
+	case types.LibraryDeployment:
+		if d.libraryDeploymentConfig == nil {
+			return nil, fmt.Errorf("library deployment config not initialized")
 		}
-		if pType, exists := d.envVars["PROPOSER_TYPE"]; exists {
-			proposerType = pType
+		calldata = abi.EncodeLibraryDeploymentRun(d.libraryDeploymentConfig)
+
+	default:
+		if d.deploymentConfig == nil {
+			return nil, fmt.Errorf("deployment config not initialized")
 		}
-		if pPrivKey, exists := d.envVars["PROPOSER_PRIVATE_KEY"]; exists && pPrivKey != "" {
-			proposerPrivateKey = new(big.Int)
-			proposerPrivateKey.SetString(pPrivKey, 0)
-		}
-		if pLedgerPath, exists := d.envVars["PROPOSER_DERIVATION_PATH"]; exists {
-			proposerLedgerPath = pLedgerPath
-		}
+		calldata = abi.EncodeDeploymentRun(d.deploymentConfig)
 	}
-	
-	executorConfig := abi.CreateExecutorConfig(
-		senderAddr,
-		d.envVars["SENDER_TYPE"],
-		privateKey,
-		d.envVars["LEDGER_DERIVATION_PATH"],
-		proposer,
-		proposerType,
-		proposerPrivateKey,
-		proposerLedgerPath,
-	)
-	
-	config := abi.CreateDeploymentConfig(
-		d.Params.Namespace,
-		d.Params.Label,
-		executorConfig,
-	)
-	
-	// Encode the config
-	encodedConfig, err := abi.EncodeDeploymentConfig(config, string(contractABI.ABI))
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode deployment config: %w\nThis might indicate a version mismatch between treb-cli and treb-sol", err)
-	}
-	
-	if encodedConfig == "" {
-		// Legacy run() method
-		return nil, nil
-	}
-	
-	// Return the encoded config as script argument with new signature
-	// DeploymentConfig: (string namespace, string label, ExecutorConfig executorConfig)
-	// ExecutorConfig: (uint8 senderType, address sender, uint256 privateKey, string ledgerDerivationPath, uint8 proposerType, address proposer, uint256 proposerPrivateKey, string proposerDerivationPath)
-	return []string{"--sig", "run((string,string,(uint8,address,uint256,string,uint8,address,uint256,string)))", encodedConfig}, nil
+
+	// Return the full calldata as script argument
+	return []string{"--sig", "0x" + hex.EncodeToString(calldata)}, nil
 }

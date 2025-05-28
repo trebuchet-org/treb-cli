@@ -6,8 +6,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/fatih/color"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/broadcast"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
 )
 
@@ -22,9 +20,18 @@ const (
 type DeploymentType string
 
 const (
-	SingletonDeployment DeploymentType = "singleton"
-	ProxyDeployment     DeploymentType = "proxy"
-	LibraryDeployment   DeploymentType = "library"
+	SingletonDeployment DeploymentType = "SINGLETON"
+	ProxyDeployment     DeploymentType = "PROXY"
+	LibraryDeployment   DeploymentType = "LIBRARY"
+	UnknownDeployment   DeploymentType = "UNKNOWN"
+)
+
+type DeployStrategy string
+
+const (
+	Create2Strategy DeployStrategy = "CREATE2"
+	Create3Strategy DeployStrategy = "CREATE3"
+	UnknownStrategy DeployStrategy = "UNKNOWN"
 )
 
 func ParseStatus(status string) (Status, error) {
@@ -38,45 +45,17 @@ func ParseStatus(status string) (Status, error) {
 	}
 }
 
-type DeploymentResult struct {
-	FQID            string         `json:"fqid"` // Fully qualified identifier
-	ShortID         string         `json:"sid"`  // Short identifier
-	Address         common.Address `json:"address"`
-	TxHash          common.Hash    `json:"transaction_hash"`
-	BlockNumber     uint64         `json:"block_number"`
-	BroadcastFile   string         `json:"broadcast_file"`
-	Salt            string         `json:"salt"`           // Keep as bytes for internal use
-	InitCodeHash    string         `json:"init_code_hash"` // Keep as bytes for internal use
-	AlreadyDeployed bool           `json:"already_deployed"`
-
-	// New deployment type information
-	DeploymentType       DeploymentType       `json:"deployment_type"`                  // "implementation" or "proxy"
-	TargetDeploymentFQID string               `json:"target_deployment_fqid,omitempty"` // only for proxy deployments
-	Label                string               `json:"label,omitempty"`                  // For implementation deployments
-	Tags                 []string             `json:"tags,omitempty"`
-	Namespace            string               `json:"namespace,omitempty"`
-	NetworkInfo          *network.NetworkInfo `json:"network_info,omitempty"`
-	Status               Status               `json:"status"`
-
-	// Safe deployment information
-	SafeTxHash  common.Hash    `json:"safe_tx_hash,omitempty"`
-	SafeAddress common.Address `json:"safe_address,omitempty"`
-
-	// Constructor arguments for verification
-	ConstructorArgs string `json:"constructor_args,omitempty"`
-
-	// Metadata
-	Metadata     *ContractMetadata       `json:"metadata,omitempty"`
-	ContractInfo *contracts.ContractInfo `json:"contract_info,omitempty"`
-
-	// Broadcast file (linked directly, not parsed into other fields)
-	BroadcastData *broadcast.BroadcastFile `json:"broadcast_data,omitempty"` // Will hold *broadcast.BroadcastFile
-}
-
-type PredictResult struct {
-	Address      common.Address `json:"address"`
-	Salt         string         `json:"salt"`
-	InitCodeHash string         `json:"init_code_hash"`
+func ParseDeploymentType(deploymentType string) (DeploymentType, error) {
+	switch deploymentType {
+	case "SINGLETON":
+		return SingletonDeployment, nil
+	case "PROXY":
+		return ProxyDeployment, nil
+	case "LIBRARY":
+		return LibraryDeployment, nil
+	default:
+		return UnknownDeployment, fmt.Errorf("unknown deployment type: %s", deploymentType)
+	}
 }
 
 type DeploymentEntry struct {

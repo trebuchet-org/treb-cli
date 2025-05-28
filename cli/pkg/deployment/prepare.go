@@ -2,8 +2,11 @@ package deployment
 
 import (
 	"fmt"
+	"math/big"
 	"os"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/abi"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	forgeExec "github.com/trebuchet-org/treb-cli/cli/pkg/forge"
@@ -33,42 +36,69 @@ func (d *DeploymentContext) ValidateDeploymentConfig() error {
 	}
 	d.networkInfo = networkInfo
 
-	// Generate environment variables
-	envVars, err := deployConfig.GenerateEnvVars(d.Params.Namespace)
-	if err != nil {
-		return fmt.Errorf("failed to generate environment variables: %w", err)
+	// Build deployment config directly
+	d.deploymentConfig = &abi.DeploymentConfig{
+		Namespace: d.Params.Namespace,
+		Label:     d.Params.Label,
 	}
 
-	// Add sender environment variables if sender is specified
+	// Build executor config if sender is specified
 	if d.Params.Sender != "" {
 		// Validate sender configuration
 		if err := deployConfig.ValidateSender("treb", d.Params.Sender); err != nil {
 			return fmt.Errorf("invalid sender configuration: %w", err)
 		}
-		
-		senderEnvVars, err := deployConfig.GenerateSenderEnvVars("treb", d.Params.Sender)
+
+		sender, err := deployConfig.GetSender("treb", d.Params.Sender)
 		if err != nil {
-			return fmt.Errorf("failed to generate sender environment variables: %w", err)
+			return fmt.Errorf("failed to get sender config: %w", err)
 		}
-		
-		// Merge sender env vars
-		for k, v := range senderEnvVars {
-			envVars[k] = v
+
+		// Build executor config based on sender type
+		executorConfig := abi.ExecutorConfig{
+			// Initialize big.Int fields to avoid nil pointer issues
+			SenderPrivateKey:   big.NewInt(0),
+			ProposerPrivateKey: big.NewInt(0),
 		}
+
+		switch sender.Type {
+		case "private_key":
+			executorConfig.SenderType = abi.SenderTypePrivateKey
+
+			// Derive address from private key
+			privKey := new(big.Int)
+			privKey.SetString(sender.PrivateKey, 0) // Handle 0x prefix automatically
+			executorConfig.SenderPrivateKey = privKey
+
+			// Use helper to get address from private key
+			address, err := config.GetAddressFromPrivateKey(sender.PrivateKey)
+			if err != nil {
+				return fmt.Errorf("failed to derive address from private key: %w", err)
+			}
+			executorConfig.Sender = common.HexToAddress(address)
+
+		case "safe":
+			executorConfig.SenderType = abi.SenderTypeSafe
+			executorConfig.Sender = common.HexToAddress(sender.Safe)
+			// TODO: Handle proposer configuration for Safe
+
+		case "ledger":
+			executorConfig.SenderType = abi.SenderTypeLedger
+			executorConfig.SenderDerivationPath = sender.DerivationPath
+
+			// Resolve address dynamically using cast
+			address, err := config.GetLedgerAddress(sender.DerivationPath)
+			if err != nil {
+				return fmt.Errorf("failed to resolve ledger address: %w", err)
+			}
+			executorConfig.Sender = common.HexToAddress(address)
+		}
+
+		d.executorConfig = &executorConfig
+		d.deploymentConfig.ExecutorConfig = executorConfig
 	}
 
-	// Add network-specific environment variables
-	if networkInfo.RpcUrl != "" {
-		envVars["RPC_URL"] = networkInfo.RpcUrl
-	}
-	envVars["CHAIN_ID"] = fmt.Sprintf("%d", networkInfo.ChainID())
-
-	// Add deployment label if specified
-	if d.Params.Label != "" {
-		envVars["DEPLOYMENT_LABEL"] = d.Params.Label
-	}
-
-	d.envVars = envVars
+	// No env vars needed - we'll pass config directly to scripts
 
 	return nil
 }
@@ -133,6 +163,7 @@ func (d *DeploymentContext) PrepareContractDeployment() (bool, error) {
 		return false, fmt.Errorf("failed to resolve libraries: %w", err)
 	}
 	d.resolvedLibraries = resolvedLibs
+	d.deploymentConfig.DeploymentType = abi.DeploymentTypeSingleton
 
 	return false, nil
 }
@@ -218,10 +249,19 @@ func (d *DeploymentContext) PrepareProxyDeployment() error {
 		return fmt.Errorf("target deployment %s is not yet deployed (status: %s)", deployment.Entry.FQID, deployment.Entry.Deployment.Status)
 	}
 
-	// Set IMPLEMENTATION_ADDRESS environment variable
-	d.envVars["IMPLEMENTATION_ADDRESS"] = deployment.Entry.Address.Hex()
-	d.targetDeploymentFQID = deployment.Entry.FQID
+	// Build proxy deployment config
+	if d.deploymentConfig == nil {
+		return fmt.Errorf("deployment config not initialized")
+	}
 
+	// Create proxy deployment config with implementation address
+	d.proxyDeploymentConfig = &abi.ProxyDeploymentConfig{
+		ImplementationAddress: deployment.Entry.Address,
+		DeploymentConfig:      abi.ConvertDeploymentConfigToProxy(*d.deploymentConfig),
+	}
+
+	d.targetDeploymentFQID = deployment.Entry.FQID
+	d.deploymentConfig.DeploymentType = abi.DeploymentTypeProxy
 	fmt.Printf("Using implementation: %s at %s\n", deployment.Entry.ShortID, deployment.Entry.Address.Hex())
 
 	return nil
@@ -251,11 +291,15 @@ func (d *DeploymentContext) PrepareLibraryDeployment() error {
 	// Set the script path to the standard library deployment script
 	d.ScriptPath = "script/deploy/DeployLibrary.s.sol"
 
-	// Set required environment variables for library deployment
-	d.envVars["LIBRARY_NAME"] = contractInfo.Name
-	// For vm.getCode(), we need the format "filename.sol:ContractName"
-	// d.envVars["LIBRARY_ARTIFACT_PATH"] = fmt.Sprintf("%s:%s", contractInfo.Path, contractInfo.Name)
-	d.envVars["LIBRARY_ARTIFACT_PATH"] = contractInfo.ArtifactPath
+	// Build library deployment config
+	if d.executorConfig == nil {
+		return fmt.Errorf("executor config not initialized for library deployment")
+	}
+
+	d.libraryDeploymentConfig = &abi.LibraryDeploymentConfig{
+		ExecutorConfig:      abi.ConvertExecutorConfigToLibrary(*d.executorConfig),
+		LibraryArtifactPath: contractInfo.ArtifactPath,
+	}
 
 	return nil
 }

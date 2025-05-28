@@ -1,15 +1,49 @@
-.PHONY: build install test clean dev-setup watch release-build release-clean
+.PHONY: build install test clean dev-setup watch release-build release-clean abis bindings clean check-bindings 
 
 # Version information
 VERSION ?= $(shell git describe --tags --always --dirty)
 COMMIT ?= $(shell git rev-parse HEAD)
 DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS = -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)
+# ABI bindings configuration
+ABI_PKG_DIR := "cli/pkg/abi"
+DEPLOYMENT_ABI := "treb-sol/out/Deployment.sol/Deployment.json"
+PROXY_ABI := "treb-sol/out/ProxyDeployment.sol/ProxyDeployment.json"
+LIBRARY_ABI := "treb-sol/out/LibraryDeployment.sol/LibraryDeployment.json"
 
 # Build the CLI binary
-build:
+build: bindings
 	@echo "🔨 Building treb..."
 	@go build -ldflags="$(LDFLAGS)" -o bin/treb ./cli
+
+bindings: forge_build
+	@echo "🔨 Generating Go bindings..."
+	@echo ">> Extracting ABIs..."
+	@jq -r '.abi' $(DEPLOYMENT_ABI) > $(ABI_PKG_DIR)/deployment/abi.json
+	@jq -r '.abi' $(PROXY_ABI) > $(ABI_PKG_DIR)/proxy/abi.json
+	@jq -r '.abi' $(LIBRARY_ABI) > $(ABI_PKG_DIR)/library/abi.json
+	@echo ">> Generating deployment bindings..."
+	@abigen --v2 --abi $(ABI_PKG_DIR)/deployment/abi.json --pkg deployment --type Deployment --out $(ABI_PKG_DIR)/deployment/bindings.go
+	@echo ">> Generating proxy bindings..."
+	@abigen --v2 --abi $(ABI_PKG_DIR)/proxy/abi.json --pkg proxy --type ProxyDeployment --out $(ABI_PKG_DIR)/proxy/bindings.go
+	@echo ">> Generating library bindings..."
+	@abigen --v2 --abi $(ABI_PKG_DIR)/library/abi.json --pkg library --type LibraryDeployment --out $(ABI_PKG_DIR)/library/bindings.go
+	@rm -f $(ABI_PKG_DIR)/*/abi.json
+	@echo "✅ Bindings generated"
+
+forge_build:
+	@echo ">> forge build"
+	@cd treb-sol && forge build
+
+check-bindings: bindings
+	@echo "🔍 Checking if ABI bindings are up to date..."
+	@if [ -n "$$(git status --porcelain cli/pkg/abi/*/bindings.go)" ]; then \
+		echo "❌ ABI bindings are not up to date. Run 'make bindings' and commit changes."; \
+		git status --porcelain cli/pkg/abi/*/bindings.go; \
+		exit 1; \
+	else \
+		echo "✅ ABI bindings are up to date"; \
+	fi
 
 # Install globally
 install: build
@@ -28,6 +62,11 @@ clean:
 	@rm -rf bin/
 	@rm -rf out/
 	@rm -rf cache/
+	@rm -f $(ABI_PKG_DIR)/deployment/bindings.go
+	@rm -f $(ABI_PKG_DIR)/proxy/bindings.go
+	@rm -f $(ABI_PKG_DIR)/library/bindings.go
+	@rm -f combined*.json
+	@echo "✅ Cleaned"
 
 # Development setup
 dev-setup:

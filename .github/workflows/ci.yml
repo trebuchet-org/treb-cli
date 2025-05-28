@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+      
+      - name: Install abigen
+        run: |
+          go install github.com/ethereum/go-ethereum/cmd/abigen@latest
+      
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+      
+      - name: Generate ABI bindings
+        run: |
+          make bindings
+      
+      - name: Verify bindings are up to date
+        run: |
+          if [[ -n $(git status --porcelain cli/pkg/abi/) ]]; then
+            echo "❌ ABI bindings are not up to date. Please run 'make bindings' and commit the changes."
+            git status --porcelain cli/pkg/abi/
+            git diff cli/pkg/abi/
+            exit 1
+          else
+            echo "✅ ABI bindings are up to date"
+          fi
+      
+      - name: Build
+        run: make build
+      
+      - name: Run tests
+        run: go test -v ./...
+      
+      - name: Verify treb-sol submodule is up to date
+        run: |
+          cd treb-sol
+          git fetch origin
+          LOCAL=$(git rev-parse HEAD)
+          REMOTE=$(git rev-parse origin/main)
+          if [ "$LOCAL" != "$REMOTE" ]; then
+            echo "⚠️  Warning: treb-sol submodule is not up to date with origin/main"
+            echo "Local:  $LOCAL"
+            echo "Remote: $REMOTE"
+            echo "Consider updating with: git submodule update --remote"
+          else
+            echo "✅ treb-sol submodule is up to date"
+          fi
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+      
+      - name: Install abigen
+        run: |
+          go install github.com/ethereum/go-ethereum/cmd/abigen@latest
+      
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+      
+      - name: Generate ABI bindings
+        run: |
+          make bindings
+      
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=5m

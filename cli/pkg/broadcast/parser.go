@@ -91,6 +91,21 @@ func NewParser(projectRoot string) *Parser {
 	}
 }
 
+// ParseBroadcastFile parses a broadcast file
+func (p *Parser) ParseBroadcastFile(file string) (*BroadcastFile, error) {
+	data, err := os.ReadFile(file)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read broadcast file: %w", err)
+	}
+
+	var broadcast BroadcastFile
+	if err := json.Unmarshal(data, &broadcast); err != nil {
+		return nil, fmt.Errorf("failed to parse broadcast file: %w", err)
+	}
+
+	return &broadcast, nil
+}
+
 // ParseLatestBroadcast parses the latest broadcast file for a given script and chain
 func (p *Parser) ParseLatestBroadcast(scriptName string, chainID uint64) (*BroadcastFile, error) {
 	broadcastPath := p.getBroadcastPath(scriptName, chainID)
@@ -137,7 +152,7 @@ func (p *Parser) GetAllBroadcastFiles(scriptName string, chainID uint64) ([]stri
 // GetTransactionHashForAddress returns the transaction hash that created the given contract address
 func (b *BroadcastFile) GetTransactionHashForAddress(address common.Address) (common.Hash, uint64, error) {
 	addressStr := strings.ToLower(address.Hex())
-	
+
 	for _, tx := range b.Transactions {
 		// Check direct contract creation
 		if strings.ToLower(tx.ContractAddress) == addressStr {
@@ -153,7 +168,7 @@ func (b *BroadcastFile) GetTransactionHashForAddress(address common.Address) (co
 			}
 			return common.HexToHash(tx.Hash), 0, nil
 		}
-		
+
 		// Check additional contracts (CreateX deployments)
 		for _, additionalContract := range tx.AdditionalContracts {
 			if strings.ToLower(additionalContract.Address) == addressStr {
@@ -171,8 +186,28 @@ func (b *BroadcastFile) GetTransactionHashForAddress(address common.Address) (co
 			}
 		}
 	}
-	
-	return common.Hash{}, 0, fmt.Errorf("transaction not found for address %s", address.Hex())
+
+
+	// For CreateX deployments through treb-sol, Foundry may not properly track the deployed contract
+	// in additionalContracts. As a fallback, if there's exactly one transaction that looks like a CreateX call,
+	// we assume it created the contract we're looking for.
+	if len(b.Transactions) == 1 {
+		tx := b.Transactions[0]
+		if tx.Function == "deployCreate3(bytes32,bytes)" || tx.Function == "deployCreate2(bytes32,bytes)" {
+			for _, receipt := range b.Receipts {
+				if receipt.TransactionHash == tx.Hash {
+					blockNumber, err := parseHexToUint64(receipt.BlockNumber)
+					if err != nil {
+						return common.Hash{}, 0, fmt.Errorf("failed to parse block number: %w", err)
+					}
+					return common.HexToHash(tx.Hash), blockNumber, nil
+				}
+			}
+			return common.HexToHash(tx.Hash), 0, nil
+		}
+	}
+
+	return common.Hash{}, 0, fmt.Errorf("transaction not found for address %s - this suggests CreateX deployment tracking issue", address.Hex())
 }
 
 // parseHexToUint64 parses a hex string to uint64

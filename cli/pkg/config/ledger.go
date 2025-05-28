@@ -1,9 +1,12 @@
 package config
 
 import (
+	"crypto/ecdsa"
 	"fmt"
 	"os/exec"
 	"strings"
+
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 // GetLedgerAddress gets the address for a given derivation path using cast
@@ -24,4 +27,28 @@ func GetLedgerAddress(derivationPath string) (string, error) {
 	}
 	
 	return address, nil
+}
+
+// GetAddressFromPrivateKey derives an Ethereum address from a private key
+func GetAddressFromPrivateKey(privateKeyHex string) (string, error) {
+	// Remove 0x prefix if present
+	privateKeyHex = strings.TrimPrefix(privateKeyHex, "0x")
+	
+	// Parse the private key
+	privateKey, err := crypto.HexToECDSA(privateKeyHex)
+	if err != nil {
+		return "", fmt.Errorf("invalid private key: %w", err)
+	}
+	
+	// Get the public key
+	publicKey := privateKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return "", fmt.Errorf("failed to cast public key to ECDSA")
+	}
+	
+	// Derive the address
+	address := crypto.PubkeyToAddress(*publicKeyECDSA)
+	
+	return address.Hex(), nil
 }

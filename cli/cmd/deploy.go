@@ -274,7 +274,7 @@ func predictDeployment(ctx *deployment.DeploymentContext) error {
 	}
 
 	s := ctx.CreateSpinner("Calculating deployment address...")
-	result, err := ctx.Predict()
+	result, err := ctx.Execute()
 	if err != nil {
 		s.Stop()
 		return err

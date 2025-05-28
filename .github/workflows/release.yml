@@ -54,12 +54,42 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          submodules: recursive
           fetch-depth: 0
       
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.21'
+      
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+      
+      - name: Install abigen
+        run: |
+          go install github.com/ethereum/go-ethereum/cmd/abigen@latest
+      
+      - name: Install jq (Linux)
+        if: matrix.goos == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+      
+      - name: Install jq (macOS)
+        if: matrix.goos == 'darwin'
+        run: |
+          brew install jq
+      
+      - name: Install jq (Windows)
+        if: matrix.goos == 'windows'
+        run: |
+          choco install jq
+      
+      - name: Generate ABI bindings
+        run: |
+          make bindings
       
       - name: Get version info
         id: version

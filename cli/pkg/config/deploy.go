@@ -153,14 +153,21 @@ func (dc *DeployConfig) GenerateSenderEnvVars(profile, senderName string) (map[s
 	switch sender.Type {
 	case "private_key":
 		envVars["SENDER_TYPE"] = "private_key"
-		envVars["SENDER_PRIVATE_KEY"] = sender.PrivateKey
+		envVars["DEPLOYER_PRIVATE_KEY"] = sender.PrivateKey
+		
+		// Derive address from private key
+		address, err := GetAddressFromPrivateKey(sender.PrivateKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to derive address from private key: %w", err)
+		}
+		envVars["SENDER_ADDRESS"] = address
 	case "safe":
 		envVars["SENDER_TYPE"] = "safe"
-		envVars["SENDER_SAFE_ADDRESS"] = sender.Safe
+		envVars["SENDER_ADDRESS"] = sender.Safe
 		envVars["SENDER_SIGNER"] = sender.Signer
 	case "ledger":
 		envVars["SENDER_TYPE"] = "ledger"
-		envVars["SENDER_DERIVATION_PATH"] = sender.DerivationPath
+		envVars["LEDGER_DERIVATION_PATH"] = sender.DerivationPath
 		
 		// Resolve address dynamically using cast
 		address, err := GetLedgerAddress(sender.DerivationPath)

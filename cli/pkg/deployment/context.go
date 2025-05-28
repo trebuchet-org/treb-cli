@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"path/filepath"
 
+	ethabi "github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/abi"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/forge"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
@@ -43,6 +45,13 @@ type DeploymentContext struct {
 	networkInfo          *network.NetworkInfo
 	targetDeploymentFQID string
 	resolvedLibraries    []LibraryInfo
+	// Deployment Config (built directly, not from env vars)
+	deploymentConfig        *abi.DeploymentConfig
+	executorConfig          *abi.ExecutorConfig
+	proxyDeploymentConfig   *abi.ProxyDeploymentConfig
+	libraryDeploymentConfig *abi.LibraryDeploymentConfig
+	// Script ABI for decoding results
+	scriptABI *ethabi.ABI
 }
 
 // NewDeploymentContext creates a new deployment context with explicit registry manager
@@ -60,13 +69,13 @@ func NewDeploymentContext(projectRoot string, params *DeploymentParams, registry
 // NewContext creates a new deployment context
 func NewContext(params DeploymentParams) (*DeploymentContext, error) {
 	projectRoot := "."
-	
+
 	registryPath := filepath.Join(projectRoot, "deployments.json")
 	registryManager, err := registry.NewManager(registryPath)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	ctx := NewDeploymentContext(projectRoot, &params, registryManager)
 
 	networkResolver := network.NewResolver(projectRoot)
@@ -110,4 +119,9 @@ func (ctx *DeploymentContext) GetFQID() string {
 	// Always use contractInfo.Path as it represents the actual contract being deployed
 	// For proxies, this is the proxy contract path, not the implementation
 	return fmt.Sprintf("%d/%s/%s:%s", ctx.networkInfo.ChainID(), ctx.Params.Namespace, ctx.contractInfo.Path, ctx.GetShortID())
+}
+
+// SetScriptABI sets the script ABI for the deployment context
+func (ctx *DeploymentContext) SetScriptABI(abi *ethabi.ABI) {
+	ctx.scriptABI = abi
 }

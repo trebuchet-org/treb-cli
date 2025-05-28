@@ -48,7 +48,7 @@ func (d *DeploymentContext) printExistingDeployment(deployment *types.Deployment
 }
 
 // ShowSuccess shows deployment success details
-func (d *DeploymentContext) ShowSuccess(result *types.DeploymentResult) {
+func (d *DeploymentContext) ShowSuccess(result *ParsedDeploymentResult) {
 	fmt.Println()
 	color.New(color.FgGreen, color.Bold).Printf("🚀 Deployment Successful!\n")
 	fmt.Println()
@@ -65,7 +65,7 @@ func (d *DeploymentContext) ShowSuccess(result *types.DeploymentResult) {
 	}
 
 	// Safe info (if pending)
-	if result.SafeTxHash != (common.Hash{}) {
+	if result.SafeTxHash != ([32]byte{}) {
 		d.printSafeInfo(result)
 	}
 
@@ -75,7 +75,7 @@ func (d *DeploymentContext) ShowSuccess(result *types.DeploymentResult) {
 }
 
 // ShowPrediction shows predicted deployment address
-func (d *DeploymentContext) ShowPrediction(predicted *types.PredictResult) {
+func (d *DeploymentContext) ShowPrediction(result *ParsedDeploymentResult) {
 	fmt.Println()
 	color.New(color.FgGreen, color.Bold).Printf("🎯 Predicted Deployment Address\n")
 	fmt.Println()
@@ -103,12 +103,12 @@ func (d *DeploymentContext) ShowPrediction(predicted *types.PredictResult) {
 
 	// Address
 	color.New(color.FgWhite, color.Bold).Printf("Address:      ")
-	color.New(color.FgGreen, color.Bold).Printf("%s\n", predicted.Address.Hex())
+	color.New(color.FgGreen, color.Bold).Printf("%s\n", result.Predicted.Hex())
 
 	// Salt (if available)
-	if predicted.Salt != "" {
+	if result.Salt != (common.Hash{}) {
 		color.New(color.FgWhite, color.Bold).Printf("Salt:         ")
-		fmt.Printf("%x\n", predicted.Salt)
+		fmt.Printf("%x\n", result.Salt)
 	}
 
 	fmt.Println()
@@ -137,7 +137,7 @@ func (d *DeploymentContext) PrintError(err error) {
 
 // Helper methods
 
-func (d *DeploymentContext) printContractInfo(result *types.DeploymentResult) {
+func (d *DeploymentContext) printContractInfo(result *ParsedDeploymentResult) {
 	switch d.Params.DeploymentType {
 	case types.SingletonDeployment:
 		color.New(color.FgWhite, color.Bold).Printf("Contract:     ")
@@ -145,7 +145,7 @@ func (d *DeploymentContext) printContractInfo(result *types.DeploymentResult) {
 		fmt.Println()
 
 		color.New(color.FgWhite, color.Bold).Printf("Address:      ")
-		color.New(color.FgGreen, color.Bold).Printf("%s\n", result.Address.Hex())
+		color.New(color.FgGreen, color.Bold).Printf("%s\n", result.Deployed.Hex())
 
 	case types.ProxyDeployment:
 		color.New(color.FgWhite, color.Bold).Printf("Proxy:        ")
@@ -153,7 +153,7 @@ func (d *DeploymentContext) printContractInfo(result *types.DeploymentResult) {
 		fmt.Println()
 
 		color.New(color.FgWhite, color.Bold).Printf("Address:      ")
-		color.New(color.FgGreen, color.Bold).Printf("%s\n", result.Address.Hex())
+		color.New(color.FgGreen, color.Bold).Printf("%s\n", result.Deployed.Hex())
 
 		// Show proxy contract details
 		if d.contractInfo != nil {
@@ -176,11 +176,11 @@ func (d *DeploymentContext) printContractInfo(result *types.DeploymentResult) {
 		fmt.Printf("%s\n", d.contractInfo.Name)
 
 		color.New(color.FgWhite, color.Bold).Printf("Address:      ")
-		color.New(color.FgGreen, color.Bold).Printf("%s\n", result.Address.Hex())
+		color.New(color.FgGreen, color.Bold).Printf("%s\n", result.Deployed.Hex())
 	}
 }
 
-func (d *DeploymentContext) printNetworkInfo(result *types.DeploymentResult) {
+func (d *DeploymentContext) printNetworkInfo(result *ParsedDeploymentResult) {
 	color.New(color.FgWhite, color.Bold).Printf("Network:      ")
 	color.New(color.FgMagenta).Printf("%s", d.networkInfo.Name)
 	if d.networkInfo.ChainID() > 0 {
@@ -189,7 +189,7 @@ func (d *DeploymentContext) printNetworkInfo(result *types.DeploymentResult) {
 	fmt.Println()
 }
 
-func (d *DeploymentContext) printTransactionInfo(result *types.DeploymentResult) {
+func (d *DeploymentContext) printTransactionInfo(result *ParsedDeploymentResult) {
 	color.New(color.FgWhite, color.Bold).Printf("Transaction:  ")
 	fmt.Printf("%s\n", result.TxHash.Hex())
 
@@ -201,12 +201,12 @@ func (d *DeploymentContext) printTransactionInfo(result *types.DeploymentResult)
 	// TODO: Add deployer address when available in result
 }
 
-func (d *DeploymentContext) printSafeInfo(result *types.DeploymentResult) {
+func (d *DeploymentContext) printSafeInfo(result *ParsedDeploymentResult) {
 	fmt.Println()
 	color.New(color.FgYellow, color.Bold).Printf("⏳ Pending Safe Execution\n")
 
 	color.New(color.FgWhite, color.Bold).Printf("Safe Tx Hash: ")
-	fmt.Printf("%s\n", result.SafeTxHash.Hex())
+	fmt.Printf("%s\n", common.Hash(result.SafeTxHash).Hex())
 
 	fmt.Println()
 	color.New(color.FgYellow).Printf("Next steps:\n")
@@ -215,7 +215,7 @@ func (d *DeploymentContext) printSafeInfo(result *types.DeploymentResult) {
 	fmt.Printf("3. Run 'treb sync' to update the deployment status\n")
 }
 
-func (d *DeploymentContext) printVerificationInfo(result *types.DeploymentResult) {
+func (d *DeploymentContext) printVerificationInfo(result *ParsedDeploymentResult) {
 	// TODO: Add verification status and explorer URL when available
 	fmt.Println()
 	color.New(color.FgWhite).Printf("Contract deployed. Run 'treb verify' to verify on block explorer.\n")

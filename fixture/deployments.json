@@ -172,6 +172,119 @@
     "31337": {
       "name": "local",
       "deployments": {
+        "0x0d6bb0de2c61a97f3bc563653c824f2d41924724": {
+          "fqid": "31337/default/src/UpgradeableCounter.sol:UpgradeableCounter:V10",
+          "sid": "UpgradeableCounter:V10",
+          "address": "0x0d6bb0de2c61a97f3bc563653c824f2d41924724",
+          "contract_name": "UpgradeableCounter",
+          "namespace": "default",
+          "type": "SINGLETON",
+          "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb922660076c434da8d4b65357cd601",
+          "init_code_hash": "0x77e9a7f6f9bb6aa17a3a98de2c97162ec48f776149ad3ec9d34209844c6eceab",
+          "label": "V10",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "broadcast_file": "/Users/bogdan/Workspace/treb-cli/fixture/broadcast/DeployUpgradeableCounter.s.sol/31337/e398ab32-latest.json",
+            "timestamp": "2025-05-27T19:13:18.041823+02:00",
+            "status": "EXECUTED",
+            "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+          },
+          "metadata": {
+            "source_commit": "be6027af5623ddf43642412e3ee2f60c00e53f5f",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/UpgradeableCounter.sol:UpgradeableCounter",
+            "contract_path": "src/UpgradeableCounter.sol",
+            "script_path": "script/deploy/DeployUpgradeableCounter.s.sol"
+          }
+        },
+        "0x2012c1db46f71c2647e7edffce5a4034134f9a46": {
+          "fqid": "31337/default/src/other/test/Counter.sol:Counter:v3",
+          "sid": "Counter:v3",
+          "address": "0x2012c1db46f71c2647e7edffce5a4034134f9a46",
+          "contract_name": "Counter",
+          "namespace": "default",
+          "type": "singleton",
+          "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600eb4aac0291466a16778c54",
+          "init_code_hash": "0x3947564314c1851e9808711b792ad845bd973d461570cde813351241d8067bf9",
+          "constructor_args": "0x",
+          "label": "v3",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "broadcast_file": "",
+            "timestamp": "2025-05-27T14:41:16.687714+02:00",
+            "status": "EXECUTED",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "be6027af5623ddf43642412e3ee2f60c00e53f5f",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/other/test/Counter.sol:Counter",
+            "contract_path": "src/other/test/Counter.sol",
+            "script_path": "script/deploy/other/test/DeployCounter.s.sol"
+          }
+        },
+        "0x2857eae71bbffd99ebf30475f0c89784506a41ea": {
+          "fqid": "31337/default/src/TestCounter.sol:TestCounter",
+          "sid": "TestCounter",
+          "address": "0x2857eae71bbffd99ebf30475f0c89784506a41ea",
+          "contract_name": "TestCounter",
+          "namespace": "default",
+          "type": "singleton",
+          "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600056191e10e106134995bb8",
+          "init_code_hash": "0xe17cc8165812b05a961d2020ab820c77d81354ee6363ef757381b248c4d29c18",
+          "constructor_args": "0x",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "broadcast_file": "",
+            "timestamp": "2025-05-27T14:30:00.825293+02:00",
+            "status": "EXECUTED",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "be6027af5623ddf43642412e3ee2f60c00e53f5f",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/TestCounter.sol:TestCounter",
+            "contract_path": "src/TestCounter.sol",
+            "script_path": "script/deploy/DeployTestCounter.s.sol"
+          }
+        },
+        "0x2fe9cb269f5ae8a11d13d306e3a95919079dae10": {
+          "fqid": "31337/default/src/TestCounter.sol:TestCounter:V101",
+          "sid": "TestCounter:V101",
+          "address": "0x2fe9cb269f5ae8a11d13d306e3a95919079dae10",
+          "contract_name": "TestCounter",
+          "namespace": "default",
+          "type": "SINGLETON",
+          "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600621b31e3d17211784c892a",
+          "init_code_hash": "0x8a0d9bd6863f8c4e7af16688ea76babbd4f1e5763dd96100caea96c936458f7b",
+          "label": "V101",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x99c6081b030976621109ae66b82230017bd04035c27ae6049d14ff2c3f0e6186",
+            "block_number": 54,
+            "broadcast_file": "/Users/bogdan/Workspace/treb-cli/fixture/broadcast/DeployTestCounter.s.sol/31337/e398ab32-latest.json",
+            "timestamp": "2025-05-28T09:04:11.070081+02:00",
+            "status": "EXECUTED",
+            "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+          },
+          "metadata": {
+            "source_commit": "be6027af5623ddf43642412e3ee2f60c00e53f5f",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/TestCounter.sol:TestCounter",
+            "contract_path": "src/TestCounter.sol",
+            "script_path": "script/deploy/DeployTestCounter.s.sol"
+          }
+        },
         "0x4c032fe72fff3de1329002db95d2e2d58bc4e3df": {
           "fqid": "31337/default/src/TestWithNewLib.sol:MathUtils",
           "sid": "MathUtils",
@@ -208,6 +321,142 @@
             "source_hash": "src/TestWithNewLib.sol:MathUtils",
             "contract_path": "src/TestWithNewLib.sol",
             "script_path": "script/deploy/DeployLibrary.s.sol"
+          }
+        },
+        "0x543ab529bff7192cf36dbbdfc669e6431586fc74": {
+          "fqid": "31337/default/src/TestCounter.sol:TestCounter:V100",
+          "sid": "TestCounter:V100",
+          "address": "0x543ab529bff7192cf36dbbdfc669e6431586fc74",
+          "contract_name": "TestCounter",
+          "namespace": "default",
+          "type": "SINGLETON",
+          "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb922660084f47f701c64425da8c807",
+          "init_code_hash": "0x8a0d9bd6863f8c4e7af16688ea76babbd4f1e5763dd96100caea96c936458f7b",
+          "label": "V100",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "broadcast_file": "/Users/bogdan/Workspace/treb-cli/fixture/broadcast/DeployTestCounter.s.sol/31337/e398ab32-latest.json",
+            "timestamp": "2025-05-28T08:51:22.798039+02:00",
+            "status": "EXECUTED",
+            "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+          },
+          "metadata": {
+            "source_commit": "be6027af5623ddf43642412e3ee2f60c00e53f5f",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/TestCounter.sol:TestCounter",
+            "contract_path": "src/TestCounter.sol",
+            "script_path": "script/deploy/DeployTestCounter.s.sol"
+          }
+        },
+        "0x81df1ce49e59a546be352cfd4b65661547b1b5fb": {
+          "fqid": "31337/default/src/UpgradeableCounter.sol:UpgradeableCounter:V100",
+          "sid": "UpgradeableCounter:V100",
+          "address": "0x81df1ce49e59a546be352cfd4b65661547b1b5fb",
+          "contract_name": "UpgradeableCounter",
+          "namespace": "default",
+          "type": "SINGLETON",
+          "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266004f584d6462aa0bcc672877",
+          "init_code_hash": "0x77e9a7f6f9bb6aa17a3a98de2c97162ec48f776149ad3ec9d34209844c6eceab",
+          "label": "V100",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "broadcast_file": "/Users/bogdan/Workspace/treb-cli/fixture/broadcast/DeployUpgradeableCounter.s.sol/31337/e398ab32-latest.json",
+            "timestamp": "2025-05-28T08:49:46.787875+02:00",
+            "status": "EXECUTED",
+            "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+          },
+          "metadata": {
+            "source_commit": "be6027af5623ddf43642412e3ee2f60c00e53f5f",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/UpgradeableCounter.sol:UpgradeableCounter",
+            "contract_path": "src/UpgradeableCounter.sol",
+            "script_path": "script/deploy/DeployUpgradeableCounter.s.sol"
+          }
+        },
+        "0xabe208f86fc6a6cf7bd940c407c216d859c36f5c": {
+          "fqid": "31337/default/src/test-dir/Counter.sol:Counter:V100",
+          "sid": "Counter:V100",
+          "address": "0xabe208f86fc6a6cf7bd940c407c216d859c36f5c",
+          "contract_name": "Counter",
+          "namespace": "default",
+          "type": "SINGLETON",
+          "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600be811daeda1aafa1507072",
+          "init_code_hash": "0x9c75808dad3b488003826098a65752b741e74661051f701247cf520f67bc3407",
+          "label": "V100",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "broadcast_file": "/Users/bogdan/Workspace/treb-cli/fixture/broadcast/DeployCounter.s.sol/31337/e398ab32-latest.json",
+            "timestamp": "2025-05-28T08:49:38.869353+02:00",
+            "status": "EXECUTED",
+            "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+          },
+          "metadata": {
+            "source_commit": "be6027af5623ddf43642412e3ee2f60c00e53f5f",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/test-dir/Counter.sol:Counter",
+            "contract_path": "src/test-dir/Counter.sol",
+            "script_path": "script/deploy/test-dir/DeployCounter.s.sol"
+          }
+        },
+        "0xdcb49b5dc72b764597d6e7f69ec213d986f82f0c": {
+          "fqid": "31337/default/src/TestCounter.sol:TestCounter:V10",
+          "sid": "TestCounter:V10",
+          "address": "0xdcb49b5dc72b764597d6e7f69ec213d986f82f0c",
+          "contract_name": "TestCounter",
+          "namespace": "default",
+          "type": "SINGLETON",
+          "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600cdad54ea2371a8214b1640",
+          "init_code_hash": "0x8a0d9bd6863f8c4e7af16688ea76babbd4f1e5763dd96100caea96c936458f7b",
+          "label": "V10",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "broadcast_file": "/Users/bogdan/Workspace/treb-cli/fixture/broadcast/DeployTestCounter.s.sol/31337/e398ab32-latest.json",
+            "timestamp": "2025-05-28T06:19:46.884267+02:00",
+            "status": "EXECUTED",
+            "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+          },
+          "metadata": {
+            "source_commit": "be6027af5623ddf43642412e3ee2f60c00e53f5f",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/TestCounter.sol:TestCounter",
+            "contract_path": "src/TestCounter.sol",
+            "script_path": "script/deploy/DeployTestCounter.s.sol"
+          }
+        },
+        "0xe1292cf87e59127cbf1a1e04b015691e99d979f0": {
+          "fqid": "31337/default/src/Counter.sol:Counter",
+          "sid": "Counter",
+          "address": "0xe1292cf87e59127cbf1a1e04b015691e99d979f0",
+          "contract_name": "Counter",
+          "namespace": "default",
+          "type": "singleton",
+          "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600b6dd63b94d0ca270a78a24",
+          "init_code_hash": "0xac335e6949b4d514740c93402952f022b1d7bce40ede5c34341c83abfb49665b",
+          "constructor_args": "0x",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "broadcast_file": "",
+            "timestamp": "2025-05-27T14:35:24.17723+02:00",
+            "status": "EXECUTED",
+            "safe_address": "0x0000000000000000000000000000000000000000"
+          },
+          "metadata": {
+            "source_commit": "be6027af5623ddf43642412e3ee2f60c00e53f5f",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/Counter.sol:Counter",
+            "contract_path": "src/Counter.sol",
+            "script_path": "script/deploy/DeployCounter.s.sol"
           }
         },
         "0xe339a44b6c9cb030bb172044a0157f2f7fe332b2": {
@@ -533,6 +782,33 @@
             "script_path": "script/deploy/test-dir/DeployCounter.s.sol"
           }
         },
+        "0x633f5d16cd17db2b1d9fc1c9d1e19d3a183dab14": {
+          "fqid": "44787/default/src/TestCounter.sol:TestCounter:v4",
+          "sid": "TestCounter:v4",
+          "address": "0x633f5d16cd17db2b1d9fc1c9d1e19d3a183dab14",
+          "contract_name": "TestCounter",
+          "namespace": "default",
+          "type": "SINGLETON",
+          "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266004804667aee3c009a7cac07",
+          "init_code_hash": "0x8a0d9bd6863f8c4e7af16688ea76babbd4f1e5763dd96100caea96c936458f7b",
+          "label": "v4",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "broadcast_file": "/Users/bogdan/Workspace/treb-cli/fixture/broadcast/DeployTestCounter.s.sol/44787/e398ab32-latest.json",
+            "timestamp": "2025-05-27T19:12:05.944765+02:00",
+            "status": "EXECUTED",
+            "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+          },
+          "metadata": {
+            "source_commit": "be6027af5623ddf43642412e3ee2f60c00e53f5f",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/TestCounter.sol:TestCounter",
+            "contract_path": "src/TestCounter.sol",
+            "script_path": "script/deploy/DeployTestCounter.s.sol"
+          }
+        },
         "0x78b09a4243c1b5bf3f98f26d3933f7a956036038": {
           "fqid": "44787/default/src/MessageStorageV08.sol:MessageStorageV08",
           "sid": "MessageStorageV08",
@@ -694,6 +970,35 @@
             "source_hash": "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
             "contract_path": "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol",
             "script_path": "script/deploy/DeployUpgradeableCounterProxy.s.sol"
+          }
+        },
+        "0x9db4ca145bb688d47d733df0215c81fc3b9bcd3b": {
+          "fqid": "44787/default/src/test-dir/Counter.sol:Counter:v7",
+          "sid": "Counter:v7",
+          "address": "0x9db4ca145bb688d47d733df0215c81fc3b9bcd3b",
+          "contract_name": "Counter",
+          "namespace": "default",
+          "type": "SINGLETON",
+          "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600fc9df587fd836fe5d7047c",
+          "init_code_hash": "0x9c75808dad3b488003826098a65752b741e74661051f701247cf520f67bc3407",
+          "label": "v7",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0xa0d4616abb0624293410b220d6e214f212ee4c94c40699950c114935fa5bd5ee",
+            "block_number": 47411753,
+            "broadcast_file": "/Users/bogdan/Workspace/treb-cli/fixture/broadcast/DeployCounter.s.sol/44787/e398ab32-latest.json",
+            "timestamp": "2025-05-27T19:31:15.422454+02:00",
+            "status": "EXECUTED",
+            "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+          },
+          "metadata": {
+            "source_commit": "be6027af5623ddf43642412e3ee2f60c00e53f5f",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/test-dir/Counter.sol:Counter",
+            "contract_path": "src/test-dir/Counter.sol",
+            "script_path": "script/deploy/test-dir/DeployCounter.s.sol"
           }
         },
         "0x9e8e25969b7c49ff957cef9b6b7c358c35527b39": {
@@ -977,6 +1282,35 @@
             "source_hash": "src/TestWithNewLib.sol:TestWithNewLib",
             "contract_path": "src/TestWithNewLib.sol",
             "script_path": "script/deploy/DeployTestWithNewLib.s.sol"
+          }
+        },
+        "0xfda8c6a17bc472c815ad7180640a67fd9603b75f": {
+          "fqid": "44787/default/src/other/test/Counter.sol:Counter:v5",
+          "sid": "Counter:v5",
+          "address": "0xfda8c6a17bc472c815ad7180640a67fd9603b75f",
+          "contract_name": "Counter",
+          "namespace": "default",
+          "type": "SINGLETON",
+          "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb922660013ef7676afa3bac32b0bbc",
+          "init_code_hash": "0xdf0d95c91adac0719d014607d315c7a18298bc5c5cc41f408d7cca0e2ade0732",
+          "label": "v5",
+          "verification": {
+            "status": "pending"
+          },
+          "deployment": {
+            "tx_hash": "0xdf66a8790ea86e85bbae427cab269472b350b417736ee6c8734c6188632507e1",
+            "block_number": 47411104,
+            "broadcast_file": "/Users/bogdan/Workspace/treb-cli/fixture/broadcast/DeployCounter.s.sol/44787/e398ab32-latest.json",
+            "timestamp": "2025-05-27T19:20:26.436557+02:00",
+            "status": "EXECUTED",
+            "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+          },
+          "metadata": {
+            "source_commit": "be6027af5623ddf43642412e3ee2f60c00e53f5f",
+            "compiler": "0.8.27+commit.40a35a09",
+            "source_hash": "src/other/test/Counter.sol:Counter",
+            "contract_path": "src/other/test/Counter.sol",
+            "script_path": "script/deploy/other/test/DeployCounter.s.sol"
           }
         }
       }
