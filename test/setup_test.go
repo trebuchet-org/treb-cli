@@ -52,16 +52,21 @@ func setup() error {
 		return fmt.Errorf("failed to change to fixture directory: %w", err)
 	}
 
+	// Clean up previous test artifacts
+	fmt.Println("🧹 Cleaning previous test artifacts...")
+	os.Remove("deployments.json")
+	os.RemoveAll("broadcast")
+	
 	fmt.Println("🔨 Building contracts...")
 	cmd = exec.Command("forge", "build")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to build contracts: %w", err)
 	}
 
-	// Start anvil with CreateX using our management tool
-	fmt.Println("🔗 Starting anvil node with CreateX factory...")
-	if err := dev.StartAnvil(); err != nil {
-		return fmt.Errorf("failed to start anvil: %w", err)
+	// Restart anvil with CreateX using our management tool (ensures clean state)
+	fmt.Println("🔗 Restarting anvil node with CreateX factory...")
+	if err := dev.RestartAnvil(); err != nil {
+		return fmt.Errorf("failed to restart anvil: %w", err)
 	}
 
 	fmt.Println("✅ Anvil node with CreateX ready")

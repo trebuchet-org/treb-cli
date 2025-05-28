@@ -1,5 +1,5 @@
 {
   "namespace": "default",
-  "network": "sepolia",
-  "sender": "local"
+  "network": "local",
+  "sender": "anvil"
 }
