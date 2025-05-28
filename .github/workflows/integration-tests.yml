@@ -37,7 +37,7 @@ jobs:
         sudo apt-get update && sudo apt-get install -y jq
         
     - name: Cache Go modules
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -49,7 +49,7 @@ jobs:
         
     - name: Upload test artifacts on failure
       if: failure()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test-artifacts
         path: |
@@ -93,7 +93,7 @@ jobs:
       
     - name: Upload test artifacts on failure
       if: failure()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test-artifacts-macos
         path: |
@@ -132,7 +132,7 @@ jobs:
       run: make integration-test-coverage
       
     - name: Upload coverage report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: coverage-report
         path: |
