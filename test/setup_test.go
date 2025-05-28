@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -18,6 +19,14 @@ var (
 
 // TestMain handles setup/teardown for all tests
 func TestMain(m *testing.M) {
+	// Force sequential test execution by setting parallel to 1
+	// This prevents nonce issues when multiple tests try to deploy simultaneously
+	testing.Init()
+	flag.Parse()
+	if !flag.Parsed() {
+		flag.Set("test.parallel", "1")
+	}
+
 	// Setup
 	if err := setup(); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to setup: %v\n", err)
