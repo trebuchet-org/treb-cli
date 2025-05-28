@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/dev"
 )
 
@@ -316,7 +317,7 @@ func fixScriptPaths() error {
 
 		// Determine the script path based on contract name
 		var scriptPath string
-		if deployment.Entry.Type == "proxy" {
+		if deployment.Entry.Type == types.ProxyDeployment {
 			// For proxies, the contract name is already the proxy name
 			scriptPath = fmt.Sprintf("script/deploy/Deploy%s.s.sol", deployment.Entry.ContractName)
 		} else {

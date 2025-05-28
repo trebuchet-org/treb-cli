@@ -164,7 +164,7 @@ func displayDeployments(deployments []*registry.DeploymentInfo, deployConfig *co
 			singletons := make([]*registry.DeploymentInfo, 0)
 
 			for _, deployment := range deployments {
-				if deployment.Entry.Type == "proxy" {
+				if deployment.Entry.Type == types.ProxyDeployment {
 					proxies = append(proxies, deployment)
 				} else {
 					singletons = append(singletons, deployment)
@@ -232,7 +232,7 @@ func displayDeployments(deployments []*registry.DeploymentInfo, deployConfig *co
 			singletons := make([]*registry.DeploymentInfo, 0)
 
 			for _, deployment := range deployments {
-				if deployment.Entry.Type == "proxy" {
+				if deployment.Entry.Type == types.ProxyDeployment {
 					proxies = append(proxies, deployment)
 				} else {
 					singletons = append(singletons, deployment)
@@ -487,7 +487,7 @@ func buildDeploymentTable(deployments []*registry.DeploymentInfo) TableData {
 		})
 
 		// If this is a proxy and we're showing implementations, add implementation row
-		if deployment.Entry.Type == "proxy" && deployment.Entry.Target != nil {
+		if deployment.Entry.Type == types.ProxyDeployment && deployment.Entry.Target != nil {
 			implDisplayName := deployment.Entry.Target.GetColoredDisplayName()
 			implTimestamp := deployment.Entry.Target.Deployment.Timestamp.Format("2006-01-02 15:04:05")
 
