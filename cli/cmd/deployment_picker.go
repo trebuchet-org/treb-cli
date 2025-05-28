@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/fatih/color"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/interactive"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 )
@@ -116,42 +114,4 @@ func formatMatchSuggestions(matches []*registry.DeploymentInfo) string {
 	return strings.Join(suggestions, "\n")
 }
 
-// findDeploymentByAddress finds a deployment by its address across all networks and namespaces
-func findDeploymentByAddress(address common.Address, registryManager *registry.Manager) (*registry.DeploymentInfo, error) {
-	allDeployments := registryManager.GetAllDeployments()
-	
-	for _, deployment := range allDeployments {
-		if deployment.Address == address {
-			return deployment, nil
-		}
-	}
-	
-	return nil, fmt.Errorf("no deployment found at address %s", address.Hex())
-}
-
-// formatDeploymentInfo formats deployment information for display
-func formatDeploymentInfo(deployment *registry.DeploymentInfo) string {
-	labelStyle := color.New(color.FgCyan, color.Bold)
-	valueStyle := color.New(color.FgWhite)
-	
-	// Build the output
-	var output strings.Builder
-	
-	labelStyle.Fprint(&output, "Contract:  ")
-	valueStyle.Fprintln(&output, deployment.Entry.GetDisplayName())
-	
-	labelStyle.Fprint(&output, "Network:   ")
-	valueStyle.Fprintln(&output, deployment.NetworkName)
-	
-	labelStyle.Fprint(&output, "Namespace: ")
-	valueStyle.Fprintln(&output, deployment.Entry.Namespace)
-	
-	labelStyle.Fprint(&output, "Address:   ")
-	valueStyle.Fprintln(&output, deployment.Address.Hex())
-	
-	labelStyle.Fprint(&output, "Type:      ")
-	valueStyle.Fprintln(&output, deployment.Entry.Type)
-	
-	return output.String()
-}
 

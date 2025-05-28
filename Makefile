@@ -1,4 +1,4 @@
-.PHONY: build install test integration-test clean dev-setup watch release-build release-clean abis bindings clean check-bindings 
+.PHONY: build install test integration-test clean dev-setup watch release-build release-clean abis bindings clean check-bindings lint lint-install lint-fix 
 
 # Version information
 VERSION ?= $(shell git describe --tags --always --dirty)
@@ -12,7 +12,7 @@ PROXY_ABI := "treb-sol/out/ProxyDeployment.sol/ProxyDeployment.json"
 LIBRARY_ABI := "treb-sol/out/LibraryDeployment.sol/LibraryDeployment.json"
 
 # Build the CLI binary
-build: bindings
+build: bindings lint
 	@echo "🔨 Building treb..."
 	@go build -ldflags="$(LDFLAGS)" -tags dev -o bin/treb ./cli 
 
@@ -81,30 +81,11 @@ clean:
 	@echo "✅ Cleaned"
 
 # Development setup
-dev-setup:
+dev-setup: lint-install
 	@echo "🛠️  Setting up development environment..."
 	@mkdir -p bin
 	@go mod download
 	@echo "✅ Development environment ready"
-
-# Run the CLI locally
-run: build
-	@./bin/treb $(ARGS)
-
-# Install forge if not present
-install-forge:
-	@command -v forge >/dev/null 2>&1 || { \
-		echo "⚡ Installing Foundry..."; \
-		curl -L https://foundry.paradigm.xyz | bash; \
-		echo "Please run 'source ~/.bashrc' and 'foundryup' to complete installation"; \
-	}
-
-# Initialize example project
-example: build
-	@echo "📝 Creating example project..."
-	@mkdir -p example
-	@cd example && ../bin/treb init example-protocol --createx
-	@echo "✅ Example project created in ./example/"
 
 # Watch for file changes and rebuild
 watch: build
@@ -182,3 +163,26 @@ release-platform:
 release-clean:
 	@echo "🧹 Cleaning release artifacts..."
 	@rm -rf release/
+
+# Install golangci-lint
+lint-install:
+	@command -v golangci-lint >/dev/null 2>&1 || { \
+		echo "Installing golangci-lint..."; \
+		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.1.6 \
+		echo "✅ golangci-lint installed"; \
+	}
+
+# Run linter
+lint:
+	@echo "🔍 Running linter..."
+	@golangci-lint run || { \
+		echo "❌ Linting failed. Run 'make lint-fix' to automatically fix some issues."; \
+		exit 1; \
+	}
+	@echo "✅ Linting passed"
+
+# Fix linting issues automatically
+lint-fix:
+	@echo "🔧 Fixing linting issues..."
+	@golangci-lint run --fix
+	@echo "✅ Linting issues fixed (where possible)"

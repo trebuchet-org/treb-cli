@@ -81,13 +81,14 @@ func (p *Parser) ParseContractABI(contractName string) (*ContractABI, error) {
 			continue
 		}
 		
-		if abiEntry.Type == "constructor" {
+		switch abiEntry.Type {
+		case "constructor":
 			result.HasConstructor = true
 			result.Constructor = &ABIConstructor{
 				Type:   abiEntry.Type,
 				Inputs: abiEntry.Inputs,
 			}
-		} else if abiEntry.Type == "function" {
+		case "function":
 			result.Methods = append(result.Methods, Method{
 				Name:   abiEntry.Name,
 				Type:   abiEntry.Type,

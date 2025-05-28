@@ -289,14 +289,15 @@ func (g *Generator) GenerateProxyDeployScript(implementationInfo *ContractInfo, 
 	// Check if we need constructor override (for TransparentUpgradeableProxy)
 	hasConstructorOverride := proxyType == ProxyTypeOZTransparent || proxyType == ProxyTypeCustom
 	var constructorOverride string
-	if proxyType == ProxyTypeOZTransparent {
+	switch proxyType {
+	case ProxyTypeOZTransparent:
 		constructorOverride = `    /// @notice Get constructor arguments - override to include admin parameter
     function _getConstructorArgs() internal view override returns (bytes memory) {
         address admin = executor; // Use executor as the ProxyAdmin owner
         bytes memory initData = _getProxyInitializer();
         return abi.encode(implementationAddress, admin, initData);
     }`
-	} else if proxyType == ProxyTypeCustom {
+	case ProxyTypeCustom:
 		constructorOverride = `    /// @notice Get constructor arguments - override for custom proxy
     function _getConstructorArgs() internal view override returns (bytes memory) {
         bytes memory initData = _getProxyInitializer();

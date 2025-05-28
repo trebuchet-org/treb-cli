@@ -1,0 +1,81 @@
+# golangci-lint configuration for treb-cli
+version: '2'
+
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+    - misspell
+    - errcheck
+    - gosec
+  
+  settings:
+    errcheck:
+      # Exclude specific functions from errcheck
+      exclude-functions:
+        # Standard fmt package print functions
+        - fmt.Print
+        - fmt.Printf
+        - fmt.Println
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+        # fatih/color package functions
+        - (github.com/fatih/color.Color).Print
+        - (github.com/fatih/color.Color).Printf
+        - (github.com/fatih/color.Color).Println
+        - (github.com/fatih/color.Color).Fprint
+        - (github.com/fatih/color.Color).Fprintf
+        - (github.com/fatih/color.Color).Fprintln
+        - (*github.com/fatih/color.Color).Print
+        - (*github.com/fatih/color.Color).Printf
+        - (*github.com/fatih/color.Color).Println
+        - (*github.com/fatih/color.Color).Fprint
+        - (*github.com/fatih/color.Color).Fprintf
+        - (*github.com/fatih/color.Color).Fprintln
+        # IO operations commonly ignored in defer statements
+        - (io.Closer).Close
+        - (*os.File).Close
+        - (*net/http.Response.Body).Close
+        # Other commonly ignored functions
+        - os.Setenv
+    
+    gosec:
+      # Exclude specific rules
+      excludes:
+        - G104  # Audit errors not checked (covered by errcheck)
+        - G304  # File path provided as tainted input
+        - G301  # Poor file permissions (0755 for directories is common)
+        - G306  # Poor file permissions (0644 for files is common)
+        - G204  # Subprocess launched with variable (needed for forge)
+
+issues:
+  # Exclude specific patterns
+  exclude-rules:
+    # Exclude linter checks for test files
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gosec
+    
+    # Exclude error checks for deferred Close() calls
+    - linters:
+        - errcheck
+      source: "defer .+\\.Close"
+    
+    # Exclude specific directories if needed
+    - path: test/
+      linters:
+        - errcheck
+        - gosec
+
+  # Maximum count of issues with the same text (0 = unlimited)
+  max-same-issues: 0
+  
+  # Show all issues from a linter
+  max-issues-per-linter: 0
