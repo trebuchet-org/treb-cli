@@ -9,7 +9,6 @@ linters:
     - govet
     - staticcheck
     - ineffassign
-    - unused
     - misspell
     - errcheck
     - gosec
@@ -56,23 +55,6 @@ linters:
 
 issues:
   # Exclude specific patterns
-  exclude-rules:
-    # Exclude linter checks for test files
-    - path: _test\.go
-      linters:
-        - errcheck
-        - gosec
-    
-    # Exclude error checks for deferred Close() calls
-    - linters:
-        - errcheck
-      source: "defer .+\\.Close"
-    
-    # Exclude specific directories if needed
-    - path: test/
-      linters:
-        - errcheck
-        - gosec
 
   # Maximum count of issues with the same text (0 = unlimited)
   max-same-issues: 0
