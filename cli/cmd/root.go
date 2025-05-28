@@ -62,7 +62,6 @@ func init() {
 	rootCmd.AddCommand(tagCmd)
 	rootCmd.AddCommand(syncCmd)
 	rootCmd.AddCommand(contextCmd)
-	rootCmd.AddCommand(debugCmd)
 	rootCmd.AddCommand(versionCmd)
 }
 

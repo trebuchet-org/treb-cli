@@ -1,21 +1,19 @@
 package integration_test
 
 import (
-	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
-	"time"
+
+	"github.com/trebuchet-org/treb-cli/cli/pkg/dev"
 )
 
 // Global test variables
 var (
 	trebBin    string
 	fixtureDir string
-	anvilCmd   *exec.Cmd
 )
 
 // TestMain handles setup/teardown for all tests
@@ -36,14 +34,14 @@ func TestMain(m *testing.M) {
 }
 
 func setup() error {
-	// Build treb
+	// Build treb with dev tag for anvil management
 	wd, _ := os.Getwd()
 	projectRoot := filepath.Dir(wd)
 	trebBin = filepath.Join(projectRoot, "treb")
 	fixtureDir = filepath.Join(wd, "fixture")
 
-	fmt.Println("🔨 Building treb binary...")
-	cmd := exec.Command("go", "build", "-o", "treb", "./cli")
+	fmt.Println("🔨 Building treb binary with dev tools...")
+	cmd := exec.Command("go", "build", "-tags", "dev", "-o", "treb", "./cli")
 	cmd.Dir = projectRoot
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to build treb: %w", err)
@@ -60,35 +58,20 @@ func setup() error {
 		return fmt.Errorf("failed to build contracts: %w", err)
 	}
 
-	// Start anvil
-	fmt.Println("🔗 Starting anvil node...")
-	anvilCmd = exec.Command("anvil", "--host", "0.0.0.0", "--port", "8545")
-	if err := anvilCmd.Start(); err != nil {
+	// Start anvil with CreateX using our management tool
+	fmt.Println("🔗 Starting anvil node with CreateX factory...")
+	if err := dev.StartAnvil(); err != nil {
 		return fmt.Errorf("failed to start anvil: %w", err)
 	}
 
-	// Wait for anvil
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	for {
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("anvil did not start in time")
-		default:
-			if resp, err := http.Get("http://localhost:8545"); err == nil {
-				resp.Body.Close()
-				fmt.Println("✅ Anvil node ready")
-				return nil
-			}
-			time.Sleep(200 * time.Millisecond)
-		}
-	}
+	fmt.Println("✅ Anvil node with CreateX ready")
+	return nil
 }
 
 func teardown() {
 	fmt.Println("🧹 Cleaning up...")
-	if anvilCmd != nil && anvilCmd.Process != nil {
-		anvilCmd.Process.Kill()
-		anvilCmd.Wait()
+	// Stop anvil using our management tool
+	if err := dev.StopAnvil(); err != nil {
+		fmt.Printf("Warning: failed to stop anvil: %v\n", err)
 	}
 }
