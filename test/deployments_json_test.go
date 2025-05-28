@@ -122,38 +122,38 @@ func TestDeploymentsJSONIntegrity(t *testing.T) {
 		anvilNetwork := networks["31337"].(map[string]interface{})
 		deployments := anvilNetwork["deployments"].(map[string]interface{})
 		
-		// Find proxy and implementation deployments
-		var proxyDeployment, implDeployment map[string]interface{}
+		// Find proxy and singleton deployments
+		var proxyDeployment, singletonDeployment map[string]interface{}
 		proxyCount := 0
 		implCount := 0
 		
 		for _, deployment := range deployments {
 			dep := deployment.(map[string]interface{})
 			depType := dep["type"].(string)
-			contractName := dep["contract_name"].(string)
+			sid := dep["sid"].(string)
 			
-			if depType == "PROXY" && contractName == "UpgradeableCounter" {
+			if depType == "PROXY" && sid == "UpgradeableCounterProxy" {
 				proxyDeployment = dep
 				proxyCount++
-			} else if depType == "IMPLEMENTATION" && contractName == "UpgradeableCounter" {
-				implDeployment = dep
+			} else if depType == "SINGLETON" && sid == "UpgradeableCounter" {
+				singletonDeployment = dep
 				implCount++
 			}
 		}
 		
 		// Verify we found both
 		require.NotNil(t, proxyDeployment, "Proxy deployment not found")
-		require.NotNil(t, implDeployment, "Implementation deployment not found")
+		require.NotNil(t, singletonDeployment, "Singleton deployment not found")
 		assert.Equal(t, 1, proxyCount, "Should have exactly one proxy")
-		assert.Equal(t, 1, implCount, "Should have exactly one implementation")
+		assert.Equal(t, 1, implCount, "Should have exactly one singleton")
 		
 		// Verify proxy fields
 		assert.Equal(t, "PROXY", proxyDeployment["type"])
 		assert.NotEmpty(t, proxyDeployment["address"])
 		
-		// Verify implementation fields
-		assert.Equal(t, "IMPLEMENTATION", implDeployment["type"])
-		assert.NotEmpty(t, implDeployment["address"])
+		// Verify singleton fields
+		assert.Equal(t, "SINGLETON", singletonDeployment["type"])
+		assert.NotEmpty(t, singletonDeployment["address"])
 		
 		// Note: The proxy deployment may not have implementation_address field in the current structure
 		// But both should have proper deployment info
@@ -161,9 +161,9 @@ func TestDeploymentsJSONIntegrity(t *testing.T) {
 		assert.NotEmpty(t, proxyDeployInfo["tx_hash"])
 		assert.Equal(t, "EXECUTED", proxyDeployInfo["status"])
 		
-		implDeployInfo := implDeployment["deployment"].(map[string]interface{})
-		assert.NotEmpty(t, implDeployInfo["tx_hash"])
-		assert.Equal(t, "EXECUTED", implDeployInfo["status"])
+		singletonDeployInfo := singletonDeployment["deployment"].(map[string]interface{})
+		assert.NotEmpty(t, singletonDeployInfo["tx_hash"])
+		assert.Equal(t, "EXECUTED", singletonDeployInfo["status"])
 	})
 	
 	t.Run("library deployment integrity", func(t *testing.T) {

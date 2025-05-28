@@ -24,9 +24,9 @@ type TrebContext struct {
 func NewTrebContext(t *testing.T) *TrebContext {
 	return &TrebContext{
 		t:         t,
-		network:   "anvil",
+		network:   "local",
 		namespace: "default",
-		sender:    "local",
+		sender:    "anvil",
 	}
 }
 

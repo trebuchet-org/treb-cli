@@ -19,7 +19,7 @@ func TestDeploymentFlow(t *testing.T) {
 	assert.Contains(t, output, "Generated deploy script")
 	
 	// Deploy
-	output, err = runTreb(t, "deploy", "src/Counter.sol:Counter", "--network", "anvil")
+	output, err = runTreb(t, "deploy", "src/Counter.sol:Counter")
 	require.NoError(t, err)
 	assert.Contains(t, output, "Deployment Successful")
 	
@@ -62,7 +62,7 @@ func TestShowAndList(t *testing.T) {
 		_, err := runTreb(t, "gen", "deploy", "src/Counter.sol:Counter", "--strategy", "CREATE3")
 		require.NoError(t, err)
 		
-		_, err = runTreb(t, "deploy", "src/Counter.sol:Counter", "--network", "anvil")
+		_, err = runTreb(t, "deploy", "src/Counter.sol:Counter")
 		require.NoError(t, err)
 		
 		// Now test show
@@ -73,7 +73,18 @@ func TestShowAndList(t *testing.T) {
 	})
 	
 	t.Run("show with network filter", func(t *testing.T) {
-		output, err := runTreb(t, "show", "Counter", "--network", "anvil")
+		// Ensure we have a deployment for this test
+		cleanupGeneratedFiles(t)
+		
+		// Generate and deploy
+		_, err := runTreb(t, "gen", "deploy", "src/Counter.sol:Counter", "--strategy", "CREATE3")
+		require.NoError(t, err)
+		
+		_, err = runTreb(t, "deploy", "src/Counter.sol:Counter")
+		require.NoError(t, err)
+		
+		// Now test show
+		output, err := runTreb(t, "show", "Counter")
 		assert.NoError(t, err)
 		assert.Contains(t, output, "Counter")
 	})
