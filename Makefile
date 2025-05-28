@@ -12,7 +12,7 @@ PROXY_ABI := "treb-sol/out/ProxyDeployment.sol/ProxyDeployment.json"
 LIBRARY_ABI := "treb-sol/out/LibraryDeployment.sol/LibraryDeployment.json"
 
 # Build the CLI binary
-build: bindings lint
+build: bindings
 	@echo "🔨 Building treb..."
 	@go build -ldflags="$(LDFLAGS)" -tags dev -o bin/treb ./cli 
 
