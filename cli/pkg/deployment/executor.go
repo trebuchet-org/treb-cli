@@ -3,8 +3,10 @@ package deployment
 import (
 	"encoding/hex"
 	"fmt"
+	"os/exec"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/abi"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/broadcast"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
@@ -56,6 +58,14 @@ func (d *DeploymentContext) Execute() (*ParsedDeploymentResult, error) {
 		if err != nil {
 			return &result, fmt.Errorf("failed to build deployment entry: %w", err)
 		}
+		
+		// Verify contract exists at the deployed address for executed deployments
+		if result.ParsedStatus == types.StatusExecuted {
+			if err := d.verifyDeployment(result.Deployed); err != nil {
+				return &result, fmt.Errorf("deployment verification failed: %w", err)
+			}
+		}
+		
 		if err := d.registryManager.RecordDeployment(d.networkInfo.ChainID(), entry); err != nil {
 			return &result, fmt.Errorf("could not record deployed contract: %w", err)
 		}
@@ -164,4 +174,25 @@ func (d *DeploymentContext) prepareScriptArguments() ([]string, error) {
 
 	// Return the full calldata as script argument
 	return []string{"--sig", "0x" + hex.EncodeToString(calldata)}, nil
+}
+
+// verifyDeployment checks that a contract exists at the deployed address
+func (d *DeploymentContext) verifyDeployment(address common.Address) error {
+	// Use cast to get the bytecode at the address
+	cmd := exec.Command("cast", "code", address.Hex(), "--rpc-url", d.networkInfo.RpcUrl)
+	cmd.Dir = d.projectRoot
+	
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to check contract code: %w\nOutput: %s", err, output)
+	}
+	
+	// Check if the output is empty or just "0x"
+	code := strings.TrimSpace(string(output))
+	if code == "" || code == "0x" {
+		return fmt.Errorf("no contract found at address %s - deployment may have failed", address.Hex())
+	}
+	
+	// Contract exists if we have any bytecode
+	return nil
 }
