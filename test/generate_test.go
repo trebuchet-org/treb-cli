@@ -90,6 +90,8 @@ func TestGenerateCommands(t *testing.T) {
 
 // Test proxy generation
 func TestGenerateProxy(t *testing.T) {
+	// Non-interactive proxy generation is now implemented!
+	
 	cleanupGeneratedFiles(t)
 	
 	// Generate proxy script

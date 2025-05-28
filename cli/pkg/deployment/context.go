@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	ethabi "github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/abi"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/forge"

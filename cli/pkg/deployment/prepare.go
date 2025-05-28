@@ -10,7 +10,6 @@ import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	forgeExec "github.com/trebuchet-org/treb-cli/cli/pkg/forge"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/interactive"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
@@ -129,30 +128,10 @@ func (d *DeploymentContext) PrepareContractDeployment() (bool, error) {
 	d.contractInfo = contractInfo
 
 	// Check if deploy script exists using the generator's path logic
-	generator := contracts.NewGenerator(d.projectRoot)
-	scriptPath := generator.GetDeployScriptPath(contractInfo)
+	contractsGen := contracts.NewGenerator(d.projectRoot)
+	scriptPath := contractsGen.GetDeployScriptPath(contractInfo)
 	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
-		if d.Params.Predict || d.Params.NonInteractive {
-			return false, fmt.Errorf("deploy script required but not found: %s", scriptPath)
-		}
-
-		fmt.Printf("\nDeploy script not found for %s (%s)\n", d.contractInfo.Name, d.ScriptPath)
-
-		// Ask if user wants to generate the script
-		selector := interactive.NewSelector()
-		shouldGenerate, err := selector.PromptConfirm("Would you like to generate a deploy script?", true)
-		if err != nil || !shouldGenerate {
-			return false, fmt.Errorf("deploy script required but not found: %s", scriptPath)
-		}
-
-		// Generate the script interactively
-		fmt.Printf("\nStarting interactive script generation...\n\n")
-		interactiveGenerator := interactive.NewGenerator(d.projectRoot)
-		contractPath := fmt.Sprintf("%s:%s", contractInfo.Path, contractInfo.Name)
-		if err := interactiveGenerator.GenerateDeployScript(contractPath); err != nil {
-			return false, fmt.Errorf("script generation failed: %w", err)
-		}
-		return true, nil
+		return false, fmt.Errorf("deploy script not found at %s\n\nTo generate a deploy script, run:\n  treb gen deploy %s", scriptPath, contractInfo.Name)
 	}
 
 	// Set script path
@@ -181,28 +160,10 @@ func (d *DeploymentContext) PrepareProxyDeployment() error {
 	d.implementationInfo = implementationInfo
 
 	// Check if proxy deploy script exists
-	generator := contracts.NewGenerator(d.projectRoot)
-	scriptPath := generator.GetProxyScriptPath(implementationInfo)
+	contractsGen := contracts.NewGenerator(d.projectRoot)
+	scriptPath := contractsGen.GetProxyScriptPath(implementationInfo)
 	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
-		if d.Params.NonInteractive {
-			return fmt.Errorf("proxy deploy script not found: %s", scriptPath)
-		}
-		
-		// Ask if user wants to generate the script
-		selector := interactive.NewSelector()
-		shouldGenerate, err := selector.PromptConfirm("Would you like to generate a deploy script?", true)
-		if err != nil || !shouldGenerate {
-			return fmt.Errorf("proxy deploy script not found: %s", scriptPath)
-		}
-
-		// Generate the script interactively
-		fmt.Printf("\nStarting interactive script generation...\n\n")
-		interactiveGenerator := interactive.NewGenerator(d.projectRoot)
-		implPath := fmt.Sprintf("%s:%s", implementationInfo.Path, implementationInfo.Name)
-		if err := interactiveGenerator.GenerateProxyScript(implPath); err != nil {
-			return fmt.Errorf("script generation failed: %w", err)
-		}
-		return nil
+		return fmt.Errorf("proxy deploy script not found at %s\n\nTo generate a proxy deploy script, run:\n  treb gen proxy %s", scriptPath, implementationInfo.Name)
 	}
 
 	// Set script path

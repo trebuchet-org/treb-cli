@@ -91,22 +91,36 @@ func TestDeploymentsJSONIntegrity(t *testing.T) {
 		tc := NewTrebContext(t)
 		
 		// Step 1: Generate and deploy the implementation first
-		_, err := tc.treb("gen", "deploy", "src/UpgradeableCounter.sol:UpgradeableCounter", "--strategy", "CREATE3")
-		require.NoError(t, err)
+		output, err := tc.treb("gen", "deploy", "src/UpgradeableCounter.sol:UpgradeableCounter", "--strategy", "CREATE3")
+		require.NoError(t, err, "Failed to generate deploy script: %s", output)
 		
-		_, err = tc.treb("deploy", "src/UpgradeableCounter.sol:UpgradeableCounter")
-		require.NoError(t, err)
+		// Use a unique label to avoid address collisions with other tests
+		output, err = tc.treb("deploy", "src/UpgradeableCounter.sol:UpgradeableCounter", "--label", "proxy-test")
+		require.NoError(t, err, "Failed to deploy implementation: %s", output)
 		
 		// Step 2: Generate and deploy the proxy pointing to the implementation (using ShortID)
-		_, err = tc.treb("gen", "proxy",
+		output, err = tc.treb("gen", "proxy",
 			"src/UpgradeableCounter.sol:UpgradeableCounter",
 			"--strategy", "CREATE3",
 			"--proxy-contract", "lib/openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy")
-		require.NoError(t, err)
+		if err != nil {
+			t.Logf("Proxy generation output: %s", output)
+		}
+		require.NoError(t, err, "Failed to generate proxy script: %s", output)
 		
 		// Deploy proxy using the ShortID "UpgradeableCounter" which will resolve to the deployed implementation
-		_, err = tc.treb("deploy", "proxy", "UpgradeableCounter")
-		require.NoError(t, err)
+		output, err = tc.treb("deploy", "proxy", "UpgradeableCounter")
+		if err != nil {
+			t.Logf("Proxy deployment output: %s", output)
+			// Check if script exists
+			scriptPath := filepath.Join(fixtureDir, "script/deploy/DeployUpgradeableCounterProxy.s.sol")
+			if _, err := os.Stat(scriptPath); err != nil {
+				t.Logf("Script does not exist at: %s", scriptPath)
+			} else {
+				t.Logf("Script exists at: %s", scriptPath)
+			}
+		}
+		require.NoError(t, err, "Failed to deploy proxy: %s", output)
 		
 		// Check deployments.json
 		deploymentsFile := filepath.Join(fixtureDir, "deployments.json")
@@ -135,7 +149,7 @@ func TestDeploymentsJSONIntegrity(t *testing.T) {
 			if depType == "PROXY" && sid == "UpgradeableCounterProxy" {
 				proxyDeployment = dep
 				proxyCount++
-			} else if depType == "SINGLETON" && sid == "UpgradeableCounter" {
+			} else if depType == "SINGLETON" && sid == "UpgradeableCounter:proxy-test" {
 				singletonDeployment = dep
 				implCount++
 			}
