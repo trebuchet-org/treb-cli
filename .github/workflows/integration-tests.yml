@@ -13,7 +13,12 @@ jobs:
     runs-on: ubuntu-latest
     environment: TEST
     timeout-minutes: 15
-    
+    env:  # These will be available to all steps in this job
+      CELOSCAN_API_KEY: ${{ secrets.CELOSCAN_API_KEY }}
+      DEPLOYER_PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY }}
+      ETHERSCAN_MAIN_API_KEY: ${{ secrets.ETHERSCAN_MAIN_API_KEY }}
+      INFURA_API_KEY: ${{ secrets.INFURA_API_KEY }}
+   
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -64,6 +69,11 @@ jobs:
     runs-on: macos-latest
     environment: TEST
     timeout-minutes: 15
+    env:  # These will be available to all steps in this job
+      CELOSCAN_API_KEY: ${{ secrets.CELOSCAN_API_KEY }}
+      DEPLOYER_PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY }}
+      ETHERSCAN_MAIN_API_KEY: ${{ secrets.ETHERSCAN_MAIN_API_KEY }}
+      INFURA_API_KEY: ${{ secrets.INFURA_API_KEY }}
     
     steps:
     - name: Checkout code
@@ -109,6 +119,11 @@ jobs:
     runs-on: ubuntu-latest
     environment: TEST
     timeout-minutes: 15
+    env:  # These will be available to all steps in this job
+      CELOSCAN_API_KEY: ${{ secrets.CELOSCAN_API_KEY }}
+      DEPLOYER_PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY }}
+      ETHERSCAN_MAIN_API_KEY: ${{ secrets.ETHERSCAN_MAIN_API_KEY }}
+      INFURA_API_KEY: ${{ secrets.INFURA_API_KEY }}
     
     steps:
     - name: Checkout code
