@@ -62,6 +62,7 @@ Examples:
 			NetworkName:    networkName,
 			Sender:         senderName,
 			Verify:         false, // TODO: add verify flag
+			NonInteractive: IsNonInteractive(),
 		})
 		if err != nil {
 			checkError(err)
@@ -109,6 +110,7 @@ Examples:
 			NetworkName:         networkName,
 			Sender:              senderName,
 			Verify:              false, // TODO: add verify flag
+			NonInteractive:      IsNonInteractive(),
 		}); err != nil {
 			checkError(err)
 		} else {
@@ -148,6 +150,7 @@ Examples:
 			Namespace:      namespace,
 			Sender:         senderName,
 			Verify:         false, // TODO: add verify flag
+			NonInteractive: IsNonInteractive(),
 		}); err != nil {
 			checkError(err)
 		} else {

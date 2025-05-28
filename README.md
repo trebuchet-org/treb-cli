@@ -278,6 +278,9 @@ make build
 # Run tests
 make test
 
+# Run integration tests
+make integration-test
+
 # Create example project for testing
 make example
 
@@ -294,7 +297,7 @@ make clean
 2. Create a feature branch
 3. Make your changes
 4. Add tests if applicable
-5. Run `make test` and `make lint`
+5. Run `make test`, `make integration-test`, and `make lint`
 6. Submit a pull request
 
 ## Status

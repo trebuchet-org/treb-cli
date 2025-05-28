@@ -8,10 +8,18 @@ import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 )
 
+// ResolverInterface defines the contract resolver interface to avoid circular imports
+type ResolverInterface interface {
+	ResolveContractForImplementation(nameOrPath string) (*contracts.ContractInfo, error)
+	ResolveContractForProxy(nameOrPath string) (*contracts.ContractInfo, error)
+	IsInteractive() bool
+}
+
 // Generator handles interactive generation workflows
 type Generator struct {
 	projectRoot string
 	selector    *Selector
+	resolver    ResolverInterface
 }
 
 // NewGenerator creates a new interactive generator
@@ -19,6 +27,16 @@ func NewGenerator(projectRoot string) *Generator {
 	return &Generator{
 		projectRoot: projectRoot,
 		selector:    NewSelector(),
+		resolver:    nil, // Will use direct contract resolution
+	}
+}
+
+// NewGeneratorWithResolver creates a new generator with a custom resolver
+func NewGeneratorWithResolver(projectRoot string, resolver ResolverInterface) *Generator {
+	return &Generator{
+		projectRoot: projectRoot,
+		selector:    NewSelector(),
+		resolver:    resolver,
 	}
 }
 
@@ -289,4 +307,130 @@ func (g *Generator) determineProxyType(proxyName string) contracts.ProxyType {
 		return contracts.ProxyTypeOZUUPS
 	}
 	return contracts.ProxyTypeCustom
+}
+
+// GenerateDeployScriptNonInteractive generates a deploy script without interactive prompts
+func (g *Generator) GenerateDeployScriptNonInteractive(contractNameOrPath, strategyFlag string) error {
+	// Contract name is required in non-interactive mode
+	if contractNameOrPath == "" {
+		return fmt.Errorf("contract name is required in non-interactive mode")
+	}
+
+	// Strategy is required in non-interactive mode
+	if strategyFlag == "" {
+		return fmt.Errorf("--strategy flag is required in non-interactive mode (CREATE2 or CREATE3)")
+	}
+
+	// Resolve contract
+	var contractInfo *contracts.ContractInfo
+	var err error
+	if g.resolver != nil {
+		contractInfo, err = g.resolver.ResolveContractForImplementation(contractNameOrPath)
+	} else {
+		contractInfo, err = ResolveContractNonInteractive(contractNameOrPath, contracts.ProjectFilter())
+	}
+	if err != nil {
+		return fmt.Errorf("failed to resolve contract: %w", err)
+	}
+
+	// Validate strategy
+	strategy, err := contracts.ValidateStrategy(strategyFlag)
+	if err != nil {
+		return fmt.Errorf("invalid strategy '%s': %w", strategyFlag, err)
+	}
+
+	// Generate the script
+	generator := contracts.NewGenerator(g.projectRoot)
+	if err := generator.GenerateDeployScript(contractInfo, strategy); err != nil {
+		return fmt.Errorf("script generation failed: %w", err)
+	}
+
+	fmt.Printf("Generated deployment script for %s using %s strategy\n", contractInfo.Name, strategy)
+
+	// Show constructor info
+	abiParser := abi.NewParser(g.projectRoot)
+	if contractABI, err := abiParser.ParseContractABI(contractInfo.Name); err == nil {
+		if contractABI.HasConstructor {
+			fmt.Printf("Constructor arguments automatically detected and configured\n")
+			fmt.Printf("You can customize the values in getConstructorArgs() method\n")
+		} else {
+			fmt.Printf("No constructor arguments required\n")
+		}
+	}
+
+	return nil
+}
+
+// GenerateProxyDeployScriptNonInteractive generates a proxy deploy script without interactive prompts
+func (g *Generator) GenerateProxyDeployScriptNonInteractive(contractName, strategyFlag, proxyContractFlag string) error {
+	// Contract name is required in non-interactive mode
+	if contractName == "" {
+		return fmt.Errorf("contract name is required in non-interactive mode")
+	}
+
+	// Strategy is required in non-interactive mode
+	if strategyFlag == "" {
+		return fmt.Errorf("--strategy flag is required in non-interactive mode (CREATE2 or CREATE3)")
+	}
+
+	// Proxy contract is required in non-interactive mode
+	if proxyContractFlag == "" {
+		return fmt.Errorf("--proxy-contract flag is required in non-interactive mode (e.g., ERC1967Proxy or lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy)")
+	}
+
+	// Resolve implementation contract
+	var contractInfo *contracts.ContractInfo
+	var err error
+	if g.resolver != nil {
+		contractInfo, err = g.resolver.ResolveContractForImplementation(contractName)
+	} else {
+		contractInfo, err = ResolveContractNonInteractive(contractName, contracts.ProjectFilter())
+	}
+	if err != nil {
+		return fmt.Errorf("failed to resolve contract: %w", err)
+	}
+
+	// Validate strategy
+	strategy, err := contracts.ValidateStrategy(strategyFlag)
+	if err != nil {
+		return fmt.Errorf("invalid strategy '%s': %w", strategyFlag, err)
+	}
+
+	// Resolve proxy contract using the same method as implementation contracts
+	// This allows both name-based lookup and path:contract format
+	var proxyInfo *contracts.ContractInfo
+	if g.resolver != nil {
+		proxyInfo, err = g.resolver.ResolveContractForProxy(proxyContractFlag)
+	} else {
+		proxyInfo, err = ResolveContractNonInteractive(proxyContractFlag, contracts.DefaultFilter()) // Include libraries for proxy contracts
+	}
+	if err != nil {
+		return fmt.Errorf("failed to resolve proxy contract '%s': %w", proxyContractFlag, err)
+	}
+
+	// Determine proxy type based on the selected proxy contract name
+	proxyType := g.determineProxyType(proxyInfo.Name)
+
+	// Generate the script
+	generator := contracts.NewGenerator(g.projectRoot)
+	if err := generator.GenerateProxyDeployScript(contractInfo, proxyInfo, strategy, proxyType); err != nil {
+		return fmt.Errorf("proxy script generation failed: %w", err)
+	}
+
+	fmt.Printf("Generated proxy deployment script for %s using %s strategy\n", contractInfo.Name, strategy)
+	fmt.Printf("Implementation: %s\n", contractInfo.Name)
+	fmt.Printf("Proxy: %s (%s)\n", proxyInfo.Name, proxyType)
+
+	// Show initializer info
+	abiParser := abi.NewParser(g.projectRoot)
+	if contractABI, err := abiParser.ParseContractABI(contractInfo.Name); err == nil {
+		if initMethod := abiParser.FindInitializeMethod(contractABI); initMethod != nil {
+			fmt.Printf("Initialize method detected: %s\n", initMethod.Name)
+			fmt.Printf("Arguments will be automatically configured in _getProxyInitializer()\n")
+		} else {
+			fmt.Printf("No initialize method found - proxy will be deployed without initialization\n")
+		}
+	}
+
+	return nil
 }

@@ -1,0 +1,189 @@
+name: Integration Tests
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+        
+    - name: Install Foundry
+      uses: foundry-rs/foundry-toolchain@v1
+      with:
+        version: nightly
+        
+    - name: Install dependencies
+      run: |
+        # Install abigen for ABI bindings
+        go install github.com/ethereum/go-ethereum/cmd/abigen@latest
+        # Install jq for JSON processing
+        sudo apt-get update && sudo apt-get install -y jq
+        
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+          
+    - name: Run integration tests
+      run: make integration-test
+        
+    - name: Upload test artifacts on failure
+      if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-artifacts
+        path: |
+          test/fixture/script/deploy/
+          test/fixture/deployments.json
+          test/fixture/out/
+        retention-days: 7
+
+  integration-tests-macos:
+    name: Integration Tests (macOS)
+    runs-on: macos-latest
+    timeout-minutes: 15
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+        
+    - name: Install Foundry
+      uses: foundry-rs/foundry-toolchain@v1
+      with:
+        version: nightly
+        
+    - name: Install dependencies
+      run: |
+        # Install abigen for ABI bindings
+        go install github.com/ethereum/go-ethereum/cmd/abigen@latest
+        # Install jq (macOS has it by default via Xcode Command Line Tools)
+        if ! command -v jq &> /dev/null; then
+          brew install jq
+        fi
+        
+    - name: Run integration tests
+      run: make integration-test
+
+  # Test specific test functions individually for better debugging
+  test-generate:
+    name: Test Generation Commands
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+        
+    - name: Install Foundry
+      uses: foundry-rs/foundry-toolchain@v1
+      with:
+        version: nightly
+        
+    - name: Install dependencies
+      run: |
+        go install github.com/ethereum/go-ethereum/cmd/abigen@latest
+        sudo apt-get update && sudo apt-get install -y jq
+        
+    - name: Run generation tests
+      run: make integration-test-run TEST=TestGenerateCommands
+        
+  test-deployment-flow:
+    name: Test Deployment Flow
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+        
+    - name: Install Foundry
+      uses: foundry-rs/foundry-toolchain@v1
+      with:
+        version: nightly
+        
+    - name: Install dependencies
+      run: |
+        go install github.com/ethereum/go-ethereum/cmd/abigen@latest
+        sudo apt-get update && sudo apt-get install -y jq
+        
+    - name: Run deployment tests
+      run: make integration-test-run TEST=TestDeploymentFlow
+      
+  test-coverage:
+    name: Test Coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+        
+    - name: Install Foundry
+      uses: foundry-rs/foundry-toolchain@v1
+      with:
+        version: nightly
+        
+    - name: Install dependencies
+      run: |
+        go install github.com/ethereum/go-ethereum/cmd/abigen@latest
+        sudo apt-get update && sudo apt-get install -y jq
+        
+    - name: Run tests with coverage
+      run: make integration-test-coverage
+      
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: |
+          test/coverage.out
+          test/coverage.html
+        retention-days: 7

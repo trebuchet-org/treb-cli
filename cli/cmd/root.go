@@ -7,6 +7,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	nonInteractive bool
+)
+
 var rootCmd = &cobra.Command{
 	Use:   "treb",
 	Short: "Smart contract deployment orchestrator for Foundry",
@@ -19,6 +23,9 @@ func Execute() error {
 }
 
 func init() {
+	// Global flags
+	rootCmd.PersistentFlags().BoolVar(&nonInteractive, "non-interactive", false, "Disable interactive prompts")
+
 	// Add command groups
 	rootCmd.AddGroup(&cobra.Group{
 		ID:    "main",
@@ -64,4 +71,9 @@ func checkError(err error) {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+// IsNonInteractive returns true if the non-interactive flag is set
+func IsNonInteractive() bool {
+	return nonInteractive
 }

@@ -1,4 +1,4 @@
-.PHONY: build install test clean dev-setup watch release-build release-clean abis bindings clean check-bindings 
+.PHONY: build install test integration-test clean dev-setup watch release-build release-clean abis bindings clean check-bindings 
 
 # Version information
 VERSION ?= $(shell git describe --tags --always --dirty)
@@ -55,6 +55,18 @@ install: build
 test:
 	@echo "🧪 Running tests..."
 	@go test -v ./...
+
+# Run integration tests  
+integration-test: build
+	@echo "🔗 Running integration tests..."
+	@cd test && go mod download && go test -v -timeout=10m
+
+# Run integration tests with coverage
+integration-test-coverage: build
+	@echo "🔗 Running integration tests with coverage..."
+	@cd test && go test -v -timeout=10m -coverprofile=coverage.out
+	@cd test && go tool cover -html=coverage.out -o coverage.html
+	@echo "✅ Coverage report generated: test/coverage.html"
 
 # Clean build artifacts
 clean:

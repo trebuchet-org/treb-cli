@@ -9,8 +9,14 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/resolvers"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/safe"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
+)
+
+var (
+	showNetworkFlag   string
+	showNamespaceFlag string
 )
 
 var showCmd = &cobra.Command{
@@ -22,30 +28,35 @@ Accepts contract name, address, or partial match.
 Examples:
   treb show Counter
   treb show 0x1234...
-  treb show Count`,
+  treb show Count
+  treb show Counter --network sepolia --namespace staging`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		identifier := args[0]
 
-		if err := showDeploymentByIdentifier(identifier); err != nil {
+		if err := showDeploymentByIdentifier(identifier, showNetworkFlag, showNamespaceFlag); err != nil {
 			checkError(err)
 		}
 	},
 }
 
 func init() {
-	// Add flags if needed in the future
+	showCmd.Flags().StringVar(&showNetworkFlag, "network", "", "Filter by network name")
+	showCmd.Flags().StringVarP(&showNamespaceFlag, "namespace", "n", "", "Filter by namespace")
 }
 
-func showDeploymentByIdentifier(identifier string) error {
+func showDeploymentByIdentifier(identifier, networkFilter, namespaceFilter string) error {
 	// Initialize registry manager
 	registryManager, err := registry.NewManager("deployments.json")
 	if err != nil {
 		return fmt.Errorf("failed to initialize registry: %w", err)
 	}
 
-	// Use shared picker
-	deployment, err := pickDeployment(identifier, registryManager)
+	// Create resolver context
+	resolver := resolvers.NewContext(".", !IsNonInteractive())
+	
+	// Use resolver for deployment resolution
+	deployment, err := resolver.ResolveDeploymentWithFilters(identifier, registryManager, networkFilter, namespaceFilter)
 	if err != nil {
 		return err
 	}

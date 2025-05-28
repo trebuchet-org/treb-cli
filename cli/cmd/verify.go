@@ -14,15 +14,18 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/resolvers"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/verification"
 )
 
 var (
-	allFlag          bool
-	forceFlag        bool
-	contractPathFlag string
-	debugFlag        bool
+	allFlag           bool
+	forceFlag         bool
+	contractPathFlag  string
+	debugFlag         bool
+	verifyNetworkFlag string
+	verifyNamespaceFlag string
 )
 
 var verifyCmd = &cobra.Command{
@@ -36,6 +39,7 @@ Examples:
   treb verify --all                 # Verify all unverified contracts (pending/failed)
   treb verify --all --force         # Re-verify all contracts including verified ones
   treb verify Counter --force       # Re-verify even if already verified
+  treb verify Counter --network sepolia --namespace staging  # Verify with filters
   treb verify CounterProxy --contract-path "./src/Counter.sol:Counter"  # Verify with manual contract path`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -50,6 +54,8 @@ func init() {
 	verifyCmd.Flags().BoolVar(&forceFlag, "force", false, "Re-verify even if already verified")
 	verifyCmd.Flags().StringVar(&contractPathFlag, "contract-path", "", "Manual contract path (e.g., ./src/Contract.sol:Contract)")
 	verifyCmd.Flags().BoolVar(&debugFlag, "debug", false, "Show debug information including forge verify commands")
+	verifyCmd.Flags().StringVar(&verifyNetworkFlag, "network", "", "Filter by network name")
+	verifyCmd.Flags().StringVarP(&verifyNamespaceFlag, "namespace", "n", "", "Filter by namespace")
 }
 
 func runVerify(args []string) error {
@@ -76,7 +82,7 @@ func runVerify(args []string) error {
 
 	// Verify specific contract
 	identifier := args[0]
-	return verifySpecificContract(identifier, verificationManager, registryManager)
+	return verifySpecificContract(identifier, verificationManager, registryManager, verifyNetworkFlag, verifyNamespaceFlag)
 }
 
 func verifyAllContracts(verificationManager *verification.Manager, registryManager *registry.Manager) error {
@@ -154,9 +160,9 @@ func verifyAllContracts(verificationManager *verification.Manager, registryManag
 
 		fmt.Printf("  %s %s/%s/%s\n", statusIcon, deployment.NetworkName, deployment.Entry.Namespace, displayName)
 
-		// Start spinner for verification (unless debug mode)
+		// Start spinner for verification (unless debug mode or non-interactive)
 		var s *spinner.Spinner
-		if !debugFlag {
+		if !debugFlag && !IsNonInteractive() {
 			s = createSpinner(fmt.Sprintf("Verifying %s...", displayName))
 		}
 
@@ -183,9 +189,12 @@ func verifyAllContracts(verificationManager *verification.Manager, registryManag
 	return nil
 }
 
-func verifySpecificContract(identifier string, verificationManager *verification.Manager, registryManager *registry.Manager) error {
-	// Use shared picker to find deployment
-	deployment, err := pickDeployment(identifier, registryManager)
+func verifySpecificContract(identifier string, verificationManager *verification.Manager, registryManager *registry.Manager, networkFilter, namespaceFilter string) error {
+	// Create resolver context
+	resolver := resolvers.NewContext(".", !IsNonInteractive())
+	
+	// Use resolver to find deployment with filters
+	deployment, err := resolver.ResolveDeploymentWithFilters(identifier, registryManager, networkFilter, namespaceFilter)
 	if err != nil {
 		return err
 	}
@@ -221,9 +230,9 @@ func verifySpecificContract(identifier string, verificationManager *verification
 
 	displayName := deployment.Entry.GetDisplayName()
 
-	// Start spinner for verification (unless debug mode)
+	// Start spinner for verification (unless debug mode or non-interactive)
 	var s *spinner.Spinner
-	if !debugFlag {
+	if !debugFlag && !IsNonInteractive() {
 		s = createSpinner(fmt.Sprintf("Verifying %s/%s/%s...",
 			deployment.NetworkName, deployment.Entry.Namespace, displayName))
 	}

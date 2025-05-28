@@ -10,6 +10,7 @@ import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/forge"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/resolvers"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
@@ -26,6 +27,7 @@ type DeploymentParams struct {
 	Predict             bool
 	Debug               bool
 	Verify              bool
+	NonInteractive      bool
 }
 
 // DeploymentContext holds all deployment configuration
@@ -37,6 +39,7 @@ type DeploymentContext struct {
 	generator       *contracts.Generator
 	registryManager *registry.Manager
 	forge           *forge.Forge
+	resolver        *resolvers.Context
 	// Deployment
 	ScriptPath           string
 	envVars              map[string]string
@@ -63,6 +66,7 @@ func NewDeploymentContext(projectRoot string, params *DeploymentParams, registry
 		registryManager: registryManager,
 		generator:       contracts.NewGenerator(projectRoot),
 		forge:           forge.NewForge(projectRoot),
+		resolver:        resolvers.NewContext(projectRoot, !params.NonInteractive),
 	}
 }
 

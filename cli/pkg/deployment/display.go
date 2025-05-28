@@ -184,7 +184,7 @@ func (d *DeploymentContext) printNetworkInfo(result *ParsedDeploymentResult) {
 	color.New(color.FgWhite, color.Bold).Printf("Network:      ")
 	color.New(color.FgMagenta).Printf("%s", d.networkInfo.Name)
 	if d.networkInfo.ChainID() > 0 {
-		fmt.Printf(" (chain ID: %d)", d.networkInfo.ChainID)
+		fmt.Printf(" (chain ID: %d)", d.networkInfo.ChainID())
 	}
 	fmt.Println()
 }

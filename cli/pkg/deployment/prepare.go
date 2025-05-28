@@ -119,8 +119,8 @@ func (d *DeploymentContext) BuildContracts() error {
 
 // PrepareContractDeployment validates a singleton contract deployment and returns whether a script was generated
 func (d *DeploymentContext) PrepareContractDeployment() (bool, error) {
-	// Resolve the contract
-	contractInfo, err := interactive.ResolveContract(d.Params.ContractQuery, contracts.ProjectFilter())
+	// Resolve the contract using the resolver
+	contractInfo, err := d.resolver.ResolveContractForImplementation(d.Params.ContractQuery)
 	if err != nil {
 		return false, fmt.Errorf("failed to resolve contract: %w", err)
 	}
@@ -132,7 +132,7 @@ func (d *DeploymentContext) PrepareContractDeployment() (bool, error) {
 	generator := contracts.NewGenerator(d.projectRoot)
 	scriptPath := generator.GetDeployScriptPath(contractInfo)
 	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
-		if d.Params.Predict {
+		if d.Params.Predict || d.Params.NonInteractive {
 			return false, fmt.Errorf("deploy script required but not found: %s", scriptPath)
 		}
 
@@ -170,8 +170,8 @@ func (d *DeploymentContext) PrepareContractDeployment() (bool, error) {
 
 // PrepareProxyDeployment validates a proxy deployment
 func (d *DeploymentContext) PrepareProxyDeployment() error {
-	// Resolve the contract
-	implementationInfo, err := interactive.ResolveContract(d.Params.ImplementationQuery, contracts.ProjectFilter())
+	// Resolve the contract using the resolver
+	implementationInfo, err := d.resolver.ResolveContractForImplementation(d.Params.ImplementationQuery)
 	if err != nil {
 		return fmt.Errorf("failed to resolve contract: %w", err)
 	}
@@ -183,6 +183,10 @@ func (d *DeploymentContext) PrepareProxyDeployment() error {
 	generator := contracts.NewGenerator(d.projectRoot)
 	scriptPath := generator.GetProxyScriptPath(implementationInfo)
 	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
+		if d.Params.NonInteractive {
+			return fmt.Errorf("proxy deploy script not found: %s", scriptPath)
+		}
+		
 		// Ask if user wants to generate the script
 		selector := interactive.NewSelector()
 		shouldGenerate, err := selector.PromptConfirm("Would you like to generate a deploy script?", true)
@@ -230,8 +234,8 @@ func (d *DeploymentContext) PrepareProxyDeployment() error {
 	d.resolvedLibraries = resolvedLibs
 
 	// Pass current network and environment context to narrow down results
-	// Use ResolveImplementationDeployment to filter out proxy deployments
-	deployment, err := interactive.ResolveImplementationDeployment(d.Params.TargetQuery, d.registryManager, d.networkInfo.ChainID(), d.Params.Namespace)
+	// Use ResolveDeploymentForProxy to filter out proxy deployments
+	deployment, err := d.resolver.ResolveDeploymentForProxy(d.Params.TargetQuery, d.registryManager, d.networkInfo.ChainID(), d.Params.Namespace)
 	if err != nil {
 		return fmt.Errorf("failed to resolve target deployment: %w", err)
 	}
@@ -254,6 +258,9 @@ func (d *DeploymentContext) PrepareProxyDeployment() error {
 		return fmt.Errorf("deployment config not initialized")
 	}
 
+	// Set the deployment type to proxy BEFORE creating the proxy deployment config
+	d.deploymentConfig.DeploymentType = abi.DeploymentTypeProxy
+
 	// Create proxy deployment config with implementation address
 	d.proxyDeploymentConfig = &abi.ProxyDeploymentConfig{
 		ImplementationAddress: deployment.Entry.Address,
@@ -261,7 +268,6 @@ func (d *DeploymentContext) PrepareProxyDeployment() error {
 	}
 
 	d.targetDeploymentFQID = deployment.Entry.FQID
-	d.deploymentConfig.DeploymentType = abi.DeploymentTypeProxy
 	fmt.Printf("Using implementation: %s at %s\n", deployment.Entry.ShortID, deployment.Entry.Address.Hex())
 
 	return nil
@@ -269,13 +275,8 @@ func (d *DeploymentContext) PrepareProxyDeployment() error {
 
 // PrepareLibraryDeployment validates a library deployment
 func (d *DeploymentContext) PrepareLibraryDeployment() error {
-	// Resolve the library - use AllFilter to include libraries
-	libraryFilter := contracts.QueryFilter{
-		IncludeLibraries: true,
-		IncludeAbstract:  false,
-		IncludeInterface: false,
-	}
-	contractInfo, err := interactive.ResolveContract(d.Params.ContractQuery, libraryFilter)
+	// Resolve the library using the resolver
+	contractInfo, err := d.resolver.ResolveContractForLibrary(d.Params.ContractQuery)
 	if err != nil {
 		return fmt.Errorf("failed to resolve library: %w", err)
 	}
