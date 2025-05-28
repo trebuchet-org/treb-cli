@@ -17,6 +17,8 @@ import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/resolvers"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/verification"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 var (
@@ -285,13 +287,13 @@ func showVerificationStatus(deployment *registry.DeploymentInfo) {
 	for verifier, status := range deployment.Entry.Verification.Verifiers {
 		switch status.Status {
 		case "verified":
-			color.New(color.FgGreen).Printf("  %s: ✓ Verified", strings.Title(verifier))
+			color.New(color.FgGreen).Printf("  %s: ✓ Verified", cases.Title(language.English).String(verifier))
 			if status.URL != "" {
 				fmt.Printf(" - %s", status.URL)
 			}
 			fmt.Println()
 		case "failed":
-			color.New(color.FgRed).Printf("  %s: ✗ Failed", strings.Title(verifier))
+			color.New(color.FgRed).Printf("  %s: ✗ Failed", cases.Title(language.English).String(verifier))
 			if status.Reason != "" {
 				fmt.Printf(" - %s", status.Reason)
 			}
@@ -331,7 +333,7 @@ func parseChainID(chainIDStr string) (uint64, error) {
 func createSpinner(message string) *spinner.Spinner {
 	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
 	s.Suffix = " " + message
-	s.Color("cyan", "bold")
+	_ = s.Color("cyan", "bold")
 	s.Start()
 	return s
 }

@@ -118,7 +118,7 @@ func (d *DeploymentContext) ShowPrediction(result *ParsedDeploymentResult) {
 func (d *DeploymentContext) CreateSpinner(message string) *spinner.Spinner {
 	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
 	s.Suffix = " " + message
-	s.Color("cyan", "bold")
+	_ = s.Color("cyan", "bold")
 	s.Start()
 	return s
 }

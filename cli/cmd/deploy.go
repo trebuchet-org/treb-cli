@@ -182,7 +182,7 @@ func init() {
 	// Global flags
 	deployCmd.PersistentFlags().StringVar(&networkName, "network", defaultNetwork, "Network to deploy to")
 	if defaultNetwork == "" {
-		deployCmd.MarkPersistentFlagRequired("network")
+		_ = deployCmd.MarkPersistentFlagRequired("network")
 	}
 	deployCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Show detailed debug output")
 	deployCmd.PersistentFlags().BoolVar(&predict, "predict", false, "Predict deployment address without deploying")
@@ -192,7 +192,7 @@ func init() {
 	deployCmd.PersistentFlags().StringVar(&senderName, "sender", defaultSender, "Transaction sender")
 	deployCmd.PersistentFlags().StringVar(&label, "label", "", "Deployment label (affects address)")
 	if defaultSender == "" {
-		deployCmd.MarkPersistentFlagRequired("sender")
+		_ = deployCmd.MarkPersistentFlagRequired("sender")
 	}
 
 	deployContractCmd.Flags().StringVarP(&namespace, "namespace", "n", defaultNamespace, "Deployment namespace")

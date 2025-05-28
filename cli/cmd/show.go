@@ -12,6 +12,8 @@ import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/resolvers"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/safe"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 var (
@@ -265,7 +267,7 @@ func showDeploymentInfo(deployment *registry.DeploymentInfo) error {
 	// Show individual verifier status
 	if deployment.Entry.Verification.Verifiers != nil {
 		for verifier, status := range deployment.Entry.Verification.Verifiers {
-			labelStyle.Printf("%s:  ", strings.Title(verifier))
+			labelStyle.Printf("%s:  ", cases.Title(language.English).String(verifier))
 			switch status.Status {
 			case "verified":
 				successStyle.Print("✓ Verified")

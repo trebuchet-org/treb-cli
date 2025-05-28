@@ -148,7 +148,8 @@ func (d *DeploymentContext) PrepareContractDeployment() (bool, error) {
 		// Generate the script interactively
 		fmt.Printf("\nStarting interactive script generation...\n\n")
 		interactiveGenerator := interactive.NewGenerator(d.projectRoot)
-		if err := interactiveGenerator.GenerateDeployScriptForContract(contractInfo); err != nil {
+		contractPath := fmt.Sprintf("%s:%s", contractInfo.Path, contractInfo.Name)
+		if err := interactiveGenerator.GenerateDeployScript(contractPath); err != nil {
 			return false, fmt.Errorf("script generation failed: %w", err)
 		}
 		return true, nil
@@ -197,7 +198,8 @@ func (d *DeploymentContext) PrepareProxyDeployment() error {
 		// Generate the script interactively
 		fmt.Printf("\nStarting interactive script generation...\n\n")
 		interactiveGenerator := interactive.NewGenerator(d.projectRoot)
-		if err := interactiveGenerator.GenerateProxyDeployScript(implementationInfo.Path); err != nil {
+		implPath := fmt.Sprintf("%s:%s", implementationInfo.Path, implementationInfo.Name)
+		if err := interactiveGenerator.GenerateProxyScript(implPath); err != nil {
 			return fmt.Errorf("script generation failed: %w", err)
 		}
 		return nil

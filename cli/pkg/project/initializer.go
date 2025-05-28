@@ -150,7 +150,3 @@ func (i *Initializer) printNextSteps() {
 	fmt.Println("   treb tag Counter v1.0.0")
 }
 
-func (i *Initializer) fileExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
-}

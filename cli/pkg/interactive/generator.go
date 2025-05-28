@@ -2,45 +2,12 @@ package interactive
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/trebuchet-org/treb-cli/cli/pkg/abi"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 )
 
-// ResolverInterface defines the contract resolver interface to avoid circular imports
-type ResolverInterface interface {
-	ResolveContractForImplementation(nameOrPath string) (*contracts.ContractInfo, error)
-	ResolveContractForProxy(nameOrPath string) (*contracts.ContractInfo, error)
-	IsInteractive() bool
-}
-
-// Generator handles interactive generation workflows
-type Generator struct {
-	projectRoot string
-	selector    *Selector
-	resolver    ResolverInterface
-}
-
-// NewGenerator creates a new interactive generator
-func NewGenerator(projectRoot string) *Generator {
-	return &Generator{
-		projectRoot: projectRoot,
-		selector:    NewSelector(),
-		resolver:    nil, // Will use direct contract resolution
-	}
-}
-
-// NewGeneratorWithResolver creates a new generator with a custom resolver
-func NewGeneratorWithResolver(projectRoot string, resolver ResolverInterface) *Generator {
-	return &Generator{
-		projectRoot: projectRoot,
-		selector:    NewSelector(),
-		resolver:    resolver,
-	}
-}
-
-// GenerateType represents different generation types
+// GenerateType represents the type of script to generate
 type GenerateType string
 
 const (
@@ -60,75 +27,28 @@ func GetAvailableTypes() []GenerateType {
 	}
 }
 
-// pickContract selects a contract from available contracts, or validates a specific contract
-func (g *Generator) pickContract(contractNameOrPath string) (*contracts.ContractInfo, error) {
-	// Use the global indexer
-	indexer, err := contracts.GetGlobalIndexer(g.projectRoot)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize contract indexer: %w", err)
+// Generator handles interactive script generation
+type Generator struct {
+	projectRoot string
+	selector    *Selector
+}
+
+// NewGenerator creates a new interactive generator
+func NewGenerator(projectRoot string) *Generator {
+	return &Generator{
+		projectRoot: projectRoot,
+		selector:    NewSelector(),
 	}
+}
 
-	var selected *contracts.ContractInfo
-
-	// If a contract name/path was specified, try to resolve it
-	if contractNameOrPath != "" {
-		// Try direct lookup first
-		if contract, err := indexer.GetContract(contractNameOrPath); err == nil {
-			selected = contract
-			fmt.Printf("Using specified contract: %s\n\n", contract.Name)
-		} else {
-			// Try by name
-			contracts := indexer.GetContractsByName(contractNameOrPath)
-			if len(contracts) == 0 {
-				return nil, fmt.Errorf("contract not found: %s", contractNameOrPath)
-			} else if len(contracts) == 1 {
-				selected = contracts[0]
-				fmt.Printf("Using specified contract: %s\n\n", contracts[0].Name)
-			} else {
-				// Multiple contracts with same name - let user pick
-				var options []string
-				for _, c := range contracts {
-					options = append(options, fmt.Sprintf("%s (%s)", c.Name, c.Path))
-				}
-				_, selectedIndex, err := g.selector.SelectOption("Multiple contracts found. Select one:", options, 0)
-				if err != nil {
-					return nil, fmt.Errorf("contract selection failed: %w", err)
-				}
-				selected = contracts[selectedIndex]
-			}
-		}
-	} else {
-		// No contract specified - show picker with deployable contracts
-		deployableContracts := indexer.GetDeployableContracts()
-		if len(deployableContracts) == 0 {
-			return nil, fmt.Errorf("no deployable contracts found")
-		}
-
-		var options []string
-		for _, c := range deployableContracts {
-			if c.Version != "" {
-				options = append(options, fmt.Sprintf("%s (%s)", c.Name, c.Version))
-			} else {
-				options = append(options, c.Name)
-			}
-		}
-
-		_, selectedIndex, err := g.selector.SelectOption("Select contract:", options, 0)
-		if err != nil {
-			return nil, fmt.Errorf("contract selection failed: %w", err)
-		}
-
-		selected = deployableContracts[selectedIndex]
+// GenerateType returns available generate types for a generator
+func (g *Generator) GenerateType() []GenerateType {
+	return []GenerateType{
+		GenerateTypeDeploy,
+		GenerateTypeDeployProxy,
+		GenerateTypeMigration,
+		GenerateTypeUpgrade,
 	}
-
-	// Convert to ContractInfo
-	contractInfo := &contracts.ContractInfo{
-		Name:      selected.Name,
-		Path:      selected.Path,
-		IsLibrary: selected.IsLibrary,
-	}
-
-	return contractInfo, nil
 }
 
 // pickProxyContract selects a proxy contract from available proxy contracts
@@ -214,223 +134,56 @@ func (g *Generator) GenerateDeployScript(contractNameOrPath string) error {
 		if contractABI.HasConstructor {
 			fmt.Printf("Constructor arguments automatically detected and configured\n")
 			fmt.Printf("You can customize the values in getConstructorArgs() method\n")
-		} else {
-			fmt.Printf("No constructor arguments required\n")
 		}
 	}
+
+	// Show next steps
+	scriptPath := generator.GetDeployScriptPath(contractInfo)
+	fmt.Printf("\nGenerated deploy script:\n")
+	fmt.Printf("  %s\n", scriptPath)
+	fmt.Printf("\nNext steps:\n")
+	fmt.Printf("1. Review and customize the script if needed\n")
+	fmt.Printf("2. Deploy with: treb deploy %s --network <network>\n", contractInfo.Name)
 
 	return nil
 }
 
-// GenerateDeployScriptForContract generates a deploy script for a specific contract
-func (g *Generator) GenerateDeployScriptForContract(contractInfo *contracts.ContractInfo) error {
-	// Step 1: Pick deployment strategy
-	strategy, err := g.pickDeploymentStrategy()
+// GenerateProxyScript interactively generates a proxy deploy script
+func (g *Generator) GenerateProxyScript(contractNameOrPath string) error {
+	// Step 1: Pick or resolve implementation contract
+	contractInfo, err := ResolveContract(contractNameOrPath, contracts.ProjectFilter())
 	if err != nil {
-		return err
-	}
-
-	// Step 2: Generate the script
-	generator := contracts.NewGenerator(g.projectRoot)
-	if err := generator.GenerateDeployScript(contractInfo, strategy); err != nil {
-		return fmt.Errorf("script generation failed: %w", err)
-	}
-
-	fmt.Printf("Strategy: %s\n", strategy)
-
-	// Show constructor info
-	abiParser := abi.NewParser(g.projectRoot)
-	if contractABI, err := abiParser.ParseContractABI(contractInfo.Name); err == nil {
-		if contractABI.HasConstructor {
-			fmt.Printf("Constructor arguments automatically detected and configured\n")
-			fmt.Printf("You can customize the values in getConstructorArgs() method\n")
-		} else {
-			fmt.Printf("No constructor arguments required\n")
-		}
-	}
-
-	return nil
-}
-
-// GenerateProxyDeployScript interactively generates a proxy deploy script
-func (g *Generator) GenerateProxyDeployScript(contractName string) error {
-	// Step 1: Pick implementation contract
-	contractInfo, err := ResolveContract(contractName, contracts.ProjectFilter())
-	if err != nil {
-		return err
+		return fmt.Errorf("failed to resolve contract: %w", err)
 	}
 
 	// Step 2: Pick proxy contract
-	proxyInfo, err := g.pickProxyContract()
+	proxyContract, err := g.pickProxyContract()
 	if err != nil {
 		return err
 	}
 
-	// Step 3: Determine proxy type based on selected proxy
-	proxyType := g.determineProxyType(proxyInfo.Name)
-
-	// Step 4: Pick deployment strategy
+	// Step 3: Pick deployment strategy
 	strategy, err := g.pickDeploymentStrategy()
 	if err != nil {
 		return err
 	}
 
-	// Step 5: Generate the script
+	// Step 4: Generate the script
 	generator := contracts.NewGenerator(g.projectRoot)
-	if err := generator.GenerateProxyDeployScript(contractInfo, proxyInfo, strategy, proxyType); err != nil {
-		return fmt.Errorf("proxy script generation failed: %w", err)
-	}
-
-	fmt.Printf("Implementation: %s\n", contractInfo.Name)
-	fmt.Printf("Proxy: %s\n", proxyInfo.Name)
-	fmt.Printf("Strategy: %s\n", strategy)
-
-	// Show initializer info
-	abiParser := abi.NewParser(g.projectRoot)
-	if contractABI, err := abiParser.ParseContractABI(contractInfo.Name); err == nil {
-		if initMethod := abiParser.FindInitializeMethod(contractABI); initMethod != nil {
-			fmt.Printf("Initialize method detected: %s\n", initMethod.Name)
-			fmt.Printf("Arguments will be automatically configured in _getProxyInitializer()\n")
-		} else {
-			fmt.Printf("No initialize method found - proxy will be deployed without initialization\n")
-		}
-	}
-
-	return nil
-}
-
-// determineProxyType determines the proxy type based on the proxy contract name
-func (g *Generator) determineProxyType(proxyName string) contracts.ProxyType {
-	if strings.Contains(proxyName, "TransparentUpgradeable") {
-		return contracts.ProxyTypeOZTransparent
-	} else if strings.Contains(proxyName, "ERC1967") || strings.Contains(proxyName, "UUPS") {
-		return contracts.ProxyTypeOZUUPS
-	}
-	return contracts.ProxyTypeCustom
-}
-
-// GenerateDeployScriptNonInteractive generates a deploy script without interactive prompts
-func (g *Generator) GenerateDeployScriptNonInteractive(contractNameOrPath, strategyFlag string) error {
-	// Contract name is required in non-interactive mode
-	if contractNameOrPath == "" {
-		return fmt.Errorf("contract name is required in non-interactive mode")
-	}
-
-	// Strategy is required in non-interactive mode
-	if strategyFlag == "" {
-		return fmt.Errorf("--strategy flag is required in non-interactive mode (CREATE2 or CREATE3)")
-	}
-
-	// Resolve contract
-	var contractInfo *contracts.ContractInfo
-	var err error
-	if g.resolver != nil {
-		contractInfo, err = g.resolver.ResolveContractForImplementation(contractNameOrPath)
-	} else {
-		contractInfo, err = ResolveContractNonInteractive(contractNameOrPath, contracts.ProjectFilter())
-	}
-	if err != nil {
-		return fmt.Errorf("failed to resolve contract: %w", err)
-	}
-
-	// Validate strategy
-	strategy, err := contracts.ValidateStrategy(strategyFlag)
-	if err != nil {
-		return fmt.Errorf("invalid strategy '%s': %w", strategyFlag, err)
-	}
-
-	// Generate the script
-	generator := contracts.NewGenerator(g.projectRoot)
-	if err := generator.GenerateDeployScript(contractInfo, strategy); err != nil {
+	if err := generator.GenerateProxyDeployScript(contractInfo, proxyContract, strategy, contracts.ProxyTypeOZTransparent); err != nil {
 		return fmt.Errorf("script generation failed: %w", err)
 	}
 
-	fmt.Printf("Generated deployment script for %s using %s strategy\n", contractInfo.Name, strategy)
+	fmt.Printf("Strategy: %s\n", strategy)
+	fmt.Printf("Proxy contract: %s\n", proxyContract.Name)
 
-	// Show constructor info
-	abiParser := abi.NewParser(g.projectRoot)
-	if contractABI, err := abiParser.ParseContractABI(contractInfo.Name); err == nil {
-		if contractABI.HasConstructor {
-			fmt.Printf("Constructor arguments automatically detected and configured\n")
-			fmt.Printf("You can customize the values in getConstructorArgs() method\n")
-		} else {
-			fmt.Printf("No constructor arguments required\n")
-		}
-	}
-
-	return nil
-}
-
-// GenerateProxyDeployScriptNonInteractive generates a proxy deploy script without interactive prompts
-func (g *Generator) GenerateProxyDeployScriptNonInteractive(contractName, strategyFlag, proxyContractFlag string) error {
-	// Contract name is required in non-interactive mode
-	if contractName == "" {
-		return fmt.Errorf("contract name is required in non-interactive mode")
-	}
-
-	// Strategy is required in non-interactive mode
-	if strategyFlag == "" {
-		return fmt.Errorf("--strategy flag is required in non-interactive mode (CREATE2 or CREATE3)")
-	}
-
-	// Proxy contract is required in non-interactive mode
-	if proxyContractFlag == "" {
-		return fmt.Errorf("--proxy-contract flag is required in non-interactive mode (e.g., ERC1967Proxy or lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy)")
-	}
-
-	// Resolve implementation contract
-	var contractInfo *contracts.ContractInfo
-	var err error
-	if g.resolver != nil {
-		contractInfo, err = g.resolver.ResolveContractForImplementation(contractName)
-	} else {
-		contractInfo, err = ResolveContractNonInteractive(contractName, contracts.ProjectFilter())
-	}
-	if err != nil {
-		return fmt.Errorf("failed to resolve contract: %w", err)
-	}
-
-	// Validate strategy
-	strategy, err := contracts.ValidateStrategy(strategyFlag)
-	if err != nil {
-		return fmt.Errorf("invalid strategy '%s': %w", strategyFlag, err)
-	}
-
-	// Resolve proxy contract using the same method as implementation contracts
-	// This allows both name-based lookup and path:contract format
-	var proxyInfo *contracts.ContractInfo
-	if g.resolver != nil {
-		proxyInfo, err = g.resolver.ResolveContractForProxy(proxyContractFlag)
-	} else {
-		proxyInfo, err = ResolveContractNonInteractive(proxyContractFlag, contracts.DefaultFilter()) // Include libraries for proxy contracts
-	}
-	if err != nil {
-		return fmt.Errorf("failed to resolve proxy contract '%s': %w", proxyContractFlag, err)
-	}
-
-	// Determine proxy type based on the selected proxy contract name
-	proxyType := g.determineProxyType(proxyInfo.Name)
-
-	// Generate the script
-	generator := contracts.NewGenerator(g.projectRoot)
-	if err := generator.GenerateProxyDeployScript(contractInfo, proxyInfo, strategy, proxyType); err != nil {
-		return fmt.Errorf("proxy script generation failed: %w", err)
-	}
-
-	fmt.Printf("Generated proxy deployment script for %s using %s strategy\n", contractInfo.Name, strategy)
-	fmt.Printf("Implementation: %s\n", contractInfo.Name)
-	fmt.Printf("Proxy: %s (%s)\n", proxyInfo.Name, proxyType)
-
-	// Show initializer info
-	abiParser := abi.NewParser(g.projectRoot)
-	if contractABI, err := abiParser.ParseContractABI(contractInfo.Name); err == nil {
-		if initMethod := abiParser.FindInitializeMethod(contractABI); initMethod != nil {
-			fmt.Printf("Initialize method detected: %s\n", initMethod.Name)
-			fmt.Printf("Arguments will be automatically configured in _getProxyInitializer()\n")
-		} else {
-			fmt.Printf("No initialize method found - proxy will be deployed without initialization\n")
-		}
-	}
+	// Show next steps
+	scriptPath := generator.GetProxyScriptPath(contractInfo)
+	fmt.Printf("\nGenerated proxy deploy script:\n")
+	fmt.Printf("  %s\n", scriptPath)
+	fmt.Printf("\nNext steps:\n")
+	fmt.Printf("1. Deploy the implementation: treb deploy %s --network <network>\n", contractInfo.Name)
+	fmt.Printf("2. Deploy the proxy: treb deploy proxy %s --network <network>\n", contractInfo.Name)
 
 	return nil
 }

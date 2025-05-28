@@ -146,4 +146,25 @@ func cleanupGeneratedFiles(t *testing.T) {
 	// Reset deployments.json with proper structure
 	deploymentsFile := filepath.Join(fixtureDir, "deployments.json")
 	os.WriteFile(deploymentsFile, []byte(`{"networks": {}}`), 0644)
+	
+	// Clean forge cache to ensure fresh deployments
+	cacheDir := filepath.Join(fixtureDir, "cache")
+	os.RemoveAll(cacheDir)
+	
+	// Clean forge out directory
+	outDir := filepath.Join(fixtureDir, "out")
+	os.RemoveAll(outDir)
+}
+
+// runTrebDebug runs treb command and prints output on failure for debugging
+func runTrebDebug(t *testing.T, args ...string) (string, error) {
+	t.Helper()
+	
+	output, err := runTreb(t, args...)
+	if err != nil {
+		t.Logf("Command failed: treb %s", strings.Join(args, " "))
+		t.Logf("Error: %v", err)
+		t.Logf("Output:\n%s", output)
+	}
+	return output, err
 }

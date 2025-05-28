@@ -72,10 +72,8 @@ func (f *Forge) RunScriptWithArgs(scriptPath string, flags []string, envVars map
 	cmd := exec.Command("forge", args...)
 	cmd.Dir = f.projectRoot
 	cmd.Env = os.Environ()
-	if envVars != nil {
-		for key, value := range envVars {
-			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
-		}
+	for key, value := range envVars {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
 	}
 
 	output, err := cmd.CombinedOutput()

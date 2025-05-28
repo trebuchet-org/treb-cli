@@ -76,7 +76,7 @@ func StartAnvil() error {
 	// Write PID file
 	if err := writePidFile(cmd.Process.Pid); err != nil {
 		// Kill the process if we can't write PID file
-		cmd.Process.Kill()
+		_ = cmd.Process.Kill()
 		return fmt.Errorf("failed to write PID file: %w", err)
 	}
 

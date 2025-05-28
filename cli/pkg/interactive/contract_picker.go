@@ -172,9 +172,7 @@ func formatContractOptions(contracts []*contracts.ContractInfo) []string {
 	for i, contract := range contracts {
 		// Format as "ContractName (path/to/file.sol)"
 		relPath := contract.Path
-		if strings.HasPrefix(relPath, "src/") {
-			relPath = strings.TrimPrefix(relPath, "src/")
-		}
+		relPath = strings.TrimPrefix(relPath, "src/")
 
 		options[i] = fmt.Sprintf("%s (%s)",
 			color.New(color.FgWhite, color.Bold).Sprint(contract.Name),

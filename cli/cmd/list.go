@@ -1,14 +1,12 @@
 package cmd
 
 import (
-	"crypto/ecdsa"
 	"fmt"
 	"regexp"
 	"slices"
 	"sort"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/fatih/color"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
@@ -45,7 +43,6 @@ var (
 	// Library-specific styles
 	libraryNameStyle    = color.New(color.Bold)
 	libraryAddressStyle = color.New(color.Bold, color.FgHiWhite)
-	foundryStyle        = color.New(color.FgCyan)
 )
 
 var listCmd = &cobra.Command{
@@ -89,13 +86,6 @@ type TableSet struct {
 	ColumnWidths []int
 }
 
-// columnWidths stores the calculated column widths for consistent table rendering
-type columnWidths struct {
-	contract  int
-	address   int
-	verified  int
-	timestamp int
-}
 
 func listDeployments() error {
 	// Initialize registry manager
@@ -311,29 +301,6 @@ func filterDeployments(deployments []*registry.DeploymentInfo) []*registry.Deplo
 	}
 
 	return filtered
-}
-
-// privateKeyToAddress derives the Ethereum address from a private key
-func privateKeyToAddress(privateKeyHex string) (string, error) {
-	// Remove 0x prefix if present
-	privateKeyHex = strings.TrimPrefix(privateKeyHex, "0x")
-
-	// Convert hex string to ECDSA private key
-	privateKey, err := crypto.HexToECDSA(privateKeyHex)
-	if err != nil {
-		return "", fmt.Errorf("invalid private key: %w", err)
-	}
-
-	// Get the public key from the private key
-	publicKey := privateKey.Public()
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		return "", fmt.Errorf("error casting public key to ECDSA")
-	}
-
-	// Derive the Ethereum address
-	address := crypto.PubkeyToAddress(*publicKeyECDSA)
-	return address.Hex(), nil
 }
 
 // listLibraries displays all deployed libraries
@@ -635,16 +602,3 @@ func renderTableWithWidths(tableData TableData, columnWidths []int, continuation
 	return t.Render()
 }
 
-// calculateNamespaceHeaderWidth calculates the width needed for namespace headers
-func calculateNamespaceHeaderWidth(columnWidths []int) int {
-	// Calculate total table width: sum of columns + padding between columns
-	totalWidth := 0
-	for _, width := range columnWidths {
-		totalWidth += width
-	}
-	// Add padding (3 spaces between each column)
-	if len(columnWidths) > 1 {
-		totalWidth += (len(columnWidths) - 1) * 3
-	}
-	return totalWidth
-}

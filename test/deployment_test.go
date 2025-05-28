@@ -14,12 +14,12 @@ func TestDeploymentFlow(t *testing.T) {
 	cleanupGeneratedFiles(t)
 	
 	// Generate
-	output, err := runTreb(t, "gen", "deploy", "src/Counter.sol:Counter", "--strategy", "CREATE3")
+	output, err := runTrebDebug(t, "gen", "deploy", "src/Counter.sol:Counter", "--strategy", "CREATE3")
 	require.NoError(t, err)
 	assert.Contains(t, output, "Generated deploy script")
 	
 	// Deploy
-	output, err = runTreb(t, "deploy", "src/Counter.sol:Counter")
+	output, err = runTrebDebug(t, "deploy", "src/Counter.sol:Counter")
 	require.NoError(t, err)
 	assert.Contains(t, output, "Deployment Successful")
 	
@@ -46,7 +46,7 @@ func TestShowAndList(t *testing.T) {
 	// or deploy a contract within this test
 	
 	t.Run("list deployments", func(t *testing.T) {
-		output, err := runTreb(t, "list")
+		output, err := runTrebDebug(t, "list")
 		assert.NoError(t, err)
 		// Check for either empty deployments or Counter deployment
 		assert.True(t, 
@@ -58,15 +58,15 @@ func TestShowAndList(t *testing.T) {
 		// First ensure we have a deployment
 		cleanupGeneratedFiles(t)
 		
-		// Generate and deploy
-		_, err := runTreb(t, "gen", "deploy", "src/Counter.sol:Counter", "--strategy", "CREATE3")
+		// Generate and deploy with unique label
+		_, err := runTrebDebug(t, "gen", "deploy", "src/Counter.sol:Counter", "--strategy", "CREATE3")
 		require.NoError(t, err)
 		
-		_, err = runTreb(t, "deploy", "src/Counter.sol:Counter")
+		_, err = runTrebDebug(t, "deploy", "src/Counter.sol:Counter", "--label", "show-test")
 		require.NoError(t, err)
 		
 		// Now test show
-		output, err := runTreb(t, "show", "Counter")
+		output, err := runTrebDebug(t, "show", "Counter")
 		assert.NoError(t, err)
 		assert.Contains(t, output, "Counter")
 		assert.Contains(t, output, "0x") // Should have address
@@ -76,21 +76,21 @@ func TestShowAndList(t *testing.T) {
 		// Ensure we have a deployment for this test
 		cleanupGeneratedFiles(t)
 		
-		// Generate and deploy
-		_, err := runTreb(t, "gen", "deploy", "src/Counter.sol:Counter", "--strategy", "CREATE3")
+		// Generate and deploy with unique label
+		_, err := runTrebDebug(t, "gen", "deploy", "src/Counter.sol:Counter", "--strategy", "CREATE3")
 		require.NoError(t, err)
 		
-		_, err = runTreb(t, "deploy", "src/Counter.sol:Counter")
+		_, err = runTrebDebug(t, "deploy", "src/Counter.sol:Counter", "--label", "network-test")
 		require.NoError(t, err)
 		
 		// Now test show
-		output, err := runTreb(t, "show", "Counter")
+		output, err := runTrebDebug(t, "show", "Counter")
 		assert.NoError(t, err)
 		assert.Contains(t, output, "Counter")
 	})
 	
 	t.Run("show non-existent deployment", func(t *testing.T) {
-		output, err := runTreb(t, "show", "NonExistentContract")
+		output, err := runTrebDebug(t, "show", "NonExistentContract")
 		assert.Error(t, err)
 		assert.Contains(t, output, "no deployment found")
 	})
@@ -99,7 +99,7 @@ func TestShowAndList(t *testing.T) {
 // Test verify command behavior
 func TestVerifyCommand(t *testing.T) {
 	t.Run("verify non-existent contract", func(t *testing.T) {
-		output, err := runTreb(t, "verify", "NonExistent")
+		output, err := runTrebDebug(t, "verify", "NonExistent")
 		assert.Error(t, err)
 		assert.Contains(t, output, "no deployment found")
 	})
@@ -108,7 +108,7 @@ func TestVerifyCommand(t *testing.T) {
 		// Clean up to ensure no deployments
 		cleanupGeneratedFiles(t)
 		
-		output, err := runTreb(t, "verify", "Counter")
+		output, err := runTrebDebug(t, "verify", "Counter")
 		assert.Error(t, err)
 		assert.Contains(t, output, "no deployment found")
 	})

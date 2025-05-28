@@ -34,7 +34,7 @@ func NewResolver(projectRoot string) *Resolver {
 	envPath := filepath.Join(projectRoot, ".env")
 	if _, err := os.Stat(envPath); err == nil {
 		// Load .env file, but don't fail if it doesn't exist
-		godotenv.Load(envPath)
+		_ = godotenv.Load(envPath)
 	}
 
 	return &Resolver{

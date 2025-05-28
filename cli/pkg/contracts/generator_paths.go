@@ -10,9 +10,7 @@ import (
 func (g *Generator) GetDeployScriptPath(contractInfo *ContractInfo) string {
 	// Get relative path from src (if applicable)
 	relPath := contractInfo.Path
-	if strings.HasPrefix(relPath, "src/") {
-		relPath = strings.TrimPrefix(relPath, "src/")
-	}
+	relPath = strings.TrimPrefix(relPath, "src/")
 	
 	// Get directory path
 	dir := filepath.Dir(relPath)
@@ -31,9 +29,7 @@ func (g *Generator) GetDeployScriptPath(contractInfo *ContractInfo) string {
 func (g *Generator) GetProxyScriptPath(contractInfo *ContractInfo) string {
 	// Get relative path from src (if applicable)
 	relPath := contractInfo.Path
-	if strings.HasPrefix(relPath, "src/") {
-		relPath = strings.TrimPrefix(relPath, "src/")
-	}
+	relPath = strings.TrimPrefix(relPath, "src/")
 	
 	// Get directory path
 	dir := filepath.Dir(relPath)

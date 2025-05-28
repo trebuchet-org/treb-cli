@@ -53,8 +53,6 @@ type DeploymentContext struct {
 	executorConfig          *abi.ExecutorConfig
 	proxyDeploymentConfig   *abi.ProxyDeploymentConfig
 	libraryDeploymentConfig *abi.LibraryDeploymentConfig
-	// Script ABI for decoding results
-	scriptABI *ethabi.ABI
 }
 
 // NewDeploymentContext creates a new deployment context with explicit registry manager
@@ -125,7 +123,3 @@ func (ctx *DeploymentContext) GetFQID() string {
 	return fmt.Sprintf("%d/%s/%s:%s", ctx.networkInfo.ChainID(), ctx.Params.Namespace, ctx.contractInfo.Path, ctx.GetShortID())
 }
 
-// SetScriptABI sets the script ABI for the deployment context
-func (ctx *DeploymentContext) SetScriptABI(abi *ethabi.ABI) {
-	ctx.scriptABI = abi
-}

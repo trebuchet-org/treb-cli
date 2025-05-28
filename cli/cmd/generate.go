@@ -5,7 +5,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/interactive"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/resolvers"
 )
 
 var (
@@ -39,17 +38,12 @@ Examples:
 			fmt.Println("🧙 Interactive Contract Deploy Script Generator")
 		}
 		
-		// Create resolver context
-		resolver := resolvers.NewContext(".", !IsNonInteractive())
-		generator := interactive.NewGeneratorWithResolver(".", resolver)
+		// Create generator
+		generator := interactive.NewGenerator(".")
 
 		var contractName string
 		if len(args) > 0 {
 			contractName = args[0]
-		}
-
-		if IsNonInteractive() {
-			return generator.GenerateDeployScriptNonInteractive(contractName, genStrategyFlag)
 		}
 
 		return generator.GenerateDeployScript(contractName)
@@ -71,20 +65,15 @@ Examples:
 			fmt.Println("🧙 Interactive Proxy Deploy Script Generator")
 		}
 		
-		// Create resolver context
-		resolver := resolvers.NewContext(".", !IsNonInteractive())
-		generator := interactive.NewGeneratorWithResolver(".", resolver)
+		// Create generator
+		generator := interactive.NewGenerator(".")
 
 		var contractName string
 		if len(args) > 0 {
 			contractName = args[0]
 		}
 
-		if IsNonInteractive() {
-			return generator.GenerateProxyDeployScriptNonInteractive(contractName, genStrategyFlag, genProxyContractFlag)
-		}
-
-		return generator.GenerateProxyDeployScript(contractName)
+		return generator.GenerateProxyScript(contractName)
 	},
 }
 

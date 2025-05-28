@@ -236,7 +236,7 @@ func (i *Indexer) indexSolidityFiles() error {
 	go func() {
 		defer close(fileChan)
 		for _, basePath := range paths {
-			filepath.WalkDir(basePath, func(path string, d fs.DirEntry, err error) error {
+			_ = filepath.WalkDir(basePath, func(path string, d fs.DirEntry, err error) error {
 				if err != nil {
 					return nil // Skip errors
 				}
