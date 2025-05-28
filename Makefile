@@ -56,13 +56,35 @@ test:
 	@echo "🧪 Running tests..."
 	@go test -v ./...
 
+# Setup integration test dependencies
+setup-integration-test:
+	@echo "🔧 Setting up integration test dependencies..."
+	@cd test/fixture && \
+	if [ ! -d "lib/forge-std" ]; then \
+		echo "Installing forge-std..."; \
+		forge install foundry-rs/forge-std --no-git; \
+	fi && \
+	if [ ! -d "lib/openzeppelin-contracts" ]; then \
+		echo "Installing openzeppelin-contracts..."; \
+		forge install OpenZeppelin/openzeppelin-contracts --no-git; \
+	fi && \
+	if [ ! -d "lib/openzeppelin-contracts-upgradeable" ]; then \
+		echo "Installing openzeppelin-contracts-upgradeable..."; \
+		forge install OpenZeppelin/openzeppelin-contracts-upgradeable --no-git; \
+	fi && \
+	if [ ! -L "lib/treb-sol" ]; then \
+		echo "Creating treb-sol symlink..."; \
+		ln -sf ../../../treb-sol lib/treb-sol; \
+	fi
+	@echo "✅ Integration test dependencies ready"
+
 # Run integration tests  
-integration-test: build
+integration-test: build setup-integration-test
 	@echo "🔗 Running integration tests..."
 	@cd test && go mod download && go test -v -timeout=10m
 
 # Run integration tests with coverage
-integration-test-coverage: build
+integration-test-coverage: build setup-integration-test
 	@echo "🔗 Running integration tests with coverage..."
 	@cd test && go test -v -timeout=10m -coverprofile=coverage.out
 	@cd test && go tool cover -html=coverage.out -o coverage.html

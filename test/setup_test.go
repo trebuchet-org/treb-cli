@@ -65,7 +65,7 @@ func setup() error {
 	fmt.Println("🧹 Cleaning previous test artifacts...")
 	os.Remove("deployments.json")
 	os.RemoveAll("broadcast")
-	
+
 	fmt.Println("🔨 Building contracts...")
 	cmd = exec.Command("forge", "build")
 	if err := cmd.Run(); err != nil {
