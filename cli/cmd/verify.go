@@ -299,7 +299,7 @@ func showVerificationStatus(deployment *registry.DeploymentInfo) {
 			}
 			fmt.Println()
 		case "pending":
-			color.New(color.FgYellow).Printf("  %s: ⏳ Pending\n", strings.Title(verifier))
+			color.New(color.FgYellow).Printf("  %s: ⏳ Pending\n", cases.Title(language.English).String(verifier))
 		}
 	}
 }
