@@ -90,65 +90,17 @@ jobs:
         
     - name: Run integration tests
       run: make integration-test
-
-  # Test specific test functions individually for better debugging
-  test-generate:
-    name: Test Generation Commands
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      
+    - name: Upload test artifacts on failure
+      if: failure()
+      uses: actions/upload-artifact@v3
       with:
-        submodules: recursive
-        
-    - name: Setup Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.21'
-        
-    - name: Install Foundry
-      uses: foundry-rs/foundry-toolchain@v1
-      with:
-        version: nightly
-        
-    - name: Install dependencies
-      run: |
-        go install github.com/ethereum/go-ethereum/cmd/abigen@latest
-        sudo apt-get update && sudo apt-get install -y jq
-        
-    - name: Run generation tests
-      run: make integration-test-run TEST=TestGenerateCommands
-        
-  test-deployment-flow:
-    name: Test Deployment Flow
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-        
-    - name: Setup Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.21'
-        
-    - name: Install Foundry
-      uses: foundry-rs/foundry-toolchain@v1
-      with:
-        version: nightly
-        
-    - name: Install dependencies
-      run: |
-        go install github.com/ethereum/go-ethereum/cmd/abigen@latest
-        sudo apt-get update && sudo apt-get install -y jq
-        
-    - name: Run deployment tests
-      run: make integration-test-run TEST=TestDeploymentFlow
+        name: test-artifacts-macos
+        path: |
+          test/fixture/script/deploy/
+          test/fixture/deployments.json
+          test/fixture/out/
+        retention-days: 7
       
   test-coverage:
     name: Test Coverage
