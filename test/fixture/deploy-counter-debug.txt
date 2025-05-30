@@ -1,0 +1,1 @@
+Error: script file not found: script/DeployCounter.s.sol

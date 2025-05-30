@@ -1,0 +1,79 @@
+Running script: DeployWithTreb.s.sol
+Network: local
+Profile: default
+
+SENDER_CONFIGS: 0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000001a000000000000000000000000000000000000000000000000000000000000003800000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000005616e76696c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000056c6f63616c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000473616665000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000e0000000000000000000000000000000000000000000000000000000000000016000000000000000000000000000000000000000000000000000000000000000476c69622f747265622d736f6c2f7372632f696e7465726e616c2f73656e646572732f507269766174654b657953656e6465722e736f6c3a507269766174654b657953656e6465720000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000476c69622f747265622d736f6c2f7372632f696e7465726e616c2f73656e646572732f507269766174654b657953656e6465722e736f6c3a507269766174654b657953656e64657200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003b6c69622f747265622d736f6c2f7372632f696e7465726e616c2f73656e646572732f5361666553656e6465722e736f6c3a5361666553656e64657200000000000000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000000000000000000040000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff800000000000000000000000000000000000000000000000000000000000000040000000000000000000000000f1f30b69a9359c3e7c28eb76391835472e105f5c884d55e790cf30d9ae9646010b0aaf4d6ef9c2921633fd269130ba3786c8e8b5000000000000000000000000000000000000000000000000000000000000008000000000000000000000000032cb58b145d3f7e28c45ce4b2cc31fa94248b23f000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000056c6f63616c000000000000000000000000000000000000000000000000000000
+Sender IDs: [anvil local safe]
+Running command: forge script script/DeployWithTreb.s.sol --rpc-url http://localhost:8545 --broadcast -vvv
+Compiling 4 files with Solc 0.8.27
+Solc 0.8.27 finished in 904.02ms
+Compiler run successful with warnings:
+Warning (6321): Unnamed return variable can remain unassigned when the function is called when "TrebScript" is the most derived contract. Add an explicit return with value to all non-reverting code paths or name the variable.
+  --> lib/treb-sol/src/internal/Dispatcher.sol:37:63:
+   |
+37 |     function _loadSender(string memory _id) internal returns (Sender) {
+   |                                                               ^^^^^^
+
+Traces:
+  [2492590] → new DeployWithTrebScript@0x9f7cF1d1F558E57ef88a59ac3D47214eF25B6A06
+    ├─ [0] VM::envString("NETWORK") [staticcall]
+    │   └─ ← [Return] <env var value>
+    ├─ [0] VM::createFork("<rpc url>")
+    │   └─ ← [Return] 1
+    ├─ [0] VM::envString("NETWORK") [staticcall]
+    │   └─ ← [Return] <env var value>
+    ├─ [0] VM::createFork("<rpc url>")
+    │   └─ ← [Return] 2
+    ├─ [0] VM::selectFork(1)
+    │   └─ ← [Return]
+    ├─ [0] VM::envOr("NAMESPACE", "default") [staticcall]
+    │   └─ ← [Return] <env var value>
+    ├─ [0] VM::envOr("DEPLOYMENTS_FILE", "deployments.json") [staticcall]
+    │   └─ ← [Return] <env var value>
+    ├─ [0] VM::readFile("deployments.json") [staticcall]
+    │   └─ ← [Return] <file>
+    ├─ [0] VM::toString(31337 [3.133e4]) [staticcall]
+    │   └─ ← [Return] "31337"
+    ├─ [0] VM::keyExistsJson("<JSON file>", ".networks.31337.deployments") [staticcall]
+    │   └─ ← [Return] true
+    ├─ [0] VM::parseJsonKeys("{\n  \"networks\": {\n    \"31337\": {\n      \"deployments\": {}\n    }\n  }\n}", ".networks.31337.deployments") [staticcall]
+    │   └─ ← [Return] []
+    └─ ← [Return] 11915 bytes of code
+
+  [674264] DeployWithTrebScript::run()
+    ├─ [0] VM::envBytes("SENDER_CONFIGS") [staticcall]
+    │   └─ ← [Return] <env var value>
+    ├─ [0] VM::deployCode("lib/treb-sol/src/internal/senders/PrivateKeySender.sol:PrivateKeySender", 0x000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80)
+    │   ├─ [5402274] → new PrivateKeySender@0x5aAdFB43eF8dAF45DD80F4676345b7676f1D70e3
+    │   │   ├─ [2190421] → new Deployer@0xd9003177dC465aAA89e20678675dca7FA5f5CAD5
+    │   │   │   ├─ [0] console::log("\u{1b}[92m✔ CreateX already deployed on chain:", 31337 [3.133e4], "\u{1b}[0m") [staticcall]
+    │   │   │   │   └─ ← [Stop]
+    │   │   │   ├─ [0] VM::label(CreateX: [0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed], "CreateX")
+    │   │   │   │   └─ ← [Return]
+    │   │   │   ├─ [0] VM::envOr("NAMESPACE", "default") [staticcall]
+    │   │   │   │   └─ ← [Return] <env var value>
+    │   │   │   └─ ← [Return] 10667 bytes of code
+    │   │   ├─ [0] VM::allowCheatcodes(Deployer: [0xd9003177dC465aAA89e20678675dca7FA5f5CAD5])
+    │   │   │   └─ ← [Return]
+    │   │   ├─ [0] VM::makePersistent(Deployer: [0xd9003177dC465aAA89e20678675dca7FA5f5CAD5])
+    │   │   │   └─ ← [Return]
+    │   │   ├─ [0] VM::rememberKey(<pk>)
+    │   │   │   └─ ← [Return] 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+    │   │   └─ ← [Return] 15835 bytes of code
+    │   └─ ← [Return] PrivateKeySender: [0x5aAdFB43eF8dAF45DD80F4676345b7676f1D70e3]
+    ├─ [0] VM::allowCheatcodes(PrivateKeySender: [0x5aAdFB43eF8dAF45DD80F4676345b7676f1D70e3])
+    │   └─ ← [Return]
+    ├─ [0] VM::makePersistent(PrivateKeySender: [0x5aAdFB43eF8dAF45DD80F4676345b7676f1D70e3])
+    │   └─ ← [Return]
+    ├─ [745] PrivateKeySender::deployer() [staticcall]
+    │   └─ ← [Return] Deployer: [0xd9003177dC465aAA89e20678675dca7FA5f5CAD5]
+    ├─ [2265] Deployer::deployCreate3("Counter:v1")
+    │   ├─ [0] VM::getCode("Counter:v1") [staticcall]
+    │   │   └─ ← [Revert] vm.getCode: failed parsing version: unexpected character 'v' while parsing major version number
+    │   └─ ← [Revert] ContractNotFound("Counter:v1")
+    └─ ← [Revert] ContractNotFound("Counter:v1")
+
+
+
+== Logs ==
+  ✔ CreateX already deployed on chain: 31337 

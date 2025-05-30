@@ -20,18 +20,18 @@ sepolia = { key = "${ETHERSCAN_MAIN_API_KEY}" }
 celo-alfajores = { key = "${CELOSCAN_API_KEY}", chain = 44787 }
 celo = { key = "${CELOSCAN_API_KEY}", chain = "celo" }
 
-[profile.treb]
+[profile.default.treb]
 library_deployer =  "local"
 
-[profile.treb.senders.anvil]
+[profile.default.treb.senders.anvil]
 type = "private_key"
 private_key = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 
-[profile.treb.senders.local]
+[profile.default.treb.senders.local]
 type = "private_key"
 private_key = "${DEPLOYER_PRIVATE_KEY}"
 
-[profile.treb.senders.safe]
+[profile.default.treb.senders.safe]
 type = "safe"
 safe = "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
 signer = "local"

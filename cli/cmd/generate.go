@@ -2,252 +2,193 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
+	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/generator"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/interactive"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/resolvers"
-)
-
-var (
-	genStrategyFlag      string
-	genProxyContractFlag string
-	genProxyTypeFlag     string
 )
 
 // genCmd represents the gen command
 var genCmd = &cobra.Command{
 	Use:   "gen",
-	Short: "Generate deployment scripts",
-	Long: `Interactive generator for creating deployment scripts.
+	Short: "Generate example deployment scripts",
+	Long: `Generate example deployment scripts that work with treb's new architecture.
 
-Available types:
-  deploy  - Standard contract deployment
-  proxy   - Proxy deployment scripts`,
+This command creates template scripts that demonstrate how to use treb-sol's
+base contracts for deployments. The generated scripts are starting points
+that you can customize for your specific deployment needs.`,
 }
 
-var genDeployCmd = &cobra.Command{
-	Use:   "deploy [contract]",
-	Short: "Generate deploy script for a contract",
-	Long: `Generate a deployment script for a specific contract.
+var genExampleCmd = &cobra.Command{
+	Use:   "example [name]",
+	Short: "Generate an example deployment script",
+	Long: `Generate an example deployment script that demonstrates best practices.
 
 Examples:
-  treb gen deploy Counter                        # Interactive mode
-  treb gen deploy Counter --strategy CREATE3    # Non-interactive with strategy
-  treb gen deploy --non-interactive Counter --strategy CREATE2  # Fully non-interactive`,
-	Args:  cobra.MaximumNArgs(1),
+  treb gen example                    # Generate Deploy.s.sol
+  treb gen example MyDeploy          # Generate MyDeploy.s.sol
+  treb gen example deploy/Token      # Generate script/deploy/Token.s.sol`,
+	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if !IsNonInteractive() {
-			fmt.Println("🧙 Interactive Contract Deploy Script Generator")
-		}
-
-		var contractName string
+		scriptName := "Deploy"
 		if len(args) > 0 {
-			contractName = args[0]
+			scriptName = args[0]
 		}
 
-		// Validate required fields in non-interactive mode
-		if IsNonInteractive() {
-			if contractName == "" {
-				return fmt.Errorf("contract name is required in non-interactive mode")
-			}
-			if genStrategyFlag == "" {
-				return fmt.Errorf("--strategy flag is required in non-interactive mode (CREATE2 or CREATE3)")
-			}
+		// Determine script path
+		scriptPath := filepath.Join("script", scriptName+".s.sol")
+		
+		// Ensure script directory exists
+		scriptDir := filepath.Dir(scriptPath)
+		if err := os.MkdirAll(scriptDir, 0755); err != nil {
+			return fmt.Errorf("failed to create script directory: %w", err)
 		}
 
-		// Create resolver and generator
-		resolver := resolvers.NewContext(".", !IsNonInteractive())
-		gen := generator.NewGenerator(".")
-
-		// Resolve contract
-		var contractInfo *contracts.ContractInfo
-		var err error
-		if contractName != "" {
-			contractInfo, err = resolver.ResolveContractForImplementation(contractName)
-			if err != nil {
-				return fmt.Errorf("failed to resolve contract: %w", err)
-			}
-		} else if !IsNonInteractive() {
-			// Interactive mode: let user pick a contract
-			indexer, err := contracts.GetGlobalIndexer(".")
-			if err != nil {
-				return fmt.Errorf("failed to initialize contract indexer: %w", err)
-			}
-			contracts := indexer.GetDeployableContracts()
-			if len(contracts) == 0 {
-				return fmt.Errorf("no deployable contracts found")
-			}
-			contractInfo, err = interactive.SelectContract(contracts, "Select contract to generate deploy script:")
-			if err != nil {
-				return err
-			}
+		// Check if script already exists
+		if _, err := os.Stat(scriptPath); err == nil {
+			return fmt.Errorf("script already exists: %s", scriptPath)
 		}
 
-		// Handle strategy selection
-		var strategy contracts.DeployStrategy
-		if genStrategyFlag != "" {
-			strategy, err = contracts.ValidateStrategy(genStrategyFlag)
-			if err != nil {
-				return fmt.Errorf("invalid strategy '%s': %w", genStrategyFlag, err)
-			}
-		} else if !IsNonInteractive() {
-			// Interactive mode: let user pick strategy
-			strategies := []string{"CREATE2", "CREATE3"}
-			selector := interactive.NewSelector()
-			strategyStr, _, err := selector.SelectOption("Select deployment strategy:", strategies, 1) // Default to CREATE3
-			if err != nil {
-				return fmt.Errorf("strategy selection failed: %w", err)
-			}
-			strategy, err = contracts.ValidateStrategy(strategyStr)
-			if err != nil {
-				return err
-			}
+		// Generate example script
+		content := generateExampleScript(filepath.Base(scriptName))
+		
+		// Write script file
+		if err := os.WriteFile(scriptPath, []byte(content), 0644); err != nil {
+			return fmt.Errorf("failed to write script: %w", err)
 		}
 
-		// Generate the script
-		return gen.GenerateDeployScript(contractInfo, strategy)
+		fmt.Printf("✅ Generated example script: %s\n\n", scriptPath)
+		fmt.Println("This script demonstrates:")
+		fmt.Println("  • Using treb-sol's Script base contract")
+		fmt.Println("  • Accessing configured senders")
+		fmt.Println("  • Deploying contracts with CREATE2/CREATE3")
+		fmt.Println("  • Looking up existing deployments from registry")
+		fmt.Println("  • Emitting deployment events for automatic tracking")
+		fmt.Println("\nCustomize the script for your specific needs, then run with:")
+		fmt.Printf("  treb run %s --network <network>\n", scriptPath)
+		
+		return nil
 	},
 }
 
-var genProxyCmd = &cobra.Command{
-	Use:   "proxy [contract]",
-	Short: "Generate proxy deploy script for a contract",
-	Long: `Generate a proxy deployment script for a specific contract.
+var genLibraryCmd = &cobra.Command{
+	Use:   "library [name]",
+	Short: "Generate a library deployment script",
+	Long: `Generate a deployment script specifically for Solidity libraries.
 
 Examples:
-  treb gen proxy Counter                                    # Interactive mode
-  treb gen proxy Counter --strategy CREATE3 --proxy-contract ERC1967Proxy  # Non-interactive
-  treb gen proxy --non-interactive Counter --strategy CREATE2 --proxy-contract lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy  # Fully non-interactive`,
-	Args:  cobra.MaximumNArgs(1),
+  treb gen library                    # Generate DeployLibrary.s.sol
+  treb gen library StringUtils       # Generate DeployStringUtils.s.sol`,
+	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if !IsNonInteractive() {
-			fmt.Println("🧙 Interactive Proxy Deploy Script Generator")
-		}
-
-		var contractName string
+		libraryName := "Library"
 		if len(args) > 0 {
-			contractName = args[0]
+			libraryName = args[0]
 		}
 
-		// Validate required fields in non-interactive mode
-		if IsNonInteractive() {
-			if contractName == "" {
-				return fmt.Errorf("contract name is required in non-interactive mode")
-			}
-			if genStrategyFlag == "" {
-				return fmt.Errorf("--strategy flag is required in non-interactive mode (CREATE2 or CREATE3)")
-			}
-			if genProxyContractFlag == "" {
-				return fmt.Errorf("--proxy-contract flag is required in non-interactive mode")
-			}
+		// Script path
+		scriptPath := filepath.Join("script", "deploy", fmt.Sprintf("Deploy%s.s.sol", libraryName))
+		
+		// Ensure script directory exists
+		scriptDir := filepath.Dir(scriptPath)
+		if err := os.MkdirAll(scriptDir, 0755); err != nil {
+			return fmt.Errorf("failed to create script directory: %w", err)
 		}
 
-		// Create resolver and generator
-		resolver := resolvers.NewContext(".", !IsNonInteractive())
-		gen := generator.NewGenerator(".")
-
-		// Resolve implementation contract
-		var implementationInfo *contracts.ContractInfo
-		var err error
-		if contractName != "" {
-			implementationInfo, err = resolver.ResolveContractForImplementation(contractName)
-			if err != nil {
-				return fmt.Errorf("failed to resolve implementation contract: %w", err)
-			}
-		} else if !IsNonInteractive() {
-			// Interactive mode: let user pick a contract
-			indexer, err := contracts.GetGlobalIndexer(".")
-			if err != nil {
-				return fmt.Errorf("failed to initialize contract indexer: %w", err)
-			}
-			contracts := indexer.GetDeployableContracts()
-			if len(contracts) == 0 {
-				return fmt.Errorf("no deployable contracts found")
-			}
-			implementationInfo, err = interactive.SelectContract(contracts, "Select implementation contract:")
-			if err != nil {
-				return err
-			}
+		// Check if script already exists
+		if _, err := os.Stat(scriptPath); err == nil {
+			return fmt.Errorf("script already exists: %s", scriptPath)
 		}
 
-		// Handle proxy contract selection
-		var proxyInfo *contracts.ContractInfo
-		if genProxyContractFlag != "" {
-			proxyInfo, err = resolver.ResolveContractForProxy(genProxyContractFlag)
-			if err != nil {
-				return fmt.Errorf("failed to resolve proxy contract '%s': %w", genProxyContractFlag, err)
-			}
-		} else if !IsNonInteractive() {
-			// Interactive mode: let user pick proxy contract
-			proxyInfo, err = resolver.SelectProxyContract()
-			if err != nil {
-				return err
-			}
+		// Generate library script
+		content := generateLibraryScript(libraryName)
+		
+		// Write script file
+		if err := os.WriteFile(scriptPath, []byte(content), 0644); err != nil {
+			return fmt.Errorf("failed to write script: %w", err)
 		}
 
-		// Handle strategy selection
-		var strategy contracts.DeployStrategy
-		if genStrategyFlag != "" {
-			strategy, err = contracts.ValidateStrategy(genStrategyFlag)
-			if err != nil {
-				return fmt.Errorf("invalid strategy '%s': %w", genStrategyFlag, err)
-			}
-		} else if !IsNonInteractive() {
-			// Interactive mode: let user pick strategy
-			strategies := []string{"CREATE2", "CREATE3"}
-			selector := interactive.NewSelector()
-			strategyStr, _, err := selector.SelectOption("Select deployment strategy:", strategies, 1) // Default to CREATE3
-			if err != nil {
-				return fmt.Errorf("strategy selection failed: %w", err)
-			}
-			strategy, err = contracts.ValidateStrategy(strategyStr)
-			if err != nil {
-				return err
-			}
-		}
-
-		// Handle proxy type
-		var proxyType contracts.ProxyType
-		if genProxyTypeFlag != "" {
-			// Validate provided proxy type
-			proxyType = contracts.ProxyType(genProxyTypeFlag)
-			switch proxyType {
-			case contracts.ProxyTypeOZTransparent, contracts.ProxyTypeOZUUPS, contracts.ProxyTypeCustom:
-				// Valid
-			default:
-				return fmt.Errorf("invalid proxy type: %s (must be TransparentUpgradeable, UUPSUpgradeable, or Custom)", genProxyTypeFlag)
-			}
-		} else {
-			// Auto-determine proxy type based on proxy contract name
-			proxyType = determineProxyType(proxyInfo.Name)
-			// If we can't determine it, just use Custom
-		}
-
-		// Generate the script
-		return gen.GenerateProxyScript(implementationInfo, proxyInfo, strategy, proxyType)
+		fmt.Printf("✅ Generated library deployment script: %s\n\n", scriptPath)
+		fmt.Println("To deploy the library:")
+		fmt.Printf("  1. Update the script with your library's artifact path\n")
+		fmt.Printf("  2. Run: treb run %s --network <network>\n", scriptPath)
+		
+		return nil
 	},
 }
 
 func init() {
-	genCmd.AddCommand(genDeployCmd)
-	genCmd.AddCommand(genProxyCmd)
-	
-	// Add flags to subcommands
-	genDeployCmd.Flags().StringVar(&genStrategyFlag, "strategy", "", "Deployment strategy (CREATE2 or CREATE3)")
-	genProxyCmd.Flags().StringVar(&genStrategyFlag, "strategy", "", "Deployment strategy (CREATE2 or CREATE3)")
-	genProxyCmd.Flags().StringVar(&genProxyContractFlag, "proxy-contract", "", "Proxy contract (name or path:contract format)")
-	genProxyCmd.Flags().StringVar(&genProxyTypeFlag, "proxy-type", "", "Proxy type (TransparentUpgradeable, UUPSUpgradeable, or Custom)")
+	genCmd.AddCommand(genExampleCmd)
+	genCmd.AddCommand(genLibraryCmd)
 }
 
-// determineProxyType determines the proxy type based on the proxy contract name
-func determineProxyType(proxyName string) contracts.ProxyType {
-	if strings.Contains(proxyName, "TransparentUpgradeable") {
-		return contracts.ProxyTypeOZTransparent
-	} else if strings.Contains(proxyName, "ERC1967") || strings.Contains(proxyName, "UUPS") {
-		return contracts.ProxyTypeOZUUPS
-	}
-	return contracts.ProxyTypeCustom
+// generateExampleScript creates an example deployment script
+func generateExampleScript(name string) string {
+	return fmt.Sprintf(`// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import {Script} from "treb-sol/src/Script.sol";
+
+contract %s is Script {
+    function run() public {
+        // Get the default sender (configured via treb profile)
+        Sender deployer = sender("default");
+        
+        // Example: Deploy a simple contract
+        address myContract = deployer.deployCreate3("MyContract.sol:MyContract");
+        
+        // Example: Deploy with constructor arguments
+        bytes memory args = abi.encode(1000, "Hello");
+        address tokenContract = deployer.deployCreate3("Token.sol:Token", args);
+        
+        // Example: Deploy with specific salt for deterministic address
+        bytes32 salt = keccak256("my-unique-salt");
+        address deterministicContract = deployer.deployCreate3(
+            salt,
+            getCode("DeterministicContract.sol:DeterministicContract"),
+            ""
+        );
+        
+        // Example: Look up existing deployment from registry
+        address existingContract = getDeployment("ExistingContract");
+        
+        // Example: Deploy proxy pattern
+        address implementation = deployer.deployCreate3("MyImplementation.sol:MyImplementation");
+        bytes memory proxyArgs = abi.encode(implementation, "");
+        address proxy = deployer.deployCreate3("ERC1967Proxy.sol:ERC1967Proxy", proxyArgs);
+        
+        // All deployments are automatically tracked via events
+        // The treb CLI will parse these events and update the registry
+    }
+    
+    // Helper function to get bytecode
+    function getCode(string memory what) internal returns (bytes memory) {
+        return vm.getCode(what);
+    }
+}
+`, name)
+}
+
+// generateLibraryScript creates a library deployment script
+func generateLibraryScript(libraryName string) string {
+	return fmt.Sprintf(`// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import {LibraryDeployment} from "treb-sol/src/LibraryDeployment.sol";
+
+contract Deploy%s is LibraryDeployment {
+    // LibraryDeployment automatically:
+    // 1. Reads LIBRARY_ARTIFACT_PATH from environment
+    // 2. Deploys the library using CREATE2
+    // 3. Emits deployment events for registry tracking
+    
+    // You can override the deployment logic if needed:
+    /*
+    function run() public override {
+        // Custom deployment logic
+        super.run(); // Call parent to maintain event emissions
+    }
+    */
+}
+`, libraryName)
 }

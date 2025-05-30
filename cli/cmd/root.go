@@ -37,7 +37,8 @@ func init() {
 	})
 
 	// Main workflow commands (init at the end)
-	deployCmd.GroupID = "main"
+	// deployCmd.GroupID = "main" // TODO: Fix deployment package
+	runCmd.GroupID = "main"
 	listCmd.GroupID = "main"
 	showCmd.GroupID = "main"
 	verifyCmd.GroupID = "main"
@@ -53,7 +54,8 @@ func init() {
 	// debugCmd and versionCmd will appear in "Additional Commands" section
 	// since they don't have a GroupID set
 
-	rootCmd.AddCommand(deployCmd)
+	// rootCmd.AddCommand(deployCmd) // TODO: Fix deployment package
+	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(showCmd)
 	rootCmd.AddCommand(verifyCmd)

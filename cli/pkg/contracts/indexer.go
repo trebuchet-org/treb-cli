@@ -1,6 +1,7 @@
 package contracts
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -11,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
+	"golang.org/x/crypto/sha3"
 )
 
 var (
@@ -109,18 +111,20 @@ func AllFilter() QueryFilter {
 
 // Indexer discovers and indexes contracts and their artifacts
 type Indexer struct {
-	projectRoot   string
-	contracts     map[string]*ContractInfo   // key: "path:contractName" or "contractName" if unique
-	contractNames map[string][]*ContractInfo // key: contract name, value: all contracts with that name
-	mu            sync.RWMutex
+	projectRoot       string
+	contracts         map[string]*ContractInfo   // key: "path:contractName" or "contractName" if unique
+	contractNames     map[string][]*ContractInfo // key: contract name, value: all contracts with that name
+	bytecodeHashIndex map[string]*ContractInfo   // key: bytecodeHash -> ContractInfo
+	mu                sync.RWMutex
 }
 
 // NewIndexer creates a new contract indexer (always includes libraries)
 func NewIndexer(projectRoot string) *Indexer {
 	return &Indexer{
-		projectRoot:   projectRoot,
-		contracts:     make(map[string]*ContractInfo),
-		contractNames: make(map[string][]*ContractInfo),
+		projectRoot:       projectRoot,
+		contracts:         make(map[string]*ContractInfo),
+		contractNames:     make(map[string][]*ContractInfo),
+		bytecodeHashIndex: make(map[string]*ContractInfo),
 	}
 }
 
@@ -382,7 +386,6 @@ func (i *Indexer) processArtifact(artifactPath string) error {
 	for sourcePath, contractName := range artifact.Metadata.Settings.CompilationTarget {
 		// Find matching contract
 		i.mu.Lock()
-		defer i.mu.Unlock()
 
 		// Try exact match first
 		key := fmt.Sprintf("%s:%s", sourcePath, contractName)
@@ -390,6 +393,12 @@ func (i *Indexer) processArtifact(artifactPath string) error {
 			relPath, _ := filepath.Rel(i.projectRoot, artifactPath)
 			contract.ArtifactPath = relPath
 			contract.Artifact = &artifact
+			
+			// Calculate and store bytecode hash
+			if hash, err := i.calculateBytecodeHash(contract); err == nil {
+				i.bytecodeHashIndex[hash] = contract
+			}
+			i.mu.Unlock()
 			continue
 		}
 
@@ -401,10 +410,16 @@ func (i *Indexer) processArtifact(artifactPath string) error {
 					relPath, _ := filepath.Rel(i.projectRoot, artifactPath)
 					contract.ArtifactPath = relPath
 					contract.Artifact = &artifact
+					
+					// Calculate and store bytecode hash
+					if hash, err := i.calculateBytecodeHash(contract); err == nil {
+						i.bytecodeHashIndex[hash] = contract
+					}
 					break
 				}
 			}
 		}
+		i.mu.Unlock()
 	}
 
 	return nil
@@ -648,4 +663,49 @@ func (c *ContractInfo) GetRequiredLibraries() []LibraryRequirement {
 	}
 
 	return libs
+}
+
+// calculateBytecodeHash computes the keccak256 hash of the contract's bytecode
+func (i *Indexer) calculateBytecodeHash(contract *ContractInfo) (string, error) {
+	if contract.Artifact == nil {
+		return "", fmt.Errorf("no artifact found for contract %s", contract.Name)
+	}
+
+	// Get the creation bytecode
+	bytecode := contract.Artifact.Bytecode.Object
+	if bytecode == "" || bytecode == "0x" {
+		return "", fmt.Errorf("no bytecode found for contract %s", contract.Name)
+	}
+
+	// Remove 0x prefix if present
+	bytecode = strings.TrimPrefix(bytecode, "0x")
+
+	// Decode hex string to bytes
+	bytecodeBytes, err := hex.DecodeString(bytecode)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode bytecode: %w", err)
+	}
+
+	// Calculate keccak256 hash
+	hasher := sha3.NewLegacyKeccak256()
+	hasher.Write(bytecodeBytes)
+	hash := hasher.Sum(nil)
+	
+	// Return as hex string with 0x prefix
+	return "0x" + hex.EncodeToString(hash), nil
+}
+
+// GetContractByBytecodeHash returns a contract by its bytecode hash
+func (i *Indexer) GetContractByBytecodeHash(hash string) *ContractInfo {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
+	// Normalize hash format
+	hash = strings.ToLower(strings.TrimPrefix(hash, "0x"))
+	if len(hash) != 64 {
+		return nil
+	}
+	hash = "0x" + hash
+
+	return i.bytecodeHashIndex[hash]
 }

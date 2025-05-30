@@ -13,7 +13,8 @@ import (
 
 // FoundryConfig represents the full foundry.toml configuration
 type FoundryConfig struct {
-	Profile map[string]ProfileFoundryConfig `toml:"profile"`
+	Profile      map[string]ProfileFoundryConfig `toml:"profile"`
+	RpcEndpoints map[string]string               `toml:"rpc_endpoints"`
 }
 
 // ProfileFoundryConfig represents a profile's foundry configuration
@@ -71,6 +72,12 @@ func (fm *FoundryManager) Load() (*FoundryConfig, error) {
 	}
 
 	return &config, nil
+}
+
+// LoadFoundryConfig is a helper to load foundry config from project root
+func LoadFoundryConfig(projectRoot string) (*FoundryConfig, error) {
+	fm := NewFoundryManager(projectRoot)
+	return fm.Load()
 }
 
 // Save writes the foundry configuration back to file
