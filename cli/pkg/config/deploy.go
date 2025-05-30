@@ -60,6 +60,30 @@ func LoadDeployConfig(projectPath string) (*DeployConfig, error) {
 	return &config, nil
 }
 
+// ResolveSenderName finds the sender name for a given address by checking all profiles
+func (dc *DeployConfig) ResolveSenderName(address string) string {
+	lowerAddr := strings.ToLower(address)
+	
+	// Check each profile
+	for profileName, profile := range dc.Profile {
+		// Check each sender in the profile
+		for senderName, sender := range profile.Senders {
+			// For Safe senders, check the safe address
+			if sender.Type == "safe" && strings.ToLower(sender.Safe) == lowerAddr {
+				return fmt.Sprintf("%s/%s", profileName, senderName)
+			}
+			// For other types, we'd need to derive the address from private key
+			// which is more complex, so skip for now
+		}
+	}
+	
+	// Return shortened address if no match found
+	if len(address) > 10 {
+		return address[:10] + "..."
+	}
+	return address
+}
+
 // GetProfileConfig returns the deploy config for a specific profile (usually "treb")
 func (dc *DeployConfig) GetProfileConfig(profile string) (*ProfileConfig, error) {
 	if profileConfig, exists := dc.Profile[profile]; exists {

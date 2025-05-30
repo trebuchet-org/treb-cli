@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/interactive"
 )
 
 // genCmd represents the gen command
@@ -117,9 +119,99 @@ Examples:
 	},
 }
 
+var genDeployCmd = &cobra.Command{
+	Use:   "deploy [contract]",
+	Short: "Generate a deployment script for a specific contract",
+	Long: `Generate a deployment script for a specific contract using the new treb-sol structure.
+
+The generated script will:
+  • Use the artifact name (just contract name if unique, full path:name if duplicates exist)
+  • Support the LABEL environment variable for deployment labeling
+  • Include constructor argument handling if the contract has a constructor
+  • Use CREATE3 by default (can be changed with --strategy flag)
+
+Examples:
+  treb gen deploy                     # Interactive contract selection
+  treb gen deploy Counter             # Generate DeployCounter.s.sol
+  treb gen deploy Counter --strategy CREATE2  # Use CREATE2 instead of CREATE3`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// Parse strategy flag
+		strategyStr, _ := cmd.Flags().GetString("strategy")
+		strategy := contracts.StrategyCreate3  // Default
+		if strategyStr != "" {
+			var err error
+			strategy, err = contracts.ValidateStrategy(strategyStr)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Initialize indexer
+		indexer, err := contracts.GetGlobalIndexer(".")
+		if err != nil {
+			return fmt.Errorf("failed to initialize contract indexer: %w", err)
+		}
+
+		var contractInfo *contracts.ContractInfo
+		
+		if len(args) > 0 {
+			// Contract name provided
+			contractName := args[0]
+			
+			// Find contract(s) with this name
+			contractInfos := indexer.FindContractByName(contractName, contracts.DefaultFilter())
+			
+			if len(contractInfos) == 0 {
+				return fmt.Errorf("no deployable contract found with name: %s", contractName)
+			} else if len(contractInfos) == 1 {
+				contractInfo = contractInfos[0]
+			} else {
+				// Multiple contracts with same name, let user choose
+				contractInfo, err = interactive.SelectContract(contractInfos, "Multiple contracts found. Select one:")
+				if err != nil {
+					return err
+				}
+			}
+		} else {
+			// No contract specified, show interactive picker
+			deployableContracts := indexer.GetDeployableContracts()
+			if len(deployableContracts) == 0 {
+				return fmt.Errorf("no deployable contracts found in project")
+			}
+			
+			contractInfo, err = interactive.SelectContract(deployableContracts, "Select a contract to deploy:")
+			if err != nil {
+				return err
+			}
+		}
+
+		// Generate the deployment script
+		generator := contracts.NewGenerator(".")
+		if err := generator.GenerateDeployScript(contractInfo, strategy); err != nil {
+			return err
+		}
+
+		// Print success message
+		scriptPath := generator.GetDeployScriptPath(contractInfo)
+		fmt.Printf("\n✅ Generated deployment script: %s\n", scriptPath)
+		fmt.Println("\nTo deploy, run:")
+		fmt.Printf("  treb run %s --network <network> --env LABEL=<version>\n", scriptPath)
+		fmt.Println("\nThe script will:")
+		fmt.Println("  • Deploy using the configured sender")
+		fmt.Println("  • Use the LABEL environment variable for versioning")
+		fmt.Println("  • Emit events for automatic registry tracking")
+		
+		return nil
+	},
+}
+
 func init() {
+	// Add strategy flag to genDeployCmd
+	genDeployCmd.Flags().String("strategy", "", "Deployment strategy: CREATE2 or CREATE3 (default: CREATE3)")
+	
 	genCmd.AddCommand(genExampleCmd)
 	genCmd.AddCommand(genLibraryCmd)
+	genCmd.AddCommand(genDeployCmd)
 }
 
 // generateExampleScript creates an example deployment script

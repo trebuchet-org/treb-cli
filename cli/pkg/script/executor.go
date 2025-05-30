@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
 )
 
 // Executor handles running Foundry scripts and parsing their output
@@ -31,6 +32,8 @@ type RunOptions struct {
 	ScriptPath     string
 	Network        string
 	Profile        string
+	Namespace      string            // Namespace to use (sets NAMESPACE env var)
+	EnvVars        map[string]string // Additional environment variables
 	DryRun         bool
 	Debug          bool
 	DebugJSON      bool
@@ -201,16 +204,36 @@ func (e *Executor) buildEnvironment(opts RunOptions) ([]string, error) {
 	// Add NETWORK env var (expected by Dispatcher for creating forks)
 	env = append(env, fmt.Sprintf("NETWORK=%s", rpcURL))
 
-	// Add NAMESPACE (default for now)
-	namespace := "default"
-	if ns := os.Getenv("DEPLOYMENT_NAMESPACE"); ns != "" {
-		namespace = ns
+	// Add NAMESPACE
+	namespace := opts.Namespace
+	if namespace == "" {
+		// Fallback to environment variable
+		namespace = os.Getenv("DEPLOYMENT_NAMESPACE")
+		if namespace == "" {
+			namespace = "default"
+		}
 	}
 	env = append(env, fmt.Sprintf("NAMESPACE=%s", namespace))
 
 	// Add DRYRUN flag
 	if opts.DryRun {
 		env = append(env, "DRYRUN=true")
+	}
+
+	// Add any custom environment variables
+	for key, value := range opts.EnvVars {
+		env = append(env, fmt.Sprintf("%s=%s", key, value))
+	}
+
+	// Debug: print environment info
+	if opts.Debug {
+		fmt.Printf("NAMESPACE: %s\n", namespace)
+		if len(opts.EnvVars) > 0 {
+			fmt.Println("Custom environment variables:")
+			for k, v := range opts.EnvVars {
+				fmt.Printf("  %s=%s\n", k, v)
+			}
+		}
 	}
 
 	return env, nil
@@ -243,8 +266,8 @@ func (e *Executor) buildForgeArgs(opts RunOptions) []string {
 		}
 	}
 
-	// Add broadcast flag if not dry run
-	if !opts.DryRun {
+	// Add broadcast flag if not dry run and not debug mode
+	if !opts.DryRun && !opts.Debug {
 		args = append(args, "--broadcast")
 	}
 
@@ -288,9 +311,26 @@ func (e *Executor) parseOutput(output []byte) ([]DeploymentEvent, []ParsedEvent,
 }
 
 // findBroadcastFile finds the broadcast file for the executed script
-func (e *Executor) findBroadcastFile(scriptPath, network string) string {
-	// Broadcast files are typically in broadcast/<ScriptName>/<chainId>/run-latest.json
-	// TODO: Get chain ID from network mapping
-	// For now, we'll just return empty
+func (e *Executor) findBroadcastFile(scriptPath, networkName string) string {
+	// Get script name from path
+	scriptName := filepath.Base(scriptPath)
+	
+	// Get chain ID for network
+	chainID := network.GetChainID(networkName)
+	chainIDStr := fmt.Sprintf("%d", chainID)
+	
+	// Look for broadcast file
+	broadcastPath := filepath.Join(e.projectPath, "broadcast", scriptName, chainIDStr, "run-latest.json")
+	if _, err := os.Stat(broadcastPath); err == nil {
+		return broadcastPath
+	}
+	
+	// Check without extension
+	scriptNameNoExt := strings.TrimSuffix(scriptName, filepath.Ext(scriptName))
+	broadcastPath = filepath.Join(e.projectPath, "broadcast", scriptNameNoExt, chainIDStr, "run-latest.json")
+	if _, err := os.Stat(broadcastPath); err == nil {
+		return broadcastPath
+	}
+	
 	return ""
 }

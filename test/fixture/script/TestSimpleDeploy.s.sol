@@ -8,6 +8,7 @@ import {console} from "forge-std/console.sol";
 
 contract TestSimpleDeployScript is TrebScript {
     using Deployer for Senders.Sender;
+    using Deployer for Deployer.Deployment;
 
     function run() public {
         console.log("TestSimpleDeployScript starting...");
@@ -24,14 +25,14 @@ contract TestSimpleDeployScript is TrebScript {
         }
         console.log("CreateX code size:", codeSize);
         
+        bytes memory bytecode = hex"6080604052348015600e575f5ffd5b50603e80601b5f395ff3fe6080604052348015600e575f5ffd5b50005fea";
         // Try to predict an address first
-        bytes32 salt = keccak256("test-simple");
-        address predicted = localSender.predictCreate3(salt);
+        string memory entropy = "test-simple";
+        address predicted = localSender.create3(entropy, bytecode).predict();
         console.log("Predicted address:", predicted);
         
         // Now try a simple deployment using raw bytecode
-        bytes memory bytecode = hex"6080604052348015600e575f5ffd5b50603e80601b5f395ff3fe6080604052348015600e575f5ffd5b50005fea";
-        address deployed = localSender.deployCreate3(salt, bytecode, "");
+        address deployed = localSender.create3(entropy, bytecode).deploy();
         console.log("Deployed address:", deployed);
         
         console.log("TestSimpleDeployScript completed");

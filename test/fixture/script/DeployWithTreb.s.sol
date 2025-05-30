@@ -18,13 +18,15 @@ contract DeployWithTrebScript is TrebScript {
         Senders.Sender storage anvil = sender("anvil");
 
         // Deploy a Counter using CREATE3 with deterministic address
-        address counter = anvil.create3("src/Counter.sol:Counter").setLabel("V100").deploy();
+        string memory counterLabel = vm.envOr("LABEL", string("V100"));
+        address counter = anvil.create3("src/Counter.sol:Counter").setLabel(counterLabel).deploy();
         
         // Initialize the counter
         Counter(counter).setNumber(100);
         
         // Deploy a token with constructor args
-        address token = anvil.create3("src/SampleToken.sol:SampleToken").setLabel("v100").deploy(
+        string memory tokenLabel = vm.envOr("LABEL", string("v100"));
+        address token = anvil.create3("src/SampleToken.sol:SampleToken").setLabel(tokenLabel).deploy(
             abi.encode("Test Token", "TEST", 1000000 * 10**18)
         );
         

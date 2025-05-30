@@ -7,7 +7,7 @@ DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS = -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)
 
 # Build the CLI binary
-build: forge_build
+build: 
 	@echo "🔨 Building treb..."
 	@go build -ldflags="$(LDFLAGS)" -tags dev -o bin/treb ./cli 
 

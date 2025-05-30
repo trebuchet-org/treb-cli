@@ -49,6 +49,8 @@ func (m *Manager) load() error {
 			Networks:  make(map[string]*NetworkEntry),
 			Libraries: make(map[string]*types.DeploymentEntry),
 		}
+		// Initialize the index for empty registry
+		m.index = make(map[string]*types.DeploymentEntry)
 		return nil
 	}
 
@@ -276,6 +278,29 @@ func (m *Manager) UpdateDeployment(chainID uint64, deployment *types.DeploymentE
 	}
 
 	return fmt.Errorf("network not found")
+}
+
+// AddDeployment adds a new deployment to the registry
+func (m *Manager) AddDeployment(networkName string, chainID uint64, deployment *types.DeploymentEntry) error {
+	chainIDStr := fmt.Sprintf("%d", chainID)
+	
+	// Ensure network entry exists
+	if m.registry.Networks[chainIDStr] == nil {
+		m.registry.Networks[chainIDStr] = &NetworkEntry{
+			Name:        networkName,
+			Deployments: make(map[string]*types.DeploymentEntry),
+		}
+	}
+	
+	// Add deployment indexed by address
+	address := strings.ToLower(deployment.Address.Hex())
+	m.registry.Networks[chainIDStr].Deployments[address] = deployment
+	
+	// Update index
+	m.index[deployment.FQID] = deployment
+	
+	// Save the registry
+	return m.Save()
 }
 
 // DeploymentInfo represents deployment information for listing

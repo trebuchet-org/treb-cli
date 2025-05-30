@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 )
@@ -80,4 +81,34 @@ func (fc *FoundryFullConfig) GetProfileTrebConfig(profileName string) (*TrebConf
 // expandEnvVar expands environment variables in a string
 func expandEnvVar(s string) string {
 	return os.ExpandEnv(s)
+}
+
+// GetSenderNameByAddress looks up a sender name by its address
+func (tc *TrebConfig) GetSenderNameByAddress(address string) (string, error) {
+	if tc == nil || tc.Senders == nil {
+		return "", fmt.Errorf("no senders configured")
+	}
+	
+	// Normalize the address for comparison
+	address = strings.ToLower(address)
+	
+	for name, sender := range tc.Senders {
+		switch sender.Type {
+		case "safe":
+			if strings.ToLower(sender.Safe) == address {
+				return name, nil
+			}
+		case "private_key":
+			// For private key senders, we need to derive the address
+			addr, err := GetAddressFromPrivateKey(sender.PrivateKey)
+			if err == nil && strings.ToLower(addr) == address {
+				return name, nil
+			}
+		case "ledger":
+			// For ledger, we can't easily derive the address without the device
+			// Skip for now
+		}
+	}
+	
+	return "", fmt.Errorf("sender not found for address: %s", address)
 }

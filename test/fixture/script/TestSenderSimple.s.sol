@@ -8,6 +8,7 @@ import {console} from "forge-std/console.sol";
 
 contract TestSenderSimpleScript is TrebScript {
     using Deployer for Senders.Sender;
+    using Deployer for Deployer.Deployment;
 
     function run() public {
         console.log("TestSenderSimpleScript starting...");
@@ -27,11 +28,6 @@ contract TestSenderSimpleScript is TrebScript {
         // Get the safe sender
         Senders.Sender storage safeSender = sender("safe");
         console.log("Safe sender account:", safeSender.account);
-        
-        // Test prediction without deployment
-        bytes32 salt = keccak256("test-salt");
-        address predicted = anvilSender.predictCreate3(salt);
-        console.log("Predicted address for test-salt:", predicted);
         
         console.log("TestSenderSimpleScript completed");
     }
