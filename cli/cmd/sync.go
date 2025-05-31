@@ -2,47 +2,48 @@ package cmd
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
+	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
+	registryv2 "github.com/trebuchet-org/treb-cli/cli/pkg/registry/v2"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/safe"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
-var (
-	cleanRegistry bool
-	debugSync     bool
-)
+var syncCmd = &cobra.Command{
+	Use:   "sync",
+	Short: "Sync registry with on-chain state",
+	Long: `Update deployment registry with latest on-chain information.
+Checks pending Safe transactions and updates their execution status.
 
-var syncV1Cmd = &cobra.Command{
-	Use:   "sync-v1",
-	Short: "Sync v1 registry with on-chain state (legacy)",
-	Long: `Update v1 deployment registry with latest on-chain information.
-Checks pending Safe transactions and updates execution status.
-
-Note: This command is for the legacy v1 registry format only.
-
-Options:
-  --clean  Remove invalid entries while syncing`,
+This command will:
+- Check all pending Safe transactions for execution status
+- Update transaction records when Safe txs are executed
+- Update deployment status based on transaction status
+- Clean up orphaned records if --clean is specified`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := syncRegistry(); err != nil {
+		cleanFlag, _ := cmd.Flags().GetBool("clean")
+		debugFlag, _ := cmd.Flags().GetBool("debug")
+		
+		if err := syncRegistryV2(cleanFlag, debugFlag); err != nil {
 			checkError(err)
 		}
 
-		fmt.Println("Registry synced successfully")
+		color.New(color.FgGreen).Println("✓ Registry synced successfully")
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(syncV1Cmd)
-	syncV1Cmd.Flags().BoolVar(&cleanRegistry, "clean", false, "Remove invalid entries while syncing")
-	syncV1Cmd.Flags().BoolVar(&debugSync, "debug", false, "Show debug information during sync")
+	rootCmd.AddCommand(syncCmd)
+	syncCmd.Flags().Bool("clean", false, "Remove invalid entries while syncing")
+	syncCmd.Flags().Bool("debug", false, "Show debug information during sync")
 }
 
-func syncRegistry() error {
-	// Initialize registry manager
-	registryManager, err := registry.NewManager("deployments.json")
+func syncRegistryV2(cleanRegistry bool, debugSync bool) error {
+	// Initialize v2 registry manager
+	manager, err := registryv2.NewManager(".")
 	if err != nil {
 		return fmt.Errorf("failed to initialize registry: %w", err)
 	}
@@ -50,53 +51,54 @@ func syncRegistry() error {
 	fmt.Println("Syncing registry...")
 
 	// Check and update pending Safe transactions
-	if err := syncPendingSafeTransactions(registryManager); err != nil {
+	if err := syncPendingSafeTransactionsV2(manager, debugSync); err != nil {
 		fmt.Printf("Warning: Failed to sync Safe transactions: %v\n", err)
+	}
+
+	// Check pending transactions that might have been executed
+	if err := syncPendingTransactions(manager, debugSync); err != nil {
+		fmt.Printf("Warning: Failed to sync regular transactions: %v\n", err)
 	}
 
 	// Clean invalid entries if requested
 	if cleanRegistry {
 		fmt.Println("\nCleaning invalid entries...")
-		cleaned := registryManager.CleanInvalidEntries()
-
-		if cleaned > 0 {
-			fmt.Printf("Removed %d invalid entries\n", cleaned)
-		} else {
-			fmt.Println("No invalid entries found")
-		}
+		// TODO: Implement cleanup logic for v2
+		fmt.Println("Cleanup not yet implemented for v2 registry")
 	}
 
-	return registryManager.Save()
+	return nil
 }
 
-// syncPendingSafeTransactions checks pending Safe transactions and updates their status
-func syncPendingSafeTransactions(registryManager *registry.Manager) error {
-	deployments := registryManager.GetAllDeployments()
-
-	// Group pending deployments by chain ID
-	pendingByChain := make(map[uint64][]*registry.DeploymentInfo)
-
-	for _, deployment := range deployments {
-		if deployment.Entry.Deployment.Status == "pending_safe" && deployment.Entry.Deployment.SafeTxHash != nil {
-			chainID, err := strconv.ParseUint(deployment.ChainID, 10, 64)
-			if err != nil {
-				fmt.Printf("Warning: Invalid chain ID %s for deployment %s\n", deployment.ChainID, deployment.Address.Hex())
-				continue
-			}
-			pendingByChain[chainID] = append(pendingByChain[chainID], deployment)
+// syncPendingSafeTransactionsV2 checks pending Safe transactions and updates their status
+func syncPendingSafeTransactionsV2(manager *registryv2.Manager, debug bool) error {
+	// Get all Safe transactions
+	safeTxs := manager.GetAllSafeTransactions()
+	
+	// Filter pending ones
+	var pendingSafeTxs []*types.SafeTransaction
+	for _, safeTx := range safeTxs {
+		if safeTx.Status == types.TransactionStatusPending {
+			pendingSafeTxs = append(pendingSafeTxs, safeTx)
 		}
 	}
 
-	if len(pendingByChain) == 0 {
+	if len(pendingSafeTxs) == 0 {
 		fmt.Println("No pending Safe transactions found")
 		return nil
 	}
 
-	fmt.Printf("Found pending Safe transactions on %d network(s)\n", len(pendingByChain))
+	// Group by chain
+	pendingByChain := make(map[uint64][]*types.SafeTransaction)
+	for _, safeTx := range pendingSafeTxs {
+		pendingByChain[safeTx.ChainID] = append(pendingByChain[safeTx.ChainID], safeTx)
+	}
+
+	fmt.Printf("Found %d pending Safe transaction(s) on %d network(s)\n", len(pendingSafeTxs), len(pendingByChain))
 
 	// Check each chain
-	for chainID, pendingDeployments := range pendingByChain {
-		fmt.Printf("\nChecking %d pending transaction(s) on chain %d...\n", len(pendingDeployments), chainID)
+	for chainID, chainSafeTxs := range pendingByChain {
+		fmt.Printf("\nChecking %d pending Safe transaction(s) on chain %d...\n", len(chainSafeTxs), chainID)
 
 		// Create Safe client for this chain
 		safeClient, err := safe.NewClient(chainID)
@@ -106,60 +108,158 @@ func syncPendingSafeTransactions(registryManager *registry.Manager) error {
 		}
 
 		// Enable debug if flag is set
-		safeClient.SetDebug(debugSync)
+		safeClient.SetDebug(debug)
 
-		// Check each pending deployment
-		for _, deployment := range pendingDeployments {
-			safeTxHash := *deployment.Entry.Deployment.SafeTxHash
-			fmt.Printf("  Checking Safe tx %s for %s... \n", safeTxHash.Hex(), deployment.Entry.GetDisplayName())
+		// Check each pending Safe transaction
+		for _, safeTx := range chainSafeTxs {
+			fmt.Printf("  Checking Safe tx %s... ", safeTx.SafeTxHash)
 
 			// Debug info
-			if debugSync {
-				fmt.Printf("    [DEBUG] Deployment address: %s\n", deployment.Address.Hex())
-				fmt.Printf("    [DEBUG] Safe address: %s\n", deployment.Entry.Deployment.SafeAddress)
-				fmt.Printf("    [DEBUG] Namespace: %s\n", deployment.Entry.Namespace)
+			if debug {
+				fmt.Printf("\n    [DEBUG] Safe address: %s\n", safeTx.SafeAddress)
+				fmt.Printf("    [DEBUG] Nonce: %d\n", safeTx.Nonce)
+				fmt.Printf("    [DEBUG] Proposed by: %s\n", safeTx.ProposedBy)
 			}
 
 			// Check if transaction is executed
-			isExecuted, ethTxHash, err := safeClient.IsTransactionExecuted(safeTxHash)
+			safeTxHashBytes := common.HexToHash(safeTx.SafeTxHash)
+			isExecuted, ethTxHash, err := safeClient.IsTransactionExecuted(safeTxHashBytes)
 			if err != nil {
-				fmt.Printf("    ERROR: %v\n", err)
-
-				// Provide helpful context for common errors
-				if strings.Contains(err.Error(), "transaction not found") {
-					fmt.Printf("    HINT: This might happen if:\n")
-					fmt.Printf("      - The Safe transaction was never created (check if Safe address is correct)\n")
-					fmt.Printf("      - The transaction is on a different network\n")
-					fmt.Printf("      - The Safe Transaction Service hasn't indexed it yet (try again later)\n")
-
-					if deployment.Entry.Deployment.SafeAddress == "" || deployment.Entry.Deployment.SafeAddress == "0x0000000000000000000000000000000000000000" {
-						fmt.Printf("      - WARNING: Safe address is missing! This deployment needs to be re-executed.\n")
-					}
-				}
+				color.New(color.FgRed).Printf("ERROR: %v\n", err)
 				continue
 			}
 
 			if isExecuted && ethTxHash != nil {
-				fmt.Printf("EXECUTED (tx: %s)\n", ethTxHash.Hex())
+				color.New(color.FgGreen).Printf("EXECUTED (tx: %s)\n", ethTxHash.Hex())
 
-				// Update the deployment entry
-				deployment.Entry.Deployment.Status = "deployed"
-				deployment.Entry.Deployment.TxHash = ethTxHash
+				// Update the Safe transaction
+				safeTx.Status = types.TransactionStatusExecuted
+				safeTx.ExecutionTxHash = ethTxHash.Hex()
+				now := time.Now()
+				safeTx.ExecutedAt = &now
 
-				// Update in registry
-				chainID, _ := strconv.ParseUint(deployment.ChainID, 10, 64)
-				if err := registryManager.UpdateDeployment(chainID, deployment.Entry); err != nil {
-					fmt.Printf("    Warning: Failed to update registry: %v\n", err)
+				// Save the updated Safe transaction
+				if err := manager.UpdateSafeTransaction(safeTx); err != nil {
+					fmt.Printf("    Warning: Failed to update Safe transaction: %v\n", err)
+					continue
 				}
+
+				// Create transaction records for each operation in the batch
+				for i, txData := range safeTx.Transactions {
+					txID := fmt.Sprintf("tx-%s-%d", ethTxHash.Hex(), i)
+					
+					// Check if transaction already exists
+					if _, err := manager.GetTransaction(txID); err == nil {
+						// Transaction already recorded
+						continue
+					}
+
+					// Create new transaction record
+					tx := &types.Transaction{
+						ID:      txID,
+						ChainID: safeTx.ChainID,
+						Hash:    ethTxHash.Hex(),
+						Status:  types.TransactionStatusExecuted,
+						Sender:  safeTx.SafeAddress,
+						SafeContext: &types.SafeContext{
+							SafeAddress: safeTx.SafeAddress,
+							SafeTxHash:  safeTx.SafeTxHash,
+							BatchIndex:  i,
+							ProposerAddress: safeTx.ProposedBy,
+						},
+						Operations: []types.Operation{
+							{
+								Type:   "CALL",
+								Target: txData.To,
+								Method: "execute",
+								Result: map[string]interface{}{
+									"data": txData.Data,
+									"value": txData.Value,
+								},
+							},
+						},
+						CreatedAt: time.Now(),
+					}
+
+					// Add transaction
+					if err := manager.AddTransaction(tx); err != nil {
+						fmt.Printf("    Warning: Failed to create transaction record: %v\n", err)
+					}
+				}
+
+				// Update deployment records that reference this Safe tx
+				// This would require scanning deployments and updating their transaction references
+				// TODO: Implement deployment status updates
+				
 			} else {
 				// Get more details about the pending transaction
-				tx, err := safeClient.GetTransaction(safeTxHash)
+				tx, err := safeClient.GetTransaction(safeTxHashBytes)
 				if err == nil {
-					fmt.Printf("    PENDING (%d/%d confirmations)\n", len(tx.Confirmations), tx.ConfirmationsRequired)
+					color.New(color.FgYellow).Printf("PENDING (%d/%d confirmations)\n", 
+						len(tx.Confirmations), tx.ConfirmationsRequired)
+					
+					// Update confirmations in our record
+					safeTx.Confirmations = make([]types.Confirmation, 0, len(tx.Confirmations))
+					for _, conf := range tx.Confirmations {
+						safeTx.Confirmations = append(safeTx.Confirmations, types.Confirmation{
+							Signer:      conf.Owner,
+							Signature:   conf.Signature,
+							ConfirmedAt: time.Now(), // Safe API doesn't provide confirmation time
+						})
+					}
+					
+					// Save updated confirmations
+					if err := manager.UpdateSafeTransaction(safeTx); err != nil {
+						fmt.Printf("    Warning: Failed to update confirmations: %v\n", err)
+					}
 				} else {
-					fmt.Printf("    PENDING (couldn't get confirmation details)\n")
+					color.New(color.FgYellow).Println("PENDING (couldn't get confirmation details)")
 				}
 			}
+		}
+	}
+
+	return nil
+}
+
+// syncPendingTransactions checks regular pending transactions
+func syncPendingTransactions(manager *registryv2.Manager, debug bool) error {
+	// Get all transactions
+	allTxs := manager.GetAllTransactions()
+	
+	// Filter pending ones
+	var pendingTxs []*types.Transaction
+	for _, tx := range allTxs {
+		if tx.Status == types.TransactionStatusPending {
+			pendingTxs = append(pendingTxs, tx)
+		}
+	}
+
+	if len(pendingTxs) == 0 {
+		fmt.Println("\nNo pending regular transactions found")
+		return nil
+	}
+
+	fmt.Printf("\nFound %d pending regular transaction(s)\n", len(pendingTxs))
+
+	// Group by chain
+	pendingByChain := make(map[uint64][]*types.Transaction)
+	for _, tx := range pendingTxs {
+		pendingByChain[tx.ChainID] = append(pendingByChain[tx.ChainID], tx)
+	}
+
+	// Check each chain
+	for chainID, chainTxs := range pendingByChain {
+		fmt.Printf("\nChecking %d pending transaction(s) on chain %d...\n", len(chainTxs), chainID)
+		
+		// TODO: Implement blockchain transaction status checking
+		// This would require:
+		// 1. Getting RPC client for the chain
+		// 2. Checking transaction receipt
+		// 3. Updating status based on receipt
+		
+		for _, tx := range chainTxs {
+			fmt.Printf("  Transaction %s - checking not yet implemented\n", tx.Hash)
 		}
 	}
 

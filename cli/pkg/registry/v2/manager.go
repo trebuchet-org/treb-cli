@@ -417,6 +417,59 @@ func (m *Manager) GetSafeTransaction(safeTxHash string) (*types.SafeTransaction,
 	return safeTx, nil
 }
 
+// GetAllSafeTransactions returns all Safe transactions
+func (m *Manager) GetAllSafeTransactions() []*types.SafeTransaction {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	result := make([]*types.SafeTransaction, 0, len(m.safeTransactions))
+	for _, v := range m.safeTransactions {
+		result = append(result, v)
+	}
+	return result
+}
+
+// GetAllTransactions returns all transactions
+func (m *Manager) GetAllTransactions() []*types.Transaction {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	result := make([]*types.Transaction, 0, len(m.transactions))
+	for _, v := range m.transactions {
+		result = append(result, v)
+	}
+	return result
+}
+
+// UpdateSafeTransaction updates an existing Safe transaction
+func (m *Manager) UpdateSafeTransaction(safeTx *types.SafeTransaction) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Check if Safe transaction exists
+	if _, exists := m.safeTransactions[safeTx.SafeTxHash]; !exists {
+		return fmt.Errorf("safe transaction not found: %s", safeTx.SafeTxHash)
+	}
+
+	// Update the Safe transaction
+	m.safeTransactions[safeTx.SafeTxHash] = safeTx
+
+	// Update pending list if status changed
+	if safeTx.Status != types.TransactionStatusPending {
+		// Remove from pending list
+		newPending := make([]string, 0)
+		for _, hash := range m.lookups.Pending.SafeTxs {
+			if hash != safeTx.SafeTxHash {
+				newPending = append(newPending, hash)
+			}
+		}
+		m.lookups.Pending.SafeTxs = newPending
+	}
+
+	// Save all files
+	return m.save()
+}
+
 // SaveDeployment updates an existing deployment record
 func (m *Manager) SaveDeployment(deployment *types.Deployment) error {
 	m.mu.Lock()

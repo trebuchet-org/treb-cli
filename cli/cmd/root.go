@@ -52,7 +52,7 @@ func init() {
 	contextCmd.GroupID = "management"
 	
 	// Legacy v1 commands
-	syncV1Cmd.GroupID = "legacy"
+	// (currently empty)
 	
 	// Additional commands (merged with other utility commands)
 	// debugCmd and versionCmd will appear in "Additional Commands" section
