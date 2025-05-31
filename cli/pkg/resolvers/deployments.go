@@ -2,234 +2,213 @@ package resolvers
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
-	"github.com/trebuchet-org/treb-cli/cli/pkg/interactive"
+	"github.com/manifoldco/promptui"
+	"github.com/fatih/color"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
-// ResolveDeployment resolves a deployment by identifier, respecting the interactive context
-func (c *Context) ResolveDeployment(identifier string, registryManager *registry.Manager) (*registry.DeploymentInfo, error) {
-	if c.interactive {
-		// Use interactive resolution with basic picker
-		return c.resolveDeploymentInteractive(identifier, registryManager, "", "")
-	} else {
-		// Use non-interactive resolution - error on multiple matches
-		return c.resolveDeploymentNonInteractive(identifier, registryManager, "", "")
-	}
-}
+// ResolveDeployment resolves a deployment by identifier
+// Supports formats:
+// - Contract name: "Counter"
+// - Contract with label: "Counter:v2"
+// - Namespace/contract: "staging/Counter"
+// - Chain/contract: "11155111/Counter"
+// - Namespace/chain/contract: "staging/11155111/Counter"
+// - Full deployment ID
+// - Address (requires chainID)
+func (c *Context) ResolveDeployment(identifier string, manager *registry.Manager, chainID uint64, namespace string) (*types.Deployment, error) {
+	var deployment *types.Deployment
+	var err error
 
-// ResolveDeploymentWithFilters resolves a deployment with network and namespace filters
-func (c *Context) ResolveDeploymentWithFilters(identifier string, registryManager *registry.Manager, networkFilter, namespaceFilter string) (*registry.DeploymentInfo, error) {
-	if c.interactive {
-		return c.resolveDeploymentInteractive(identifier, registryManager, networkFilter, namespaceFilter)
-	} else {
-		return c.resolveDeploymentNonInteractive(identifier, registryManager, networkFilter, namespaceFilter)
+	// Check if identifier is an address (starts with 0x and is 42 chars)
+	if strings.HasPrefix(identifier, "0x") && len(identifier) == 42 {
+		// Look up by address
+		if chainID == 0 {
+			return nil, fmt.Errorf("chain ID is required when looking up by address")
+		}
+		deployment, err = manager.GetDeploymentByAddress(chainID, identifier)
+		if err != nil {
+			return nil, fmt.Errorf("deployment not found at address %s on chain %d", identifier, chainID)
+		}
+		return deployment, nil
 	}
-}
 
-// ResolveDeploymentForProxy resolves a deployment suitable as a proxy implementation
-// Filters out proxy deployments to ensure only actual implementations are returned
-func (c *Context) ResolveDeploymentForProxy(identifier string, registryManager *registry.Manager, chainID uint64, namespace string) (*registry.DeploymentInfo, error) {
-	if c.interactive {
-		// Use interactive resolution for implementation deployments
-		return interactive.ResolveImplementationDeployment(identifier, registryManager, chainID, namespace)
-	} else {
-		// Use non-interactive resolution for implementation deployments
-		matches := registryManager.QueryDeployments(identifier, chainID, namespace)
+	// Parse deployment ID (could be Contract, Contract:label, namespace/Contract, etc.)
+	deployments := manager.GetAllDeployments()
+	
+	// Filter by namespace if provided
+	if namespace != "" {
+		filtered := make([]*types.Deployment, 0)
+		for _, d := range deployments {
+			if d.Namespace == namespace {
+				filtered = append(filtered, d)
+			}
+		}
+		deployments = filtered
+	}
+
+	// Filter by chain if provided
+	if chainID != 0 {
+		filtered := make([]*types.Deployment, 0)
+		for _, d := range deployments {
+			if d.ChainID == chainID {
+				filtered = append(filtered, d)
+			}
+		}
+		deployments = filtered
+	}
+
+	// Look for matches based on various identifier formats
+	matches := make([]*types.Deployment, 0)
+	
+	// Try to parse identifier parts
+	parts := strings.Split(identifier, "/")
+	
+	for _, d := range deployments {
+		matched := false
 		
-		// Filter out proxy deployments
-		matches = interactive.FilterOutProxies(matches)
+		// Simple match: just contract name or contract:label
+		if d.ContractName == identifier || d.GetShortID() == identifier {
+			matched = true
+		}
 		
-		if len(matches) == 0 {
-			// Try without namespace constraint if no matches found
-			if namespace != "" {
-				matches = registryManager.QueryDeployments(identifier, chainID, "")
-				matches = interactive.FilterOutProxies(matches)
-				if len(matches) == 0 {
-					return nil, fmt.Errorf("no implementation deployments found matching '%s' on this network", identifier)
+		// Match namespace/contract or namespace/contract:label
+		if len(parts) == 2 {
+			namespace := parts[0]
+			contractPart := parts[1]
+			
+			// Check if first part is a namespace
+			if d.Namespace == namespace && (d.ContractName == contractPart || d.GetShortID() == contractPart) {
+				matched = true
+			}
+			
+			// Check if first part is a chain ID
+			if chainID, err := strconv.ParseUint(parts[0], 10, 64); err == nil {
+				if d.ChainID == chainID && (d.ContractName == contractPart || d.GetShortID() == contractPart) {
+					matched = true
 				}
-			} else {
-				return nil, fmt.Errorf("no implementation deployments found matching '%s'", identifier)
 			}
 		}
-
-		// Error if multiple matches in non-interactive mode
-		if len(matches) > 1 {
-			return nil, fmt.Errorf("multiple implementation deployments found matching '%s' - use network/namespace filters to narrow results:\n%s", 
-				identifier, c.formatDeploymentSuggestions(matches))
+		
+		// Match namespace/chain/contract or similar complex patterns
+		if len(parts) == 3 {
+			// Could be namespace/chainID/contract
+			if d.Namespace == parts[0] {
+				if chainID, err := strconv.ParseUint(parts[1], 10, 64); err == nil {
+					if d.ChainID == chainID && (d.ContractName == parts[2] || d.GetShortID() == parts[2]) {
+						matched = true
+					}
+				}
+			}
 		}
-
-		return matches[0], nil
-	}
-}
-
-// ResolveMultipleDeployments resolves deployments and allows selection of one or all
-func (c *Context) ResolveMultipleDeployments(identifier string, registryManager *registry.Manager, allowAll bool) ([]*registry.DeploymentInfo, error) {
-	// Get all deployments
-	allDeployments := registryManager.GetAllDeployments()
-
-	// Find matching deployments
-	var matches []*registry.DeploymentInfo
-	identifierLower := strings.ToLower(identifier)
-
-	for _, deployment := range allDeployments {
-		// Check if identifier is an address
-		if strings.ToLower(deployment.Address.Hex()) == identifierLower {
-			matches = append(matches, deployment)
-			continue
+		
+		// Match against the full deployment ID
+		if d.ID == identifier {
+			matched = true
 		}
-
-		// Check if identifier matches or is contained in display name
-		displayName := deployment.Entry.GetDisplayName()
-		if strings.EqualFold(displayName, identifier) || strings.Contains(strings.ToLower(displayName), identifierLower) {
-			matches = append(matches, deployment)
+		
+		if matched {
+			matches = append(matches, d)
 		}
 	}
 
 	if len(matches) == 0 {
-		return nil, fmt.Errorf("no deployment found matching '%s'", identifier)
-	}
-
-	// If single match, return it
-	if len(matches) == 1 {
-		return matches, nil
-	}
-
-	// Multiple matches
-	if !allowAll {
-		// Pick single deployment
-		selected, err := c.ResolveDeployment(identifier, registryManager)
-		if err != nil {
-			return nil, err
+		return nil, fmt.Errorf("no deployments found matching '%s'", identifier)
+	} else if len(matches) == 1 {
+		return matches[0], nil
+	} else {
+		// Multiple matches
+		if c.interactive {
+			return c.selectDeployment(matches, fmt.Sprintf("Multiple deployments found for '%s'", identifier))
+		} else {
+			// Non-interactive: return error with suggestions
+			var suggestions []string
+			for _, match := range matches {
+				suggestion := fmt.Sprintf("  - %s (chain:%d/%s/%s)", 
+					match.ID, match.ChainID, match.Namespace, match.GetDisplayName())
+				suggestions = append(suggestions, suggestion)
+			}
+			return nil, fmt.Errorf("multiple deployments found matching '%s' - be more specific:\n%s", 
+				identifier, strings.Join(suggestions, "\n"))
 		}
-		return []*registry.DeploymentInfo{selected}, nil
+	}
+}
+
+// selectDeployment helps users select a deployment when multiple matches exist
+func (c *Context) selectDeployment(matches []*types.Deployment, prompt string) (*types.Deployment, error) {
+	if len(matches) == 0 {
+		return nil, fmt.Errorf("no deployments found")
 	}
 
-	if c.interactive {
-		// Ask if user wants to apply to all
-		selector := interactive.NewSelector()
-		applyAll, err := selector.PromptConfirm(
-			fmt.Sprintf("Found %d deployments matching '%s'. Apply to all?", len(matches), identifier),
-			false,
+	// If only one match, return it directly
+	if len(matches) == 1 {
+		return matches[0], nil
+	}
+
+	// Multiple matches - need user to disambiguate
+	options := formatDeploymentOptions(matches)
+
+	templates := &promptui.SelectTemplates{
+		Label:    "{{ . }}",
+		Active:   "👉 {{ . | cyan }}",
+		Inactive: "   {{ . | faint }}",
+		Selected: "👍 {{ . | green }}",
+		Help:     color.New(color.FgYellow).Sprint("Use arrow keys to navigate, Enter to select"),
+	}
+
+	promptSelect := promptui.Select{
+		Label:     prompt,
+		Items:     options,
+		Templates: templates,
+		Size:      10,
+	}
+
+	index, _, err := promptSelect.Run()
+	if err != nil {
+		return nil, fmt.Errorf("selection cancelled: %w", err)
+	}
+
+	return matches[index], nil
+}
+
+// formatDeploymentOptions creates display strings for deployment selection
+func formatDeploymentOptions(deployments []*types.Deployment) []string {
+	options := make([]string, len(deployments))
+	for i, deployment := range deployments {
+		// Format deployment info
+		displayName := deployment.ContractName
+		if deployment.Label != "" {
+			displayName += ":" + deployment.Label
+		}
+
+		deploymentInfo := fmt.Sprintf("%s (%s)",
+			color.New(color.FgWhite, color.Bold).Sprint(displayName),
+			color.New(color.FgBlue).Sprint(deployment.ID),
 		)
-		if err != nil {
-			return nil, fmt.Errorf("selection cancelled")
+
+		// Add network and address
+		addressDisplay := deployment.Address
+		if len(addressDisplay) > 10 {
+			addressDisplay = addressDisplay[:10] + "..."
 		}
 
-		if applyAll {
-			return matches, nil
+		networkInfo := fmt.Sprintf("chain %d: %s",
+			deployment.ChainID,
+			color.New(color.FgYellow).Sprint(addressDisplay),
+		)
+
+		// Add tags if present
+		tagsDisplay := ""
+		if len(deployment.Tags) > 0 {
+			tagsDisplay = fmt.Sprintf(" [%s]", 
+				color.New(color.FgMagenta).Sprint(strings.Join(deployment.Tags, ", ")))
 		}
 
-		// Pick single deployment
-		selected, err := c.ResolveDeployment(identifier, registryManager)
-		if err != nil {
-			return nil, err
-		}
-		return []*registry.DeploymentInfo{selected}, nil
-	} else {
-		// In non-interactive mode, default to applying to all matches
-		return matches, nil
+		options[i] = fmt.Sprintf("%s - %s%s", deploymentInfo, networkInfo, tagsDisplay)
 	}
-}
-
-// resolveDeploymentInteractive uses the interactive deployment picker
-func (c *Context) resolveDeploymentInteractive(identifier string, registryManager *registry.Manager, networkFilter, namespaceFilter string) (*registry.DeploymentInfo, error) {
-	// Always use the filtering logic - it handles interactive selection internally
-	return c.resolveDeploymentWithFiltersLogic(identifier, registryManager, networkFilter, namespaceFilter, true)
-}
-
-// resolveDeploymentNonInteractive provides non-interactive deployment resolution
-func (c *Context) resolveDeploymentNonInteractive(identifier string, registryManager *registry.Manager, networkFilter, namespaceFilter string) (*registry.DeploymentInfo, error) {
-	return c.resolveDeploymentWithFiltersLogic(identifier, registryManager, networkFilter, namespaceFilter, false)
-}
-
-// resolveDeploymentWithFiltersLogic implements the core filtering and resolution logic
-func (c *Context) resolveDeploymentWithFiltersLogic(identifier string, registryManager *registry.Manager, networkFilter, namespaceFilter string, isInteractive bool) (*registry.DeploymentInfo, error) {
-	// Get all deployments
-	allDeployments := registryManager.GetAllDeployments()
-
-	// Apply filters first
-	var filteredDeployments []*registry.DeploymentInfo
-	for _, deployment := range allDeployments {
-		// Apply network filter
-		if networkFilter != "" && !strings.EqualFold(deployment.NetworkName, networkFilter) {
-			continue
-		}
-		
-		// Apply namespace filter
-		if namespaceFilter != "" && !strings.EqualFold(deployment.Entry.Namespace, namespaceFilter) {
-			continue
-		}
-		
-		filteredDeployments = append(filteredDeployments, deployment)
-	}
-
-	// Now search within filtered deployments
-	var matches []*registry.DeploymentInfo
-	identifierLower := strings.ToLower(identifier)
-
-	for _, deployment := range filteredDeployments {
-		// Check if identifier is an address
-		if strings.ToLower(deployment.Address.Hex()) == identifierLower {
-			matches = append(matches, deployment)
-			continue
-		}
-
-		// Check if identifier matches or is contained in display name
-		displayName := deployment.Entry.GetDisplayName()
-		if strings.EqualFold(displayName, identifier) || strings.Contains(strings.ToLower(displayName), identifierLower) {
-			matches = append(matches, deployment)
-		}
-	}
-
-	if len(matches) == 0 {
-		filters := ""
-		if networkFilter != "" || namespaceFilter != "" {
-			var filterParts []string
-			if networkFilter != "" {
-				filterParts = append(filterParts, fmt.Sprintf("network=%s", networkFilter))
-			}
-			if namespaceFilter != "" {
-				filterParts = append(filterParts, fmt.Sprintf("namespace=%s", namespaceFilter))
-			}
-			filters = fmt.Sprintf(" (filters: %s)", strings.Join(filterParts, ", "))
-		}
-		return nil, fmt.Errorf("no deployment found matching '%s'%s", identifier, filters)
-	}
-
-	// If single match, return it
-	if len(matches) == 1 {
-		return matches[0], nil
-	}
-
-	// Multiple matches
-	if isInteractive {
-		// Use interactive selector
-		return interactive.SelectDeployment(matches, fmt.Sprintf("Multiple deployments found matching '%s'", identifier))
-	} else {
-		// Error in non-interactive mode
-		return nil, fmt.Errorf("multiple deployments found matching '%s' - narrow results further:\n%s", 
-			identifier, c.formatDeploymentSuggestions(matches))
-	}
-}
-
-// formatDeploymentSuggestions formats multiple deployment matches into a helpful error message
-func (c *Context) formatDeploymentSuggestions(matches []*registry.DeploymentInfo) string {
-	if len(matches) == 0 {
-		return ""
-	}
-
-	var suggestions []string
-	for _, match := range matches {
-		displayName := match.Entry.GetDisplayName()
-		suggestion := fmt.Sprintf("  - %s/%s/%s (%s)", 
-			match.NetworkName, 
-			match.Entry.Namespace, 
-			displayName, 
-			match.Address.Hex()[:10]+"...")
-		suggestions = append(suggestions, suggestion)
-	}
-
-	return strings.Join(suggestions, "\n")
+	return options
 }

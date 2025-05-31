@@ -1,4 +1,4 @@
-package v2
+package registry
 
 import (
 	"fmt"
@@ -219,7 +219,6 @@ func (ru *RegistryUpdate) Apply(manager *Manager) error {
 // GetSummary returns a summary of the update
 func (ru *RegistryUpdate) GetSummary() string {
 	return fmt.Sprintf(
-		"Registry Update Summary:\n"+
 		"  Deployments: %d\n"+
 		"  Transactions: %d\n"+
 		"  Safe Transactions: %d\n"+

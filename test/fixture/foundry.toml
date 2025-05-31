@@ -24,7 +24,7 @@ celo = { key = "${CELOSCAN_API_KEY}", chain = "celo" }
 library_deployer =  "local"
 
 [profile.default.treb.senders.anvil]
-type = "private_key"
+type = "private_key" # avil user 0
 private_key = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 
 [profile.default.treb.senders.local]

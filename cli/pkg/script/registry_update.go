@@ -7,11 +7,11 @@ import (
 
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/events"
-	registryv2 "github.com/trebuchet-org/treb-cli/cli/pkg/registry/v2"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 )
 
-// UpdateRegistryFromEventsV2 updates the v2 deployment registry with parsed events
-func UpdateRegistryFromEventsV2(
+// UpdateRegistryFromEvents updates the deployment registry with parsed events
+func UpdateRegistryFromEvents(
 	scriptEvents []ParsedEvent,
 	networkName string,
 	chainID uint64,
@@ -21,7 +21,7 @@ func UpdateRegistryFromEventsV2(
 	indexer *contracts.Indexer,
 ) error {
 	// Create script updater
-	updater := registryv2.NewScriptUpdaterV2(indexer)
+	updater := registry.NewScriptUpdater(indexer)
 
 	// Default namespace if not provided
 	if namespace == "" {
@@ -30,9 +30,6 @@ func UpdateRegistryFromEventsV2(
 
 	// Convert script events to events package events
 	eventsPackageEvents := convertScriptEventsToEventsPackage(scriptEvents)
-	
-	// Debug: Check if conversion worked
-	fmt.Printf("🔍 Event conversion: %d script events -> %d events package events\n", len(scriptEvents), len(eventsPackageEvents))
 
 	// Build registry update from events
 	registryUpdate := updater.BuildRegistryUpdate(
@@ -61,7 +58,7 @@ func UpdateRegistryFromEventsV2(
 
 	// Enrich with broadcast data if available
 	if broadcastPath != "" {
-		enricher := registryv2.NewBroadcastEnricher()
+		enricher := registry.NewBroadcastEnricher()
 		if err := enricher.EnrichFromBroadcastFile(registryUpdate, broadcastPath); err != nil {
 			PrintWarningMessage(fmt.Sprintf("Failed to enrich from broadcast: %v", err))
 			// Continue anyway - we can still save with partial data
@@ -71,7 +68,7 @@ func UpdateRegistryFromEventsV2(
 	}
 
 	// Create manager and apply update
-	manager, err := registryv2.NewManager(".")
+	manager, err := registry.NewManager(".")
 	if err != nil {
 		return fmt.Errorf("failed to create registry manager: %w", err)
 	}

@@ -1,4 +1,132 @@
 {
+  "default/11155111/Counter:test": {
+    "id": "default/11155111/Counter:test",
+    "namespace": "default",
+    "chainId": 11155111,
+    "contractName": "Counter",
+    "label": "test",
+    "address": "0xF479f510B1D03c89f3d05A847f344DA01A4ed990",
+    "type": "SINGLETON",
+    "transactionId": "tx-internal-0x158b5ad19daadab746f2ba46d1d61409d64f35e3beede909c78a71a6a8140a2d",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0x32cb58b145d3f7e28c45ce4b2cc31fa94248b23f007219dcf7fcf03cf92c8b65",
+      "initCodeHash": "0xac335e6949b4d514740c93402952f022b1d7bce40ede5c34341c83abfb49665b",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x",
+      "entropy": "default/src/Counter.sol:Counter:test"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/Counter.sol:Counter",
+      "compilerVersion": "0.8.27+commit.40a35a09",
+      "bytecodeHash": "0xac335e6949b4d514740c93402952f022b1d7bce40ede5c34341c83abfb49665b",
+      "scriptPath": "DeployWithSafe.s.sol:DeployWithSafe",
+      "gitCommit": "087ddb205698def0701671092eac927c94420faf"
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": [],
+    "createdAt": "2025-05-31T13:29:26.00613+02:00",
+    "updatedAt": "2025-05-31T13:29:26.00613+02:00"
+  },
+  "default/11155111/Counter:test#-int": {
+    "id": "default/11155111/Counter:test#-int",
+    "namespace": "default",
+    "chainId": 11155111,
+    "contractName": "Counter",
+    "label": "test",
+    "address": "0xF479f510B1D03c89f3d05A847f344DA01A4ed990",
+    "type": "SINGLETON",
+    "transactionId": "tx-internal-0x00d180652ed626299100017c24b8a2fd14c086af905d5445aa3ca5d4bbe0446c",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0x32cb58b145d3f7e28c45ce4b2cc31fa94248b23f007219dcf7fcf03cf92c8b65",
+      "initCodeHash": "0xac335e6949b4d514740c93402952f022b1d7bce40ede5c34341c83abfb49665b",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x",
+      "entropy": "default/src/Counter.sol:Counter:test"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/Counter.sol:Counter",
+      "compilerVersion": "0.8.27+commit.40a35a09",
+      "bytecodeHash": "0xac335e6949b4d514740c93402952f022b1d7bce40ede5c34341c83abfb49665b",
+      "scriptPath": "DeployWithSafe.s.sol:DeployWithSafe",
+      "gitCommit": "087ddb205698def0701671092eac927c94420faf"
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": [],
+    "createdAt": "2025-05-31T14:32:30.228351+02:00",
+    "updatedAt": "2025-05-31T14:32:30.228351+02:00"
+  },
+  "default/11155111/Counter:test#1748696120": {
+    "id": "default/11155111/Counter:test#1748696120",
+    "namespace": "default",
+    "chainId": 11155111,
+    "contractName": "Counter",
+    "label": "test",
+    "address": "0xF479f510B1D03c89f3d05A847f344DA01A4ed990",
+    "type": "SINGLETON",
+    "transactionId": "",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0x32cb58b145d3f7e28c45ce4b2cc31fa94248b23f007219dcf7fcf03cf92c8b65",
+      "initCodeHash": "0xac335e6949b4d514740c93402952f022b1d7bce40ede5c34341c83abfb49665b",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x",
+      "entropy": "default/src/Counter.sol:Counter:test"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/Counter.sol:Counter",
+      "compilerVersion": "0.8.27+commit.40a35a09",
+      "bytecodeHash": "0xac335e6949b4d514740c93402952f022b1d7bce40ede5c34341c83abfb49665b",
+      "scriptPath": "DeployWithSafe.s.sol:DeployWithSafe",
+      "gitCommit": "087ddb205698def0701671092eac927c94420faf"
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": [],
+    "createdAt": "2025-05-31T14:55:20.625013+02:00",
+    "updatedAt": "2025-05-31T14:55:20.625013+02:00"
+  },
+  "default/11155111/Counter:test#1748696184": {
+    "id": "default/11155111/Counter:test#1748696184",
+    "namespace": "default",
+    "chainId": 11155111,
+    "contractName": "Counter",
+    "label": "test",
+    "address": "0xF479f510B1D03c89f3d05A847f344DA01A4ed990",
+    "type": "SINGLETON",
+    "transactionId": "",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0x32cb58b145d3f7e28c45ce4b2cc31fa94248b23f007219dcf7fcf03cf92c8b65",
+      "initCodeHash": "0xac335e6949b4d514740c93402952f022b1d7bce40ede5c34341c83abfb49665b",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x",
+      "entropy": "default/src/Counter.sol:Counter:test"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/Counter.sol:Counter",
+      "compilerVersion": "0.8.27+commit.40a35a09",
+      "bytecodeHash": "0xac335e6949b4d514740c93402952f022b1d7bce40ede5c34341c83abfb49665b",
+      "scriptPath": "DeployWithSafe.s.sol:DeployWithSafe",
+      "gitCommit": "087ddb205698def0701671092eac927c94420faf"
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": [],
+    "createdAt": "2025-05-31T14:56:24.892525+02:00",
+    "updatedAt": "2025-05-31T14:56:24.892526+02:00"
+  },
   "default/11155111/ERC1967Proxy:test22y": {
     "id": "default/11155111/ERC1967Proxy:test22y",
     "namespace": "default",

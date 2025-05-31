@@ -8,7 +8,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/interactive"
-	registryv2 "github.com/trebuchet-org/treb-cli/cli/pkg/registry/v2"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
@@ -52,7 +52,7 @@ func init() {
 
 func manageDeploymentTags(identifier string) error {
 	// Initialize v2 registry manager
-	manager, err := registryv2.NewManager(".")
+	manager, err := registry.NewManager(".")
 	if err != nil {
 		return fmt.Errorf("failed to initialize registry: %w", err)
 	}
@@ -77,7 +77,7 @@ func manageDeploymentTags(identifier string) error {
 	return removeDeploymentTag(deployment, removeTag, manager)
 }
 
-func findDeployment(identifier string, manager *registryv2.Manager) (*types.Deployment, error) {
+func findDeployment(identifier string, manager *registry.Manager) (*types.Deployment, error) {
 	allDeployments := manager.GetAllDeployments()
 	var matches []*types.Deployment
 
@@ -119,7 +119,7 @@ func findDeployment(identifier string, manager *registryv2.Manager) (*types.Depl
 		return nil, fmt.Errorf("multiple deployments found matching '%s', please be more specific", identifier)
 	}
 
-	return interactive.PickDeploymentV2(matches)
+	return interactive.PickDeployment(matches, "Multiple deployments found. Select one:")
 }
 
 func showDeploymentTags(deployment *types.Deployment) error {
@@ -162,7 +162,7 @@ func showDeploymentTags(deployment *types.Deployment) error {
 	return nil
 }
 
-func addDeploymentTag(deployment *types.Deployment, tag string, manager *registryv2.Manager) error {
+func addDeploymentTag(deployment *types.Deployment, tag string, manager *registry.Manager) error {
 	// Check if tag already exists
 	for _, existingTag := range deployment.Tags {
 		if existingTag == tag {
@@ -211,7 +211,7 @@ func addDeploymentTag(deployment *types.Deployment, tag string, manager *registr
 	return nil
 }
 
-func removeDeploymentTag(deployment *types.Deployment, tag string, manager *registryv2.Manager) error {
+func removeDeploymentTag(deployment *types.Deployment, tag string, manager *registry.Manager) error {
 	// Check if tag exists
 	found := false
 	for _, existingTag := range deployment.Tags {

@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
-	registryv2 "github.com/trebuchet-org/treb-cli/cli/pkg/registry/v2"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/safe"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
@@ -27,7 +27,7 @@ This command will:
 		cleanFlag, _ := cmd.Flags().GetBool("clean")
 		debugFlag, _ := cmd.Flags().GetBool("debug")
 		
-		if err := syncRegistryV2(cleanFlag, debugFlag); err != nil {
+		if err := syncRegistry(cleanFlag, debugFlag); err != nil {
 			checkError(err)
 		}
 
@@ -41,9 +41,9 @@ func init() {
 	syncCmd.Flags().Bool("debug", false, "Show debug information during sync")
 }
 
-func syncRegistryV2(cleanRegistry bool, debugSync bool) error {
+func syncRegistry(cleanRegistry bool, debugSync bool) error {
 	// Initialize v2 registry manager
-	manager, err := registryv2.NewManager(".")
+	manager, err := registry.NewManager(".")
 	if err != nil {
 		return fmt.Errorf("failed to initialize registry: %w", err)
 	}
@@ -51,7 +51,7 @@ func syncRegistryV2(cleanRegistry bool, debugSync bool) error {
 	fmt.Println("Syncing registry...")
 
 	// Check and update pending Safe transactions
-	if err := syncPendingSafeTransactionsV2(manager, debugSync); err != nil {
+	if err := syncPendingSafeTransactions(manager, debugSync); err != nil {
 		fmt.Printf("Warning: Failed to sync Safe transactions: %v\n", err)
 	}
 
@@ -70,8 +70,8 @@ func syncRegistryV2(cleanRegistry bool, debugSync bool) error {
 	return nil
 }
 
-// syncPendingSafeTransactionsV2 checks pending Safe transactions and updates their status
-func syncPendingSafeTransactionsV2(manager *registryv2.Manager, debug bool) error {
+// syncPendingSafeTransactions checks pending Safe transactions and updates their status
+func syncPendingSafeTransactions(manager *registry.Manager, debug bool) error {
 	// Get all Safe transactions
 	safeTxs := manager.GetAllSafeTransactions()
 	
@@ -223,7 +223,7 @@ func syncPendingSafeTransactionsV2(manager *registryv2.Manager, debug bool) erro
 }
 
 // syncPendingTransactions checks regular pending transactions
-func syncPendingTransactions(manager *registryv2.Manager, debug bool) error {
+func syncPendingTransactions(manager *registry.Manager, debug bool) error {
 	// Get all transactions
 	allTxs := manager.GetAllTransactions()
 	

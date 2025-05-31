@@ -7,7 +7,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
-	registryv2 "github.com/trebuchet-org/treb-cli/cli/pkg/registry/v2"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
@@ -27,7 +27,7 @@ Examples:
 		jsonOutput, _ := cmd.Flags().GetBool("json")
 
 		// Create registry manager
-		manager, err := registryv2.NewManager(".")
+		manager, err := registry.NewManager(".")
 		if err != nil {
 			checkError(fmt.Errorf("failed to load registry: %w", err))
 		}
@@ -67,7 +67,7 @@ Examples:
 	},
 }
 
-func findDeploymentByPartialID(manager *registryv2.Manager, partialID string) *types.Deployment {
+func findDeploymentByPartialID(manager *registry.Manager, partialID string) *types.Deployment {
 	allDeployments := manager.GetAllDeployments()
 	
 	var matches []*types.Deployment
@@ -92,7 +92,7 @@ func findDeploymentByPartialID(manager *registryv2.Manager, partialID string) *t
 	return nil
 }
 
-func displayDeployment(dep *types.Deployment, tx *types.Transaction, manager *registryv2.Manager) {
+func displayDeployment(dep *types.Deployment, tx *types.Transaction, manager *registry.Manager) {
 	// Header
 	color.New(color.FgCyan, color.Bold).Printf("Deployment: %s\n", dep.ID)
 	fmt.Println(strings.Repeat("=", 80))

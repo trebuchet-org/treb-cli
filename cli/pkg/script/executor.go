@@ -263,6 +263,9 @@ func (e *Executor) buildForgeArgs(opts RunOptions) []string {
 	// Add verbosity for better error messages
 	args = append(args, "-vvvv")
 
+	// Add FFI flag to enable foreign function interface (needed for Safe deployers)
+	args = append(args, "--ffi")
+
 	// Add any additional arguments
 	args = append(args, opts.AdditionalArgs...)
 

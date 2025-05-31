@@ -101,7 +101,12 @@ Examples:
 
 		// Run the script
 		script.PrintDeploymentBanner(fmt.Sprintf("Running script: %s", filepath.Base(scriptPath)), network, profile)
-		if dryRun {
+		
+		// Debug mode always implies dry run to prevent Safe transaction creation
+		if debug || debugJSON {
+			dryRun = true
+			fmt.Println("Mode: Debug (dry run, no broadcast)")
+		} else if dryRun {
 			fmt.Println("Mode: Dry run (no broadcast)")
 		}
 
@@ -159,8 +164,8 @@ Examples:
 
 				// Update registry if not dry run
 				if !dryRun {
-					// Use v2 registry
-					if err := script.UpdateRegistryFromEventsV2(
+					// Update registry
+					if err := script.UpdateRegistryFromEvents(
 						result.AllEvents,
 						network,
 						networkInfo.ChainID,

@@ -34,7 +34,7 @@ var (
 
 	// From SafeSender.sol
 	// SafeTransactionQueued(bytes32 indexed safeTxHash, address indexed safe, address indexed proposer, (address,bytes,uint256,string,bytes32,bytes32,uint8,bytes,bytes)[] transactions)
-	SafeTransactionQueuedTopic = crypto.Keccak256Hash([]byte("SafeTransactionQueued(bytes32,address,address,(address,bytes,uint256,string,bytes32,bytes32,uint8,bytes,bytes)[])"))
+	SafeTransactionQueuedTopic = crypto.Keccak256Hash([]byte("SafeTransactionQueued(bytes32,address,address,((string,address,bytes,uint256),bytes32,bytes32,uint8,bytes,bytes)[])"))
 
 	// ERC1967 Proxy Events
 	// Upgraded(address indexed implementation)
@@ -49,22 +49,22 @@ var (
 
 // Re-export types from events package for backward compatibility
 type (
-	EventType                     = events.EventType
-	ParsedEvent                   = events.ParsedEvent
-	DeployingContractEvent        = events.DeployingContractEvent
-	EventDeployment               = events.EventDeployment
-	ContractDeployedEvent         = events.ContractDeployedEvent
-	Transaction                   = events.Transaction
-	RichTransaction               = events.RichTransaction
-	SafeTransactionQueuedEvent    = events.SafeTransactionQueuedEvent
-	TransactionSimulatedEvent     = events.TransactionSimulatedEvent
-	TransactionFailedEvent        = events.TransactionFailedEvent
-	TransactionBroadcastEvent     = events.TransactionBroadcastEvent
-	UpgradedEvent                 = events.UpgradedEvent
-	AdminChangedEvent             = events.AdminChangedEvent
-	BeaconUpgradedEvent           = events.BeaconUpgradedEvent
-	DeploymentEvent               = events.DeploymentEvent
-	Log                           = events.Log
+	EventType                  = events.EventType
+	ParsedEvent                = events.ParsedEvent
+	DeployingContractEvent     = events.DeployingContractEvent
+	EventDeployment            = events.EventDeployment
+	ContractDeployedEvent      = events.ContractDeployedEvent
+	Transaction                = events.Transaction
+	RichTransaction            = events.RichTransaction
+	SafeTransactionQueuedEvent = events.SafeTransactionQueuedEvent
+	TransactionSimulatedEvent  = events.TransactionSimulatedEvent
+	TransactionFailedEvent     = events.TransactionFailedEvent
+	TransactionBroadcastEvent  = events.TransactionBroadcastEvent
+	UpgradedEvent              = events.UpgradedEvent
+	AdminChangedEvent          = events.AdminChangedEvent
+	BeaconUpgradedEvent        = events.BeaconUpgradedEvent
+	DeploymentEvent            = events.DeploymentEvent
+	Log                        = events.Log
 )
 
 // Re-export event type constants for backward compatibility
@@ -279,7 +279,7 @@ func parseSafeTransactionQueuedEvent(log events.Log) (*events.SafeTransactionQue
 	// Parse the transactions using reflection
 	var transactions []events.RichTransaction
 	txArray := reflect.ValueOf(values[0])
-	
+
 	for i := 0; i < txArray.Len(); i++ {
 		txValue := txArray.Index(i)
 		if txValue.Kind() != reflect.Struct {
@@ -313,7 +313,7 @@ func parseSafeTransactionQueuedEvent(log events.Log) (*events.SafeTransactionQue
 			SimulatedReturnData: simulatedReturnDataField,
 			ExecutedReturnData:  executedReturnDataField,
 		}
-		
+
 		transactions = append(transactions, richTx)
 	}
 

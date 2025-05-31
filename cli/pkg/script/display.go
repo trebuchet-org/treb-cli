@@ -43,6 +43,7 @@ type TransactionInfo struct {
 	Deployments   []*ContractDeployedEvent
 	Failed        *TransactionFailedEvent
 	ProxyEvents   []ParsedEvent // Upgraded, AdminChanged, BeaconUpgraded events
+	SafeQueued    *SafeTransactionQueuedEvent // Track if this is a Safe transaction
 }
 
 // GetEventIcon returns an icon for the event type
@@ -320,12 +321,11 @@ func reportTransactionsWithTxInfo(events []ParsedEvent, indexer *contracts.Index
 				txID := richTx.TransactionID.Hex()
 				if tx, exists := txMap[txID]; exists {
 					// Mark this as a Safe transaction
-					if tx.Broadcast == nil {
-						// Create a pseudo-broadcast event to show it's queued
-						tx.Broadcast = &TransactionBroadcastEvent{
-							TransactionID: richTx.TransactionID,
-							Label:         fmt.Sprintf("Safe: %s", richTx.Transaction.Label),
-						}
+					tx.SafeQueued = e
+				} else {
+					txMap[txID] = &TransactionInfo{
+						TransactionID: txID,
+						SafeQueued:    e,
 					}
 				}
 			}
@@ -386,7 +386,17 @@ func reportTransactionsWithTxInfo(events []ParsedEvent, indexer *contracts.Index
 			var sender string
 			var label string
 			
-			if tx.Simulated != nil {
+			if tx.SafeQueued != nil {
+				// For Safe transactions, show the Safe address as sender
+				sender = tx.SafeQueued.Safe.Hex()
+				// Find the label from the transaction in the SafeQueued event
+				for _, richTx := range tx.SafeQueued.Transactions {
+					if richTx.TransactionID.Hex() == txID {
+						label = richTx.Transaction.Label
+						break
+					}
+				}
+			} else if tx.Simulated != nil {
 				sender = tx.Simulated.Sender.Hex()
 				label = tx.Simulated.Label
 			} else if tx.Broadcast != nil {
@@ -423,6 +433,9 @@ func reportTransactionsWithTxInfo(events []ParsedEvent, indexer *contracts.Index
 			if tx.Failed != nil {
 				statusColor = ColorRed
 				statusText = "FAILED"
+			} else if tx.SafeQueued != nil {
+				statusColor = ColorBlue
+				statusText = "QUEUED (Safe)"
 			} else if tx.Broadcast != nil {
 				statusColor = ColorGreen
 				statusText = "EXECUTED"

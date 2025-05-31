@@ -1,4 +1,4 @@
-package v2
+package registry
 
 import (
 	"fmt"
@@ -13,22 +13,22 @@ import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
-// ScriptUpdaterV2 handles building registry updates from script execution
-type ScriptUpdaterV2 struct {
+// ScriptUpdater handles building registry updates from script execution
+type ScriptUpdater struct {
 	indexer      *contracts.Indexer
 	proxyTracker *events.ProxyTracker
 }
 
-// NewScriptUpdaterV2 creates a new script updater
-func NewScriptUpdaterV2(indexer *contracts.Indexer) *ScriptUpdaterV2 {
-	return &ScriptUpdaterV2{
+// NewScriptUpdater creates a new script updater
+func NewScriptUpdater(indexer *contracts.Indexer) *ScriptUpdater {
+	return &ScriptUpdater{
 		indexer:      indexer,
 		proxyTracker: events.NewProxyTracker(),
 	}
 }
 
 // BuildRegistryUpdate builds a registry update from script events
-func (su *ScriptUpdaterV2) BuildRegistryUpdate(
+func (su *ScriptUpdater) BuildRegistryUpdate(
 	scriptEvents []events.ParsedEvent,
 	namespace string,
 	chainID uint64,
@@ -41,104 +41,122 @@ func (su *ScriptUpdaterV2) BuildRegistryUpdate(
 	// Process events to identify proxy relationships
 	su.proxyTracker.ProcessEvents(scriptEvents)
 
-	// Group deployment events by transaction ID
-	txDeployments := make(map[string][]*events.ContractDeployedEvent)
-	senderConfigs := make(map[string]*events.SenderConfig)
+	// First pass: collect all deployment events and broadcast events
+	deploymentEvents := make(map[string][]*events.ContractDeployedEvent)
+	broadcastEvents := make(map[string]*events.TransactionBroadcastEvent)
+	safeTransactions := make(map[string]*events.SafeTransactionQueuedEvent)
 	
 	for _, event := range scriptEvents {
 		switch e := event.(type) {
 		case *events.ContractDeployedEvent:
 			txID := e.TransactionID.Hex()
-			txDeployments[txID] = append(txDeployments[txID], e)
-		case *events.SenderDeployerConfiguredEvent:
-			senderConfigs[e.TransactionID.Hex()] = &e.Sender
+			deploymentEvents[txID] = append(deploymentEvents[txID], e)
+		case *events.TransactionBroadcastEvent:
+			broadcastEvents[e.TransactionID.Hex()] = e
+		case *events.SafeTransactionQueuedEvent:
+			// Index safe transactions by their transaction IDs
+			for _, richTx := range e.Transactions {
+				safeTransactions[richTx.TransactionID.Hex()] = e
+			}
 		}
 	}
 
 	// Get git commit hash
 	commitHash := getGitCommit()
 
-	// Process each transaction group
-	for internalTxID, deployEvents := range txDeployments {
+	// Process deployments
+	for internalTxID, deployEvents := range deploymentEvents {
 		// Skip zero transaction ID (indicates dry run or no transaction)
 		if internalTxID == "0x0000000000000000000000000000000000000000000000000000000000000000" {
 			update.Metadata.DryRun = true
 			continue
 		}
 
-		// Create transaction record
-		tx := &types.Transaction{
-			ID:          "", // Will be set when applying
-			ChainID:     chainID,
-			Hash:        "", // Will be enriched from broadcast
-			Status:      types.TransactionStatusPending,
-			Deployments: []string{},
-			Operations:  []types.Operation{},
-			Environment: namespace,
-			CreatedAt:   time.Now(),
+		// Check if this deployment is part of a Safe transaction
+		if safeEvent, exists := safeTransactions[internalTxID]; exists {
+			// This is part of a Safe transaction - handle it separately
+			su.createOrUpdateSafeTransaction(update, safeEvent, namespace, chainID)
+			
+			// Add deployments without creating a regular transaction
+			for _, deployEvent := range deployEvents {
+				deployment := su.createDeploymentFromEvent(
+					deployEvent,
+					namespace,
+					chainID,
+					scriptPath,
+					commitHash,
+				)
+				
+				// Deployment will be associated with Safe transaction
+				update.AddDeployment(internalTxID, deployment)
+			}
+			continue
 		}
 
-		// Set sender from first deployment event
-		if len(deployEvents) > 0 {
-			tx.Sender = deployEvents[0].Deployer.Hex()
-		}
+		// Check if this deployment has a broadcast event
+		if broadcastEvent, exists := broadcastEvents[internalTxID]; exists {
+			// This transaction was broadcast - create an executed transaction
+			tx := &types.Transaction{
+				ID:          "", // Will be set when applying
+				ChainID:     chainID,
+				Hash:        "", // Will be enriched from broadcast
+				Status:      types.TransactionStatusExecuted,
+				Sender:      broadcastEvent.Sender.Hex(),
+				Deployments: []string{},
+				Operations:  []types.Operation{},
+				Environment: namespace,
+				CreatedAt:   time.Now(),
+			}
 
-		// Check if this is part of a Safe transaction
-		var safeContext *types.SafeContext
-		for _, event := range scriptEvents {
-			if safeEvent, ok := event.(*events.SafeTransactionQueuedEvent); ok {
-				// Check if this deployment was part of this Safe transaction
-				for i, richTx := range safeEvent.Transactions {
-					if richTx.TransactionID.Hex() == internalTxID {
-						safeContext = &types.SafeContext{
-							SafeAddress:     safeEvent.Safe.Hex(),
-							SafeTxHash:      safeEvent.SafeTxHash.Hex(),
-							BatchIndex:      i,
-							ProposerAddress: safeEvent.Proposer.Hex(),
-						}
-						
-						// Create or update safe transaction record
-						su.createOrUpdateSafeTransaction(update, safeEvent, namespace)
-						break
-					}
-				}
+			// Process deployments for this transaction
+			for _, deployEvent := range deployEvents {
+				deployment := su.createDeploymentFromEvent(
+					deployEvent,
+					namespace,
+					chainID,
+					scriptPath,
+					commitHash,
+				)
+
+				update.AddDeployment(internalTxID, deployment)
+
+				// Add operation to transaction
+				tx.Operations = append(tx.Operations, types.Operation{
+					Type:   "DEPLOY",
+					Target: deployment.Address,
+					Method: string(deployment.DeploymentStrategy.Method),
+					Result: map[string]interface{}{
+						"address": deployment.Address,
+					},
+				})
+			}
+
+			// Add transaction to update
+			update.AddTransaction(internalTxID, tx)
+		} else {
+			// No broadcast event - this is a simulated transaction
+			// Don't create a transaction record, just add deployments
+			for _, deployEvent := range deployEvents {
+				deployment := su.createDeploymentFromEvent(
+					deployEvent,
+					namespace,
+					chainID,
+					scriptPath,
+					commitHash,
+				)
+				
+				// Mark as dry-run/simulated
+				update.Metadata.DryRun = true
+				update.AddDeployment(internalTxID, deployment)
 			}
 		}
-		tx.SafeContext = safeContext
-
-		// Process each deployment in the transaction
-		for _, deployEvent := range deployEvents {
-			deployment := su.createDeploymentFromEvent(
-				deployEvent,
-				namespace,
-				chainID,
-				scriptPath,
-				commitHash,
-			)
-
-			// Deployment ID will be generated when applying
-			update.AddDeployment(internalTxID, deployment)
-
-			// Add operation to transaction
-			tx.Operations = append(tx.Operations, types.Operation{
-				Type:   "DEPLOY",
-				Target: deployment.Address,
-				Method: string(deployment.DeploymentStrategy.Method),
-				Result: map[string]interface{}{
-					"address": deployment.Address,
-				},
-			})
-		}
-
-		// Add transaction to update
-		update.AddTransaction(internalTxID, tx)
 	}
 
 	return update
 }
 
 // createDeploymentFromEvent creates a deployment record from an event
-func (su *ScriptUpdaterV2) createDeploymentFromEvent(
+func (su *ScriptUpdater) createDeploymentFromEvent(
 	event *events.ContractDeployedEvent,
 	namespace string,
 	chainID uint64,
@@ -245,10 +263,11 @@ func (su *ScriptUpdaterV2) createDeploymentFromEvent(
 }
 
 // createOrUpdateSafeTransaction creates or updates a Safe transaction record
-func (su *ScriptUpdaterV2) createOrUpdateSafeTransaction(
+func (su *ScriptUpdater) createOrUpdateSafeTransaction(
 	update *RegistryUpdate,
 	event *events.SafeTransactionQueuedEvent,
 	namespace string,
+	chainID uint64,
 ) {
 	safeTxHash := event.SafeTxHash.Hex()
 	
@@ -271,7 +290,7 @@ func (su *ScriptUpdaterV2) createOrUpdateSafeTransaction(
 	safeTx := &types.SafeTransaction{
 		SafeTxHash:     safeTxHash,
 		SafeAddress:    event.Safe.Hex(),
-		ChainID:        0, // TODO: Get chain ID from context
+		ChainID:        chainID,
 		Status:         types.TransactionStatusPending,
 		Nonce:          0, // TODO: Get nonce from Safe
 		Transactions:   []types.SafeTxData{},

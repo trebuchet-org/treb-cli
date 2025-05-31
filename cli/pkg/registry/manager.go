@@ -4,530 +4,579 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
+const (
+	TrebDir                = ".treb"
+	DeploymentsFile        = "deployments.json"
+	TransactionsFile       = "transactions.json"
+	SafeTransactionsFile   = "safe-txs.json"
+	SolidityRegistryFile   = "registry.json"
+)
+
+// Manager handles all registry operations for the new data model
 type Manager struct {
-	registryPath    string
-	networkResolver *network.Resolver
-	registry        *Registry
-	index           map[string]*types.DeploymentEntry
+	rootDir          string
+	mu               sync.RWMutex
+	deployments      map[string]*types.Deployment
+	transactions     map[string]*types.Transaction
+	safeTransactions map[string]*types.SafeTransaction
+	lookups          *types.LookupIndexes
+	solidityRegistry types.SolidityRegistry
 }
 
-type Registry struct {
-	Networks  map[string]*NetworkEntry          `json:"networks"`
-	Libraries map[string]*types.DeploymentEntry `json:"libraries,omitempty"` // Global libraries by chain
-}
-
-type NetworkEntry struct {
-	Name        string                            `json:"name"`
-	Deployments map[string]*types.DeploymentEntry `json:"deployments"`
-}
-
-func NewManager(registryPath string) (*Manager, error) {
-	manager := &Manager{
-		registryPath: registryPath,
+// NewManager creates a new registry manager
+func NewManager(rootDir string) (*Manager, error) {
+	trebDir := filepath.Join(rootDir, TrebDir)
+	
+	// Create .treb directory if it doesn't exist
+	if err := os.MkdirAll(trebDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create .treb directory: %w", err)
 	}
 
-	manager.networkResolver = network.NewResolver(".")
-
-	if err := manager.load(); err != nil {
-		return nil, err
+	m := &Manager{
+		rootDir:          rootDir,
+		deployments:      make(map[string]*types.Deployment),
+		transactions:     make(map[string]*types.Transaction),
+		safeTransactions: make(map[string]*types.SafeTransaction),
+		lookups:          &types.LookupIndexes{
+			Version:     "1.0.0",
+			ByAddress:   make(map[uint64]map[string]string),
+			ByNamespace: make(map[string]map[uint64][]string),
+			ByContract:  make(map[string][]string),
+			Proxies: types.ProxyIndexes{
+				Implementations: make(map[string][]string),
+				ProxyToImpl:     make(map[string]string),
+			},
+			Pending: types.PendingItems{
+				SafeTxs: []string{},
+			},
+		},
+		solidityRegistry: make(types.SolidityRegistry),
 	}
 
-	return manager, nil
+	// Load existing data
+	if err := m.load(); err != nil {
+		return nil, fmt.Errorf("failed to load registry: %w", err)
+	}
+
+	return m, nil
 }
 
+// load reads all registry files
 func (m *Manager) load() error {
-	if _, err := os.Stat(m.registryPath); os.IsNotExist(err) {
-		// Create empty registry
-		m.registry = &Registry{
-			Networks:  make(map[string]*NetworkEntry),
-			Libraries: make(map[string]*types.DeploymentEntry),
-		}
-		// Initialize the index for empty registry
-		m.index = make(map[string]*types.DeploymentEntry)
-		return nil
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Load deployments
+	if err := m.loadFile(DeploymentsFile, &m.deployments); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to load deployments: %w", err)
 	}
 
-	data, err := os.ReadFile(m.registryPath)
+	// Load transactions
+	if err := m.loadFile(TransactionsFile, &m.transactions); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to load transactions: %w", err)
+	}
+
+	// Load safe transactions
+	if err := m.loadFile(SafeTransactionsFile, &m.safeTransactions); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to load safe transactions: %w", err)
+	}
+
+	// Load solidity registry
+	if err := m.loadFile(SolidityRegistryFile, &m.solidityRegistry); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to load solidity registry: %w", err)
+	}
+
+	// Build lookups from loaded data
+	m.rebuildLookups()
+
+	return nil
+}
+
+// loadFile loads a JSON file into the given target
+func (m *Manager) loadFile(filename string, target interface{}) error {
+	path := filepath.Join(m.rootDir, TrebDir, filename)
+	
+	file, err := os.Open(path)
 	if err != nil {
-		return fmt.Errorf("failed to read registry file: %w", err)
+		return err
+	}
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+	return decoder.Decode(target)
+}
+
+// save writes all registry files
+func (m *Manager) save() error {
+	// Save deployments
+	if err := m.saveFile(DeploymentsFile, m.deployments); err != nil {
+		return fmt.Errorf("failed to save deployments: %w", err)
 	}
 
-	// Try to load with new format first
-	m.registry = &Registry{}
-	if err := json.Unmarshal(data, m.registry); err != nil {
-		return fmt.Errorf("failed to parse registry file: %w", err)
+	// Save transactions
+	if err := m.saveFile(TransactionsFile, m.transactions); err != nil {
+		return fmt.Errorf("failed to save transactions: %w", err)
 	}
 
-	// Initialize networks map if nil
-	if m.registry.Networks == nil {
-		m.registry.Networks = make(map[string]*NetworkEntry)
+	// Save safe transactions
+	if err := m.saveFile(SafeTransactionsFile, m.safeTransactions); err != nil {
+		return fmt.Errorf("failed to save safe transactions: %w", err)
 	}
 
-	m.index = make(map[string]*types.DeploymentEntry)
-	for _, network := range m.registry.Networks {
-		for _, deployment := range network.Deployments {
-			m.index[deployment.FQID] = deployment
-			if deployment.NetworkInfo == nil {
-				networkInfo, err := m.networkResolver.ResolveNetwork(network.Name)
-				if err != nil {
-					return fmt.Errorf("failed to resolve network %s: %w", network.Name, err)
-				}
-				deployment.NetworkInfo = networkInfo
-			}
-		}
-	}
-
-	for _, library := range m.registry.Libraries {
-		m.index[library.FQID] = library
-	}
-
-	for _, chain := range m.registry.Networks {
-		for _, deployment := range chain.Deployments {
-			if deployment.Type == types.ProxyDeployment {
-				deployment.Target = m.index[deployment.TargetDeploymentFQID]
-			}
-		}
+	// Save solidity registry
+	if err := m.saveFile(SolidityRegistryFile, m.solidityRegistry); err != nil {
+		return fmt.Errorf("failed to save solidity registry: %w", err)
 	}
 
 	return nil
 }
 
-func (m *Manager) Save() error {
-	data, err := json.MarshalIndent(m.registry, "", "  ")
+// rebuildLookups rebuilds all lookup indexes from current deployment data
+func (m *Manager) rebuildLookups() {
+	// Initialize fresh lookup indexes
+	m.lookups = &types.LookupIndexes{
+		Version:     "1.0.0",
+		ByAddress:   make(map[uint64]map[string]string),
+		ByNamespace: make(map[string]map[uint64][]string),
+		ByContract:  make(map[string][]string),
+		Proxies: types.ProxyIndexes{
+			Implementations: make(map[string][]string),
+			ProxyToImpl:     make(map[string]string),
+		},
+		Pending: types.PendingItems{
+			SafeTxs: []string{},
+		},
+	}
+
+	// Rebuild from deployments
+	for _, deployment := range m.deployments {
+		m.updateIndexesForDeployment(deployment)
+	}
+
+	// Rebuild pending Safe transactions
+	for hash, safeTx := range m.safeTransactions {
+		if safeTx.Status == types.TransactionStatusPending {
+			m.lookups.Pending.SafeTxs = append(m.lookups.Pending.SafeTxs, hash)
+		}
+	}
+}
+
+// saveFile saves data to a JSON file
+func (m *Manager) saveFile(filename string, data interface{}) error {
+	path := filepath.Join(m.rootDir, TrebDir, filename)
+	
+	file, err := os.Create(path)
 	if err != nil {
-		return fmt.Errorf("failed to marshal registry: %w", err)
+		return err
 	}
+	defer file.Close()
 
-	if err := os.WriteFile(m.registryPath, data, 0644); err != nil {
-		return fmt.Errorf("failed to write registry file: %w", err)
-	}
-
-	return nil
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(data)
 }
 
-func (m *Manager) RecordDeployment(chainID uint64, entry *types.DeploymentEntry) error {
-	chainIDStr := fmt.Sprintf("%d", chainID)
-
-	// Ensure network exists
-	if m.registry.Networks[chainIDStr] == nil {
-		networkName := "unknown"
-		if entry.NetworkInfo != nil {
-			networkName = entry.NetworkInfo.Name
-		}
-		m.registry.Networks[chainIDStr] = &NetworkEntry{
-			Name:        networkName,
-			Deployments: make(map[string]*types.DeploymentEntry),
-		}
-	}
-
-	// Use address as key for uniqueness
-	key := strings.ToLower(entry.Address.Hex())
-	if m.registry.Networks[chainIDStr].Deployments[key] == nil {
-		m.registry.Networks[chainIDStr].Deployments[key] = entry
-	} else {
-		return fmt.Errorf("deployment already exists for address %s on chain %d", entry.Address.Hex(), chainID)
-	}
-
-	return m.Save()
-}
-
-// GetLibrary retrieves a library deployment for a specific chain
-func (m *Manager) GetLibrary(libraryName string, chainID uint64) *types.DeploymentEntry {
-	if m.registry.Libraries == nil {
-		return nil
-	}
-
-	key := fmt.Sprintf("%d-%s", chainID, libraryName)
-	return m.registry.Libraries[key]
-}
-
-// GetAllLibraries returns all library deployments
-func (m *Manager) GetAllLibraries() map[string]*types.DeploymentEntry {
-	if m.registry.Libraries == nil {
-		return make(map[string]*types.DeploymentEntry)
-	}
-	return m.registry.Libraries
-}
-
-func (m *Manager) GetDeployment(identifier string) *types.DeploymentEntry {
-	return m.index[identifier]
-}
-
-// QueryDeployments finds deployments matching the given query string
-// Query can be:
-// - Full FQID: "chainID/env/contractPath:shortID"
-// - ShortID: "contract:label"
-// - Contract name: "MyToken"
-// If chainID and namespace are provided, they are used to narrow down results
-func (m *Manager) QueryDeployments(query string, chainID uint64, namespace string) []*DeploymentInfo {
-	var results []*DeploymentInfo
-	queryLower := strings.ToLower(query)
-
-	// First, check for exact FQID match
-	for cID, network := range m.registry.Networks {
-		for _, deployment := range network.Deployments {
-			if strings.EqualFold(deployment.FQID, query) {
-				return []*DeploymentInfo{{
-					Address:     deployment.Address,
-					NetworkName: network.Name,
-					ChainID:     cID,
-					Entry:       deployment,
-				}}
-			}
-		}
-	}
-
-	// If chainID is provided, only search within that network
-	chainIDStr := ""
-	if chainID > 0 {
-		chainIDStr = fmt.Sprintf("%d", chainID)
-	}
-
-	// Search for partial matches
-	for cID, network := range m.registry.Networks {
-		// Skip if chainID is specified and doesn't match
-		if chainIDStr != "" && cID != chainIDStr {
-			continue
-		}
-
-		for _, deployment := range network.Deployments {
-			// Skip if namespace is specified and doesn't match
-			if namespace != "" && deployment.Namespace != namespace {
-				continue
-			}
-
-			matched := false
-
-			// Check if ShortID matches exactly
-			if strings.EqualFold(deployment.ShortID, query) {
-				matched = true
-			} else if strings.EqualFold(deployment.ContractName, query) {
-				// Check if contract name matches exactly
-				matched = true
-			} else if strings.Contains(strings.ToLower(deployment.ShortID), queryLower) {
-				// Check if ShortID contains the query
-				matched = true
-			} else if strings.Contains(strings.ToLower(deployment.ContractName), queryLower) {
-				// Check if contract name contains the query
-				matched = true
-			}
-
-			if matched {
-				results = append(results, &DeploymentInfo{
-					Address:     deployment.Address,
-					NetworkName: network.Name,
-					ChainID:     cID,
-					Entry:       deployment,
-				})
-			}
-		}
-	}
-
-	return results
-}
-
-// GetDeploymentWithLabel gets a deployment by contract, namespace, and label
-func (m *Manager) GetDeploymentWithLabel(contract, namespace, label string, chainID uint64) *types.DeploymentEntry {
-	chainIDStr := fmt.Sprintf("%d", chainID)
-
-	// Default namespace to "default" if not provided
-	if namespace == "" {
-		namespace = "default"
-	}
-
-	if network := m.registry.Networks[chainIDStr]; network != nil {
-		// Search through deployments to find matching contract, env, and label
-		for _, deployment := range network.Deployments {
-			if deployment.ContractName == contract && deployment.Namespace == namespace && deployment.Label == label {
-				return deployment
-			}
-		}
-	}
-
-	return nil
-}
-
-func (m *Manager) GetPendingVerifications(chainID uint64) map[string]*types.DeploymentEntry {
-	chainIDStr := fmt.Sprintf("%d", chainID)
-	pending := make(map[string]*types.DeploymentEntry)
-
-	if network := m.registry.Networks[chainIDStr]; network != nil {
-		for key, deployment := range network.Deployments {
-			if deployment.Verification.Status == "pending" {
-				pending[key] = deployment
-			}
-		}
-	}
-
-	return pending
-}
-
-func (m *Manager) UpdateDeployment(chainID uint64, deployment *types.DeploymentEntry) error {
-	chainIDStr := fmt.Sprintf("%d", chainID)
-	address := strings.ToLower(deployment.Address.Hex())
-	if network := m.registry.Networks[chainIDStr]; network != nil {
-		network.Deployments[address] = deployment
-		return m.Save()
-	}
-
-	return fmt.Errorf("network not found")
-}
-
-// AddDeployment adds a new deployment to the registry
-func (m *Manager) AddDeployment(networkName string, chainID uint64, deployment *types.DeploymentEntry) error {
-	chainIDStr := fmt.Sprintf("%d", chainID)
+// GenerateDeploymentID generates a unique deployment ID
+func (m *Manager) GenerateDeploymentID(namespace string, chainID uint64, contractName, label string, txHash string) string {
+	baseID := fmt.Sprintf("%s/%d/%s:%s", namespace, chainID, contractName, label)
 	
-	// Ensure network entry exists
-	if m.registry.Networks[chainIDStr] == nil {
-		m.registry.Networks[chainIDStr] = &NetworkEntry{
-			Name:        networkName,
-			Deployments: make(map[string]*types.DeploymentEntry),
-		}
-	}
-	
-	// Add deployment indexed by address
-	address := strings.ToLower(deployment.Address.Hex())
-	m.registry.Networks[chainIDStr].Deployments[address] = deployment
-	
-	// Update index
-	m.index[deployment.FQID] = deployment
-	
-	// Save the registry
-	return m.Save()
-}
-
-// DeploymentInfo represents deployment information for listing
-type DeploymentInfo struct {
-	Address     common.Address         `json:"address"`
-	NetworkName string                 `json:"network_name"`
-	ChainID     string                 `json:"chain_id"`
-	Entry       *types.DeploymentEntry `json:"entry"`
-}
-
-// NetworkSummary represents network information and statistics
-type NetworkSummary struct {
-	Name            string   `json:"name"`
-	DeploymentCount int      `json:"deployment_count"`
-	Contracts       []string `json:"contracts"`
-}
-
-// RegistryStatus represents overall registry status
-type RegistryStatus struct {
-	NetworkCount        int                    `json:"network_count"`
-	TotalDeployments    int                    `json:"total_deployments"`
-	VerifiedCount       int                    `json:"verified_count"`
-	PendingVerification int                    `json:"pending_verification"`
-	RecentDeployments   []RecentDeploymentInfo `json:"recent_deployments"`
-}
-
-// RecentDeploymentInfo represents recent deployment information
-type RecentDeploymentInfo struct {
-	Contract  string               `json:"contract"`
-	Namespace string               `json:"namespace"`
-	Label     string               `json:"label"`
-	Address   string               `json:"address"`
-	Network   string               `json:"network"`
-	Timestamp string               `json:"timestamp"`
-	Type      types.DeploymentType `json:"type"` // implementation/proxy
-}
-
-// GetAllDeployments returns all deployments across networks
-func (m *Manager) GetAllDeployments() []*DeploymentInfo {
-	var deployments []*DeploymentInfo
-
-	for chainID, network := range m.registry.Networks {
-		for _, deployment := range network.Deployments {
-			deployments = append(deployments, &DeploymentInfo{
-				Address:     deployment.Address,
-				NetworkName: network.Name,
-				ChainID:     chainID,
-				Entry:       deployment,
-			})
-		}
+	// Check if this ID already exists
+	if _, exists := m.deployments[baseID]; !exists {
+		return baseID
 	}
 
-	return deployments
+	// Add transaction prefix for uniqueness
+	if txHash != "" && len(txHash) >= 10 {
+		return fmt.Sprintf("%s#%s", baseID, txHash[2:6]) // Skip 0x prefix, take first 4 chars
+	}
+
+	// Fallback: use timestamp
+	return fmt.Sprintf("%s#%d", baseID, time.Now().Unix())
 }
 
-// AddTag adds a tag to a deployment by address
-func (m *Manager) AddTag(address common.Address, tag string) error {
-	// Find deployment by address across all networks
-	addressLower := strings.ToLower(address.Hex())
+// AddDeployment adds a new deployment record
+func (m *Manager) AddDeployment(deployment *types.Deployment) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
-	for _, network := range m.registry.Networks {
-		if deployment, exists := network.Deployments[addressLower]; exists {
-			// Check if tag already exists
-			for _, existingTag := range deployment.Tags {
-				if existingTag == tag {
-					return nil // Tag already exists, no error
+	// Add to deployments
+	m.deployments[deployment.ID] = deployment
+
+	// Update indexes
+	m.updateIndexesForDeployment(deployment)
+
+	// Update solidity registry
+	m.updateSolidityRegistry(deployment)
+
+	// Save all files
+	return m.save()
+}
+
+// updateIndexesForDeployment updates lookup indexes for a deployment
+func (m *Manager) updateIndexesForDeployment(deployment *types.Deployment) {
+	// Update address index (use lowercase for consistency)
+	if m.lookups.ByAddress[deployment.ChainID] == nil {
+		m.lookups.ByAddress[deployment.ChainID] = make(map[string]string)
+	}
+	m.lookups.ByAddress[deployment.ChainID][strings.ToLower(deployment.Address)] = deployment.ID
+
+	// Update namespace index
+	if m.lookups.ByNamespace[deployment.Namespace] == nil {
+		m.lookups.ByNamespace[deployment.Namespace] = make(map[uint64][]string)
+	}
+	namespaceChain := m.lookups.ByNamespace[deployment.Namespace][deployment.ChainID]
+	if !contains(namespaceChain, deployment.ID) {
+		m.lookups.ByNamespace[deployment.Namespace][deployment.ChainID] = append(namespaceChain, deployment.ID)
+	}
+
+	// Update contract index
+	contractList := m.lookups.ByContract[deployment.ContractName]
+	if !contains(contractList, deployment.ID) {
+		m.lookups.ByContract[deployment.ContractName] = append(contractList, deployment.ID)
+	}
+
+	// Update proxy indexes if applicable
+	if deployment.Type == types.ProxyDeployment && deployment.ProxyInfo != nil {
+		m.lookups.Proxies.ProxyToImpl[deployment.ID] = deployment.ProxyInfo.Implementation
+		
+		// Find implementation deployment ID by address
+		for id, dep := range m.deployments {
+			if dep.Address == deployment.ProxyInfo.Implementation {
+				implList := m.lookups.Proxies.Implementations[id]
+				if !contains(implList, deployment.ID) {
+					m.lookups.Proxies.Implementations[id] = append(implList, deployment.ID)
 				}
+				break
 			}
-
-			// Add the tag
-			deployment.Tags = append(deployment.Tags, tag)
-			return nil
 		}
 	}
-
-	return fmt.Errorf("deployment not found for address %s", address.Hex())
 }
 
-// RemoveTag removes a tag from a deployment by address
-func (m *Manager) RemoveTag(address common.Address, tag string) error {
-	// Find deployment by address across all networks
-	addressLower := strings.ToLower(address.Hex())
-
-	for _, network := range m.registry.Networks {
-		if deployment, exists := network.Deployments[addressLower]; exists {
-			// Find and remove the tag
-			for i, existingTag := range deployment.Tags {
-				if existingTag == tag {
-					// Remove the tag by slicing
-					deployment.Tags = append(deployment.Tags[:i], deployment.Tags[i+1:]...)
-					return nil
-				}
-			}
-			// Tag not found, but deployment exists - not an error
-			return nil
-		}
+// updateSolidityRegistry updates the simplified Solidity registry
+func (m *Manager) updateSolidityRegistry(deployment *types.Deployment) {
+	if m.solidityRegistry[deployment.ChainID] == nil {
+		m.solidityRegistry[deployment.ChainID] = make(map[string]map[string]string)
+	}
+	if m.solidityRegistry[deployment.ChainID][deployment.Namespace] == nil {
+		m.solidityRegistry[deployment.ChainID][deployment.Namespace] = make(map[string]string)
 	}
 
-	return fmt.Errorf("deployment not found for address %s", address.Hex())
+	key := fmt.Sprintf("%s:%s", deployment.ContractName, deployment.Label)
+	m.solidityRegistry[deployment.ChainID][deployment.Namespace][key] = deployment.Address
 }
 
-// GetNetworkSummary returns network summary information
-func (m *Manager) GetNetworkSummary() map[string]*NetworkSummary {
-	networks := make(map[string]*NetworkSummary)
+// AddTransaction adds a new transaction record
+func (m *Manager) AddTransaction(tx *types.Transaction) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
-	for chainID, network := range m.registry.Networks {
-		contracts := make(map[string]bool)
-
-		for key := range network.Deployments {
-			// Extract contract name from key (format: ContractName_env)
-			parts := strings.Split(key, "_")
-			if len(parts) > 0 {
-				contracts[parts[0]] = true
-			}
-		}
-
-		contractNames := make([]string, 0, len(contracts))
-		for contract := range contracts {
-			contractNames = append(contractNames, contract)
-		}
-
-		networks[chainID] = &NetworkSummary{
-			Name:            network.Name,
-			DeploymentCount: len(network.Deployments),
-			Contracts:       contractNames,
-		}
-	}
-
-	return networks
+	m.transactions[tx.ID] = tx
+	return m.save()
 }
 
-// GetStatus returns overall registry status
-func (m *Manager) GetStatus() *RegistryStatus {
-	status := &RegistryStatus{
-		NetworkCount: len(m.registry.Networks),
-	}
+// AddSafeTransaction adds a new Safe transaction record
+func (m *Manager) AddSafeTransaction(safeTx *types.SafeTransaction) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
-	// Count deployments and verification status
-	recentDeployments := make([]RecentDeploymentInfo, 0)
+	m.safeTransactions[safeTx.SafeTxHash] = safeTx
 
-	for _, network := range m.registry.Networks {
-		for _, deployment := range network.Deployments {
-			status.TotalDeployments++
-
-			// Count verification status
-			switch deployment.Verification.Status {
-			case "verified":
-				status.VerifiedCount++
-			case "pending":
-				status.PendingVerification++
-			}
-
-			// Add to recent deployments (limit to 5 most recent)
-			if len(recentDeployments) < 5 {
-				recentDeployments = append(recentDeployments, RecentDeploymentInfo{
-					Contract:  deployment.ContractName,
-					Namespace: deployment.Namespace,
-					Address:   deployment.Address.Hex(),
-					Network:   network.Name,
-					Timestamp: deployment.Deployment.Timestamp.Format("2006-01-02 15:04"),
-					Type:      deployment.Type,
-					Label:     deployment.Label,
-				})
-			}
+	// Update pending list if needed
+	if safeTx.Status == types.TransactionStatusPending {
+		if !contains(m.lookups.Pending.SafeTxs, safeTx.SafeTxHash) {
+			m.lookups.Pending.SafeTxs = append(m.lookups.Pending.SafeTxs, safeTx.SafeTxHash)
 		}
 	}
 
-	status.RecentDeployments = recentDeployments
-	return status
+	return m.save()
 }
 
-// CleanInvalidEntries removes invalid entries from the registry
-func (m *Manager) CleanInvalidEntries() int {
-	cleaned := 0
+// GetDeployment retrieves a deployment by ID
+func (m *Manager) GetDeployment(id string) (*types.Deployment, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
-	for chainID, network := range m.registry.Networks {
-		toDelete := make([]string, 0)
+	deployment, exists := m.deployments[id]
+	if !exists {
+		return nil, fmt.Errorf("deployment not found: %s", id)
+	}
 
-		// Check if this is the old hardcoded Sepolia chainID (11155111)
-		// These are definitely dummy entries since sepolia is not configured in foundry.toml
-		if chainID == "11155111" {
-			// Remove the entire network
-			delete(m.registry.Networks, chainID)
-			cleaned += len(network.Deployments)
-			continue
-		}
+	return deployment, nil
+}
 
-		for key, deployment := range network.Deployments {
-			// Check for dummy entries (all zero salt and init code hash)
-			isZeroSalt := deployment.Salt == "" || deployment.Salt == "0000000000000000000000000000000000000000000000000000000000000000"
-			isZeroInitCodeHash := deployment.InitCodeHash == "" || deployment.InitCodeHash == "0000000000000000000000000000000000000000000000000000000000000000"
+// GetDeploymentByAddress retrieves a deployment by chain and address
+func (m *Manager) GetDeploymentByAddress(chainID uint64, address string) (*types.Deployment, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
-			// Mark entries with zero salt AND zero init code hash as potentially invalid
-			if isZeroSalt && isZeroInitCodeHash {
-				// Check if the broadcast file doesn't exist
-				broadcastPath := deployment.Deployment.BroadcastFile
-				shouldDelete := false
+	chainAddresses, exists := m.lookups.ByAddress[chainID]
+	if !exists {
+		return nil, fmt.Errorf("no deployments on chain %d", chainID)
+	}
 
-				if broadcastPath == "" {
-					shouldDelete = true
-				} else if !fileExists(broadcastPath) {
-					shouldDelete = true
-				}
+	deploymentID, exists := chainAddresses[strings.ToLower(address)]
+	if !exists {
+		return nil, fmt.Errorf("deployment not found at address %s on chain %d", address, chainID)
+	}
 
-				if shouldDelete {
-					toDelete = append(toDelete, key)
-				}
-			}
-		}
+	return m.deployments[deploymentID], nil
+}
 
-		// Delete invalid entries
-		for _, key := range toDelete {
-			delete(network.Deployments, key)
-			cleaned++
-		}
+// GetDeploymentsByNamespace retrieves all deployments in a namespace
+func (m *Manager) GetDeploymentsByNamespace(namespace string, chainID uint64) ([]*types.Deployment, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
-		// Remove empty networks
-		if len(network.Deployments) == 0 {
-			delete(m.registry.Networks, chainID)
+	namespaceData, exists := m.lookups.ByNamespace[namespace]
+	if !exists {
+		return nil, nil // No deployments in this namespace
+	}
+
+	deploymentIDs, exists := namespaceData[chainID]
+	if !exists {
+		return nil, nil // No deployments on this chain
+	}
+
+	deployments := make([]*types.Deployment, 0, len(deploymentIDs))
+	for _, id := range deploymentIDs {
+		if deployment, exists := m.deployments[id]; exists {
+			deployments = append(deployments, deployment)
 		}
 	}
 
-	return cleaned
+	return deployments, nil
 }
 
-// fileExists checks if a file exists
-func fileExists(filename string) bool {
-	_, err := os.Stat(filename)
-	return !os.IsNotExist(err)
+// GetAllDeployments returns all deployments as a slice
+func (m *Manager) GetAllDeployments() []*types.Deployment {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	// Return a slice to prevent external modifications
+	result := make([]*types.Deployment, 0, len(m.deployments))
+	for _, v := range m.deployments {
+		result = append(result, v)
+	}
+	return result
+}
+
+// GetAllDeploymentsHydrated returns all deployments with linked transaction data
+func (m *Manager) GetAllDeploymentsHydrated() []*types.Deployment {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	result := make([]*types.Deployment, 0, len(m.deployments))
+	for _, deployment := range m.deployments {
+		// Create a copy to avoid modifying the original
+		dep := *deployment
+		
+		// Hydrate with transaction data if available
+		if dep.TransactionID != "" {
+			if tx, exists := m.transactions[dep.TransactionID]; exists {
+				// Add transaction reference to deployment
+				dep.Transaction = tx
+			}
+		}
+		
+		result = append(result, &dep)
+	}
+	return result
+}
+
+// GetTransaction retrieves a transaction by ID
+func (m *Manager) GetTransaction(id string) (*types.Transaction, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	tx, exists := m.transactions[id]
+	if !exists {
+		return nil, fmt.Errorf("transaction not found: %s", id)
+	}
+
+	return tx, nil
+}
+
+// GetSafeTransaction retrieves a Safe transaction by hash
+func (m *Manager) GetSafeTransaction(safeTxHash string) (*types.SafeTransaction, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	safeTx, exists := m.safeTransactions[safeTxHash]
+	if !exists {
+		return nil, fmt.Errorf("safe transaction not found: %s", safeTxHash)
+	}
+
+	return safeTx, nil
+}
+
+// GetAllSafeTransactions returns all Safe transactions
+func (m *Manager) GetAllSafeTransactions() []*types.SafeTransaction {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	result := make([]*types.SafeTransaction, 0, len(m.safeTransactions))
+	for _, v := range m.safeTransactions {
+		result = append(result, v)
+	}
+	return result
+}
+
+// GetAllTransactions returns all transactions
+func (m *Manager) GetAllTransactions() []*types.Transaction {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	result := make([]*types.Transaction, 0, len(m.transactions))
+	for _, v := range m.transactions {
+		result = append(result, v)
+	}
+	return result
+}
+
+// UpdateSafeTransaction updates an existing Safe transaction
+func (m *Manager) UpdateSafeTransaction(safeTx *types.SafeTransaction) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Check if Safe transaction exists
+	if _, exists := m.safeTransactions[safeTx.SafeTxHash]; !exists {
+		return fmt.Errorf("safe transaction not found: %s", safeTx.SafeTxHash)
+	}
+
+	// Update the Safe transaction
+	m.safeTransactions[safeTx.SafeTxHash] = safeTx
+
+	// Update pending list if status changed
+	if safeTx.Status != types.TransactionStatusPending {
+		// Remove from pending list
+		newPending := make([]string, 0)
+		for _, hash := range m.lookups.Pending.SafeTxs {
+			if hash != safeTx.SafeTxHash {
+				newPending = append(newPending, hash)
+			}
+		}
+		m.lookups.Pending.SafeTxs = newPending
+	}
+
+	// Save all files
+	return m.save()
+}
+
+// SaveDeployment updates an existing deployment record
+func (m *Manager) SaveDeployment(deployment *types.Deployment) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Check if deployment exists
+	if _, exists := m.deployments[deployment.ID]; !exists {
+		return fmt.Errorf("deployment not found: %s", deployment.ID)
+	}
+
+	// Update the deployment
+	deployment.UpdatedAt = time.Now()
+	m.deployments[deployment.ID] = deployment
+
+	// Update indexes in case address changed
+	m.updateIndexesForDeployment(deployment)
+
+	// Update solidity registry
+	m.updateSolidityRegistry(deployment)
+
+	// Save all files
+	return m.save()
+}
+
+// UpdateDeploymentVerification updates the verification status of a deployment
+func (m *Manager) UpdateDeploymentVerification(deploymentID string, status types.VerificationStatus, etherscanURL string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	deployment, exists := m.deployments[deploymentID]
+	if !exists {
+		return fmt.Errorf("deployment not found: %s", deploymentID)
+	}
+
+	deployment.Verification.Status = status
+	deployment.Verification.EtherscanURL = etherscanURL
+	if status == types.VerificationStatusVerified {
+		now := time.Now()
+		deployment.Verification.VerifiedAt = &now
+	}
+	deployment.UpdatedAt = time.Now()
+
+	return m.save()
+}
+
+// AddTag adds a tag to a deployment
+func (m *Manager) AddTag(deploymentID string, tag string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	deployment, exists := m.deployments[deploymentID]
+	if !exists {
+		return fmt.Errorf("deployment not found: %s", deploymentID)
+	}
+
+	// Check if tag already exists
+	for _, existingTag := range deployment.Tags {
+		if existingTag == tag {
+			return nil // Tag already exists, no error
+		}
+	}
+
+	// Add tag
+	deployment.Tags = append(deployment.Tags, tag)
+	deployment.UpdatedAt = time.Now()
+
+	return m.save()
+}
+
+// RemoveTag removes a tag from a deployment
+func (m *Manager) RemoveTag(deploymentID string, tag string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	deployment, exists := m.deployments[deploymentID]
+	if !exists {
+		return fmt.Errorf("deployment not found: %s", deploymentID)
+	}
+
+	// Find and remove tag
+	newTags := make([]string, 0, len(deployment.Tags))
+	found := false
+	for _, existingTag := range deployment.Tags {
+		if existingTag != tag {
+			newTags = append(newTags, existingTag)
+		} else {
+			found = true
+		}
+	}
+
+	if !found {
+		return nil // Tag doesn't exist, no error
+	}
+
+	// Update tags
+	deployment.Tags = newTags
+	deployment.UpdatedAt = time.Now()
+
+	return m.save()
+}
+
+// contains checks if a string slice contains a value
+func contains(slice []string, value string) bool {
+	for _, v := range slice {
+		if v == value {
+			return true
+		}
+	}
+	return false
 }

@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/interactive"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
-	registryv2 "github.com/trebuchet-org/treb-cli/cli/pkg/registry/v2"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/verification"
 	"golang.org/x/text/cases"
@@ -40,7 +40,7 @@ Examples:
   treb verify CounterProxy --contract-path "./src/Counter.sol:Counter"  # Manual contract path`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := runVerifyV2(cmd, args); err != nil {
+		if err := runVerify(cmd, args); err != nil {
 			checkError(err)
 		}
 	},
@@ -56,13 +56,13 @@ func init() {
 	verifyCmd.Flags().StringP("namespace", "n", "", "Filter by namespace")
 }
 
-func runVerifyV2(cmd *cobra.Command, args []string) error {
+func runVerify(cmd *cobra.Command, args []string) error {
 	// Get flags
 	allFlag, _ := cmd.Flags().GetBool("all")
 	namespaceFlag, _ := cmd.Flags().GetString("namespace")
 
 	// Initialize v2 registry manager
-	manager, err := registryv2.NewManager(".")
+	manager, err := registry.NewManager(".")
 	if err != nil {
 		return fmt.Errorf("failed to initialize registry: %w", err)
 	}
@@ -71,11 +71,11 @@ func runVerifyV2(cmd *cobra.Command, args []string) error {
 	networkResolver := network.NewResolver(".")
 
 	// Initialize verification manager (for v2)
-	verificationManager := verification.NewManagerV2(manager, networkResolver)
+	verificationManager := verification.NewManager(manager, networkResolver)
 
 	if allFlag {
 		// Verify all unverified contracts (pending/failed) or all contracts if force is used
-		return verifyAllContractsV2(cmd, verificationManager, manager)
+		return verifyAllContracts(cmd, verificationManager, manager)
 	}
 
 	if len(args) == 0 {
@@ -85,10 +85,10 @@ func runVerifyV2(cmd *cobra.Command, args []string) error {
 	// Verify specific contract
 	identifier := args[0]
 	chainID, _ := cmd.Flags().GetUint64("chain")
-	return verifySpecificContractV2(cmd, identifier, verificationManager, manager, chainID, namespaceFlag)
+	return verifySpecificContract(cmd, identifier, verificationManager, manager, chainID, namespaceFlag)
 }
 
-func verifyAllContractsV2(cmd *cobra.Command, verificationManager *verification.ManagerV2, manager *registryv2.Manager) error {
+func verifyAllContracts(cmd *cobra.Command, verificationManager *verification.Manager, manager *registry.Manager) error {
 	// Get force flag
 	forceFlag, _ := cmd.Flags().GetBool("force")
 	debugFlag, _ := cmd.Flags().GetBool("debug")
@@ -253,7 +253,7 @@ func verifyAllContractsV2(cmd *cobra.Command, verificationManager *verification.
 	return nil
 }
 
-func verifySpecificContractV2(cmd *cobra.Command, identifier string, verificationManager *verification.ManagerV2, manager *registryv2.Manager, chainIDFilter uint64, namespaceFilter string) error {
+func verifySpecificContract(cmd *cobra.Command, identifier string, verificationManager *verification.Manager, manager *registry.Manager, chainIDFilter uint64, namespaceFilter string) error {
 	// Get flags
 	forceFlag, _ := cmd.Flags().GetBool("force")
 	debugFlag, _ := cmd.Flags().GetBool("debug")
@@ -441,11 +441,11 @@ func verifySpecificContractV2(cmd *cobra.Command, identifier string, verificatio
 	}
 
 	// Show verification status
-	showVerificationStatusV2(deployment)
+	showVerificationStatus(deployment)
 	return nil
 }
 
-func showVerificationStatusV2(deployment *types.Deployment) {
+func showVerificationStatus(deployment *types.Deployment) {
 	if deployment.Verification.Verifiers == nil {
 		return
 	}

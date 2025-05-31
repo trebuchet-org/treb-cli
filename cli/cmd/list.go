@@ -10,7 +10,7 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
-	registryv2 "github.com/trebuchet-org/treb-cli/cli/pkg/registry/v2"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
@@ -46,7 +46,7 @@ var listCmd = &cobra.Command{
 		contractName, _ := cmd.Flags().GetString("contract")
 
 		// Create registry manager
-		manager, err := registryv2.NewManager(".")
+		manager, err := registry.NewManager(".")
 		if err != nil {
 			checkError(fmt.Errorf("failed to load registry: %w", err))
 		}
@@ -95,7 +95,7 @@ var listCmd = &cobra.Command{
 }
 
 // displayTableFormat shows deployments in table format
-func displayTableFormat(deployments []*types.Deployment, manager *registryv2.Manager) {
+func displayTableFormat(deployments []*types.Deployment, manager *registry.Manager) {
 	// Group by namespace and chain
 	namespaceChainGroups := make(map[string]map[uint64][]*types.Deployment)
 
@@ -233,7 +233,7 @@ func displayTableFormat(deployments []*types.Deployment, manager *registryv2.Man
 }
 
 // buildDeploymentTable creates a TableData for a list of deployments
-func buildDeploymentTable(deployments []*types.Deployment, manager *registryv2.Manager) TableData {
+func buildDeploymentTable(deployments []*types.Deployment, manager *registry.Manager) TableData {
 	tableData := make(TableData, 0)
 
 	// Sort deployments by timestamp (newest first)

@@ -1,6 +1,7 @@
 {
   "11155111": {
     "default": {
+      "Counter:test": "0xF479f510B1D03c89f3d05A847f344DA01A4ed990",
       "ERC1967Proxy:test22y": "0x71F6f67c725B21523b0302ef6c78EF0afCe9369e",
       "UpgradeableCounter:test22y": "0x70D606073465Df4f1119704CfbADaa67F9f4E248"
     }

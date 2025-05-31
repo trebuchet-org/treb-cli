@@ -6,14 +6,14 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strconv"
+	// "strconv" // Used in commented v1 registry functions
 	"strings"
 
-	"github.com/fatih/color"
+	// "github.com/fatih/color" // Used in commented v1 registry functions
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
+	// "github.com/trebuchet-org/treb-cli/cli/pkg/registry" // v1 registry removed
+	// "github.com/trebuchet-org/treb-cli/cli/pkg/types" // Used in commented v1 registry functions
 	"github.com/trebuchet-org/treb-cli/cli/pkg/dev"
 )
 
@@ -45,9 +45,10 @@ var debugFixCompilerCmd = &cobra.Command{
 This command iterates through all deployments and updates the compiler version metadata
 by reading from the contract artifacts in the out/ directory.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := fixCompilerVersions(); err != nil {
-			checkError(err)
-		}
+		fmt.Println("This command is obsolete - it was for v1 registry which has been removed")
+		// if err := fixCompilerVersions(); err != nil {
+		// 	checkError(err)
+		// }
 	},
 }
 
@@ -59,9 +60,10 @@ var debugFixScriptPathCmd = &cobra.Command{
 This command iterates through all deployments and adds the script_path metadata
 field based on the contract name and type (implementation or proxy).`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := fixScriptPaths(); err != nil {
-			checkError(err)
-		}
+		fmt.Println("This command is obsolete - it was for v1 registry which has been removed")
+		// if err := fixScriptPaths(); err != nil {
+		// 	checkError(err)
+		// }
 	},
 }
 
@@ -199,6 +201,8 @@ func showDeployConfig(namespace, sender string) error {
 	return nil
 }
 
+// OBSOLETE: This function was for v1 registry which has been removed
+/*
 func fixCompilerVersions() error {
 	// Initialize registry manager
 	registryManager, err := registry.NewManager("deployments.json")
@@ -283,7 +287,10 @@ func fixCompilerVersions() error {
 
 	return nil
 }
+*/
 
+// OBSOLETE: This function was for v1 registry which has been removed
+/*
 func fixScriptPaths() error {
 	// Initialize registry manager
 	registryManager, err := registry.NewManager("deployments.json")
@@ -364,6 +371,7 @@ func fixScriptPaths() error {
 
 	return nil
 }
+*/
 
 // isValidContractPath checks if a contract path points to a file that exists on disk
 func isValidContractPath(contractPath string) bool {
