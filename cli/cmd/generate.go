@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/interactive"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/resolvers"
 )
 
 // genCmd represents the gen command
@@ -146,34 +147,27 @@ Examples:
 			}
 		}
 
-		// Initialize indexer
-		indexer, err := contracts.GetGlobalIndexer(".")
-		if err != nil {
-			return fmt.Errorf("failed to initialize contract indexer: %w", err)
-		}
+		// Create resolver context
+		isInteractive := !rootCmd.PersistentFlags().Changed("non-interactive")
+		ctx := resolvers.NewContext(".", isInteractive)
 
 		var contractInfo *contracts.ContractInfo
+		var err error
 		
 		if len(args) > 0 {
-			// Contract name provided
+			// Contract name provided - use resolver which handles full paths properly
 			contractName := args[0]
-			
-			// Find contract(s) with this name
-			contractInfos := indexer.FindContractByName(contractName, contracts.DefaultFilter())
-			
-			if len(contractInfos) == 0 {
-				return fmt.Errorf("no deployable contract found with name: %s", contractName)
-			} else if len(contractInfos) == 1 {
-				contractInfo = contractInfos[0]
-			} else {
-				// Multiple contracts with same name, let user choose
-				contractInfo, err = interactive.SelectContract(contractInfos, "Multiple contracts found. Select one:")
-				if err != nil {
-					return err
-				}
+			contractInfo, err = ctx.ResolveContract(contractName, contracts.DefaultFilter())
+			if err != nil {
+				return err
 			}
 		} else {
 			// No contract specified, show interactive picker
+			indexer, err := contracts.GetGlobalIndexer(".")
+			if err != nil {
+				return fmt.Errorf("failed to initialize contract indexer: %w", err)
+			}
+			
 			deployableContracts := indexer.GetDeployableContracts()
 			if len(deployableContracts) == 0 {
 				return fmt.Errorf("no deployable contracts found in project")

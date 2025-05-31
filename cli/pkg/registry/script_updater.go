@@ -183,6 +183,12 @@ func (su *ScriptUpdater) createDeploymentFromEvent(
 		}
 	}
 
+	// If indexer lookup failed, try to extract contract name from artifact field
+	if contractName == "" && event.Deployment.Artifact != "" {
+		contractName, contractPath = extractContractNameFromArtifact(event.Deployment.Artifact)
+	}
+
+	// Final fallback to "Unknown" 
 	if contractName == "" {
 		contractName = "Unknown"
 		contractPath = "Unknown"
@@ -342,5 +348,33 @@ func extractScriptName(scriptPath string) string {
 	}
 	
 	return filename
+}
+
+// extractContractNameFromArtifact extracts contract name and path from artifact string
+// Handles formats like:
+// - "src/Counter.sol:Counter" -> ("Counter", "src/Counter.sol:Counter")
+// - "ERC1967Proxy" -> ("ERC1967Proxy", "ERC1967Proxy")
+// - "<user-provided-bytecode>" -> ("UserProvidedBytecode", "<user-provided-bytecode>")
+func extractContractNameFromArtifact(artifact string) (string, string) {
+	if artifact == "" {
+		return "", ""
+	}
+	
+	// Handle special case of user-provided bytecode
+	if artifact == "<user-provided-bytecode>" {
+		return "UserProvidedBytecode", artifact
+	}
+	
+	// Check if it's in the format "path:contractName"
+	if strings.Contains(artifact, ":") {
+		parts := strings.Split(artifact, ":")
+		if len(parts) >= 2 {
+			contractName := parts[len(parts)-1] // Last part is the contract name
+			return contractName, artifact
+		}
+	}
+	
+	// If no colon, assume the entire string is the contract name
+	return artifact, artifact
 }
 

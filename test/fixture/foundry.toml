@@ -34,4 +34,4 @@ private_key = "${DEPLOYER_PRIVATE_KEY}"
 [profile.default.treb.senders.safe]
 type = "safe"
 safe = "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
-signer = "local"
+signer = "anvil"

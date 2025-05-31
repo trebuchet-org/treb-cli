@@ -195,8 +195,9 @@ contract Deploy{{.ContractName}} is TrebScript {
     using Deployer for Deployer.Deployment;
 
     function run() public broadcast {
-        // Get the sender
-        Senders.Sender storage sender = sender("default");
+        // Get the sender (can be overridden with --env deployer=<name>)
+        string memory deployerName = vm.envOr("deployer", string("default"));
+        Senders.Sender storage sender = sender(deployerName);
         
         // Read label from environment (e.g., --env LABEL=v1)
         string memory label = vm.envOr("LABEL", string(""));
@@ -239,8 +240,9 @@ contract Deploy{{.ContractName}} is TrebScript {
     using Deployer for Deployer.Deployment;
 
     function run() public broadcast {
-        // Get the sender
-        Senders.Sender storage sender = sender("default");
+        // Get the sender (can be overridden with --env deployer=<name>)
+        string memory deployerName = vm.envOr("deployer", string("default"));
+        Senders.Sender storage sender = sender(deployerName);
         
         // Read label from environment (e.g., --env LABEL=v1)
         string memory label = vm.envOr("LABEL", string(""));
