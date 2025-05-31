@@ -1,68 +1,27 @@
 {
   "deployments": {
-    "0x62d92c5f1a402d714a5f5de72418a0d67632e138bd50c2724eec666591345b45": {
-      "internalTxId": "0x62d92c5f1a402d714a5f5de72418a0d67632e138bd50c2724eec666591345b45",
+    "0x156dbd35d132c8c278c99b4357f6bfa97a39be99c833df57eb2e90c20a38f2d1": {
+      "internalTxId": "0x156dbd35d132c8c278c99b4357f6bfa97a39be99c833df57eb2e90c20a38f2d1",
       "deployment": {
-        "id": "default/31337/UpgradeableCounter:test100",
+        "id": "default/44787/ERC1967Proxy:test22y",
         "namespace": "default",
-        "chainId": 31337,
-        "contractName": "UpgradeableCounter",
-        "label": "test100",
-        "address": "0x9Ceb779dE1dDf2d98735071383aEa15AB6c45415",
-        "type": "SINGLETON",
-        "transactionId": "tx-0x37cdd95197a5b6e76fb53cb69dd2b456ad60f9aff8a580e64594f09ef6565e7d",
-        "deploymentStrategy": {
-          "method": "CREATE3",
-          "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600f2bfe5b407309dd9f88e19",
-          "initCodeHash": "0x5486ce6c86ba56c7bb877d0f3b9753c251076afae58a4f9ce7fed3ae56b6732a",
-          "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
-          "constructorArgs": "0x",
-          "entropy": "default/src/UpgradeableCounter.sol:UpgradeableCounter:test100"
-        },
-        "proxyInfo": null,
-        "artifact": {
-          "path": "src/UpgradeableCounter.sol:UpgradeableCounter",
-          "compilerVersion": "0.8.27+commit.40a35a09",
-          "bytecodeHash": "0x5486ce6c86ba56c7bb877d0f3b9753c251076afae58a4f9ce7fed3ae56b6732a",
-          "scriptPath": "DeployUCProxy.s.sol:DeployUCProxy",
-          "gitCommit": "de7bc758f89bc487a8498236e083ad260ec15d61"
-        },
-        "verification": {
-          "status": "UNVERIFIED"
-        },
-        "tags": [],
-        "createdAt": "2025-05-31T09:43:07.99384+02:00",
-        "updatedAt": "2025-05-31T09:43:07.99384+02:00"
-      },
-      "broadcastEnrichment": {
-        "transactionHash": "0x37cdd95197a5b6e76fb53cb69dd2b456ad60f9aff8a580e64594f09ef6565e7d",
-        "blockNumber": 105,
-        "gasUsed": 457732,
-        "timestamp": 1748677387
-      }
-    },
-    "0x66591df2ac2b2c44dc22db315120957bfb7ebe4a53bd0c72327160ed9d7f3f57": {
-      "internalTxId": "0x66591df2ac2b2c44dc22db315120957bfb7ebe4a53bd0c72327160ed9d7f3f57",
-      "deployment": {
-        "id": "default/31337/ERC1967Proxy:test100",
-        "namespace": "default",
-        "chainId": 31337,
+        "chainId": 44787,
         "contractName": "ERC1967Proxy",
-        "label": "test100",
-        "address": "0x51668f042a3FD1109249d867f39cc4694C592c2b",
+        "label": "test22y",
+        "address": "0x71F6f67c725B21523b0302ef6c78EF0afCe9369e",
         "type": "PROXY",
-        "transactionId": "tx-0x86628f9112709e6334c722a524b9dbd31dffa627db1427d022977d04bc0ecb98",
+        "transactionId": "tx-0xb21c407481ff24ef12aaccad946db008846a8419b3f2c9f69a81deca01b5233d",
         "deploymentStrategy": {
           "method": "CREATE3",
-          "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266006c0560c6df54a0b2911a92",
-          "initCodeHash": "0x1eb35bcc64f7987c236981fb67908009f92147c873d21465ba592de57ea0f85f",
+          "salt": "0xf1f30b69a9359c3e7c28eb76391835472e105f5c00e93c08a5624e52fe546568",
+          "initCodeHash": "0x647daeff53c94e264bcf1a123597e003f33cec51486c839a33df0841ede691bf",
           "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
-          "constructorArgs": "0x0000000000000000000000009ceb779de1ddf2d98735071383aea15ab6c4541500000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000",
-          "entropy": "default/ERC1967Proxy:test100"
+          "constructorArgs": "0x00000000000000000000000070d606073465df4f1119704cfbadaa67f9f4e24800000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000",
+          "entropy": "default/ERC1967Proxy:test22y"
         },
         "proxyInfo": {
           "type": "UUPS",
-          "implementation": "0x9Ceb779dE1dDf2d98735071383aEa15AB6c45415",
+          "implementation": "0x70D606073465Df4f1119704CfbADaa67F9f4E248",
           "history": []
         },
         "artifact": {
@@ -70,83 +29,124 @@
           "compilerVersion": "0.8.27+commit.40a35a09",
           "bytecodeHash": "0x49945270a289d183adf52e288c3c12e78172e546742643be864ef3b2c1f23079",
           "scriptPath": "DeployUCProxy.s.sol:DeployUCProxy",
-          "gitCommit": "de7bc758f89bc487a8498236e083ad260ec15d61"
+          "gitCommit": "84cab71acc09c31602f3a98c818f25c93f8a975b"
         },
         "verification": {
           "status": "UNVERIFIED"
         },
         "tags": [],
-        "createdAt": "2025-05-31T09:43:07.993863+02:00",
-        "updatedAt": "2025-05-31T09:43:07.993863+02:00"
+        "createdAt": "2025-05-31T11:53:33.454281+02:00",
+        "updatedAt": "2025-05-31T11:53:33.454281+02:00"
       },
       "broadcastEnrichment": {
-        "transactionHash": "0x86628f9112709e6334c722a524b9dbd31dffa627db1427d022977d04bc0ecb98",
-        "blockNumber": 107,
+        "transactionHash": "0xb21c407481ff24ef12aaccad946db008846a8419b3f2c9f69a81deca01b5233d",
+        "blockNumber": 47729891,
         "gasUsed": 49816,
-        "timestamp": 1748677387
+        "timestamp": 1748685213
+      }
+    },
+    "0x3ea9df037ccffce700ab5f8456aa47dc0c8c7745a8f22af7e9bfff9d2db7fa62": {
+      "internalTxId": "0x3ea9df037ccffce700ab5f8456aa47dc0c8c7745a8f22af7e9bfff9d2db7fa62",
+      "deployment": {
+        "id": "default/44787/UpgradeableCounter:test22y",
+        "namespace": "default",
+        "chainId": 44787,
+        "contractName": "UpgradeableCounter",
+        "label": "test22y",
+        "address": "0x70D606073465Df4f1119704CfbADaa67F9f4E248",
+        "type": "SINGLETON",
+        "transactionId": "tx-0x6a80945ac8d165c2a7bd36c74eb12e03c81d2a46a989a6a77d2a28c41f504374",
+        "deploymentStrategy": {
+          "method": "CREATE3",
+          "salt": "0xf1f30b69a9359c3e7c28eb76391835472e105f5c00bb69c4bde58d29ce788c71",
+          "initCodeHash": "0x5486ce6c86ba56c7bb877d0f3b9753c251076afae58a4f9ce7fed3ae56b6732a",
+          "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+          "constructorArgs": "0x",
+          "entropy": "default/src/UpgradeableCounter.sol:UpgradeableCounter:test22y"
+        },
+        "proxyInfo": null,
+        "artifact": {
+          "path": "src/UpgradeableCounter.sol:UpgradeableCounter",
+          "compilerVersion": "0.8.27+commit.40a35a09",
+          "bytecodeHash": "0x5486ce6c86ba56c7bb877d0f3b9753c251076afae58a4f9ce7fed3ae56b6732a",
+          "scriptPath": "DeployUCProxy.s.sol:DeployUCProxy",
+          "gitCommit": "84cab71acc09c31602f3a98c818f25c93f8a975b"
+        },
+        "verification": {
+          "status": "UNVERIFIED"
+        },
+        "tags": [],
+        "createdAt": "2025-05-31T11:53:33.454258+02:00",
+        "updatedAt": "2025-05-31T11:53:33.454258+02:00"
+      },
+      "broadcastEnrichment": {
+        "transactionHash": "0x6a80945ac8d165c2a7bd36c74eb12e03c81d2a46a989a6a77d2a28c41f504374",
+        "blockNumber": 47729891,
+        "gasUsed": 457732,
+        "timestamp": 1748685213
       }
     }
   },
   "transactions": {
-    "0x62d92c5f1a402d714a5f5de72418a0d67632e138bd50c2724eec666591345b45": {
-      "internalId": "0x62d92c5f1a402d714a5f5de72418a0d67632e138bd50c2724eec666591345b45",
+    "0x156dbd35d132c8c278c99b4357f6bfa97a39be99c833df57eb2e90c20a38f2d1": {
+      "internalId": "0x156dbd35d132c8c278c99b4357f6bfa97a39be99c833df57eb2e90c20a38f2d1",
       "transaction": {
-        "id": "tx-0x37cdd95197a5b6e76fb53cb69dd2b456ad60f9aff8a580e64594f09ef6565e7d",
-        "chainId": 31337,
-        "hash": "0x37cdd95197a5b6e76fb53cb69dd2b456ad60f9aff8a580e64594f09ef6565e7d",
+        "id": "tx-0xb21c407481ff24ef12aaccad946db008846a8419b3f2c9f69a81deca01b5233d",
+        "chainId": 44787,
+        "hash": "0xb21c407481ff24ef12aaccad946db008846a8419b3f2c9f69a81deca01b5233d",
         "status": "EXECUTED",
-        "blockNumber": 105,
-        "sender": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "blockNumber": 47729891,
+        "sender": "0xf1f30b69A9359C3e7c28eB76391835472E105f5C",
         "nonce": 0,
         "deployments": [],
         "operations": [
           {
             "type": "DEPLOY",
-            "target": "0x9Ceb779dE1dDf2d98735071383aEa15AB6c45415",
+            "target": "0x71F6f67c725B21523b0302ef6c78EF0afCe9369e",
             "method": "CREATE3",
             "result": {
-              "address": "0x9Ceb779dE1dDf2d98735071383aEa15AB6c45415"
+              "address": "0x71F6f67c725B21523b0302ef6c78EF0afCe9369e"
             }
           }
         ],
         "environment": "default",
-        "createdAt": "2025-05-31T09:43:07.993817+02:00"
+        "createdAt": "2025-05-31T11:53:33.454265+02:00"
       },
       "onChainData": {
-        "hash": "0x37cdd95197a5b6e76fb53cb69dd2b456ad60f9aff8a580e64594f09ef6565e7d",
-        "blockNumber": 105,
-        "gasUsed": 457732,
+        "hash": "0xb21c407481ff24ef12aaccad946db008846a8419b3f2c9f69a81deca01b5233d",
+        "blockNumber": 47729891,
+        "gasUsed": 49816,
         "status": 1
       }
     },
-    "0x66591df2ac2b2c44dc22db315120957bfb7ebe4a53bd0c72327160ed9d7f3f57": {
-      "internalId": "0x66591df2ac2b2c44dc22db315120957bfb7ebe4a53bd0c72327160ed9d7f3f57",
+    "0x3ea9df037ccffce700ab5f8456aa47dc0c8c7745a8f22af7e9bfff9d2db7fa62": {
+      "internalId": "0x3ea9df037ccffce700ab5f8456aa47dc0c8c7745a8f22af7e9bfff9d2db7fa62",
       "transaction": {
-        "id": "tx-0x86628f9112709e6334c722a524b9dbd31dffa627db1427d022977d04bc0ecb98",
-        "chainId": 31337,
-        "hash": "0x86628f9112709e6334c722a524b9dbd31dffa627db1427d022977d04bc0ecb98",
+        "id": "tx-0x6a80945ac8d165c2a7bd36c74eb12e03c81d2a46a989a6a77d2a28c41f504374",
+        "chainId": 44787,
+        "hash": "0x6a80945ac8d165c2a7bd36c74eb12e03c81d2a46a989a6a77d2a28c41f504374",
         "status": "EXECUTED",
-        "blockNumber": 107,
-        "sender": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "blockNumber": 47729891,
+        "sender": "0xf1f30b69A9359C3e7c28eB76391835472E105f5C",
         "nonce": 0,
         "deployments": [],
         "operations": [
           {
             "type": "DEPLOY",
-            "target": "0x51668f042a3FD1109249d867f39cc4694C592c2b",
+            "target": "0x70D606073465Df4f1119704CfbADaa67F9f4E248",
             "method": "CREATE3",
             "result": {
-              "address": "0x51668f042a3FD1109249d867f39cc4694C592c2b"
+              "address": "0x70D606073465Df4f1119704CfbADaa67F9f4E248"
             }
           }
         ],
         "environment": "default",
-        "createdAt": "2025-05-31T09:43:07.993849+02:00"
+        "createdAt": "2025-05-31T11:53:33.454229+02:00"
       },
       "onChainData": {
-        "hash": "0x86628f9112709e6334c722a524b9dbd31dffa627db1427d022977d04bc0ecb98",
-        "blockNumber": 107,
-        "gasUsed": 49816,
+        "hash": "0x6a80945ac8d165c2a7bd36c74eb12e03c81d2a46a989a6a77d2a28c41f504374",
+        "blockNumber": 47729891,
+        "gasUsed": 457732,
         "status": 1
       }
     }
@@ -154,11 +154,11 @@
   "safeTransactions": {},
   "metadata": {
     "scriptPath": "script/DeployUCProxy.s.sol",
-    "broadcastPath": "broadcast/DeployUCProxy.s.sol/31337/run-latest.json",
+    "broadcastPath": "broadcast/DeployUCProxy.s.sol/44787/run-latest.json",
     "namespace": "default",
-    "chainId": 31337,
-    "networkName": "local",
-    "createdAt": "2025-05-31T09:43:07.983554+02:00",
+    "chainId": 44787,
+    "networkName": "celo-alfajores",
+    "createdAt": "2025-05-31T11:53:33.44491+02:00",
     "dryRun": false
   }
 }

@@ -30,6 +30,9 @@ func UpdateRegistryFromEventsV2(
 
 	// Convert script events to events package events
 	eventsPackageEvents := convertScriptEventsToEventsPackage(scriptEvents)
+	
+	// Debug: Check if conversion worked
+	fmt.Printf("🔍 Event conversion: %d script events -> %d events package events\n", len(scriptEvents), len(eventsPackageEvents))
 
 	// Build registry update from events
 	registryUpdate := updater.BuildRegistryUpdate(
@@ -92,12 +95,20 @@ func UpdateRegistryFromEventsV2(
 // convertScriptEventsToEventsPackage converts script package events to events package events
 func convertScriptEventsToEventsPackage(scriptEvents []ParsedEvent) []events.ParsedEvent {
 	var eventsPackageEvents []events.ParsedEvent
+	failedConversions := 0
 	
 	for _, scriptEvent := range scriptEvents {
 		// The script package re-exports events package types, so we can cast directly
 		if eventsEvent, ok := scriptEvent.(events.ParsedEvent); ok {
 			eventsPackageEvents = append(eventsPackageEvents, eventsEvent)
+		} else {
+			failedConversions++
+			fmt.Printf("⚠️ Failed to convert event type: %T\n", scriptEvent)
 		}
+	}
+	
+	if failedConversions > 0 {
+		fmt.Printf("⚠️ Warning: %d events failed type conversion\n", failedConversions)
 	}
 	
 	return eventsPackageEvents

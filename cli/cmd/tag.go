@@ -2,10 +2,14 @@ package cmd
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/interactive"
+	registryv2 "github.com/trebuchet-org/treb-cli/cli/pkg/registry/v2"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
 var (
@@ -13,16 +17,16 @@ var (
 	removeTag string
 )
 
-var tagV1Cmd = &cobra.Command{
-	Use:   "tag-v1 <contract|address>",
-	Short: "Manage deployment tags (legacy)",
-	Long: `Add or remove version tags on deployments in v1 registry.
+var tagCmd = &cobra.Command{
+	Use:   "tag <deployment|address>",
+	Short: "Manage deployment tags",
+	Long: `Add or remove version tags on deployments.
 Without flags, shows current tags.
 
 Examples:
-  treb tag-v1 Counter                     # Show current tags
-  treb tag-v1 Counter --add v1.0.0        # Add a tag
-  treb tag-v1 Counter --remove v1.0.0     # Remove a tag`,
+  treb tag Counter:v1                  # Show current tags
+  treb tag Counter:v1 --add v1.0.0     # Add a tag
+  treb tag Counter:v1 --remove v1.0.0  # Remove a tag`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		identifier := args[0]
@@ -39,20 +43,22 @@ Examples:
 }
 
 func init() {
-	rootCmd.AddCommand(tagV1Cmd)
-	tagV1Cmd.Flags().StringVar(&addTag, "add", "", "Add a tag to the deployment")
-	tagV1Cmd.Flags().StringVar(&removeTag, "remove", "", "Remove a tag from the deployment")
+	rootCmd.AddCommand(tagCmd)
+	
+	tagCmd.Flags().StringVar(&addTag, "add", "", "Add a tag to the deployment")
+	tagCmd.Flags().StringVar(&removeTag, "remove", "", "Remove a tag from the deployment")
 }
 
+
 func manageDeploymentTags(identifier string) error {
-	// Initialize registry manager
-	registryManager, err := registry.NewManager("deployments.json")
+	// Initialize v2 registry manager
+	manager, err := registryv2.NewManager(".")
 	if err != nil {
 		return fmt.Errorf("failed to initialize registry: %w", err)
 	}
 
-	// Use shared picker
-	deployment, err := pickDeployment(identifier, registryManager)
+	// Find deployment
+	deployment, err := findDeployment(identifier, manager)
 	if err != nil {
 		return err
 	}
@@ -64,32 +70,86 @@ func manageDeploymentTags(identifier string) error {
 
 	// Add tag
 	if addTag != "" {
-		return addDeploymentTag(deployment, addTag, registryManager)
+		return addDeploymentTag(deployment, addTag, manager)
 	}
 
 	// Remove tag
-	return removeDeploymentTag(deployment, removeTag, registryManager)
+	return removeDeploymentTag(deployment, removeTag, manager)
 }
 
-func showDeploymentTags(deployment *registry.DeploymentInfo) error {
+func findDeployment(identifier string, manager *registryv2.Manager) (*types.Deployment, error) {
+	allDeployments := manager.GetAllDeployments()
+	var matches []*types.Deployment
+
+	// Check if identifier is an address (starts with 0x)
+	if strings.HasPrefix(strings.ToLower(identifier), "0x") {
+		// Try to find by address
+		for _, deployment := range allDeployments {
+			if strings.EqualFold(deployment.Address, identifier) {
+				matches = append(matches, deployment)
+			}
+		}
+	} else {
+		// Search by contract name or deployment ID
+		for _, deployment := range allDeployments {
+			// Check contract name match
+			if strings.EqualFold(deployment.ContractName, identifier) {
+				matches = append(matches, deployment)
+				continue
+			}
+			
+			// Check full ID match
+			if strings.Contains(strings.ToLower(deployment.ID), strings.ToLower(identifier)) {
+				matches = append(matches, deployment)
+				continue
+			}
+		}
+	}
+
+	if len(matches) == 0 {
+		return nil, fmt.Errorf("no deployment found matching '%s'", identifier)
+	}
+
+	if len(matches) == 1 {
+		return matches[0], nil
+	}
+
+	// Multiple matches - use interactive picker
+	if IsNonInteractive() {
+		return nil, fmt.Errorf("multiple deployments found matching '%s', please be more specific", identifier)
+	}
+
+	return interactive.PickDeploymentV2(matches)
+}
+
+func showDeploymentTags(deployment *types.Deployment) error {
 	// Color styles
 	titleStyle := color.New(color.FgCyan, color.Bold)
 	labelStyle := color.New(color.FgWhite, color.Bold)
 	addressStyle := color.New(color.FgGreen, color.Bold)
 	tagStyle := color.New(color.FgCyan)
 
-	displayName := deployment.Entry.GetDisplayName()
+	displayName := deployment.ContractName
+	if deployment.Label != "" {
+		displayName += ":" + deployment.Label
+	}
+
 	fmt.Println()
-	titleStyle.Printf("Deployment: %s/%s/%s\n", deployment.NetworkName, deployment.Entry.Namespace, displayName)
+	titleStyle.Printf("Deployment: %s/%d/%s\n", deployment.Namespace, deployment.ChainID, displayName)
 
 	labelStyle.Print("Address: ")
-	addressStyle.Println(deployment.Address.Hex())
+	addressStyle.Println(deployment.Address)
 
 	labelStyle.Print("Tags:    ")
-	if len(deployment.Entry.Tags) == 0 {
+	if len(deployment.Tags) == 0 {
 		color.New(color.Faint).Println("No tags")
 	} else {
-		for i, tag := range deployment.Entry.Tags {
+		// Sort tags for consistent display
+		sortedTags := make([]string, len(deployment.Tags))
+		copy(sortedTags, deployment.Tags)
+		sort.Strings(sortedTags)
+		
+		for i, tag := range sortedTags {
 			if i > 0 {
 				fmt.Print(", ")
 			}
@@ -102,37 +162,44 @@ func showDeploymentTags(deployment *registry.DeploymentInfo) error {
 	return nil
 }
 
-func addDeploymentTag(deployment *registry.DeploymentInfo, tag string, registryManager *registry.Manager) error {
+func addDeploymentTag(deployment *types.Deployment, tag string, manager *registryv2.Manager) error {
 	// Check if tag already exists
-	for _, existingTag := range deployment.Entry.Tags {
+	for _, existingTag := range deployment.Tags {
 		if existingTag == tag {
 			color.New(color.FgYellow).Printf("⚠️  Deployment already has tag '%s'\n", tag)
 			return nil
 		}
 	}
 
-	// Add the tag
-	if err := registryManager.AddTag(deployment.Address, tag); err != nil {
+	// Add tag and save
+	if err := manager.AddTag(deployment.ID, tag); err != nil {
 		return fmt.Errorf("failed to add tag: %w", err)
 	}
 
-	// Save changes
-	if err := registryManager.Save(); err != nil {
-		return fmt.Errorf("failed to save registry: %w", err)
-	}
-
 	// Show success
-	color.New(color.FgGreen).Printf("✅ Added tag '%s' to %s/%s/%s\n",
+	displayName := deployment.ContractName
+	if deployment.Label != "" {
+		displayName += ":" + deployment.Label
+	}
+	
+	color.New(color.FgGreen).Printf("✅ Added tag '%s' to %s/%d/%s\n",
 		tag,
-		deployment.NetworkName,
-		deployment.Entry.Namespace,
-		deployment.Entry.GetDisplayName(),
+		deployment.Namespace,
+		deployment.ChainID,
+		displayName,
 	)
 
-	// Show all tags
+	// Show all tags (reload deployment to get updated tags)
 	fmt.Print("\nCurrent tags: ")
 	tagStyle := color.New(color.FgCyan)
-	allTags := append(deployment.Entry.Tags, tag)
+	// Get updated deployment from manager
+	updatedDeployment, err := manager.GetDeployment(deployment.ID)
+	if err != nil {
+		return fmt.Errorf("failed to reload deployment: %w", err)
+	}
+	allTags := make([]string, len(updatedDeployment.Tags))
+	copy(allTags, updatedDeployment.Tags)
+	sort.Strings(allTags)
 	for i, t := range allTags {
 		if i > 0 {
 			fmt.Print(", ")
@@ -144,10 +211,10 @@ func addDeploymentTag(deployment *registry.DeploymentInfo, tag string, registryM
 	return nil
 }
 
-func removeDeploymentTag(deployment *registry.DeploymentInfo, tag string, registryManager *registry.Manager) error {
+func removeDeploymentTag(deployment *types.Deployment, tag string, manager *registryv2.Manager) error {
 	// Check if tag exists
 	found := false
-	for _, existingTag := range deployment.Entry.Tags {
+	for _, existingTag := range deployment.Tags {
 		if existingTag == tag {
 			found = true
 			break
@@ -159,37 +226,43 @@ func removeDeploymentTag(deployment *registry.DeploymentInfo, tag string, regist
 		return nil
 	}
 
-	// Remove the tag
-	if err := registryManager.RemoveTag(deployment.Address, tag); err != nil {
+	// Remove tag and save
+	if err := manager.RemoveTag(deployment.ID, tag); err != nil {
 		return fmt.Errorf("failed to remove tag: %w", err)
 	}
 
-	// Save changes
-	if err := registryManager.Save(); err != nil {
-		return fmt.Errorf("failed to save registry: %w", err)
-	}
-
 	// Show success
-	color.New(color.FgGreen).Printf("✅ Removed tag '%s' from %s/%s/%s\n",
+	displayName := deployment.ContractName
+	if deployment.Label != "" {
+		displayName += ":" + deployment.Label
+	}
+	
+	color.New(color.FgGreen).Printf("✅ Removed tag '%s' from %s/%d/%s\n",
 		tag,
-		deployment.NetworkName,
-		deployment.Entry.Namespace,
-		deployment.Entry.GetDisplayName(),
+		deployment.Namespace,
+		deployment.ChainID,
+		displayName,
 	)
 
 	// Show remaining tags
 	fmt.Print("\nRemaining tags: ")
-	if len(deployment.Entry.Tags) == 1 {
+	remainingTags := make([]string, 0)
+	for _, t := range deployment.Tags {
+		if t != tag {
+			remainingTags = append(remainingTags, t)
+		}
+	}
+	
+	if len(remainingTags) == 0 {
 		color.New(color.Faint).Print("No tags")
 	} else {
 		tagStyle := color.New(color.FgCyan)
-		for i, t := range deployment.Entry.Tags {
-			if t != tag {
-				if i > 0 {
-					fmt.Print(", ")
-				}
-				tagStyle.Print(t)
+		sort.Strings(remainingTags)
+		for i, t := range remainingTags {
+			if i > 0 {
+				fmt.Print(", ")
 			}
+			tagStyle.Print(t)
 		}
 	}
 	fmt.Println()

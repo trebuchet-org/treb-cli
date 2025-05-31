@@ -28,13 +28,17 @@ contract DeployerUCProxy is TrebScript {
         string memory _deployer = vm.envString("deployer");
 
         Senders.Sender storage deployer = sender(_deployer);
-        
-        address implementation = deployer.create3(
-            "src/UpgradeableCounter.sol:UpgradeableCounter"
-        ).setLabel(label).deploy();
-        
-        address proxy = deployer.create3("ERC1967Proxy").setLabel(label).deploy(abi.encode(implementation, ""));
+
+        address implementation = deployer
+            .create3("src/UpgradeableCounter.sol:UpgradeableCounter")
+            .setLabel(label)
+            .deploy();
+
+        address proxy = deployer.create3("ERC1967Proxy").setLabel(label).deploy(
+            abi.encode(implementation, "")
+        );
 
         UpgradeableCounter(deployer.harness(proxy)).increment();
     }
 }
+

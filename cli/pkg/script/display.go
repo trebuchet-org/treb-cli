@@ -24,6 +24,17 @@ const (
 	ColorBold   = "\033[1m"
 )
 
+// safeTruncate safely truncates a string to the specified length with ellipsis
+func safeTruncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	if maxLen <= 3 {
+		return s[:maxLen]
+	}
+	return s[:maxLen-3] + "..."
+}
+
 // TransactionInfo groups related transaction events
 type TransactionInfo struct {
 	TransactionID string
@@ -159,7 +170,7 @@ func printSafeTransactionDetails(e *SafeTransactionQueuedEvent) {
 	// Print details of each transaction
 	for i, tx := range e.Transactions {
 		fmt.Printf("      Transaction %d:\n", i+1)
-		fmt.Printf("        TransactionID: %s%s%s\n", ColorGray, tx.TransactionID.Hex()[:10]+"...", ColorReset)
+		fmt.Printf("        TransactionID: %s%s%s\n", ColorGray, safeTruncate(tx.TransactionID.Hex(), 10), ColorReset)
 		fmt.Printf("        Label: %s\n", tx.Transaction.Label)
 		fmt.Printf("        To: %s%s%s\n", ColorGray, tx.Transaction.To.Hex(), ColorReset)
 		if tx.Transaction.Value != nil && tx.Transaction.Value.Sign() > 0 {
@@ -369,7 +380,7 @@ func reportTransactionsWithTxInfo(events []ParsedEvent, indexer *contracts.Index
 				continue
 			}
 			
-			fmt.Printf("\n  Transaction: %s%s%s\n", ColorGray, txID[:10]+"...", ColorReset)
+			fmt.Printf("\n  Transaction: %s%s%s\n", ColorGray, safeTruncate(txID, 10), ColorReset)
 			
 			// Show transaction details based on what events we have
 			var sender string
@@ -426,7 +437,7 @@ func reportTransactionsWithTxInfo(events []ParsedEvent, indexer *contracts.Index
 			if len(broadcastTxs) > 0 && sender != "" {
 				for _, btx := range broadcastTxs {
 					if strings.EqualFold(btx.From, sender) {
-						fmt.Printf(" (tx: %s%s%s", ColorGray, btx.Hash[:10]+"...", ColorReset)
+						fmt.Printf(" (tx: %s%s%s", ColorGray, safeTruncate(btx.Hash, 10), ColorReset)
 						if btx.BlockNumber > 0 {
 							fmt.Printf(" @ block %d", btx.BlockNumber)
 						}
@@ -487,7 +498,7 @@ func decodeDeploymentTransaction(deployment *ContractDeployedEvent, indexer *con
 	// Format as: create3(new Counter()) or create3(new SampleToken(224 bytes args))
 	strategy := strings.ToLower(deployment.Deployment.CreateStrategy)
 	contractNameFormatted := fmt.Sprintf("%s%s%s", ColorCyan, contractName, ColorReset)
-	addressFormatted := fmt.Sprintf("%s%s%s", ColorGreen, deployment.Location.Hex()[:10]+"...", ColorReset)
+	addressFormatted := fmt.Sprintf("%s%s%s", ColorGreen, safeTruncate(deployment.Location.Hex(), 10), ColorReset)
 	
 	return fmt.Sprintf("%s(new %s%s) → %s", strategy, contractNameFormatted, constructorDesc, addressFormatted)
 }
@@ -516,9 +527,7 @@ func ColorizeAddress(address string) string {
 
 // ColorizeHash returns a colorized hash string (shortened)
 func ColorizeHash(hash string) string {
-	if len(hash) > 10 {
-		hash = hash[:10] + "..."
-	}
+	hash = safeTruncate(hash, 10)
 	return fmt.Sprintf("%s%s%s", ColorGray, hash, ColorReset)
 }
 

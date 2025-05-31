@@ -82,9 +82,16 @@ Examples:
 			parsedEnvVars[parts[0]] = parts[1]
 		}
 
+		// Resolve network info to get chain ID from RPC
+		networkResolver := netpkg.NewResolver(".")
+		networkInfo, err := networkResolver.ResolveNetwork(network)
+		if err != nil {
+			checkError(fmt.Errorf("failed to resolve network: %w", err))
+		}
+
 		// Create script executor
-		executor := script.NewExecutor(".")
-		
+		executor := script.NewExecutor(".", networkInfo)
+
 		// Initialize indexer for contract identification
 		indexer, err := contracts.GetGlobalIndexer(".")
 		if err != nil {
@@ -128,30 +135,27 @@ Examples:
 			fmt.Printf("\n🔍 Parsed %d event(s):\n", len(result.AllEvents))
 			for i, event := range result.AllEvents {
 				fmt.Printf("  %s %s\n", script.GetEventIcon(event.Type()), event.String())
-				
+
 				// In verbose mode, print all raw data
 				if verbose {
 					fmt.Printf("    Event %d Details:\n", i+1)
 					script.PrintEventDetails(event, indexer)
 				}
 			}
-			
+
 			// Report deployment events specifically
 			if len(result.ParsedEvents) > 0 {
 				fmt.Printf("\n📦 %d contract(s) deployed:\n", len(result.ParsedEvents))
 				for _, event := range result.ParsedEvents {
 					// Try to get contract name
-				contractName := "Unknown"
-				if indexer != nil {
-					if contractInfo := indexer.GetContractByBytecodeHash(event.Deployment.BytecodeHash.Hex()); contractInfo != nil {
-						contractName = contractInfo.Name
+					contractName := "Unknown"
+					if indexer != nil {
+						if contractInfo := indexer.GetContractByBytecodeHash(event.Deployment.BytecodeHash.Hex()); contractInfo != nil {
+							contractName = contractInfo.Name
+						}
 					}
+					fmt.Printf("  - %s\n", script.FormatDeploymentSummary(&event, contractName))
 				}
-				fmt.Printf("  - %s\n", script.FormatDeploymentSummary(&event, contractName))
-				}
-
-				// Get chain ID for the network
-				chainID := netpkg.GetChainID(network)
 
 				// Update registry if not dry run
 				if !dryRun {
@@ -159,7 +163,7 @@ Examples:
 					if err := script.UpdateRegistryFromEventsV2(
 						result.AllEvents,
 						network,
-						chainID,
+						networkInfo.ChainID,
 						namespace,
 						scriptPath,
 						result.BroadcastPath,
@@ -168,7 +172,7 @@ Examples:
 						script.PrintErrorMessage(fmt.Sprintf("Failed to update registry: %v", err))
 					}
 				}
-				
+
 				// Report bundle events
 				// Load sender configs to pass to ReportBundles for address resolution
 				trebConfig, _ := config.LoadTrebConfig(".")
@@ -176,11 +180,11 @@ Examples:
 				if trebConfig != nil {
 					profileTrebConfig, _ = trebConfig.GetProfileTrebConfig(profile)
 				}
-				
+
 				// Report transaction events with sender config
 				// Pass broadcast path and chain ID for transaction matching
-				script.ReportTransactions(result.AllEvents, indexer, profileTrebConfig, result.BroadcastPath, chainID)
-				
+				script.ReportTransactions(result.AllEvents, indexer, profileTrebConfig, result.BroadcastPath, networkInfo.ChainID)
+
 				// Track and report proxy relationships
 				proxyTracker := script.NewProxyTracker()
 				proxyTracker.ProcessEvents(result.AllEvents)

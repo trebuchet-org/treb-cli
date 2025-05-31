@@ -97,7 +97,7 @@ var listCmd = &cobra.Command{
 func displayTableFormat(deployments []*types.Deployment, manager *registryv2.Manager) {
 	// Group by namespace and chain
 	namespaceChainGroups := make(map[string]map[uint64][]*types.Deployment)
-	
+
 	for _, dep := range deployments {
 		if namespaceChainGroups[dep.Namespace] == nil {
 			namespaceChainGroups[dep.Namespace] = make(map[uint64][]*types.Deployment)
@@ -124,11 +124,11 @@ func displayTableFormat(deployments []*types.Deployment, manager *registryv2.Man
 
 		for _, chainID := range chainIDs {
 			chainDeployments := chains[chainID]
-			
+
 			// Separate proxies and singletons
 			proxies := make([]*types.Deployment, 0)
 			singletons := make([]*types.Deployment, 0)
-			
+
 			for _, dep := range chainDeployments {
 				if dep.Type == types.ProxyDeployment {
 					proxies = append(proxies, dep)
@@ -136,7 +136,7 @@ func displayTableFormat(deployments []*types.Deployment, manager *registryv2.Man
 					singletons = append(singletons, dep)
 				}
 			}
-			
+
 			if len(proxies) > 0 {
 				proxyTable := buildDeploymentTable(proxies, manager)
 				allTables = append(allTables, proxyTable)
@@ -248,13 +248,13 @@ func buildDeploymentTable(deployments []*types.Deployment, manager *registryv2.M
 		}
 
 		addressCell := addressStyle.Sprint(deployment.Address)
-		
+
 		verifiedCell := ""
 		switch deployment.Verification.Status {
 		case types.VerificationStatusVerified:
 			verifiedCell = verifiedStyle.Sprint("✓ verified")
 		case types.VerificationStatusPending:
-			verifiedCell = pendingStyle.Sprint("⏳ pending")
+			verifiedCell = pendingStyle.Sprint("⏳ not deployed")
 		case types.VerificationStatusFailed:
 			verifiedCell = notVerifiedStyle.Sprint("✗ failed")
 		default:
@@ -281,10 +281,10 @@ func buildDeploymentTable(deployments []*types.Deployment, manager *registryv2.M
 				}
 				implDisplayName = shortID
 			}
-			
+
 			implRow := implPrefixStyle.Sprintf("└─ %s", implDisplayName)
 			implAddress := addressStyle.Sprint(deployment.ProxyInfo.Implementation)
-			
+
 			tableData = append(tableData, []string{
 				implRow,
 				implAddress,
@@ -303,7 +303,7 @@ func getColoredDisplayName(dep *types.Deployment) string {
 	if dep.Label != "" {
 		name += ":" + dep.Label
 	}
-	
+
 	switch dep.Type {
 	case types.ProxyDeployment:
 		return color.New(color.FgMagenta, color.Bold).Sprint(name)
@@ -333,6 +333,9 @@ func renderTableWithWidths(tableData TableData, columnWidths []int, continuation
 	// Configure column styles with calculated widths
 	colConfigs := make([]table.ColumnConfig, len(columnWidths))
 	for i, width := range columnWidths {
+		if i == 0 {
+			width += 2 + len([]rune(continuationPrefix))
+		}
 		colConfigs[i] = table.ColumnConfig{
 			Number:   i + 1,
 			Align:    text.AlignLeft,

@@ -415,6 +415,62 @@ func (m *Manager) UpdateDeploymentVerification(deploymentID string, status types
 	return m.save()
 }
 
+// AddTag adds a tag to a deployment
+func (m *Manager) AddTag(deploymentID string, tag string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	deployment, exists := m.deployments[deploymentID]
+	if !exists {
+		return fmt.Errorf("deployment not found: %s", deploymentID)
+	}
+
+	// Check if tag already exists
+	for _, existingTag := range deployment.Tags {
+		if existingTag == tag {
+			return nil // Tag already exists, no error
+		}
+	}
+
+	// Add tag
+	deployment.Tags = append(deployment.Tags, tag)
+	deployment.UpdatedAt = time.Now()
+
+	return m.save()
+}
+
+// RemoveTag removes a tag from a deployment
+func (m *Manager) RemoveTag(deploymentID string, tag string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	deployment, exists := m.deployments[deploymentID]
+	if !exists {
+		return fmt.Errorf("deployment not found: %s", deploymentID)
+	}
+
+	// Find and remove tag
+	newTags := make([]string, 0, len(deployment.Tags))
+	found := false
+	for _, existingTag := range deployment.Tags {
+		if existingTag != tag {
+			newTags = append(newTags, existingTag)
+		} else {
+			found = true
+		}
+	}
+
+	if !found {
+		return nil // Tag doesn't exist, no error
+	}
+
+	// Update tags
+	deployment.Tags = newTags
+	deployment.UpdatedAt = time.Now()
+
+	return m.save()
+}
+
 // contains checks if a string slice contains a value
 func contains(slice []string, value string) bool {
 	for _, v := range slice {

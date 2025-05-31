@@ -1,8 +1,21 @@
 {
   "31337": {
     "default": {
-      "ERC1967Proxy:test100": "0x51668f042a3FD1109249d867f39cc4694C592c2b",
-      "UpgradeableCounter:test100": "0x9Ceb779dE1dDf2d98735071383aEa15AB6c45415"
+      "ERC1967Proxy:test100": "0x61b6A600ea7496ED9488d645D81d20819B1e32AA",
+      "ERC1967Proxy:test101": "0xaF80255AaA2fbF44682613cB4103d438Cd9B97dd",
+      "ERC1967Proxy:test3": "0xE80E5536ea103732a4183d1AF65409a9F41013c6",
+      "ERC1967Proxy:test4": "0x1b8b2A609A116387846dda04B49ee776A81e578d",
+      "UpgradeableCounter:test100": "0xe0f0eC5E6e004FAFAdA21043A23EBcba62CB7251",
+      "UpgradeableCounter:test101": "0x6870036cd5D985a7C2123dF8F8D04cc9e3A2a867",
+      "UpgradeableCounter:test3": "0xfCfF0F2f98346AC97b2150a48e0A286fCE454064",
+      "UpgradeableCounter:test4": "0x25Cd1801279b723bABB53291e830FDA485c9105F"
+    }
+  },
+  "44787": {
+    "default": {
+      "ERC1967Proxy:test22y": "0x71F6f67c725B21523b0302ef6c78EF0afCe9369e",
+      "Unknown:testy": "0x59C120531Bf070A2badd7691BEBB78A06f95614c",
+      "UpgradeableCounter:test22y": "0x70D606073465Df4f1119704CfbADaa67F9f4E248"
     }
   }
 }

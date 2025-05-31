@@ -39,18 +39,9 @@ contract DeployWithTrebScript is TrebScript {
         console.log("Counter value:", value);
         
         // Read from registry (if deployments exist)
-        address existingCounter = tryGetDeployment("Counter");
+        address existingCounter = lookup("Counter");
         if (existingCounter != address(0)) {
             console.log("Found existing Counter at:", existingCounter);
-        }
-    }
-    
-    // Helper to safely get deployment
-    function tryGetDeployment(string memory name) internal view returns (address) {
-        try this.getDeployment(name) returns (address addr) {
-            return addr;
-        } catch {
-            return address(0);
         }
     }
 }
