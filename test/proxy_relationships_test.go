@@ -25,10 +25,12 @@ func TestProxyDeploymentRelationships(t *testing.T) {
 		require.NoError(t, err)
 		
 		// Should have deployed contracts
-		assert.Contains(t, output, "contract(s) deployed")
+		assert.Contains(t, output, "Deployment Summary:")
+		assert.Contains(t, output, "UpgradeableCounter")
+		assert.Contains(t, output, "Proxy[UpgradeableCounter]")
 		
-		// Check that proxy events were captured
-		assert.Contains(t, output, "Proxy Operations")
+		// Check that proxy relationships were detected
+		assert.Contains(t, output, "Proxy Relationships Detected:")
 		
 		// Verify list shows the deployments
 		listOutput, err := runTrebDebug(t, "list")

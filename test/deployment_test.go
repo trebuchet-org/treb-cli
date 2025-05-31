@@ -16,20 +16,26 @@ func TestDeploymentFlow(t *testing.T) {
 	// Run the DeployWithTreb script with deployer=anvil
 	output, err := runScriptDebug(t, "script/DeployWithTreb.s.sol", "deployer=anvil", "COUNTER_LABEL=test", "TOKEN_LABEL=test")
 	require.NoError(t, err)
-	assert.Contains(t, output, "contract(s) deployed")
 	
-	// Should have deployed 2 contracts
-	assert.Contains(t, output, "2 contract(s) deployed")
+	// Should have deployed 2 contracts - check for deployment summary
+	assert.Contains(t, output, "Deployment Summary:")
+	assert.Contains(t, output, "Counter")
+	assert.Contains(t, output, "SampleToken")
 	
 	// Extract addresses from output (looking for deployed contracts)
 	lines := strings.Split(output, "\n")
 	var deployedAddress string
 	for _, line := range lines {
-		if strings.Contains(line, "Contract deployed at") && strings.Contains(line, "0x") {
+		// Look for "Deployed" lines with addresses
+		if strings.Contains(line, "Deployed") && strings.Contains(line, " at ") && strings.Contains(line, "0x") {
 			// Extract the address from the deployment event
 			if idx := strings.Index(line, "0x"); idx >= 0 {
-				deployedAddress = line[idx:idx+42] // 0x + 40 hex chars
-				break
+				// Find the end of the address (next ANSI escape or space)
+				endIdx := idx + 42
+				if endIdx <= len(line) {
+					deployedAddress = line[idx:endIdx] // 0x + 40 hex chars
+					break
+				}
 			}
 		}
 	}

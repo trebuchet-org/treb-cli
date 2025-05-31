@@ -182,9 +182,7 @@ func (d *EnhancedEventDisplay) extractContractName(artifact string) string {
 	if idx := strings.LastIndex(artifact, "/"); idx != -1 {
 		name := artifact[idx+1:]
 		// Remove .sol extension if present
-		if strings.HasSuffix(name, ".sol") {
-			name = name[:len(name)-4]
-		}
+		name = strings.TrimSuffix(name, ".sol")
 		return name
 	}
 	
@@ -229,7 +227,11 @@ func (d *EnhancedEventDisplay) registerProxyRelationships(allEvents []interface{
 					contractInfo := d.indexer.GetContractByArtifact(implArtifact)
 					if contractInfo != nil && contractInfo.ArtifactPath != "" {
 						if abiJSON := d.loadABIFromPath(contractInfo.ArtifactPath); abiJSON != "" {
-							d.transactionDecoder.RegisterContract(e.ProxyAddress, proxyName, abiJSON)
+							if err := d.transactionDecoder.RegisterContract(e.ProxyAddress, proxyName, abiJSON); err != nil {
+								if d.verbose {
+									fmt.Printf("Warning: Failed to register proxy ABI: %v\n", err)
+								}
+							}
 						}
 					}
 				}
@@ -251,7 +253,11 @@ func (d *EnhancedEventDisplay) registerProxyRelationships(allEvents []interface{
 					contractInfo := d.indexer.GetContractByArtifact(implArtifact)
 					if contractInfo != nil && contractInfo.ArtifactPath != "" {
 						if abiJSON := d.loadABIFromPath(contractInfo.ArtifactPath); abiJSON != "" {
-							d.transactionDecoder.RegisterContract(e.ProxyAddress, proxyName, abiJSON)
+							if err := d.transactionDecoder.RegisterContract(e.ProxyAddress, proxyName, abiJSON); err != nil {
+								if d.verbose {
+									fmt.Printf("Warning: Failed to register proxy ABI: %v\n", err)
+								}
+							}
 						}
 					}
 				}

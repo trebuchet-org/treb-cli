@@ -20,17 +20,6 @@ const (
 	ColorBold   = "\033[1m"
 )
 
-// safeTruncate safely truncates a string to the specified length with ellipsis
-func safeTruncate(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	if maxLen <= 3 {
-		return s[:maxLen]
-	}
-	return s[:maxLen-3] + "..."
-}
-
 // TransactionInfo groups related transaction events using generated types
 type TransactionInfo struct {
 	TransactionID     string
