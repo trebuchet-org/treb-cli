@@ -3,44 +3,38 @@ package script
 import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/events"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
-// ProxyRelationship represents a proxy-implementation relationship
-type ProxyRelationship struct {
-	ProxyAddress          common.Address
-	ImplementationAddress common.Address
-	ProxyType             string // "ERC1967", "Transparent", "Beacon"
-	AdminAddress          *common.Address
-	BeaconAddress         *common.Address
-	TransactionID         common.Hash
-}
+// ProxyRelationship re-exports the type from events package for backward compatibility
+type ProxyRelationship = events.ProxyRelationship
 
 // ProxyTracker tracks proxy relationships from events
 type ProxyTracker struct {
-	relationships map[common.Address]*ProxyRelationship
+	relationships map[common.Address]*events.ProxyRelationship
 	deployments   map[common.Address]*ContractDeployedEvent
 }
 
 // NewProxyTracker creates a new proxy tracker
 func NewProxyTracker() *ProxyTracker {
 	return &ProxyTracker{
-		relationships: make(map[common.Address]*ProxyRelationship),
+		relationships: make(map[common.Address]*events.ProxyRelationship),
 		deployments:   make(map[common.Address]*ContractDeployedEvent),
 	}
 }
 
 // ProcessEvents processes all events to build proxy relationships
-func (pt *ProxyTracker) ProcessEvents(events []ParsedEvent) {
+func (pt *ProxyTracker) ProcessEvents(parsedEvents []ParsedEvent) {
 	// First pass: collect all deployments
-	for _, event := range events {
+	for _, event := range parsedEvents {
 		if deployEvent, ok := event.(*ContractDeployedEvent); ok {
 			pt.deployments[deployEvent.Location] = deployEvent
 		}
 	}
 
 	// Second pass: process proxy events
-	for _, event := range events {
+	for _, event := range parsedEvents {
 		switch e := event.(type) {
 		case *UpgradedEvent:
 			pt.processUpgradedEvent(e)
@@ -56,10 +50,9 @@ func (pt *ProxyTracker) ProcessEvents(events []ParsedEvent) {
 func (pt *ProxyTracker) processUpgradedEvent(event *UpgradedEvent) {
 	rel, exists := pt.relationships[event.ProxyAddress]
 	if !exists {
-		rel = &ProxyRelationship{
+		rel = &events.ProxyRelationship{
 			ProxyAddress:  event.ProxyAddress,
-			ProxyType:     "ERC1967",
-			TransactionID: event.TransactionID,
+			ProxyType:     events.ProxyTypeUUPS,
 		}
 		pt.relationships[event.ProxyAddress] = rel
 	}
@@ -72,10 +65,9 @@ func (pt *ProxyTracker) processUpgradedEvent(event *UpgradedEvent) {
 func (pt *ProxyTracker) processAdminChangedEvent(event *AdminChangedEvent) {
 	rel, exists := pt.relationships[event.ProxyAddress]
 	if !exists {
-		rel = &ProxyRelationship{
+		rel = &events.ProxyRelationship{
 			ProxyAddress:  event.ProxyAddress,
-			ProxyType:     "Transparent",
-			TransactionID: event.TransactionID,
+			ProxyType:     events.ProxyTypeTransparent,
 		}
 		pt.relationships[event.ProxyAddress] = rel
 	}
@@ -84,8 +76,8 @@ func (pt *ProxyTracker) processAdminChangedEvent(event *AdminChangedEvent) {
 	rel.AdminAddress = &event.NewAdmin
 	
 	// Transparent proxies have admin changes
-	if rel.ProxyType == "ERC1967" {
-		rel.ProxyType = "Transparent"
+	if rel.ProxyType == events.ProxyTypeUUPS {
+		rel.ProxyType = events.ProxyTypeTransparent
 	}
 }
 
@@ -93,26 +85,25 @@ func (pt *ProxyTracker) processAdminChangedEvent(event *AdminChangedEvent) {
 func (pt *ProxyTracker) processBeaconUpgradedEvent(event *BeaconUpgradedEvent) {
 	rel, exists := pt.relationships[event.ProxyAddress]
 	if !exists {
-		rel = &ProxyRelationship{
+		rel = &events.ProxyRelationship{
 			ProxyAddress:  event.ProxyAddress,
-			ProxyType:     "Beacon",
-			TransactionID: event.TransactionID,
+			ProxyType:     events.ProxyTypeBeacon,
 		}
 		pt.relationships[event.ProxyAddress] = rel
 	}
 	
 	// Update beacon
 	rel.BeaconAddress = &event.Beacon
-	rel.ProxyType = "Beacon"
+	rel.ProxyType = events.ProxyTypeBeacon
 }
 
 // GetProxyRelationships returns all detected proxy relationships
-func (pt *ProxyTracker) GetProxyRelationships() map[common.Address]*ProxyRelationship {
+func (pt *ProxyTracker) GetProxyRelationships() map[common.Address]*events.ProxyRelationship {
 	return pt.relationships
 }
 
 // GetRelationshipForProxy returns the relationship for a specific proxy address
-func (pt *ProxyTracker) GetRelationshipForProxy(proxyAddr common.Address) (*ProxyRelationship, bool) {
+func (pt *ProxyTracker) GetRelationshipForProxy(proxyAddr common.Address) (*events.ProxyRelationship, bool) {
 	rel, exists := pt.relationships[proxyAddr]
 	return rel, exists
 }
@@ -129,7 +120,7 @@ func (pt *ProxyTracker) UpdateDeploymentTypes(deployments []*types.DeploymentEnt
 				deployment.Metadata.Extra = make(map[string]interface{})
 			}
 			
-			deployment.Metadata.Extra["proxyType"] = rel.ProxyType
+			deployment.Metadata.Extra["proxyType"] = string(rel.ProxyType)
 			deployment.Metadata.Extra["implementation"] = rel.ImplementationAddress.Hex()
 			
 			if rel.AdminAddress != nil {

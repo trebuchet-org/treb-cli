@@ -9,3 +9,6 @@ broadcast/
 # Environment files
 .env
 .env.local
+
+# Treb local config
+.treb/config.local.json

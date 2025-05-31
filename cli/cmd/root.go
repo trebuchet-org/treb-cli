@@ -35,34 +35,38 @@ func init() {
 		ID:    "management",
 		Title: "Management Commands", 
 	})
+	rootCmd.AddGroup(&cobra.Group{
+		ID:    "legacy",
+		Title: "Legacy Commands (v1 registry)", 
+	})
 
 	// Main workflow commands (init at the end)
 	// deployCmd.GroupID = "main" // TODO: Fix deployment package
 	runCmd.GroupID = "main"
 	listCmd.GroupID = "main"
 	showCmd.GroupID = "main"
-	verifyCmd.GroupID = "main"
 	genCmd.GroupID = "main"
 	initCmd.GroupID = "main"
 	
 	// Management commands
-	tagCmd.GroupID = "management"
-	syncCmd.GroupID = "management"
 	contextCmd.GroupID = "management"
+	
+	// Legacy v1 commands
+	verifyV1Cmd.GroupID = "legacy"
+	tagV1Cmd.GroupID = "legacy"
+	syncV1Cmd.GroupID = "legacy"
 	
 	// Additional commands (merged with other utility commands)
 	// debugCmd and versionCmd will appear in "Additional Commands" section
 	// since they don't have a GroupID set
 
 	// rootCmd.AddCommand(deployCmd) // TODO: Fix deployment package
-	rootCmd.AddCommand(runCmd)
-	rootCmd.AddCommand(listCmd)
-	rootCmd.AddCommand(showCmd)
-	rootCmd.AddCommand(verifyCmd)
+	// Commands are registered in their respective init() functions
+	// rootCmd.AddCommand(runCmd)
+	// rootCmd.AddCommand(listCmd)
+	// rootCmd.AddCommand(showCmd)
 	rootCmd.AddCommand(genCmd)
 	rootCmd.AddCommand(initCmd)
-	rootCmd.AddCommand(tagCmd)
-	rootCmd.AddCommand(syncCmd)
 	rootCmd.AddCommand(contextCmd)
 	rootCmd.AddCommand(versionCmd)
 }

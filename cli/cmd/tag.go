@@ -13,16 +13,16 @@ var (
 	removeTag string
 )
 
-var tagCmd = &cobra.Command{
-	Use:   "tag <contract|address>",
-	Short: "Manage deployment tags",
-	Long: `Add or remove version tags on deployments.
+var tagV1Cmd = &cobra.Command{
+	Use:   "tag-v1 <contract|address>",
+	Short: "Manage deployment tags (legacy)",
+	Long: `Add or remove version tags on deployments in v1 registry.
 Without flags, shows current tags.
 
 Examples:
-  treb tag Counter                     # Show current tags
-  treb tag Counter --add v1.0.0        # Add a tag
-  treb tag Counter --remove v1.0.0     # Remove a tag`,
+  treb tag-v1 Counter                     # Show current tags
+  treb tag-v1 Counter --add v1.0.0        # Add a tag
+  treb tag-v1 Counter --remove v1.0.0     # Remove a tag`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		identifier := args[0]
@@ -39,8 +39,9 @@ Examples:
 }
 
 func init() {
-	tagCmd.Flags().StringVar(&addTag, "add", "", "Add a tag to the deployment")
-	tagCmd.Flags().StringVar(&removeTag, "remove", "", "Remove a tag from the deployment")
+	rootCmd.AddCommand(tagV1Cmd)
+	tagV1Cmd.Flags().StringVar(&addTag, "add", "", "Add a tag to the deployment")
+	tagV1Cmd.Flags().StringVar(&removeTag, "remove", "", "Remove a tag from the deployment")
 }
 
 func manageDeploymentTags(identifier string) error {

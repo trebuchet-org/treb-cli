@@ -1,13 +1,16 @@
 package script
 
 import (
+	"bufio"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
@@ -104,11 +107,33 @@ func (e *Executor) Run(opts RunOptions) (*RunResult, error) {
 
 	// If debug JSON mode, save raw output to file and print it
 	if opts.DebugJSON {
+		// Create a unique run directory
+		runUUID := fmt.Sprintf("%d", time.Now().Unix())
+		debugDir := filepath.Join(e.projectPath, "out", ".treb-debug", runUUID)
+		if err := os.MkdirAll(debugDir, 0755); err != nil {
+			fmt.Printf("Warning: failed to create debug directory: %v\n", err)
+		} else {
+			// Save raw output
+			rawPath := filepath.Join(debugDir, "raw-output.json")
+			if err := os.WriteFile(rawPath, result.RawOutput, 0644); err != nil {
+				fmt.Printf("Warning: failed to write raw output: %v\n", err)
+			}
+			
+			// Parse and save parsed/ignored output
+			parsedPath := filepath.Join(debugDir, "parsed-output.json")
+			ignoredPath := filepath.Join(debugDir, "ignored-output.txt")
+			e.debugParseOutput(result.RawOutput, parsedPath, ignoredPath)
+			
+			fmt.Printf("Debug output written to: %s\n", debugDir)
+			fmt.Printf("  - raw-output.json: Complete forge output\n")
+			fmt.Printf("  - parsed-output.json: Successfully parsed JSON objects\n")
+			fmt.Printf("  - ignored-output.txt: Lines that were not parsed\n")
+		}
+		
+		// Also save to legacy location for compatibility
 		debugPath := filepath.Join(e.projectPath, "debug-output.json")
 		if err := os.WriteFile(debugPath, result.RawOutput, 0644); err != nil {
-			fmt.Printf("Warning: failed to write debug output: %v\n", err)
-		} else {
-			fmt.Printf("Debug output written to: %s\n", debugPath)
+			fmt.Printf("Warning: failed to write legacy debug output: %v\n", err)
 		}
 		
 		fmt.Printf("\n=== Raw JSON Output ===\n")
@@ -333,4 +358,98 @@ func (e *Executor) findBroadcastFile(scriptPath, networkName string) string {
 	}
 	
 	return ""
+}
+
+// debugParseOutput parses the forge output and separates parsed vs ignored lines
+func (e *Executor) debugParseOutput(output []byte, parsedPath, ignoredPath string) {
+	var parsedObjects []json.RawMessage
+	var ignoredLines []string
+
+	// Use ParseCompleteForgeOutput to try to parse all JSON objects
+	parsedOutput, _ := ParseCompleteForgeOutput(output)
+	
+	// Collect successfully parsed objects
+	if parsedOutput != nil {
+		if parsedOutput.ScriptOutput != nil {
+			if data, err := json.Marshal(parsedOutput.ScriptOutput); err == nil {
+				parsedObjects = append(parsedObjects, json.RawMessage(data))
+			}
+		}
+		if parsedOutput.GasEstimate != nil {
+			if data, err := json.Marshal(parsedOutput.GasEstimate); err == nil {
+				parsedObjects = append(parsedObjects, json.RawMessage(data))
+			}
+		}
+		if parsedOutput.StatusOutput != nil {
+			if data, err := json.Marshal(parsedOutput.StatusOutput); err == nil {
+				parsedObjects = append(parsedObjects, json.RawMessage(data))
+			}
+		}
+	}
+
+	// Now scan through the output line by line to find what was ignored
+	scanner := bufio.NewScanner(bytes.NewReader(output))
+	const maxTokenSize = 200 * 1024 * 1024 // 200MB
+	buf := make([]byte, maxTokenSize)
+	scanner.Buffer(buf, maxTokenSize)
+
+	lineNumber := 0
+	for scanner.Scan() {
+		lineNumber++
+		line := scanner.Text()
+		
+		// Skip empty lines
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+
+		// Check if this line is a JSON object that we could parse
+		if strings.HasPrefix(strings.TrimSpace(line), "{") {
+			var testJSON json.RawMessage
+			if err := json.Unmarshal([]byte(line), &testJSON); err == nil {
+				// It's valid JSON, check if we already parsed it
+				wasParsed := false
+				
+				// Check against our known parsed types
+				var forgeOut ForgeScriptOutput
+				var gasEst GasEstimate
+				var statusOut StatusOutput
+				
+				if err := json.Unmarshal([]byte(line), &forgeOut); err == nil && forgeOut.RawLogs != nil {
+					wasParsed = true
+				} else if err := json.Unmarshal([]byte(line), &gasEst); err == nil && gasEst.Chain != 0 {
+					wasParsed = true
+				} else if err := json.Unmarshal([]byte(line), &statusOut); err == nil && statusOut.Status != "" {
+					wasParsed = true
+				}
+				
+				if !wasParsed {
+					// This is a JSON object we didn't parse
+					parsedObjects = append(parsedObjects, json.RawMessage(line))
+					ignoredLines = append(ignoredLines, line)
+				}
+			} else {
+				// Not valid JSON but starts with {
+				ignoredLines = append(ignoredLines, line)
+			}
+		} else {
+			// Non-JSON line
+			ignoredLines = append(ignoredLines, line)
+		}
+	}
+
+	// Write parsed objects to file
+	if len(parsedObjects) > 0 {
+		parsedData, _ := json.MarshalIndent(map[string]interface{}{
+			"parsed_objects": parsedObjects,
+			"count":         len(parsedObjects),
+		}, "", "  ")
+		os.WriteFile(parsedPath, parsedData, 0644)
+	}
+
+	// Write ignored lines to file
+	if len(ignoredLines) > 0 {
+		ignoredData := []byte(strings.Join(ignoredLines, "\n"))
+		os.WriteFile(ignoredPath, ignoredData, 0644)
+	}
 }

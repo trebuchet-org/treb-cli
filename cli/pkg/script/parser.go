@@ -39,14 +39,34 @@ type StatusOutput struct {
 	Sensitive    string `json:"sensitive"`
 }
 
+// ParsedForgeOutput contains all the parsed outputs from forge script
+type ParsedForgeOutput struct {
+	ScriptOutput   *ForgeScriptOutput
+	GasEstimate    *GasEstimate
+	StatusOutput   *StatusOutput
+	BroadcastPath  string
+}
+
 // ParseForgeOutput parses the JSON output from forge script
 func ParseForgeOutput(output []byte) (*ForgeScriptOutput, error) {
+	parsed, err := ParseCompleteForgeOutput(output)
+	if err != nil {
+		return nil, err
+	}
+	return parsed.ScriptOutput, nil
+}
+
+// ParseCompleteForgeOutput parses all JSON outputs from forge script
+func ParseCompleteForgeOutput(output []byte) (*ParsedForgeOutput, error) {
+	result := &ParsedForgeOutput{}
+
 	// First try to parse the entire output as a single JSON object
 	var mainOutput ForgeScriptOutput
 	if err := json.Unmarshal(output, &mainOutput); err == nil {
 		// Check if this looks like the main output (has raw_logs)
 		if mainOutput.RawLogs != nil {
-			return &mainOutput, nil
+			result.ScriptOutput = &mainOutput
+			return result, nil
 		}
 	}
 
@@ -69,12 +89,37 @@ func ParseForgeOutput(output []byte) (*ForgeScriptOutput, error) {
 			continue
 		}
 
-		// Try to parse as main output
-		var lineOutput ForgeScriptOutput
-		if err := json.Unmarshal(line, &lineOutput); err == nil {
-			// Check if this looks like the main output (has raw_logs)
-			if lineOutput.RawLogs != nil {
-				return &lineOutput, nil
+		// Try to parse as main output (has raw_logs)
+		if result.ScriptOutput == nil {
+			var lineOutput ForgeScriptOutput
+			if err := json.Unmarshal(line, &lineOutput); err == nil {
+				if lineOutput.RawLogs != nil {
+					result.ScriptOutput = &lineOutput
+					continue
+				}
+			}
+		}
+
+		// Try to parse as gas estimate
+		if result.GasEstimate == nil {
+			var gasOutput GasEstimate
+			if err := json.Unmarshal(line, &gasOutput); err == nil {
+				if gasOutput.Chain != 0 {
+					result.GasEstimate = &gasOutput
+					continue
+				}
+			}
+		}
+
+		// Try to parse as status output (contains broadcast file path)
+		if result.StatusOutput == nil {
+			var statusOutput StatusOutput
+			if err := json.Unmarshal(line, &statusOutput); err == nil {
+				if statusOutput.Status != "" {
+					result.StatusOutput = &statusOutput
+					result.BroadcastPath = statusOutput.Transactions
+					continue
+				}
 			}
 		}
 	}
@@ -83,7 +128,11 @@ func ParseForgeOutput(output []byte) (*ForgeScriptOutput, error) {
 		return nil, fmt.Errorf("scanner error: %w", err)
 	}
 
-	return nil, fmt.Errorf("no valid forge script output found")
+	if result.ScriptOutput == nil {
+		return nil, fmt.Errorf("no valid forge script output found")
+	}
+
+	return result, nil
 }
 
 // ParseAllEvents extracts all types of events from forge output

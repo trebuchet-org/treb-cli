@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/events"
 )
 
 // Event signatures (keccak256 of event signature)
@@ -46,209 +47,41 @@ var (
 	BeaconUpgradedTopic = crypto.Keccak256Hash([]byte("BeaconUpgraded(address)"))
 )
 
-// Event types
-type EventType string
-
-const (
-	EventTypeDeployingContract    EventType = "DeployingContract"
-	EventTypeContractDeployed     EventType = "ContractDeployed"
-	EventTypeSafeTransaction      EventType = "SafeTransactionQueued"
-	EventTypeTransactionSimulated EventType = "TransactionSimulated"
-	EventTypeTransactionFailed    EventType = "TransactionFailed"
-	EventTypeTransactionBroadcast EventType = "TransactionBroadcast"
-	EventTypeUpgraded             EventType = "Upgraded"
-	EventTypeAdminChanged         EventType = "AdminChanged"
-	EventTypeBeaconUpgraded       EventType = "BeaconUpgraded"
+// Re-export types from events package for backward compatibility
+type (
+	EventType                     = events.EventType
+	ParsedEvent                   = events.ParsedEvent
+	DeployingContractEvent        = events.DeployingContractEvent
+	EventDeployment               = events.EventDeployment
+	ContractDeployedEvent         = events.ContractDeployedEvent
+	Transaction                   = events.Transaction
+	RichTransaction               = events.RichTransaction
+	SafeTransactionQueuedEvent    = events.SafeTransactionQueuedEvent
+	TransactionSimulatedEvent     = events.TransactionSimulatedEvent
+	TransactionFailedEvent        = events.TransactionFailedEvent
+	TransactionBroadcastEvent     = events.TransactionBroadcastEvent
+	UpgradedEvent                 = events.UpgradedEvent
+	AdminChangedEvent             = events.AdminChangedEvent
+	BeaconUpgradedEvent           = events.BeaconUpgradedEvent
+	DeploymentEvent               = events.DeploymentEvent
+	Log                           = events.Log
 )
 
-// ParsedEvent is the interface for all parsed events
-type ParsedEvent interface {
-	Type() EventType
-	String() string
-}
-
-// DeployingContractEvent represents a contract being deployed
-type DeployingContractEvent struct {
-	What         string
-	Label        string
-	InitCodeHash common.Hash
-}
-
-func (e DeployingContractEvent) Type() EventType { return EventTypeDeployingContract }
-func (e DeployingContractEvent) String() string {
-	return fmt.Sprintf("Deploying %s (label: %s, initCodeHash: %s)", e.What, e.Label, e.InitCodeHash.Hex()[:10]+"...")
-}
-
-// EventDeployment represents the EventDeployment struct from Deployer.sol
-type EventDeployment struct {
-	Artifact        string // Contract artifact path (e.g., "src/Counter.sol:Counter")
-	Label           string // Optional label for deployment identification
-	Entropy         string // Entropy string used for salt generation
-	Salt            common.Hash
-	BytecodeHash    common.Hash // This is the actual bytecode hash from the event
-	InitCodeHash    common.Hash // Hash of bytecode + constructor args
-	ConstructorArgs []byte
-	CreateStrategy  string
-}
-
-// ContractDeployedEvent represents a deployed contract
-type ContractDeployedEvent struct {
-	Deployer      common.Address
-	Location      common.Address
-	TransactionID common.Hash
-	Deployment    EventDeployment
-}
-
-func (e ContractDeployedEvent) Type() EventType { return EventTypeContractDeployed }
-func (e ContractDeployedEvent) String() string {
-	return fmt.Sprintf("Deployed contract at %s by %s (strategy: %s, salt: %s)",
-		e.Location.Hex(), e.Deployer.Hex()[:10]+"...", e.Deployment.CreateStrategy, e.Deployment.Salt.Hex()[:10]+"...")
-}
-
-// Transaction represents the base transaction struct from treb-sol
-type Transaction struct {
-	Label string
-	To    common.Address
-	Data  []byte
-	Value *big.Int
-}
-
-// RichTransaction represents a transaction with metadata from treb-sol
-type RichTransaction struct {
-	Transaction           Transaction
-	TransactionID         common.Hash
-	SenderID              common.Hash
-	Status                uint8  // 0: PENDING, 1: EXECUTED, 2: QUEUED
-	SimulatedReturnData   []byte
-	ExecutedReturnData    []byte
-}
-
-// SafeTransactionQueuedEvent represents a Safe transaction queued
-type SafeTransactionQueuedEvent struct {
-	SafeTxHash   common.Hash
-	Safe         common.Address
-	Proposer     common.Address
-	Transactions []RichTransaction
-}
-
-func (e SafeTransactionQueuedEvent) Type() EventType { return EventTypeSafeTransaction }
-func (e SafeTransactionQueuedEvent) String() string {
-	labels := []string{}
-	for _, tx := range e.Transactions {
-		if tx.Transaction.Label != "" {
-			labels = append(labels, tx.Transaction.Label)
-		}
-	}
-	labelsStr := ""
-	if len(labels) > 0 {
-		labelsStr = fmt.Sprintf(" [%s]", strings.Join(labels, ", "))
-	}
-	return fmt.Sprintf("Safe transaction queued: safe=%s, proposer=%s, txHash=%s, transactions=%d%s",
-		e.Safe.Hex()[:10]+"...", e.Proposer.Hex()[:10]+"...", e.SafeTxHash.Hex()[:10]+"...", len(e.Transactions), labelsStr)
-}
-
-// TransactionSimulatedEvent represents a simulated transaction
-type TransactionSimulatedEvent struct {
-	TransactionID common.Hash
-	Sender        common.Address
-	To            common.Address
-	Value         *big.Int
-	Data          []byte
-	Label         string
-	ReturnData    []byte
-}
-
-func (e TransactionSimulatedEvent) Type() EventType { return EventTypeTransactionSimulated }
-func (e TransactionSimulatedEvent) String() string {
-	return fmt.Sprintf("Transaction simulated: %s -> %s (label: %s, value: %s)",
-		e.Sender.Hex()[:10]+"...", e.To.Hex()[:10]+"...", e.Label, e.Value.String())
-}
-
-// TransactionFailedEvent represents a failed transaction
-type TransactionFailedEvent struct {
-	TransactionID common.Hash
-	Sender        common.Address
-	To            common.Address
-	Value         *big.Int
-	Data          []byte
-	Label         string
-}
-
-func (e TransactionFailedEvent) Type() EventType { return EventTypeTransactionFailed }
-func (e TransactionFailedEvent) String() string {
-	return fmt.Sprintf("Transaction failed: %s -> %s (label: %s)",
-		e.Sender.Hex()[:10]+"...", e.To.Hex()[:10]+"...", e.Label)
-}
-
-// TransactionBroadcastEvent represents a broadcast transaction
-type TransactionBroadcastEvent struct {
-	TransactionID common.Hash
-	Sender        common.Address
-	To            common.Address
-	Value         *big.Int
-	Data          []byte
-	Label         string
-	ReturnData    []byte
-}
-
-func (e TransactionBroadcastEvent) Type() EventType { return EventTypeTransactionBroadcast }
-func (e TransactionBroadcastEvent) String() string {
-	return fmt.Sprintf("Transaction broadcast: %s -> %s (label: %s, value: %s)",
-		e.Sender.Hex()[:10]+"...", e.To.Hex()[:10]+"...", e.Label, e.Value.String())
-}
-
-// UpgradedEvent represents a proxy implementation upgrade
-type UpgradedEvent struct {
-	ProxyAddress     common.Address
-	Implementation   common.Address
-	TransactionID    common.Hash // We'll try to link this from the transaction context
-}
-
-func (e UpgradedEvent) Type() EventType { return EventTypeUpgraded }
-func (e UpgradedEvent) String() string {
-	return fmt.Sprintf("Proxy upgraded: proxy=%s, implementation=%s", 
-		e.ProxyAddress.Hex()[:10]+"...", e.Implementation.Hex()[:10]+"...")
-}
-
-// AdminChangedEvent represents a proxy admin change
-type AdminChangedEvent struct {
-	ProxyAddress   common.Address
-	PreviousAdmin  common.Address
-	NewAdmin       common.Address
-	TransactionID  common.Hash
-}
-
-func (e AdminChangedEvent) Type() EventType { return EventTypeAdminChanged }
-func (e AdminChangedEvent) String() string {
-	return fmt.Sprintf("Admin changed: proxy=%s, old=%s, new=%s", 
-		e.ProxyAddress.Hex()[:10]+"...", e.PreviousAdmin.Hex()[:10]+"...", e.NewAdmin.Hex()[:10]+"...")
-}
-
-// BeaconUpgradedEvent represents a beacon proxy upgrade
-type BeaconUpgradedEvent struct {
-	ProxyAddress  common.Address
-	Beacon        common.Address
-	TransactionID common.Hash
-}
-
-func (e BeaconUpgradedEvent) Type() EventType { return EventTypeBeaconUpgraded }
-func (e BeaconUpgradedEvent) String() string {
-	return fmt.Sprintf("Beacon upgraded: proxy=%s, beacon=%s", 
-		e.ProxyAddress.Hex()[:10]+"...", e.Beacon.Hex()[:10]+"...")
-}
-
-// Legacy event types for backward compatibility
-type DeploymentEvent = ContractDeployedEvent
-
-// Log represents a log entry from the script output
-type Log struct {
-	Address common.Address `json:"address"`
-	Topics  []common.Hash  `json:"topics"`
-	Data    string         `json:"data"`
-}
+// Re-export event type constants for backward compatibility
+const (
+	EventTypeDeployingContract    = events.EventTypeDeployingContract
+	EventTypeContractDeployed     = events.EventTypeContractDeployed
+	EventTypeSafeTransaction      = events.EventTypeSafeTransactionQueued
+	EventTypeTransactionSimulated = events.EventTypeTransactionSimulated
+	EventTypeTransactionFailed    = events.EventTypeTransactionFailed
+	EventTypeTransactionBroadcast = events.EventTypeTransactionBroadcast
+	EventTypeUpgraded             = events.EventTypeUpgraded
+	EventTypeAdminChanged         = events.EventTypeAdminChanged
+	EventTypeBeaconUpgraded       = events.EventTypeBeaconUpgraded
+)
 
 // parseDeployingContractEvent parses a DeployingContract event from a log
-func parseDeployingContractEvent(log Log) (*DeployingContractEvent, error) {
+func parseDeployingContractEvent(log events.Log) (*events.DeployingContractEvent, error) {
 	// No indexed parameters, all in data
 	// Parameters: string what, string label, bytes32 initCodeHash
 	data, err := hex.DecodeString(strings.TrimPrefix(log.Data, "0x"))
@@ -291,7 +124,7 @@ func parseDeployingContractEvent(log Log) (*DeployingContractEvent, error) {
 		return nil, fmt.Errorf("failed to cast init code hash")
 	}
 
-	return &DeployingContractEvent{
+	return &events.DeployingContractEvent{
 		What:         what,
 		Label:        label,
 		InitCodeHash: common.BytesToHash(initCodeHash[:]),
@@ -299,7 +132,7 @@ func parseDeployingContractEvent(log Log) (*DeployingContractEvent, error) {
 }
 
 // parseContractDeployedEvent parses a ContractDeployed event from a log
-func parseContractDeployedEvent(log Log) (*ContractDeployedEvent, error) {
+func parseContractDeployedEvent(log events.Log) (*events.ContractDeployedEvent, error) {
 	if len(log.Topics) < 4 {
 		return nil, fmt.Errorf("invalid number of topics for ContractDeployed event: got %d", len(log.Topics))
 	}
@@ -368,11 +201,11 @@ func parseContractDeployedEvent(log Log) (*ContractDeployedEvent, error) {
 	constructorArgs := structReflect.Field(6).Interface().([]byte)
 	createStrategy := structReflect.Field(7).String()
 
-	return &ContractDeployedEvent{
+	return &events.ContractDeployedEvent{
 		Deployer:      deployer,
 		Location:      location,
 		TransactionID: transactionID,
-		Deployment: EventDeployment{
+		Deployment: events.EventDeployment{
 			Artifact:        artifact,
 			Label:           label,
 			Entropy:         entropy,
@@ -386,7 +219,7 @@ func parseContractDeployedEvent(log Log) (*ContractDeployedEvent, error) {
 }
 
 // parseSafeTransactionQueuedEvent parses a SafeTransactionQueued event from a log
-func parseSafeTransactionQueuedEvent(log Log) (*SafeTransactionQueuedEvent, error) {
+func parseSafeTransactionQueuedEvent(log events.Log) (*events.SafeTransactionQueuedEvent, error) {
 	if len(log.Topics) < 4 {
 		return nil, fmt.Errorf("invalid number of topics for SafeTransactionQueued event")
 	}
@@ -444,7 +277,7 @@ func parseSafeTransactionQueuedEvent(log Log) (*SafeTransactionQueuedEvent, erro
 	}
 
 	// Parse the transactions using reflection
-	var transactions []RichTransaction
+	var transactions []events.RichTransaction
 	txArray := reflect.ValueOf(values[0])
 	
 	for i := 0; i < txArray.Len(); i++ {
@@ -467,8 +300,8 @@ func parseSafeTransactionQueuedEvent(log Log) (*SafeTransactionQueuedEvent, erro
 		txData := transactionField.Field(2).Interface().([]byte)
 		value := transactionField.Field(3).Interface().(*big.Int)
 
-		richTx := RichTransaction{
-			Transaction: Transaction{
+		richTx := events.RichTransaction{
+			Transaction: events.Transaction{
 				Label: label,
 				To:    to,
 				Data:  txData,
@@ -484,7 +317,7 @@ func parseSafeTransactionQueuedEvent(log Log) (*SafeTransactionQueuedEvent, erro
 		transactions = append(transactions, richTx)
 	}
 
-	return &SafeTransactionQueuedEvent{
+	return &events.SafeTransactionQueuedEvent{
 		SafeTxHash:   safeTxHash,
 		Safe:         safe,
 		Proposer:     proposer,
@@ -493,7 +326,7 @@ func parseSafeTransactionQueuedEvent(log Log) (*SafeTransactionQueuedEvent, erro
 }
 
 // parseTransactionSimulatedEvent parses a TransactionSimulated event from a log
-func parseTransactionSimulatedEvent(log Log) (*TransactionSimulatedEvent, error) {
+func parseTransactionSimulatedEvent(log events.Log) (*events.TransactionSimulatedEvent, error) {
 	if len(log.Topics) < 4 {
 		return nil, fmt.Errorf("invalid number of topics for TransactionSimulated event")
 	}
@@ -552,7 +385,7 @@ func parseTransactionSimulatedEvent(log Log) (*TransactionSimulatedEvent, error)
 		return nil, fmt.Errorf("failed to cast return data")
 	}
 
-	return &TransactionSimulatedEvent{
+	return &events.TransactionSimulatedEvent{
 		TransactionID: transactionID,
 		Sender:        sender,
 		To:            to,
@@ -564,7 +397,7 @@ func parseTransactionSimulatedEvent(log Log) (*TransactionSimulatedEvent, error)
 }
 
 // parseTransactionFailedEvent parses a TransactionFailed event from a log
-func parseTransactionFailedEvent(log Log) (*TransactionFailedEvent, error) {
+func parseTransactionFailedEvent(log events.Log) (*events.TransactionFailedEvent, error) {
 	if len(log.Topics) < 4 {
 		return nil, fmt.Errorf("invalid number of topics for TransactionFailed event")
 	}
@@ -617,7 +450,7 @@ func parseTransactionFailedEvent(log Log) (*TransactionFailedEvent, error) {
 		return nil, fmt.Errorf("failed to cast label")
 	}
 
-	return &TransactionFailedEvent{
+	return &events.TransactionFailedEvent{
 		TransactionID: transactionID,
 		Sender:        sender,
 		To:            to,
@@ -628,7 +461,7 @@ func parseTransactionFailedEvent(log Log) (*TransactionFailedEvent, error) {
 }
 
 // parseTransactionBroadcastEvent parses a TransactionBroadcast event from a log
-func parseTransactionBroadcastEvent(log Log) (*TransactionBroadcastEvent, error) {
+func parseTransactionBroadcastEvent(log events.Log) (*events.TransactionBroadcastEvent, error) {
 	if len(log.Topics) < 4 {
 		return nil, fmt.Errorf("invalid number of topics for TransactionBroadcast event")
 	}
@@ -687,7 +520,7 @@ func parseTransactionBroadcastEvent(log Log) (*TransactionBroadcastEvent, error)
 		return nil, fmt.Errorf("failed to cast return data")
 	}
 
-	return &TransactionBroadcastEvent{
+	return &events.TransactionBroadcastEvent{
 		TransactionID: transactionID,
 		Sender:        sender,
 		To:            to,
@@ -699,7 +532,7 @@ func parseTransactionBroadcastEvent(log Log) (*TransactionBroadcastEvent, error)
 }
 
 // parseUpgradedEvent parses an Upgraded event from a log
-func parseUpgradedEvent(log Log) (*UpgradedEvent, error) {
+func parseUpgradedEvent(log events.Log) (*events.UpgradedEvent, error) {
 	if len(log.Topics) < 2 {
 		return nil, fmt.Errorf("invalid number of topics for Upgraded event")
 	}
@@ -710,7 +543,7 @@ func parseUpgradedEvent(log Log) (*UpgradedEvent, error) {
 	// The proxy address is the address that emitted the event
 	proxyAddress := log.Address
 
-	return &UpgradedEvent{
+	return &events.UpgradedEvent{
 		ProxyAddress:   proxyAddress,
 		Implementation: implementation,
 		TransactionID:  common.Hash{}, // Will be filled in by context
@@ -718,7 +551,7 @@ func parseUpgradedEvent(log Log) (*UpgradedEvent, error) {
 }
 
 // parseAdminChangedEvent parses an AdminChanged event from a log
-func parseAdminChangedEvent(log Log) (*AdminChangedEvent, error) {
+func parseAdminChangedEvent(log events.Log) (*events.AdminChangedEvent, error) {
 	if len(log.Topics) < 1 {
 		return nil, fmt.Errorf("invalid number of topics for AdminChanged event")
 	}
@@ -757,7 +590,7 @@ func parseAdminChangedEvent(log Log) (*AdminChangedEvent, error) {
 		return nil, fmt.Errorf("failed to cast newAdmin")
 	}
 
-	return &AdminChangedEvent{
+	return &events.AdminChangedEvent{
 		ProxyAddress:  log.Address,
 		PreviousAdmin: previousAdmin,
 		NewAdmin:      newAdmin,
@@ -766,7 +599,7 @@ func parseAdminChangedEvent(log Log) (*AdminChangedEvent, error) {
 }
 
 // parseBeaconUpgradedEvent parses a BeaconUpgraded event from a log
-func parseBeaconUpgradedEvent(log Log) (*BeaconUpgradedEvent, error) {
+func parseBeaconUpgradedEvent(log events.Log) (*events.BeaconUpgradedEvent, error) {
 	if len(log.Topics) < 2 {
 		return nil, fmt.Errorf("invalid number of topics for BeaconUpgraded event")
 	}
@@ -774,7 +607,7 @@ func parseBeaconUpgradedEvent(log Log) (*BeaconUpgradedEvent, error) {
 	// Topics: [eventSig, beacon (indexed)]
 	beacon := common.HexToAddress(log.Topics[1].Hex())
 
-	return &BeaconUpgradedEvent{
+	return &events.BeaconUpgradedEvent{
 		ProxyAddress:  log.Address,
 		Beacon:        beacon,
 		TransactionID: common.Hash{}, // Will be filled in by context

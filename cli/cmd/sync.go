@@ -15,11 +15,13 @@ var (
 	debugSync     bool
 )
 
-var syncCmd = &cobra.Command{
-	Use:   "sync",
-	Short: "Sync registry with on-chain state",
-	Long: `Update deployment registry with latest on-chain information.
+var syncV1Cmd = &cobra.Command{
+	Use:   "sync-v1",
+	Short: "Sync v1 registry with on-chain state (legacy)",
+	Long: `Update v1 deployment registry with latest on-chain information.
 Checks pending Safe transactions and updates execution status.
+
+Note: This command is for the legacy v1 registry format only.
 
 Options:
   --clean  Remove invalid entries while syncing`,
@@ -33,8 +35,9 @@ Options:
 }
 
 func init() {
-	syncCmd.Flags().BoolVar(&cleanRegistry, "clean", false, "Remove invalid entries while syncing")
-	syncCmd.Flags().BoolVar(&debugSync, "debug", false, "Show debug information during sync")
+	rootCmd.AddCommand(syncV1Cmd)
+	syncV1Cmd.Flags().BoolVar(&cleanRegistry, "clean", false, "Remove invalid entries while syncing")
+	syncV1Cmd.Flags().BoolVar(&debugSync, "debug", false, "Show debug information during sync")
 }
 
 func syncRegistry() error {

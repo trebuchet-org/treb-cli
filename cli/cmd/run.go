@@ -155,7 +155,8 @@ Examples:
 
 				// Update registry if not dry run
 				if !dryRun {
-					if err := script.UpdateRegistryFromEvents(
+					// Use v2 registry
+					if err := script.UpdateRegistryFromEventsV2(
 						result.AllEvents,
 						network,
 						chainID,

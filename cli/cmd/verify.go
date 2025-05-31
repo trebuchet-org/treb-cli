@@ -30,19 +30,19 @@ var (
 	verifyNamespaceFlag string
 )
 
-var verifyCmd = &cobra.Command{
-	Use:   "verify [contract|address]",
-	Short: "Verify contracts on block explorers",
-	Long: `Verify contracts on block explorers (Etherscan and Sourcify) and update registry status.
+var verifyV1Cmd = &cobra.Command{
+	Use:   "verify-v1 [contract|address]",
+	Short: "Verify contracts on block explorers (legacy)",
+	Long: `Verify contracts on block explorers (Etherscan and Sourcify) and update v1 registry status.
 
 Examples:
-  treb verify Counter               # Verify specific contract
-  treb verify 0x1234...            # Verify by address
-  treb verify --all                 # Verify all unverified contracts (pending/failed)
-  treb verify --all --force         # Re-verify all contracts including verified ones
-  treb verify Counter --force       # Re-verify even if already verified
-  treb verify Counter --network sepolia --namespace staging  # Verify with filters
-  treb verify CounterProxy --contract-path "./src/Counter.sol:Counter"  # Verify with manual contract path`,
+  treb verify-v1 Counter               # Verify specific contract
+  treb verify-v1 0x1234...            # Verify by address
+  treb verify-v1 --all                 # Verify all unverified contracts (pending/failed)
+  treb verify-v1 --all --force         # Re-verify all contracts including verified ones
+  treb verify-v1 Counter --force       # Re-verify even if already verified
+  treb verify-v1 Counter --network sepolia --namespace staging  # Verify with filters
+  treb verify-v1 CounterProxy --contract-path "./src/Counter.sol:Counter"  # Verify with manual contract path`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := runVerify(args); err != nil {
@@ -52,12 +52,13 @@ Examples:
 }
 
 func init() {
-	verifyCmd.Flags().BoolVar(&allFlag, "all", false, "Verify all unverified contracts (pending/failed)")
-	verifyCmd.Flags().BoolVar(&forceFlag, "force", false, "Re-verify even if already verified")
-	verifyCmd.Flags().StringVar(&contractPathFlag, "contract-path", "", "Manual contract path (e.g., ./src/Contract.sol:Contract)")
-	verifyCmd.Flags().BoolVar(&debugFlag, "debug", false, "Show debug information including forge verify commands")
-	verifyCmd.Flags().StringVar(&verifyNetworkFlag, "network", "", "Filter by network name")
-	verifyCmd.Flags().StringVarP(&verifyNamespaceFlag, "namespace", "n", "", "Filter by namespace")
+	rootCmd.AddCommand(verifyV1Cmd)
+	verifyV1Cmd.Flags().BoolVar(&allFlag, "all", false, "Verify all unverified contracts (pending/failed)")
+	verifyV1Cmd.Flags().BoolVar(&forceFlag, "force", false, "Re-verify even if already verified")
+	verifyV1Cmd.Flags().StringVar(&contractPathFlag, "contract-path", "", "Manual contract path (e.g., ./src/Contract.sol:Contract)")
+	verifyV1Cmd.Flags().BoolVar(&debugFlag, "debug", false, "Show debug information including forge verify commands")
+	verifyV1Cmd.Flags().StringVar(&verifyNetworkFlag, "network", "", "Filter by network name")
+	verifyV1Cmd.Flags().StringVarP(&verifyNamespaceFlag, "namespace", "n", "", "Filter by namespace")
 }
 
 func runVerify(args []string) error {
