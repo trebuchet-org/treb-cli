@@ -25,6 +25,9 @@ var (
 	// TransactionBroadcast(bytes32 indexed transactionId, address indexed sender, address indexed to, uint256 value, bytes data, string label, bytes returnData)
 	TransactionBroadcastTopic = crypto.Keccak256Hash([]byte("TransactionBroadcast(bytes32,address,address,uint256,bytes,string,bytes)"))
 
+	// BroadcastStarted() - Marks the start of the broadcast phase
+	BroadcastStartedTopic = crypto.Keccak256Hash([]byte("BroadcastStarted()"))
+
 	// From SafeSender.sol
 	// SafeTransactionQueued(bytes32 indexed safeTxHash, address indexed safe, address indexed proposer, ((string,address,bytes,uint256),bytes32,bytes32,uint8,bytes,bytes)[] transactions)
 	SafeTransactionQueuedTopic = crypto.Keccak256Hash([]byte("SafeTransactionQueued(bytes32,address,address,((string,address,bytes,uint256),bytes32,bytes32,uint8,bytes,bytes)[])"))

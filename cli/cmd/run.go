@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/abi/treb"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	netpkg "github.com/trebuchet-org/treb-cli/cli/pkg/network"
@@ -141,30 +140,22 @@ Examples:
 			fmt.Printf("Raw output size: %d bytes\n", len(result.RawOutput))
 		}
 
-		// Report all parsed events
+		// Report all parsed events using enhanced display
 		if len(result.AllEvents) > 0 {
-			fmt.Printf("\n🔍 Parsed %d event(s):\n", len(result.AllEvents))
-			for i, event := range result.AllEvents {
-				fmt.Printf("  %s %T\n", script.GetEventIconForGenerated(event), event)
-
-				// In verbose mode, print basic event info
-				if verbose {
-					fmt.Printf("    Event %d: %T\n", i+1, event)
-				}
-			}
-
-			// Report deployment events specifically from generated types
-			deploymentCount := 0
-			for _, event := range result.AllEvents {
-				if deployment, ok := event.(*treb.TrebContractDeployed); ok {
-					if deploymentCount == 0 {
-						fmt.Printf("\n📦 Contract(s) deployed:\n")
+			// Use enhanced display system for better formatting and phase tracking
+			enhancedDisplay := script.NewEnhancedEventDisplay(indexer)
+			enhancedDisplay.SetVerbose(verbose)
+			
+			// Load sender configs to improve address display
+			if trebConfig, err := config.LoadTrebConfig("."); err == nil {
+				if profileConfig, err := trebConfig.GetProfileTrebConfig(profile); err == nil {
+					if senderConfigs, err := script.BuildSenderConfigs(profileConfig); err == nil {
+						enhancedDisplay.SetSenderConfigs(senderConfigs)
 					}
-					deploymentCount++
-					contractName := deployment.Deployment.Artifact
-					fmt.Printf("  - %s\n", script.FormatGeneratedDeploymentSummary(deployment, contractName))
 				}
 			}
+			
+			enhancedDisplay.ProcessEvents(result.AllEvents)
 
 			// Update registry if not dry run
 			if !dryRun {
@@ -235,5 +226,5 @@ func init() {
 	// Debug flags
 	runCmd.Flags().Bool("debug", false, "Enable debug mode (shows forge output and saves to file)")
 	runCmd.Flags().Bool("debug-json", false, "Enable JSON debug mode (shows raw JSON output)")
-	runCmd.Flags().BoolP("verbose", "v", false, "Show detailed event data for verification")
+	runCmd.Flags().BoolP("verbose", "v", false, "Show extra detailed information for events and transactions")
 }

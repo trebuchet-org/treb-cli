@@ -33,13 +33,14 @@ func safeTruncate(s string, maxLen int) string {
 
 // TransactionInfo groups related transaction events using generated types
 type TransactionInfo struct {
-	TransactionID string
-	Simulated     *treb.TrebTransactionSimulated
-	Broadcast     *treb.TrebTransactionBroadcast
-	Deployments   []*treb.TrebContractDeployed
-	Failed        *treb.TrebTransactionFailed
-	ProxyEvents   []interface{} // Upgraded, AdminChanged, BeaconUpgraded events (still from events package)
-	SafeQueued    *treb.TrebSafeTransactionQueued // Track if this is a Safe transaction
+	TransactionID     string
+	Simulated         *treb.TrebTransactionSimulated
+	BroadcastStarted  *treb.TrebBroadcastStarted     // Marks the start of broadcast phase
+	Broadcast         *treb.TrebTransactionBroadcast
+	Deployments       []*treb.TrebContractDeployed
+	Failed            *treb.TrebTransactionFailed
+	ProxyEvents       []interface{} // Upgraded, AdminChanged, BeaconUpgraded events (still from events package)
+	SafeQueued        *treb.TrebSafeTransactionQueued // Track if this is a Safe transaction
 }
 
 // GetEventIconForGenerated returns an icon for generated event types
@@ -51,6 +52,8 @@ func GetEventIconForGenerated(event interface{}) string {
 		return "✅"
 	case *treb.TrebSafeTransactionQueued:
 		return "🔐"
+	case *treb.TrebBroadcastStarted:
+		return "🚀"
 	case *treb.TrebTransactionBroadcast:
 		return "📤"
 	case *treb.TrebTransactionSimulated:

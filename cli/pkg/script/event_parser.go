@@ -83,6 +83,14 @@ func (p *EventParser) ParseEvent(rawLog RawLog) (interface{}, error) {
 		return event, nil
 	}
 
+	if broadcastStartedID, err := p.trebContract.GetEventID("BroadcastStarted"); err == nil && eventSig == broadcastStartedID {
+		event, err := p.trebContract.UnpackBroadcastStartedEvent(typesLog)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unpack BroadcastStarted event: %w", err)
+		}
+		return event, nil
+	}
+
 	// Fall back to manual parsing for proxy events (not in our ABI)
 	eventsLog := events.Log{
 		Address: rawLog.Address,

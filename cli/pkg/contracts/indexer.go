@@ -437,7 +437,38 @@ func (i *Indexer) GetContract(key string) (*ContractInfo, error) {
 	return nil, fmt.Errorf("contract not found: %s", key)
 }
 
-// GetContractsByName returns all contracts with the given name
+// GetContractByArtifact returns a contract by artifact name
+// It handles both simple names (e.g., "Counter") and full artifact paths (e.g., "src/Counter.sol:Counter")
+func (i *Indexer) GetContractByArtifact(artifact string) *ContractInfo {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
+	// First try exact match in contracts map (for full artifact paths)
+	if contract, exists := i.contracts[artifact]; exists {
+		return contract
+	}
+
+	// If artifact contains ":", try to find by path:name format
+	if strings.Contains(artifact, ":") {
+		parts := strings.Split(artifact, ":")
+		if len(parts) == 2 {
+			// Try with exact path:name
+			key := fmt.Sprintf("%s:%s", parts[0], parts[1])
+			if contract, exists := i.contracts[key]; exists {
+				return contract
+			}
+		}
+	} else {
+		// Simple name - check if it's unique
+		if contracts := i.contractNames[artifact]; len(contracts) == 1 {
+			return contracts[0]
+		}
+	}
+
+	return nil
+}
+
+// GetContractsByName returns all contracts with the given name (kept for compatibility)
 func (i *Indexer) GetContractsByName(name string) []*ContractInfo {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
