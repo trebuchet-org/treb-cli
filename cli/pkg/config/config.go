@@ -31,7 +31,7 @@ type Manager struct {
 // NewManager creates a new configuration manager
 func NewManager(projectRoot string) *Manager {
 	return &Manager{
-		configPath: filepath.Join(projectRoot, ".treb"),
+		configPath: filepath.Join(projectRoot, ".treb/config.local.json"),
 	}
 }
 

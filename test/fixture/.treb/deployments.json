@@ -1,0 +1,66 @@
+{
+  "default/31337/Counter:list-show-test": {
+    "id": "default/31337/Counter:list-show-test",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "Counter",
+    "label": "list-show-test",
+    "address": "0xE5673f9194DF31187b80d5Eb0DC67c2529B8Da2D",
+    "type": "SINGLETON",
+    "transactionId": "tx-0x48ce36844c0688a519231ba7b7e59074da4236d2ba14fda0dd135ecc42bf379b",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600d3aa2cb65e72c5dd590e58",
+      "initCodeHash": "0xac335e6949b4d514740c93402952f022b1d7bce40ede5c34341c83abfb49665b",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x",
+      "entropy": "default/src/Counter.sol:Counter:list-show-test"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/Counter.sol:Counter",
+      "compilerVersion": "unknown",
+      "bytecodeHash": "0xac335e6949b4d514740c93402952f022b1d7bce40ede5c34341c83abfb49665b",
+      "scriptPath": "DeployWithTreb.s.sol:DeployWithTreb",
+      "gitCommit": "0486bc13c916ca827684e7c655af7fc3e2047c3a"
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": [],
+    "createdAt": "2025-05-31T22:20:44.609474+02:00",
+    "updatedAt": "2025-05-31T22:20:44.609474+02:00"
+  },
+  "default/31337/SampleToken:list-show-test": {
+    "id": "default/31337/SampleToken:list-show-test",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "SampleToken",
+    "label": "list-show-test",
+    "address": "0xD328909E5d61c6e34762DF29154e4473C3D3E85C",
+    "type": "SINGLETON",
+    "transactionId": "tx-0x259eb8f5acdbffe9f0614a6e02d95b5e5d142b297437d334fd5e205215d03fc7",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600ed411c924f51ad3e534801",
+      "initCodeHash": "0x9ed180ba91c84c81ed6148a30418733f69f4012d300db73197128cd4f640d432",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000d3c21bcecceda1000000000000000000000000000000000000000000000000000000000000000000000a5465737420546f6b656e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000045445535400000000000000000000000000000000000000000000000000000000",
+      "entropy": "default/src/SampleToken.sol:SampleToken:list-show-test"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/SampleToken.sol:SampleToken",
+      "compilerVersion": "unknown",
+      "bytecodeHash": "0xbc1e485c21c306154adb700a82448796fc20a6bafa06e2fb0d8e2b2626d948d5",
+      "scriptPath": "DeployWithTreb.s.sol:DeployWithTreb",
+      "gitCommit": "0486bc13c916ca827684e7c655af7fc3e2047c3a"
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": [],
+    "createdAt": "2025-05-31T22:20:44.609485+02:00",
+    "updatedAt": "2025-05-31T22:20:44.609485+02:00"
+  }
+}

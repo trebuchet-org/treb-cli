@@ -106,19 +106,32 @@ CONTRACT_VERSION=v0.1.0
 
 
 func (i *Initializer) createRegistry() error {
-	// Only create if it doesn't exist
-	if _, err := os.Stat("deployments.json"); err == nil {
-		fmt.Println("📋 deployments.json already exists")
+	// Create .treb directory
+	if err := os.MkdirAll(".treb", 0755); err != nil {
+		return fmt.Errorf("failed to create .treb directory: %w", err)
+	}
+
+	// Check if registry files already exist
+	if _, err := os.Stat(".treb/deployments.json"); err == nil {
+		fmt.Println("📋 Registry files already exist in .treb/")
 		return nil
 	}
 
-	registry := `{}`
-
-	if err := os.WriteFile("deployments.json", []byte(registry), 0644); err != nil {
-		return fmt.Errorf("failed to create deployments.json: %w", err)
+	// Create empty registry files
+	registryFiles := map[string]string{
+		".treb/deployments.json":      "{}",
+		".treb/transactions.json":     "{}",
+		".treb/safe-txs.json":         "{}",
+		".treb/registry.json":         "{}",
 	}
 
-	fmt.Println("📋 Created deployments.json registry")
+	for filename, content := range registryFiles {
+		if err := os.WriteFile(filename, []byte(content), 0644); err != nil {
+			return fmt.Errorf("failed to create %s: %w", filename, err)
+		}
+	}
+
+	fmt.Println("📋 Created v2 registry structure in .treb/")
 	return nil
 }
 

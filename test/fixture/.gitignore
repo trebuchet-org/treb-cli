@@ -9,3 +9,6 @@ broadcast/
 # Environment files
 .env
 .env.local
+
+# Treb. Usually you commit this but for running tests we want a clean slate
+.treb

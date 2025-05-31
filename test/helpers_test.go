@@ -94,7 +94,7 @@ func (tc *TrebContext) treb(args ...string) (string, error) {
 
 // supportsDeploymentFlags returns true if the command supports network/namespace/sender flags
 func (tc *TrebContext) supportsDeploymentFlags(command string) bool {
-	deploymentCommands := []string{"deploy", "show", "verify", "list"}
+	deploymentCommands := []string{"run", "show", "verify", "list"}
 	for _, cmd := range deploymentCommands {
 		if command == cmd {
 			return true
@@ -143,9 +143,9 @@ func cleanupGeneratedFiles(t *testing.T) {
 		}
 	}
 
-	// Reset deployments.json with proper structure
-	deploymentsFile := filepath.Join(fixtureDir, "deployments.json")
-	os.WriteFile(deploymentsFile, []byte(`{"networks": {}}`), 0644)
+	// Clean .treb directory (v2 registry structure)
+	trebDir := filepath.Join(fixtureDir, ".treb")
+	os.RemoveAll(trebDir)
 	
 	// Clean forge cache to ensure fresh deployments
 	cacheDir := filepath.Join(fixtureDir, "cache")
@@ -163,6 +163,34 @@ func runTrebDebug(t *testing.T, args ...string) (string, error) {
 	output, err := runTreb(t, args...)
 	if err != nil {
 		t.Logf("Command failed: treb %s", strings.Join(args, " "))
+		t.Logf("Error: %v", err)
+		t.Logf("Output:\n%s", output)
+	}
+	return output, err
+}
+
+// runScript executes a script with treb run command using environment variables
+func runScript(t *testing.T, scriptPath string, envVars ...string) (string, error) {
+	t.Helper()
+	
+	args := []string{"run", scriptPath}
+	
+	// Add environment variables
+	for _, envVar := range envVars {
+		args = append(args, "--env", envVar)
+	}
+	
+	return runTreb(t, args...)
+}
+
+// runScriptDebug executes a script with debug output on failure
+func runScriptDebug(t *testing.T, scriptPath string, envVars ...string) (string, error) {
+	t.Helper()
+	
+	output, err := runScript(t, scriptPath, envVars...)
+	if err != nil {
+		t.Logf("Script failed: %s", scriptPath)
+		t.Logf("Env vars: %v", envVars)
 		t.Logf("Error: %v", err)
 		t.Logf("Output:\n%s", output)
 	}

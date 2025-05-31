@@ -1,0 +1,8 @@
+{
+  "31337": {
+    "default": {
+      "Counter:list-show-test": "0xE5673f9194DF31187b80d5Eb0DC67c2529B8Da2D",
+      "SampleToken:list-show-test": "0xD328909E5d61c6e34762DF29154e4473C3D3E85C"
+    }
+  }
+}

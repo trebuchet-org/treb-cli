@@ -28,25 +28,25 @@ func TestGenerateCommands(t *testing.T) {
 			name:      "generate Counter with CREATE3",
 			args:      []string{"gen", "deploy", "src/Counter.sol:Counter", "--strategy", "CREATE3"},
 			checkFile: "script/deploy/DeployCounter.s.sol",
-			contains:  "DeployStrategy.CREATE3",
+			contains:  ".create3(",
 		},
 		{
 			name:      "generate TestCounter with CREATE2",
 			args:      []string{"gen", "deploy", "src/TestCounter.sol:TestCounter", "--strategy", "CREATE2"},
 			checkFile: "script/deploy/DeployTestCounter.s.sol",
-			contains:  "DeployStrategy.CREATE2",
+			contains:  ".create2(",
 		},
 		{
 			name:        "ambiguous contract name",
-			args:        []string{"gen", "deploy", "Counter", "--strategy", "CREATE3"},
+			args:        []string{"gen", "deploy", "Counter", "--strategy", "CREATE3", "--non-interactive"},
 			wantErr:     true,
-			errContains: "multiple contracts found",
+			errContains: "multiple contracts found matching",
 		},
 		{
-			name:        "missing strategy",
-			args:        []string{"gen", "deploy", "src/Counter.sol:Counter"},
-			wantErr:     true,
-			errContains: "strategy",
+			name:      "missing strategy uses default CREATE3",
+			args:      []string{"gen", "deploy", "src/Counter.sol:Counter"},
+			checkFile: "script/deploy/DeployCounter.s.sol",
+			contains:  ".create3(",
 		},
 		{
 			name:        "invalid strategy",
@@ -58,7 +58,7 @@ func TestGenerateCommands(t *testing.T) {
 			name:        "non-existent contract",
 			args:        []string{"gen", "deploy", "src/NonExistent.sol:NonExistent", "--strategy", "CREATE3"},
 			wantErr:     true,
-			errContains: "not found",
+			errContains: "contract 'src/NonExistent.sol:NonExistent' not found",
 		},
 	}
 
@@ -88,32 +88,5 @@ func TestGenerateCommands(t *testing.T) {
 	}
 }
 
-// Test proxy generation
-func TestGenerateProxy(t *testing.T) {
-	// Non-interactive proxy generation is now implemented!
-	
-	cleanupGeneratedFiles(t)
-	
-	// Generate proxy script
-	output, err := runTreb(t, "gen", "proxy",
-		"src/UpgradeableCounter.sol:UpgradeableCounter",
-		"--strategy", "CREATE3",
-		"--proxy-contract", "lib/openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy")
-	
-	if err != nil {
-		t.Logf("Proxy generation failed with output: %s", output)
-	}
-	require.NoError(t, err)
-	assert.Contains(t, output, "Generated")
-	
-	// Check file was created
-	scriptPath := filepath.Join(fixtureDir, "script/deploy/DeployUpgradeableCounterProxy.s.sol")
-	assert.FileExists(t, scriptPath)
-	
-	// Test missing proxy contract
-	output, err = runTreb(t, "gen", "proxy",
-		"src/UpgradeableCounter.sol:UpgradeableCounter",
-		"--strategy", "CREATE3")
-	assert.Error(t, err)
-	assert.Contains(t, output, "proxy-contract")
-}
+// TestGenerateProxy was removed because 'gen proxy' command no longer exists
+// Proxy deployments should be done manually using existing proxy contracts

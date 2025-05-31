@@ -178,22 +178,41 @@ func (g *Generator) getSameVersionTemplate() string {
 	return `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {Deployment, DeployStrategy} from "treb-sol/Deployment.sol";
+import {TrebScript} from "treb-sol/TrebScript.sol";
+import {Senders} from "treb-sol/internal/sender/Senders.sol";
+import {Deployer} from "treb-sol/internal/sender/Deployer.sol";
+{{if .ImportPath}}
+import { {{.ContractName}} } from "{{.ImportPath}}";
+{{end}}
 
 /**
  * @title Deploy{{.ContractName}}
  * @notice Deployment script for {{.ContractName}} contract
  * @dev Generated automatically by treb
  */
-contract Deploy{{.ContractName}} is Deployment {
-    constructor() Deployment(
-        "{{.ArtifactPath}}",
-        DeployStrategy.{{.Strategy}}
-    ) {}
+contract Deploy{{.ContractName}} is TrebScript {
+    using Deployer for Senders.Sender;
+    using Deployer for Deployer.Deployment;
 
-{{if .HasConstructor}}    /// @notice Get constructor arguments
-    function _getConstructorArgs() internal pure override returns (bytes memory) {
-        // Constructor arguments detected from ABI
+    function run() public broadcast {
+        // Get the sender (can be overridden with --env deployer=<name>)
+        string memory deployerName = vm.envOr("deployer", string("default"));
+        Senders.Sender storage sender = sender(deployerName);
+        
+        // Read label from environment (e.g., --env LABEL=v1)
+        string memory label = vm.envOr("LABEL", string(""));
+        
+        // Deploy {{.ContractName}} using {{.Strategy}}
+        address deployed = sender.{{if eq .Strategy "CREATE3"}}create3{{else}}create2{{end}}("{{.ArtifactPath}}")
+            .setLabel(label)
+            .deploy({{if .HasConstructor}}_getConstructorArgs(){{end}});
+        
+        // Deployment events are automatically emitted for registry tracking
+    }
+{{if .HasConstructor}}
+    /// @notice Get constructor arguments
+    function _getConstructorArgs() internal pure returns (bytes memory) {
+        // TODO: Update these constructor arguments
 {{.ConstructorVars}}
         {{.ConstructorEncode}}
     }
@@ -206,7 +225,9 @@ func (g *Generator) getCrossVersionTemplate() string {
 	return `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {Deployment, DeployStrategy} from "treb-sol/Deployment.sol";
+import {TrebScript} from "treb-sol/TrebScript.sol";
+import {Senders} from "treb-sol/internal/sender/Senders.sol";
+import {Deployer} from "treb-sol/internal/sender/Deployer.sol";
 
 /**
  * @title Deploy{{.ContractName}}
@@ -214,15 +235,30 @@ import {Deployment, DeployStrategy} from "treb-sol/Deployment.sol";
  * @dev Generated automatically by treb
  * @dev Target contract version: {{.TargetVersion}} (cross-version deployment)
  */
-contract Deploy{{.ContractName}} is Deployment {
-    constructor() Deployment(
-        "{{.ArtifactPath}}",
-        DeployStrategy.{{.Strategy}}
-    ) {}
+contract Deploy{{.ContractName}} is TrebScript {
+    using Deployer for Senders.Sender;
+    using Deployer for Deployer.Deployment;
 
-{{if .HasConstructor}}    /// @notice Get constructor arguments
-    function _getConstructorArgs() internal pure override returns (bytes memory) {
-        // Constructor arguments detected from ABI
+    function run() public broadcast {
+        // Get the sender (can be overridden with --env deployer=<name>)
+        string memory deployerName = vm.envOr("deployer", string("default"));
+        Senders.Sender storage sender = sender(deployerName);
+        
+        // Read label from environment (e.g., --env LABEL=v1)
+        string memory label = vm.envOr("LABEL", string(""));
+        
+        // Deploy {{.ContractName}} using {{.Strategy}}
+        // Note: Using artifact path for cross-version compatibility
+        address deployed = sender.{{if eq .Strategy "CREATE3"}}create3{{else}}create2{{end}}("{{.ArtifactPath}}")
+            .setLabel(label)
+            .deploy({{if .HasConstructor}}_getConstructorArgs(){{end}});
+        
+        // Deployment events are automatically emitted for registry tracking
+    }
+{{if .HasConstructor}}
+    /// @notice Get constructor arguments
+    function _getConstructorArgs() internal pure returns (bytes memory) {
+        // TODO: Update these constructor arguments
 {{.ConstructorVars}}
         {{.ConstructorEncode}}
     }

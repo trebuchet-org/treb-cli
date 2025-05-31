@@ -26,18 +26,18 @@ func TestBasicCommands(t *testing.T) {
 			contains: "non-interactive",
 		},
 		{
-			name:     "help mentions deploy",
+			name:     "help mentions run",
 			args:     []string{"--help"},
-			contains: "deploy",
+			contains: "run",
 		},
 		{
 			name: "list command",
 			args: []string{"list"},
 		},
 		{
-			name:     "deploy help",
-			args:     []string{"deploy", "--help"},
-			contains: "Deploy",
+			name:     "run help",
+			args:     []string{"run", "--help"},
+			contains: "Run",
 		},
 		{
 			name:     "gen help",
@@ -47,7 +47,7 @@ func TestBasicCommands(t *testing.T) {
 		{
 			name:     "show help",
 			args:     []string{"show", "--help"},
-			contains: "Display",
+			contains: "Show",
 		},
 		{
 			name:     "verify help",
@@ -97,9 +97,9 @@ func TestBasicCommands(t *testing.T) {
 // Test non-interactive mode
 func TestNonInteractiveMode(t *testing.T) {
 	// Test that ambiguous contract names fail in non-interactive mode
-	output, err := runTreb(t, "gen", "deploy", "Counter", "--strategy", "CREATE3")
+	output, err := runTreb(t, "gen", "deploy", "Counter", "--strategy", "CREATE3", "--non-interactive")
 	assert.Error(t, err)
-	assert.Contains(t, output, "multiple contracts found")
+	assert.Contains(t, output, "multiple contracts found matching")
 	
 	// Test that help shows non-interactive flag
 	output, err = runTreb(t, "--help")
@@ -109,7 +109,7 @@ func TestNonInteractiveMode(t *testing.T) {
 
 // Test command structure
 func TestCommandStructure(t *testing.T) {
-	commands := []string{"deploy", "gen", "show", "verify", "list", "init", "version"}
+	commands := []string{"run", "gen", "show", "verify", "list", "init", "version", "context", "sync", "tag"}
 	
 	for _, cmd := range commands {
 		t.Run(fmt.Sprintf("%s command exists", cmd), func(t *testing.T) {
@@ -126,8 +126,8 @@ func TestCommandStructure(t *testing.T) {
 		assert.Contains(t, output, "deploy")
 	})
 	
-	t.Run("gen has proxy subcommand", func(t *testing.T) {
+	t.Run("gen has library subcommand", func(t *testing.T) {
 		output, _ := runTreb(t, "gen", "--help")
-		assert.Contains(t, output, "proxy")
+		assert.Contains(t, output, "library")
 	})
 }

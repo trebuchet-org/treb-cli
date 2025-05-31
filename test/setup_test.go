@@ -63,7 +63,7 @@ func setup() error {
 
 	// Clean up previous test artifacts
 	fmt.Println("🧹 Cleaning previous test artifacts...")
-	os.Remove("deployments.json")
+	os.RemoveAll(".treb")
 	os.RemoveAll("broadcast")
 
 	fmt.Println("🔨 Building contracts...")

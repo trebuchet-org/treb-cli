@@ -17,8 +17,9 @@ import (
 
 // NetworkInfo contains resolved network details
 type NetworkInfo struct {
-	Name   string
-	RpcUrl string
+	Name    string
+	RpcUrl  string
+	ChainID uint64
 }
 
 // Resolver handles network resolution from foundry.toml and chain ID extraction
@@ -50,32 +51,20 @@ func (r *Resolver) ResolveNetwork(network string) (*NetworkInfo, error) {
 		return nil, fmt.Errorf("failed to resolve network %s: %w", network, err)
 	}
 
-	return &NetworkInfo{
-		Name:   network,
-		RpcUrl: rpcUrl,
-	}, nil
-}
-
-func (n *NetworkInfo) ChainID() uint64 {
-	if chainIDMap[n.Name] == 0 {
-		chainID, err := n.getChainID()
-		if err != nil {
-			panic(err)
-		}
-		chainIDMap[n.Name] = chainID
+	chainID, err := r.getChainID(rpcUrl)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get chain ID for network %s: %w", network, err)
 	}
-	return chainIDMap[n.Name]
+
+	return &NetworkInfo{
+		Name:    network,
+		RpcUrl:  rpcUrl,
+		ChainID: chainID,
+	}, nil
 }
 
 // getRpcUrlFromFoundry extracts RPC URL from foundry.toml
 func (r *Resolver) getRpcUrlFromFoundry(network string) (string, error) {
-	// For now, use a simple approach - in production, you'd want to parse foundry.toml properly
-	// or use forge config command
-	return r.getFoundryRpcUrl(network)
-}
-
-// getFoundryRpcUrl reads foundry.toml and resolves RPC URL with env var substitution
-func (r *Resolver) getFoundryRpcUrl(network string) (string, error) {
 	foundryToml := fmt.Sprintf("%s/foundry.toml", r.projectRoot)
 
 	content, err := os.ReadFile(foundryToml)
@@ -144,7 +133,11 @@ func (r *Resolver) substituteEnvVars(value string) string {
 }
 
 // getChainID extracts chain ID from RPC endpoint
-func (n *NetworkInfo) getChainID() (uint64, error) {
+func (r *Resolver) getChainID(rpcUrl string) (uint64, error) {
+	if chainID, ok := chainIDMap[rpcUrl]; ok {
+		return chainID, nil
+	}
+
 	// Create HTTP client with timeout
 	client := &http.Client{
 		Timeout: 10 * time.Second,
@@ -153,7 +146,7 @@ func (n *NetworkInfo) getChainID() (uint64, error) {
 	// Prepare eth_chainId JSON-RPC request
 	requestBody := `{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}`
 
-	resp, err := client.Post(n.RpcUrl, "application/json", strings.NewReader(requestBody))
+	resp, err := client.Post(rpcUrl, "application/json", strings.NewReader(requestBody))
 	if err != nil {
 		return 0, fmt.Errorf("failed to make RPC request: %w", err)
 	}
@@ -188,5 +181,6 @@ func (n *NetworkInfo) getChainID() (uint64, error) {
 		return 0, fmt.Errorf("failed to parse chain ID: %w", err)
 	}
 
+	chainIDMap[rpcUrl] = chainID
 	return chainID, nil
 }

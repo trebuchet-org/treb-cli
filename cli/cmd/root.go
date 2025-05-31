@@ -37,30 +37,29 @@ func init() {
 	})
 
 	// Main workflow commands (init at the end)
-	deployCmd.GroupID = "main"
+	// deployCmd.GroupID = "main" // TODO: Fix deployment package
+	runCmd.GroupID = "main"
 	listCmd.GroupID = "main"
 	showCmd.GroupID = "main"
-	verifyCmd.GroupID = "main"
 	genCmd.GroupID = "main"
+	verifyCmd.GroupID = "main"
 	initCmd.GroupID = "main"
 	
 	// Management commands
-	tagCmd.GroupID = "management"
-	syncCmd.GroupID = "management"
 	contextCmd.GroupID = "management"
+	syncCmd.GroupID = "management"
+	tagCmd.GroupID = "management"
 	
 	// Additional commands (merged with other utility commands)
 	// debugCmd and versionCmd will appear in "Additional Commands" section
 	// since they don't have a GroupID set
 
-	rootCmd.AddCommand(deployCmd)
-	rootCmd.AddCommand(listCmd)
-	rootCmd.AddCommand(showCmd)
-	rootCmd.AddCommand(verifyCmd)
+	// rootCmd.AddCommand(deployCmd) // TODO: Fix deployment package
+	// Commands are registered in their respective init() functions
+	// Most commands self-register via init() in their respective files
+	// Only manually add commands that don't self-register
 	rootCmd.AddCommand(genCmd)
 	rootCmd.AddCommand(initCmd)
-	rootCmd.AddCommand(tagCmd)
-	rootCmd.AddCommand(syncCmd)
 	rootCmd.AddCommand(contextCmd)
 	rootCmd.AddCommand(versionCmd)
 }
