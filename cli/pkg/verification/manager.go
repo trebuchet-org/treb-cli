@@ -240,7 +240,7 @@ func (vm *Manager) verifyOnSourceifyWithDebug(deployment *types.Deployment, netw
 
 // buildEtherscanURL builds the Etherscan URL for a contract
 func (vm *Manager) buildEtherscanURL(networkInfo *network.NetworkInfo, address string) string {
-	baseURL := "https://etherscan.io"
+	var baseURL string
 	
 	// Map common chain IDs to their explorer URLs
 	switch networkInfo.ChainID {

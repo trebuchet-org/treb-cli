@@ -91,22 +91,7 @@ func UpdateRegistryFromEvents(
 
 // convertScriptEventsToEventsPackage converts script package events to events package events
 func convertScriptEventsToEventsPackage(scriptEvents []ParsedEvent) []events.ParsedEvent {
-	var eventsPackageEvents []events.ParsedEvent
-	failedConversions := 0
-	
-	for _, scriptEvent := range scriptEvents {
-		// The script package re-exports events package types, so we can cast directly
-		if eventsEvent, ok := scriptEvent.(events.ParsedEvent); ok {
-			eventsPackageEvents = append(eventsPackageEvents, eventsEvent)
-		} else {
-			failedConversions++
-			fmt.Printf("⚠️ Failed to convert event type: %T\n", scriptEvent)
-		}
-	}
-	
-	if failedConversions > 0 {
-		fmt.Printf("⚠️ Warning: %d events failed type conversion\n", failedConversions)
-	}
-	
+	// The script package re-exports events.ParsedEvent, so we can append directly
+	eventsPackageEvents := append([]events.ParsedEvent(nil), scriptEvents...)
 	return eventsPackageEvents
 }

@@ -166,7 +166,7 @@ func (su *ScriptUpdater) createDeploymentFromEvent(
 	// Get contract info from indexer
 	var contractName string
 	var contractPath string
-	var compilerVersion string = "unknown"
+	compilerVersion := "unknown"
 	var isLibrary bool
 
 	if su.indexer != nil {

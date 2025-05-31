@@ -290,7 +290,13 @@ func parseSafeTransactionQueuedEvent(log events.Log) (*events.SafeTransactionQue
 		transactionField := txValue.Field(0)
 		transactionIdField := txValue.Field(1).Interface().([32]byte)
 		senderIdField := txValue.Field(2).Interface().([32]byte)
-		statusField := uint8(txValue.Field(3).Uint())
+		statusFieldValue := txValue.Field(3).Uint()
+	var statusField uint8
+	if statusFieldValue > 255 {
+		statusField = 255
+	} else {
+		statusField = uint8(statusFieldValue)
+	}
 		simulatedReturnDataField := txValue.Field(4).Interface().([]byte)
 		executedReturnDataField := txValue.Field(5).Interface().([]byte)
 

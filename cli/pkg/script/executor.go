@@ -410,12 +410,16 @@ func (e *Executor) debugParseOutput(output []byte, parsedPath, ignoredPath strin
 			"parsed_objects": parsedObjects,
 			"count":          len(parsedObjects),
 		}, "", "  ")
-		os.WriteFile(parsedPath, parsedData, 0644)
+		if err := os.WriteFile(parsedPath, parsedData, 0644); err != nil {
+			fmt.Printf("Warning: failed to write parsed debug file: %v\n", err)
+		}
 	}
 
 	// Write ignored lines to file
 	if len(ignoredLines) > 0 {
 		ignoredData := []byte(strings.Join(ignoredLines, "\n"))
-		os.WriteFile(ignoredPath, ignoredData, 0644)
+		if err := os.WriteFile(ignoredPath, ignoredData, 0644); err != nil {
+			fmt.Printf("Warning: failed to write ignored debug file: %v\n", err)
+		}
 	}
 }

@@ -49,7 +49,7 @@ func BuildSenderConfigs(trebConfig *config.TrebConfig) (*SenderConfigs, error) {
 	}
 
 	// Debug: check if senders exist
-	if trebConfig.Senders == nil || len(trebConfig.Senders) == 0 {
+	if len(trebConfig.Senders) == 0 {
 		return nil, fmt.Errorf("no senders configured in profile")
 	}
 
@@ -108,12 +108,12 @@ func buildSenderInitConfig(id string, sender config.SenderConfig, allSenders map
 
 		// Validate signer is provided
 		if sender.Signer == "" {
-			return nil, fmt.Errorf("Safe sender requires a signer (proposer) to be specified")
+			return nil, fmt.Errorf("safe sender requires a signer (proposer) to be specified")
 		}
 
 		// Validate that the signer exists in the sender configs
 		if _, exists := allSenders[sender.Signer]; !exists {
-			return nil, fmt.Errorf("Safe signer '%s' not found in sender configurations", sender.Signer)
+			return nil, fmt.Errorf("safe signer '%s' not found in sender configurations", sender.Signer)
 		}
 
 		// For Safe senders, config contains the proposer name as string

@@ -96,7 +96,12 @@ func (be *BroadcastEnricher) EnrichFromBroadcastFile(update *RegistryUpdate, bro
 				TransactionHash: tx.Hash,
 				BlockNumber:     blockNumber,
 				GasUsed:         parseGasUsed(receipt.GasUsed),
-				Timestamp:       uint64(broadcastData.Timestamp), // Use broadcast timestamp
+				Timestamp:       func() uint64 {
+				if broadcastData.Timestamp < 0 {
+					return 0
+				}
+				return uint64(broadcastData.Timestamp)
+			}(), // Use broadcast timestamp
 			}
 
 			// Enrich all matched deployments
