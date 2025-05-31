@@ -1,81 +1,88 @@
 {
   "deployments": {
-    "0x2437e18a86265e5a04a0183d3357940f25bc4003b88e555014c027ef33097414": {
-      "internalTxId": "0x2437e18a86265e5a04a0183d3357940f25bc4003b88e555014c027ef33097414",
+    "0x16018a6807700a6d4ff9332cc69d252c0a5adf2cd512aec7ac0722837b6057dc": {
+      "internalTxId": "0x16018a6807700a6d4ff9332cc69d252c0a5adf2cd512aec7ac0722837b6057dc",
       "deployment": {
-        "id": "default/11155111/Counter:test#1748696184",
+        "id": "default/44787/UpgradeableCounter:",
         "namespace": "default",
-        "chainId": 11155111,
-        "contractName": "Counter",
-        "label": "test",
-        "address": "0xF479f510B1D03c89f3d05A847f344DA01A4ed990",
+        "chainId": 44787,
+        "contractName": "UpgradeableCounter",
+        "label": "",
+        "address": "0xf2a6Da983dfE6A27eee44a33962c02FAEFF39e45",
         "type": "SINGLETON",
-        "transactionId": "",
+        "transactionId": "tx-0xc3c686c4ac381079be43b0db2399dca15c924b9d95010290c218fa370c2cf86b",
         "deploymentStrategy": {
           "method": "CREATE3",
-          "salt": "0x32cb58b145d3f7e28c45ce4b2cc31fa94248b23f007219dcf7fcf03cf92c8b65",
-          "initCodeHash": "0xac335e6949b4d514740c93402952f022b1d7bce40ede5c34341c83abfb49665b",
+          "salt": "0xf1f30b69a9359c3e7c28eb76391835472e105f5c008833bca0ee959b6584eba6",
+          "initCodeHash": "0x5486ce6c86ba56c7bb877d0f3b9753c251076afae58a4f9ce7fed3ae56b6732a",
           "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
           "constructorArgs": "0x",
-          "entropy": "default/src/Counter.sol:Counter:test"
+          "entropy": "default/UpgradeableCounter"
         },
         "proxyInfo": null,
         "artifact": {
-          "path": "src/Counter.sol:Counter",
+          "path": "src/UpgradeableCounter.sol:UpgradeableCounter",
           "compilerVersion": "0.8.27+commit.40a35a09",
-          "bytecodeHash": "0xac335e6949b4d514740c93402952f022b1d7bce40ede5c34341c83abfb49665b",
-          "scriptPath": "DeployWithSafe.s.sol:DeployWithSafe",
-          "gitCommit": "087ddb205698def0701671092eac927c94420faf"
+          "bytecodeHash": "0x5486ce6c86ba56c7bb877d0f3b9753c251076afae58a4f9ce7fed3ae56b6732a",
+          "scriptPath": "DeployUpgradeableCounter.s.sol:DeployUpgradeableCounter",
+          "gitCommit": "3f7a76730bc26dfed902ea155b534738d9d824dc"
         },
         "verification": {
           "status": "UNVERIFIED"
         },
         "tags": [],
-        "createdAt": "2025-05-31T14:56:24.892525+02:00",
-        "updatedAt": "2025-05-31T14:56:24.892526+02:00"
+        "createdAt": "2025-05-31T15:05:10.711169+02:00",
+        "updatedAt": "2025-05-31T15:05:10.711169+02:00"
+      },
+      "broadcastEnrichment": {
+        "transactionHash": "0xc3c686c4ac381079be43b0db2399dca15c924b9d95010290c218fa370c2cf86b",
+        "blockNumber": 47741388,
+        "gasUsed": 457732,
+        "timestamp": 1748696710
       }
     }
   },
-  "transactions": {},
-  "safeTransactions": {
-    "0xa0b9f886f5aa6d83fccc541f24cfb539d5a8537b9dae4e09f6950d37f67f0b47": {
-      "safeTransaction": {
-        "safeTxHash": "0xa0b9f886f5aa6d83fccc541f24cfb539d5a8537b9dae4e09f6950d37f67f0b47",
-        "safeAddress": "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F",
-        "chainId": 11155111,
-        "status": "PENDING",
+  "transactions": {
+    "0x16018a6807700a6d4ff9332cc69d252c0a5adf2cd512aec7ac0722837b6057dc": {
+      "internalId": "0x16018a6807700a6d4ff9332cc69d252c0a5adf2cd512aec7ac0722837b6057dc",
+      "transaction": {
+        "id": "tx-0xc3c686c4ac381079be43b0db2399dca15c924b9d95010290c218fa370c2cf86b",
+        "chainId": 44787,
+        "hash": "0xc3c686c4ac381079be43b0db2399dca15c924b9d95010290c218fa370c2cf86b",
+        "status": "EXECUTED",
+        "blockNumber": 47741388,
+        "sender": "0xf1f30b69A9359C3e7c28eB76391835472E105f5C",
         "nonce": 0,
-        "transactions": [
+        "deployments": [],
+        "operations": [
           {
-            "to": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
-            "value": "0",
-            "data": "0x9c36a28632cb58b145d3f7e28c45ce4b2cc31fa94248b23f007219dcf7fcf03cf92c8b65000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000001fd6080604052348015600e575f5ffd5b506101e18061001c5f395ff3fe608060405234801561000f575f5ffd5b506004361061003f575f3560e01c80633fb5c1cb146100435780638381f58a1461005f578063d09de08a1461007d575b5f5ffd5b61005d600480360381019061005891906100e4565b610087565b005b610067610090565b604051610074919061011e565b60405180910390f35b610085610095565b005b805f8190555050565b5f5481565b5f5f8154809291906100a690610164565b9190505550565b5f5ffd5b5f819050919050565b6100c3816100b1565b81146100cd575f5ffd5b50565b5f813590506100de816100ba565b92915050565b5f602082840312156100f9576100f86100ad565b5b5f610106848285016100d0565b91505092915050565b610118816100b1565b82525050565b5f6020820190506101315f83018461010f565b92915050565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601160045260245ffd5b5f61016e826100b1565b91507fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff82036101a05761019f610137565b5b60018201905091905056fea26469706673582212206d1a3331f2e67f8ce8b6c5d188286df40f8b7cfedd4bed22d60c2ffc3a31f0f864736f6c634300081b0033000000",
-            "operation": 0
-          },
-          {
-            "to": "0xF479f510B1D03c89f3d05A847f344DA01A4ed990",
-            "value": "0",
-            "data": "0xd09de08a",
-            "operation": 0
+            "type": "DEPLOY",
+            "target": "0xf2a6Da983dfE6A27eee44a33962c02FAEFF39e45",
+            "method": "CREATE3",
+            "result": {
+              "address": "0xf2a6Da983dfE6A27eee44a33962c02FAEFF39e45"
+            }
           }
         ],
-        "transactionIds": [],
-        "proposedBy": "0xf1f30b69A9359C3e7c28eB76391835472E105f5C",
-        "proposedAt": "2025-05-31T14:56:24.892497+02:00",
-        "confirmations": []
+        "environment": "default",
+        "createdAt": "2025-05-31T15:05:10.711087+02:00"
       },
-      "internalTxMapping": {
-        "0x2437e18a86265e5a04a0183d3357940f25bc4003b88e555014c027ef33097414": 0,
-        "0xaefc4be8f148d644311efb3ae01f7554ca15038f580554a7f8a113ec259a3aff": 1
+      "onChainData": {
+        "hash": "0xc3c686c4ac381079be43b0db2399dca15c924b9d95010290c218fa370c2cf86b",
+        "blockNumber": 47741388,
+        "gasUsed": 457732,
+        "status": 1
       }
     }
   },
+  "safeTransactions": {},
   "metadata": {
-    "scriptPath": "script/DeployWithSafe.s.sol",
+    "scriptPath": "script/deploy/DeployUpgradeableCounter.s.sol",
+    "broadcastPath": "broadcast/DeployUpgradeableCounter.s.sol/44787/run-latest.json",
     "namespace": "default",
-    "chainId": 11155111,
-    "networkName": "sepolia",
-    "createdAt": "2025-05-31T14:56:24.882336+02:00",
+    "chainId": 44787,
+    "networkName": "celo-alfajores",
+    "createdAt": "2025-05-31T15:05:10.694296+02:00",
     "dryRun": false
   }
 }

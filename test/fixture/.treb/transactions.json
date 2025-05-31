@@ -219,6 +219,28 @@
     "environment": "default",
     "createdAt": "2025-05-31T11:53:33.454265+02:00"
   },
+  "tx-0xc3c686c4ac381079be43b0db2399dca15c924b9d95010290c218fa370c2cf86b": {
+    "id": "tx-0xc3c686c4ac381079be43b0db2399dca15c924b9d95010290c218fa370c2cf86b",
+    "chainId": 44787,
+    "hash": "0xc3c686c4ac381079be43b0db2399dca15c924b9d95010290c218fa370c2cf86b",
+    "status": "EXECUTED",
+    "blockNumber": 47741388,
+    "sender": "0xf1f30b69A9359C3e7c28eB76391835472E105f5C",
+    "nonce": 0,
+    "deployments": [],
+    "operations": [
+      {
+        "type": "DEPLOY",
+        "target": "0xf2a6Da983dfE6A27eee44a33962c02FAEFF39e45",
+        "method": "CREATE3",
+        "result": {
+          "address": "0xf2a6Da983dfE6A27eee44a33962c02FAEFF39e45"
+        }
+      }
+    ],
+    "environment": "default",
+    "createdAt": "2025-05-31T15:05:10.711087+02:00"
+  },
   "tx-internal-0x00d180652ed626299100017c24b8a2fd14c086af905d5445aa3ca5d4bbe0446c": {
     "id": "tx-internal-0x00d180652ed626299100017c24b8a2fd14c086af905d5445aa3ca5d4bbe0446c",
     "chainId": 11155111,

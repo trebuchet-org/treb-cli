@@ -608,6 +608,49 @@
     "createdAt": "2025-05-31T11:53:33.454281+02:00",
     "updatedAt": "2025-05-31T12:14:35.535969+02:00"
   },
+  "default/44787/UpgradeableCounter:": {
+    "id": "default/44787/UpgradeableCounter:",
+    "namespace": "default",
+    "chainId": 44787,
+    "contractName": "UpgradeableCounter",
+    "label": "",
+    "address": "0xf2a6Da983dfE6A27eee44a33962c02FAEFF39e45",
+    "type": "SINGLETON",
+    "transactionId": "tx-0xc3c686c4ac381079be43b0db2399dca15c924b9d95010290c218fa370c2cf86b",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf1f30b69a9359c3e7c28eb76391835472e105f5c008833bca0ee959b6584eba6",
+      "initCodeHash": "0x5486ce6c86ba56c7bb877d0f3b9753c251076afae58a4f9ce7fed3ae56b6732a",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x",
+      "entropy": "default/UpgradeableCounter"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/UpgradeableCounter.sol:UpgradeableCounter",
+      "compilerVersion": "0.8.27+commit.40a35a09",
+      "bytecodeHash": "0x5486ce6c86ba56c7bb877d0f3b9753c251076afae58a4f9ce7fed3ae56b6732a",
+      "scriptPath": "DeployUpgradeableCounter.s.sol:DeployUpgradeableCounter",
+      "gitCommit": "3f7a76730bc26dfed902ea155b534738d9d824dc"
+    },
+    "verification": {
+      "status": "VERIFIED",
+      "etherscanUrl": "https://alfajores.celoscan.io/address/0xf2a6Da983dfE6A27eee44a33962c02FAEFF39e45#code",
+      "verifiers": {
+        "etherscan": {
+          "status": "verified",
+          "url": "https://alfajores.celoscan.io/address/0xf2a6Da983dfE6A27eee44a33962c02FAEFF39e45#code"
+        },
+        "sourcify": {
+          "status": "verified",
+          "url": "https://sourcify.dev/#/lookup/0xf2a6Da983dfE6A27eee44a33962c02FAEFF39e45"
+        }
+      }
+    },
+    "tags": [],
+    "createdAt": "2025-05-31T15:05:10.711169+02:00",
+    "updatedAt": "2025-05-31T15:05:22.891879+02:00"
+  },
   "default/44787/UpgradeableCounter:test22y": {
     "id": "default/44787/UpgradeableCounter:test22y",
     "namespace": "default",
