@@ -187,8 +187,18 @@ func FilterOutProxies(deployments []*registry.DeploymentInfo) []*registry.Deploy
 
 // V2 Deployment Picker Functions
 
+// PickDeployment is an alias for PickDeploymentV2 for v2 registry compatibility
+func PickDeployment(matches []*types.Deployment, prompt string) (*types.Deployment, error) {
+	return PickDeploymentV2WithPrompt(matches, prompt)
+}
+
 // PickDeploymentV2 helps users select a deployment when multiple matches exist (v2 registry)
 func PickDeploymentV2(matches []*types.Deployment) (*types.Deployment, error) {
+	return PickDeploymentV2WithPrompt(matches, "Multiple deployments found. Select one:")
+}
+
+// PickDeploymentV2WithPrompt helps users select a deployment with a custom prompt
+func PickDeploymentV2WithPrompt(matches []*types.Deployment, prompt string) (*types.Deployment, error) {
 	if len(matches) == 0 {
 		return nil, fmt.Errorf("no deployments found")
 	}
@@ -210,7 +220,7 @@ func PickDeploymentV2(matches []*types.Deployment) (*types.Deployment, error) {
 	}
 
 	promptSelect := promptui.Select{
-		Label:     "Multiple deployments found. Select one:",
+		Label:     prompt,
 		Items:     options,
 		Templates: templates,
 		Size:      10,

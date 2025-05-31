@@ -1,6 +1,7 @@
 package types
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -37,6 +38,7 @@ const (
 	VerificationStatusPending    VerificationStatus = "PENDING"
 	VerificationStatusVerified   VerificationStatus = "VERIFIED"
 	VerificationStatusFailed     VerificationStatus = "FAILED"
+	VerificationStatusPartial    VerificationStatus = "PARTIAL"
 )
 
 // Deployment represents a contract deployment record
@@ -67,6 +69,14 @@ type Deployment struct {
 	Tags      []string  `json:"tags"`      // User-defined tags
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
+	
+	// V2 specific fields for verification compatibility
+	Status           Status                 `json:"status,omitempty"`           // For execution status
+	ConstructorArgs  string                 `json:"constructorArgs,omitempty"`  // For verification
+	Metadata         *ContractMetadata      `json:"metadata,omitempty"`         // Additional metadata
+	
+	// Runtime fields (not persisted)
+	Transaction      *Transaction           `json:"-"`                          // Linked transaction data
 }
 
 // DeploymentStrategy contains deployment method details
@@ -105,9 +115,11 @@ type ArtifactInfo struct {
 
 // VerificationInfo contains verification details
 type VerificationInfo struct {
-	Status       VerificationStatus `json:"status"`
-	EtherscanURL string             `json:"etherscanUrl,omitempty"`
-	VerifiedAt   *time.Time         `json:"verifiedAt,omitempty"`
+	Status       VerificationStatus        `json:"status"`
+	EtherscanURL string                    `json:"etherscanUrl,omitempty"`
+	VerifiedAt   *time.Time                `json:"verifiedAt,omitempty"`
+	Reason       string                    `json:"reason,omitempty"`
+	Verifiers    map[string]VerifierStatus `json:"verifiers,omitempty"` // etherscan, sourcify status
 }
 
 // Transaction represents a blockchain transaction record
@@ -224,6 +236,22 @@ type ProxyIndexes struct {
 // PendingItems contains pending transactions
 type PendingItems struct {
 	SafeTxs []string `json:"safeTxs"` // Pending Safe transaction hashes
+}
+
+// GetDisplayName returns a human-friendly name for the deployment
+func (d *Deployment) GetDisplayName() string {
+	if d.Label != "" {
+		return fmt.Sprintf("%s:%s", d.ContractName, d.Label)
+	}
+	return d.ContractName
+}
+
+// GetShortID returns the short identifier (contractName:label)
+func (d *Deployment) GetShortID() string {
+	if d.Label != "" {
+		return fmt.Sprintf("%s:%s", d.ContractName, d.Label)
+	}
+	return d.ContractName
 }
 
 // SolidityRegistry is a simplified format for Solidity contract consumption

@@ -52,7 +52,6 @@ func init() {
 	contextCmd.GroupID = "management"
 	
 	// Legacy v1 commands
-	verifyV1Cmd.GroupID = "legacy"
 	syncV1Cmd.GroupID = "legacy"
 	
 	// Additional commands (merged with other utility commands)

@@ -355,15 +355,38 @@ func (m *Manager) GetDeploymentsByNamespace(namespace string, chainID uint64) ([
 	return deployments, nil
 }
 
-// GetAllDeployments returns all deployments
-func (m *Manager) GetAllDeployments() map[string]*types.Deployment {
+// GetAllDeployments returns all deployments as a slice
+func (m *Manager) GetAllDeployments() []*types.Deployment {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	// Return a copy to prevent external modifications
-	result := make(map[string]*types.Deployment, len(m.deployments))
-	for k, v := range m.deployments {
-		result[k] = v
+	// Return a slice to prevent external modifications
+	result := make([]*types.Deployment, 0, len(m.deployments))
+	for _, v := range m.deployments {
+		result = append(result, v)
+	}
+	return result
+}
+
+// GetAllDeploymentsHydrated returns all deployments with linked transaction data
+func (m *Manager) GetAllDeploymentsHydrated() []*types.Deployment {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	result := make([]*types.Deployment, 0, len(m.deployments))
+	for _, deployment := range m.deployments {
+		// Create a copy to avoid modifying the original
+		dep := *deployment
+		
+		// Hydrate with transaction data if available
+		if dep.TransactionID != "" {
+			if tx, exists := m.transactions[dep.TransactionID]; exists {
+				// Add transaction reference to deployment
+				dep.Transaction = tx
+			}
+		}
+		
+		result = append(result, &dep)
 	}
 	return result
 }
@@ -392,6 +415,30 @@ func (m *Manager) GetSafeTransaction(safeTxHash string) (*types.SafeTransaction,
 	}
 
 	return safeTx, nil
+}
+
+// SaveDeployment updates an existing deployment record
+func (m *Manager) SaveDeployment(deployment *types.Deployment) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Check if deployment exists
+	if _, exists := m.deployments[deployment.ID]; !exists {
+		return fmt.Errorf("deployment not found: %s", deployment.ID)
+	}
+
+	// Update the deployment
+	deployment.UpdatedAt = time.Now()
+	m.deployments[deployment.ID] = deployment
+
+	// Update indexes in case address changed
+	m.updateIndexesForDeployment(deployment)
+
+	// Update solidity registry
+	m.updateSolidityRegistry(deployment)
+
+	// Save all files
+	return m.save()
 }
 
 // UpdateDeploymentVerification updates the verification status of a deployment

@@ -65,6 +65,50 @@
     "environment": "default",
     "createdAt": "2025-05-31T09:43:07.993817+02:00"
   },
+  "tx-0x48d7d10c24759b593eefb627056d965ac6bb1b7763acbafe14852cc5c394a307": {
+    "id": "tx-0x48d7d10c24759b593eefb627056d965ac6bb1b7763acbafe14852cc5c394a307",
+    "chainId": 11155111,
+    "hash": "0x48d7d10c24759b593eefb627056d965ac6bb1b7763acbafe14852cc5c394a307",
+    "status": "EXECUTED",
+    "blockNumber": 8445758,
+    "sender": "0xf1f30b69A9359C3e7c28eB76391835472E105f5C",
+    "nonce": 0,
+    "deployments": [],
+    "operations": [
+      {
+        "type": "DEPLOY",
+        "target": "0x71F6f67c725B21523b0302ef6c78EF0afCe9369e",
+        "method": "CREATE3",
+        "result": {
+          "address": "0x71F6f67c725B21523b0302ef6c78EF0afCe9369e"
+        }
+      }
+    ],
+    "environment": "default",
+    "createdAt": "2025-05-31T12:35:01.546305+02:00"
+  },
+  "tx-0x5664103d0178d8223accd9516e93b008ff8c0c16d34bc047868d94cf3a559223": {
+    "id": "tx-0x5664103d0178d8223accd9516e93b008ff8c0c16d34bc047868d94cf3a559223",
+    "chainId": 11155111,
+    "hash": "0x5664103d0178d8223accd9516e93b008ff8c0c16d34bc047868d94cf3a559223",
+    "status": "EXECUTED",
+    "blockNumber": 8445757,
+    "sender": "0xf1f30b69A9359C3e7c28eB76391835472E105f5C",
+    "nonce": 0,
+    "deployments": [],
+    "operations": [
+      {
+        "type": "DEPLOY",
+        "target": "0x70D606073465Df4f1119704CfbADaa67F9f4E248",
+        "method": "CREATE3",
+        "result": {
+          "address": "0x70D606073465Df4f1119704CfbADaa67F9f4E248"
+        }
+      }
+    ],
+    "environment": "default",
+    "createdAt": "2025-05-31T12:35:01.546234+02:00"
+  },
   "tx-0x6a80945ac8d165c2a7bd36c74eb12e03c81d2a46a989a6a77d2a28c41f504374": {
     "id": "tx-0x6a80945ac8d165c2a7bd36c74eb12e03c81d2a46a989a6a77d2a28c41f504374",
     "chainId": 44787,

@@ -35,9 +35,10 @@ var (
 type TableData [][]string
 
 var listCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List deployments from registry",
-	Long:  `List all deployments in the registry, organized by namespace and chain.`,
+	Use:     "list",
+	Aliases: []string{"ls"},
+	Short:   "List deployments from registry",
+	Long:    `List all deployments in the registry, organized by namespace and chain.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Get flags
 		namespace, _ := cmd.Flags().GetString("namespace")

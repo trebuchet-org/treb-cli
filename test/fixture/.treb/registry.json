@@ -1,4 +1,10 @@
 {
+  "11155111": {
+    "default": {
+      "ERC1967Proxy:test22y": "0x71F6f67c725B21523b0302ef6c78EF0afCe9369e",
+      "UpgradeableCounter:test22y": "0x70D606073465Df4f1119704CfbADaa67F9f4E248"
+    }
+  },
   "31337": {
     "default": {
       "ERC1967Proxy:test100": "0x61b6A600ea7496ED9488d645D81d20819B1e32AA",
