@@ -7,9 +7,13 @@ DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS = -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)
 
 # Build the CLI binary
-build: 
+build: bindings
 	@echo "🔨 Building treb..."
 	@go build -ldflags="$(LDFLAGS)" -tags dev -o bin/treb ./cli 
+
+bindings: forge_build
+	@echo "🔨 Building bindings..."
+	@cat treb-sol/out/TrebScript.sol/TrebScript.json | jq ".abi" | abigen --v2 --pkg treb --out cli/pkg/abi/treb/generated.go --abi -
 
 forge_build:
 	@echo ">> forge build"

@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -135,114 +136,31 @@ func ParseCompleteForgeOutput(output []byte) (*ParsedForgeOutput, error) {
 	return result, nil
 }
 
-// ParseAllEvents extracts all types of events from forge output
-func ParseAllEvents(output *ForgeScriptOutput) ([]ParsedEvent, error) {
-	var events []ParsedEvent
+// ParseAllEvents extracts all types of events from forge output using generated ABI bindings
+func ParseAllEvents(output *ForgeScriptOutput) ([]interface{}, error) {
+	var events []interface{}
+	parser := NewEventParser()
 
 	for _, rawLog := range output.RawLogs {
 		if len(rawLog.Topics) == 0 {
 			continue
 		}
 
-		log := Log{
-			Address: rawLog.Address,
-			Topics:  rawLog.Topics,
-			Data:    rawLog.Data,
+		// Use the new event parser with RawLog directly
+		event, err := parser.ParseEvent(rawLog)
+		if err != nil {
+			// Only log warnings for actual parsing errors, not unknown events
+			if !strings.Contains(err.Error(), "unknown event signature") {
+				fmt.Printf("Warning: failed to parse event %s: %v\n", rawLog.Topics[0].Hex(), err)
+			}
+			continue
 		}
 
-		// Check event type by topic
-		switch rawLog.Topics[0] {
-		case DeployingContractTopic:
-			event, err := parseDeployingContractEvent(log)
-			if err != nil {
-				fmt.Printf("Warning: failed to parse DeployingContract event: %v\n", err)
-				continue
-			}
-			events = append(events, event)
-
-		case ContractDeployedTopic:
-			event, err := parseContractDeployedEvent(log)
-			if err != nil {
-				fmt.Printf("Warning: failed to parse ContractDeployed event: %v\n", err)
-				continue
-			}
-			events = append(events, event)
-
-		case SafeTransactionQueuedTopic:
-			event, err := parseSafeTransactionQueuedEvent(log)
-			if err != nil {
-				fmt.Printf("Warning: failed to parse SafeTransactionQueued event: %v\n", err)
-				continue
-			}
-			events = append(events, event)
-
-		case TransactionSimulatedTopic:
-			event, err := parseTransactionSimulatedEvent(log)
-			if err != nil {
-				fmt.Printf("Warning: failed to parse TransactionSimulated event: %v\n", err)
-				continue
-			}
-			events = append(events, event)
-
-		case TransactionFailedTopic:
-			event, err := parseTransactionFailedEvent(log)
-			if err != nil {
-				fmt.Printf("Warning: failed to parse TransactionFailed event: %v\n", err)
-				continue
-			}
-			events = append(events, event)
-
-		case TransactionBroadcastTopic:
-			event, err := parseTransactionBroadcastEvent(log)
-			if err != nil {
-				fmt.Printf("Warning: failed to parse TransactionBroadcast event: %v\n", err)
-				continue
-			}
-			events = append(events, event)
-
-		case UpgradedTopic:
-			event, err := parseUpgradedEvent(log)
-			if err != nil {
-				fmt.Printf("Warning: failed to parse Upgraded event: %v\n", err)
-				continue
-			}
-			events = append(events, event)
-
-		case AdminChangedTopic:
-			event, err := parseAdminChangedEvent(log)
-			if err != nil {
-				fmt.Printf("Warning: failed to parse AdminChanged event: %v\n", err)
-				continue
-			}
-			events = append(events, event)
-
-		case BeaconUpgradedTopic:
-			event, err := parseBeaconUpgradedEvent(log)
-			if err != nil {
-				fmt.Printf("Warning: failed to parse BeaconUpgraded event: %v\n", err)
-				continue
-			}
-			events = append(events, event)
-		}
+		events = append(events, event)
 	}
 
 	return events, nil
 }
 
-// ParseEvents extracts deployment events from forge output (legacy compatibility)
-func ParseEvents(output *ForgeScriptOutput) ([]DeploymentEvent, error) {
-	allEvents, err := ParseAllEvents(output)
-	if err != nil {
-		return nil, err
-	}
-
-	// Filter only deployment events
-	var deploymentEvents []DeploymentEvent
-	for _, event := range allEvents {
-		if deployEvent, ok := event.(*ContractDeployedEvent); ok {
-			deploymentEvents = append(deploymentEvents, *deployEvent)
-		}
-	}
-
-	return deploymentEvents, nil
-}
+// ParseEvents function removed - deployment events are now extracted directly 
+// from AllEvents in executor.go using type switches on generated types

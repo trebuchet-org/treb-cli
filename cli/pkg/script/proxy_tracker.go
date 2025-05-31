@@ -3,6 +3,7 @@ package script
 import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/abi/treb"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/events"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
@@ -13,41 +14,42 @@ type ProxyRelationship = events.ProxyRelationship
 // ProxyTracker tracks proxy relationships from events
 type ProxyTracker struct {
 	relationships map[common.Address]*events.ProxyRelationship
-	deployments   map[common.Address]*ContractDeployedEvent
+	deployments   map[common.Address]*treb.TrebContractDeployed
 }
 
 // NewProxyTracker creates a new proxy tracker
 func NewProxyTracker() *ProxyTracker {
 	return &ProxyTracker{
 		relationships: make(map[common.Address]*events.ProxyRelationship),
-		deployments:   make(map[common.Address]*ContractDeployedEvent),
+		deployments:   make(map[common.Address]*treb.TrebContractDeployed),
 	}
 }
 
 // ProcessEvents processes all events to build proxy relationships
-func (pt *ProxyTracker) ProcessEvents(parsedEvents []ParsedEvent) {
+func (pt *ProxyTracker) ProcessEvents(parsedEvents []interface{}) {
 	// First pass: collect all deployments
 	for _, event := range parsedEvents {
-		if deployEvent, ok := event.(*ContractDeployedEvent); ok {
-			pt.deployments[deployEvent.Location] = deployEvent
+		switch e := event.(type) {
+		case *treb.TrebContractDeployed:
+			pt.deployments[e.Location] = e
 		}
 	}
 
 	// Second pass: process proxy events
 	for _, event := range parsedEvents {
 		switch e := event.(type) {
-		case *UpgradedEvent:
+		case *events.UpgradedEvent:
 			pt.processUpgradedEvent(e)
-		case *AdminChangedEvent:
+		case *events.AdminChangedEvent:
 			pt.processAdminChangedEvent(e)
-		case *BeaconUpgradedEvent:
+		case *events.BeaconUpgradedEvent:
 			pt.processBeaconUpgradedEvent(e)
 		}
 	}
 }
 
 // processUpgradedEvent handles proxy implementation upgrades
-func (pt *ProxyTracker) processUpgradedEvent(event *UpgradedEvent) {
+func (pt *ProxyTracker) processUpgradedEvent(event *events.UpgradedEvent) {
 	rel, exists := pt.relationships[event.ProxyAddress]
 	if !exists {
 		rel = &events.ProxyRelationship{
@@ -58,11 +60,11 @@ func (pt *ProxyTracker) processUpgradedEvent(event *UpgradedEvent) {
 	}
 	
 	// Update implementation
-	rel.ImplementationAddress = event.Implementation
+	rel.ImplementationAddress = event.ImplementationAddress
 }
 
 // processAdminChangedEvent handles admin changes
-func (pt *ProxyTracker) processAdminChangedEvent(event *AdminChangedEvent) {
+func (pt *ProxyTracker) processAdminChangedEvent(event *events.AdminChangedEvent) {
 	rel, exists := pt.relationships[event.ProxyAddress]
 	if !exists {
 		rel = &events.ProxyRelationship{
@@ -82,7 +84,7 @@ func (pt *ProxyTracker) processAdminChangedEvent(event *AdminChangedEvent) {
 }
 
 // processBeaconUpgradedEvent handles beacon upgrades
-func (pt *ProxyTracker) processBeaconUpgradedEvent(event *BeaconUpgradedEvent) {
+func (pt *ProxyTracker) processBeaconUpgradedEvent(event *events.BeaconUpgradedEvent) {
 	rel, exists := pt.relationships[event.ProxyAddress]
 	if !exists {
 		rel = &events.ProxyRelationship{

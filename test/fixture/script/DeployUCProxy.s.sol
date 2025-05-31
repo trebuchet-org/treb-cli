@@ -8,6 +8,8 @@ import {Counter} from "../src/Counter.sol";
 import {UpgradeableCounter} from "../src/UpgradeableCounter.sol";
 import {console} from "forge-std/console.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title DeployerUCProxy
 /// @notice This script deploys a proxy for an upgradeable counter contract
@@ -41,4 +43,3 @@ contract DeployerUCProxy is TrebScript {
         UpgradeableCounter(deployer.harness(proxy)).increment();
     }
 }
-

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/abi/treb"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/events"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
@@ -27,9 +28,9 @@ func NewScriptUpdater(indexer *contracts.Indexer) *ScriptUpdater {
 	}
 }
 
-// BuildRegistryUpdate builds a registry update from script events
+// BuildRegistryUpdate builds a registry update from script events using generated types
 func (su *ScriptUpdater) BuildRegistryUpdate(
-	scriptEvents []events.ParsedEvent,
+	scriptEvents []interface{},
 	namespace string,
 	chainID uint64,
 	networkName string,
@@ -38,26 +39,35 @@ func (su *ScriptUpdater) BuildRegistryUpdate(
 	// Create new registry update
 	update := NewRegistryUpdate(namespace, chainID, networkName, scriptPath)
 
-	// Process events to identify proxy relationships
-	su.proxyTracker.ProcessEvents(scriptEvents)
+	// Process events to identify proxy relationships (convert interface{} events for proxy tracker)
+	var parsedEvents []events.ParsedEvent
+	for _, event := range scriptEvents {
+		if parsedEvent, ok := event.(events.ParsedEvent); ok {
+			parsedEvents = append(parsedEvents, parsedEvent)
+		}
+	}
+	su.proxyTracker.ProcessEvents(parsedEvents)
 
 	// First pass: collect all deployment events and broadcast events
-	deploymentEvents := make(map[string][]*events.ContractDeployedEvent)
-	broadcastEvents := make(map[string]*events.TransactionBroadcastEvent)
-	safeTransactions := make(map[string]*events.SafeTransactionQueuedEvent)
+	// Handle generated types only (legacy events removed from events package)
+	deploymentEvents := make(map[string][]*treb.TrebContractDeployed)
+	broadcastEvents := make(map[string]*treb.TrebTransactionBroadcast)
+	safeTransactions := make(map[string]*treb.TrebSafeTransactionQueued)
 	
 	for _, event := range scriptEvents {
 		switch e := event.(type) {
-		case *events.ContractDeployedEvent:
-			txID := e.TransactionID.Hex()
+		case *treb.TrebContractDeployed:
+			txID := common.BytesToHash(e.TransactionId[:]).Hex()
 			deploymentEvents[txID] = append(deploymentEvents[txID], e)
-		case *events.TransactionBroadcastEvent:
-			broadcastEvents[e.TransactionID.Hex()] = e
-		case *events.SafeTransactionQueuedEvent:
+		case *treb.TrebTransactionBroadcast:
+			txID := common.BytesToHash(e.TransactionId[:]).Hex()
+			broadcastEvents[txID] = e
+		case *treb.TrebSafeTransactionQueued:
 			// Index safe transactions by their transaction IDs
 			for _, richTx := range e.Transactions {
-				safeTransactions[richTx.TransactionID.Hex()] = e
+				safeTransactions[common.BytesToHash(richTx.TransactionId[:]).Hex()] = e
 			}
+		// Proxy events and unknown events are ignored in registry building
 		}
 	}
 
@@ -95,13 +105,16 @@ func (su *ScriptUpdater) BuildRegistryUpdate(
 
 		// Check if this deployment has a broadcast event
 		if broadcastEvent, exists := broadcastEvents[internalTxID]; exists {
+			// Get sender from broadcast event
+			senderAddr := broadcastEvent.Sender.Hex()
+
 			// This transaction was broadcast - create an executed transaction
 			tx := &types.Transaction{
 				ID:          "", // Will be set when applying
 				ChainID:     chainID,
 				Hash:        "", // Will be enriched from broadcast
 				Status:      types.TransactionStatusExecuted,
-				Sender:      broadcastEvent.Sender.Hex(),
+				Sender:      senderAddr,
 				Deployments: []string{},
 				Operations:  []types.Operation{},
 				Environment: namespace,
@@ -157,7 +170,7 @@ func (su *ScriptUpdater) BuildRegistryUpdate(
 
 // createDeploymentFromEvent creates a deployment record from an event
 func (su *ScriptUpdater) createDeploymentFromEvent(
-	event *events.ContractDeployedEvent,
+	event *treb.TrebContractDeployed,
 	namespace string,
 	chainID uint64,
 	scriptPath string,
@@ -170,7 +183,7 @@ func (su *ScriptUpdater) createDeploymentFromEvent(
 	var isLibrary bool
 
 	if su.indexer != nil {
-		contractInfo := su.indexer.GetContractByBytecodeHash(event.Deployment.BytecodeHash.Hex())
+		contractInfo := su.indexer.GetContractByBytecodeHash(common.BytesToHash(event.Deployment.BytecodeHash[:]).Hex())
 		if contractInfo != nil {
 			contractName = contractInfo.Name
 			contractPath = fmt.Sprintf("%s:%s", contractInfo.Path, contractInfo.Name)
@@ -230,7 +243,8 @@ func (su *ScriptUpdater) createDeploymentFromEvent(
 		method = types.DeploymentMethodCreate3
 	default:
 		// If no strategy specified, infer from salt
-		if event.Deployment.Salt == (common.Hash{}) {
+		saltHash := common.BytesToHash(event.Deployment.Salt[:])
+		if saltHash == (common.Hash{}) {
 			method = types.DeploymentMethodCreate
 		}
 	}
@@ -245,8 +259,8 @@ func (su *ScriptUpdater) createDeploymentFromEvent(
 		TransactionID: "", // Will be set when applying
 		DeploymentStrategy: types.DeploymentStrategy{
 			Method:          method,
-			Salt:            event.Deployment.Salt.Hex(),
-			InitCodeHash:    event.Deployment.InitCodeHash.Hex(),
+			Salt:            common.BytesToHash(event.Deployment.Salt[:]).Hex(),
+			InitCodeHash:    common.BytesToHash(event.Deployment.InitCodeHash[:]).Hex(),
 			ConstructorArgs: fmt.Sprintf("0x%x", event.Deployment.ConstructorArgs),
 			Factory:         "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed", // CreateX
 			Entropy:         event.Deployment.Entropy,
@@ -255,7 +269,7 @@ func (su *ScriptUpdater) createDeploymentFromEvent(
 		Artifact: types.ArtifactInfo{
 			Path:            contractPath,
 			CompilerVersion: compilerVersion,
-			BytecodeHash:    event.Deployment.BytecodeHash.Hex(),
+			BytecodeHash:    common.BytesToHash(event.Deployment.BytecodeHash[:]).Hex(),
 			ScriptPath:      extractScriptName(scriptPath),
 			GitCommit:       commitHash,
 		},
@@ -271,17 +285,18 @@ func (su *ScriptUpdater) createDeploymentFromEvent(
 // createOrUpdateSafeTransaction creates or updates a Safe transaction record
 func (su *ScriptUpdater) createOrUpdateSafeTransaction(
 	update *RegistryUpdate,
-	event *events.SafeTransactionQueuedEvent,
+	event *treb.TrebSafeTransactionQueued,
 	namespace string,
 	chainID uint64,
 ) {
-	safeTxHash := event.SafeTxHash.Hex()
+	safeTxHash := common.BytesToHash(event.SafeTxHash[:]).Hex()
 	
 	// Check if we already have this Safe transaction
 	if existing, exists := update.SafeTransactions[safeTxHash]; exists {
 		// Update internal tx mapping
 		for _, richTx := range event.Transactions {
-			existing.InternalTxMapping[richTx.TransactionID.Hex()] = len(existing.SafeTransaction.Transactions)
+			txID := common.BytesToHash(richTx.TransactionId[:]).Hex()
+			existing.InternalTxMapping[txID] = len(existing.SafeTransaction.Transactions)
 			existing.SafeTransaction.Transactions = append(existing.SafeTransaction.Transactions, types.SafeTxData{
 				To:        richTx.Transaction.To.Hex(),
 				Value:     richTx.Transaction.Value.String(),
@@ -318,7 +333,7 @@ func (su *ScriptUpdater) createOrUpdateSafeTransaction(
 			Operation: 0, // Default to CALL operation
 		})
 		
-		internalTxMapping[richTx.TransactionID.Hex()] = i
+		internalTxMapping[common.BytesToHash(richTx.TransactionId[:]).Hex()] = i
 	}
 
 	update.AddSafeTransaction(safeTx, internalTxMapping)

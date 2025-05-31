@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/trebuchet-org/treb-cli/cli/pkg/abi/treb"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
 )
@@ -46,8 +47,8 @@ type RunOptions struct {
 // RunResult contains the result of running a script
 type RunResult struct {
 	RawOutput     []byte
-	ParsedEvents  []DeploymentEvent // Legacy: only deployment events
-	AllEvents     []ParsedEvent     // New: all event types
+	ParsedEvents  []*treb.TrebContractDeployed // Contract deployment events using generated types
+	AllEvents     []interface{}                  // New: all event types (using generated types)
 	BroadcastPath string
 	Success       bool
 }
@@ -273,7 +274,7 @@ func (e *Executor) buildForgeArgs(opts RunOptions) []string {
 }
 
 // parseOutput parses the forge script output to extract events
-func (e *Executor) parseOutput(output []byte) ([]DeploymentEvent, []ParsedEvent, error) {
+func (e *Executor) parseOutput(output []byte) ([]*treb.TrebContractDeployed, []interface{}, error) {
 	// Parse the forge output
 	forgeOutput, err := ParseForgeOutput(output)
 	if err != nil {
@@ -286,10 +287,12 @@ func (e *Executor) parseOutput(output []byte) ([]DeploymentEvent, []ParsedEvent,
 		return nil, nil, fmt.Errorf("failed to parse all events: %w", err)
 	}
 
-	// Extract deployment events for legacy compatibility
-	deploymentEvents, err := ParseEvents(forgeOutput)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to parse deployment events: %w", err)
+	// Extract deployment events from allEvents
+	var deploymentEvents []*treb.TrebContractDeployed
+	for _, event := range allEvents {
+		if deployment, ok := event.(*treb.TrebContractDeployed); ok {
+			deploymentEvents = append(deploymentEvents, deployment)
+		}
 	}
 
 	return deploymentEvents, allEvents, nil

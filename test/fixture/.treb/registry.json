@@ -1,8 +1,8 @@
 {
   "31337": {
     "default": {
-      "Counter:list-show-test": "0xE5673f9194DF31187b80d5Eb0DC67c2529B8Da2D",
-      "SampleToken:list-show-test": "0xD328909E5d61c6e34762DF29154e4473C3D3E85C"
+      "ERC1967Proxy:test2": "0xD8a8c2d09b38beaF96FDD5b333789378291Fe36b",
+      "UpgradeableCounter:test2": "0xe115E2A78c8970a8AB84F6dCA7f486cbF215e27F"
     }
   }
 }

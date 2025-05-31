@@ -25,18 +25,18 @@ func (pt *ProxyTracker) ProcessEvents(events []ParsedEvent) {
 	for _, event := range events {
 		switch e := event.(type) {
 		case *ProxyDeployedEvent:
-			pt.relationships[e.Proxy] = &ProxyRelationship{
-				ProxyAddress:          e.Proxy,
-				ImplementationAddress: e.Implementation,
+			pt.relationships[e.ProxyAddress] = &ProxyRelationship{
+				ProxyAddress:          e.ProxyAddress,
+				ImplementationAddress: e.ImplementationAddress,
 				ProxyType:             ProxyTypeMinimal,
 			}
 		case *UpgradedEvent:
 			if rel, exists := pt.relationships[e.ProxyAddress]; exists {
-				rel.ImplementationAddress = e.Implementation
+				rel.ImplementationAddress = e.ImplementationAddress
 			} else {
 				pt.relationships[e.ProxyAddress] = &ProxyRelationship{
 					ProxyAddress:          e.ProxyAddress,
-					ImplementationAddress: e.Implementation,
+					ImplementationAddress: e.ImplementationAddress,
 					ProxyType:             ProxyTypeUUPS,
 				}
 			}
@@ -61,42 +61,26 @@ func (pt *ProxyTracker) ProcessEvents(events []ParsedEvent) {
 		}
 	}
 
-	// Third pass: Check for contract deployments that might be proxies
+	// Third pass: Check for standalone proxy events that might create new relationships
 	for _, event := range events {
-		if deployEvent, ok := event.(*ContractDeployedEvent); ok {
-			// Check if this address is known as a proxy
-			if _, exists := pt.relationships[deployEvent.Location]; exists {
-				// This deployment is actually a proxy
-				continue
+		switch oe := event.(type) {
+		case *UpgradedEvent:
+			// If we see an Upgraded event but don't have the proxy relationship yet, create one
+			if _, exists := pt.relationships[oe.ProxyAddress]; !exists {
+				pt.relationships[oe.ProxyAddress] = &ProxyRelationship{
+					ProxyAddress:          oe.ProxyAddress,
+					ImplementationAddress: oe.ImplementationAddress,
+					ProxyType:             ProxyTypeUUPS,
+				}
 			}
-
-			// Check if this might be a proxy based on other criteria
-			// (e.g., if it immediately emits proxy-related events)
-			for _, otherEvent := range events {
-				switch oe := otherEvent.(type) {
-				case *UpgradedEvent:
-					if oe.ProxyAddress == deployEvent.Location {
-						// This is a proxy that was upgraded in the same transaction
-						if _, exists := pt.relationships[deployEvent.Location]; !exists {
-							pt.relationships[deployEvent.Location] = &ProxyRelationship{
-								ProxyAddress:          deployEvent.Location,
-								ImplementationAddress: oe.Implementation,
-								ProxyType:             ProxyTypeUUPS,
-							}
-						}
-					}
-				case *AdminChangedEvent:
-					if oe.ProxyAddress == deployEvent.Location {
-						// This is a transparent proxy
-						if _, exists := pt.relationships[deployEvent.Location]; !exists {
-							pt.relationships[deployEvent.Location] = &ProxyRelationship{
-								ProxyAddress:          deployEvent.Location,
-								ImplementationAddress: common.Address{}, // Will be set by Upgraded event
-								AdminAddress:          &oe.NewAdmin,
-								ProxyType:             ProxyTypeTransparent,
-							}
-						}
-					}
+		case *AdminChangedEvent:
+			// If we see an AdminChanged event but don't have the proxy relationship yet, create one
+			if _, exists := pt.relationships[oe.ProxyAddress]; !exists {
+				pt.relationships[oe.ProxyAddress] = &ProxyRelationship{
+					ProxyAddress:          oe.ProxyAddress,
+					ImplementationAddress: common.Address{}, // Will be set by Upgraded event if present
+					AdminAddress:          &oe.NewAdmin,
+					ProxyType:             ProxyTypeTransparent,
 				}
 			}
 		}

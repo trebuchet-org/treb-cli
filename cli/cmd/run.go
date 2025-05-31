@@ -7,9 +7,11 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/abi/treb"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	netpkg "github.com/trebuchet-org/treb-cli/cli/pkg/network"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/script"
 )
 
@@ -69,6 +71,10 @@ Examples:
 			configManager := config.NewManager(".")
 			if cfg, err := configManager.Load(); err == nil {
 				namespace = cfg.Namespace
+			}
+			// Ensure we have a default namespace if still empty
+			if namespace == "" {
+				namespace = "default"
 			}
 		}
 
@@ -139,62 +145,62 @@ Examples:
 		if len(result.AllEvents) > 0 {
 			fmt.Printf("\n🔍 Parsed %d event(s):\n", len(result.AllEvents))
 			for i, event := range result.AllEvents {
-				fmt.Printf("  %s %s\n", script.GetEventIcon(event.Type()), event.String())
+				fmt.Printf("  %s %T\n", script.GetEventIconForGenerated(event), event)
 
-				// In verbose mode, print all raw data
+				// In verbose mode, print basic event info
 				if verbose {
-					fmt.Printf("    Event %d Details:\n", i+1)
-					script.PrintEventDetails(event, indexer)
+					fmt.Printf("    Event %d: %T\n", i+1, event)
 				}
 			}
 
-			// Report deployment events specifically
-			if len(result.ParsedEvents) > 0 {
-				fmt.Printf("\n📦 %d contract(s) deployed:\n", len(result.ParsedEvents))
-				for _, event := range result.ParsedEvents {
-					// Try to get contract name
-					contractName := "Unknown"
-					if indexer != nil {
-						if contractInfo := indexer.GetContractByBytecodeHash(event.Deployment.BytecodeHash.Hex()); contractInfo != nil {
-							contractName = contractInfo.Name
-						}
+			// Report deployment events specifically from generated types
+			deploymentCount := 0
+			for _, event := range result.AllEvents {
+				if deployment, ok := event.(*treb.TrebContractDeployed); ok {
+					if deploymentCount == 0 {
+						fmt.Printf("\n📦 Contract(s) deployed:\n")
 					}
-					fmt.Printf("  - %s\n", script.FormatDeploymentSummary(&event, contractName))
+					deploymentCount++
+					contractName := deployment.Deployment.Artifact
+					fmt.Printf("  - %s\n", script.FormatGeneratedDeploymentSummary(deployment, contractName))
 				}
-
-				// Update registry if not dry run
-				if !dryRun {
-					// Update registry
-					if err := script.UpdateRegistryFromEvents(
-						result.AllEvents,
-						network,
-						networkInfo.ChainID,
-						namespace,
-						scriptPath,
-						result.BroadcastPath,
-						indexer,
-					); err != nil {
-						script.PrintErrorMessage(fmt.Sprintf("Failed to update registry: %v", err))
-					}
-				}
-
-				// Report bundle events
-				// Load sender configs to pass to ReportBundles for address resolution
-				trebConfig, _ := config.LoadTrebConfig(".")
-				var profileTrebConfig *config.TrebConfig
-				if trebConfig != nil {
-					profileTrebConfig, _ = trebConfig.GetProfileTrebConfig(profile)
-				}
-
-				// Report transaction events with sender config
-				// Pass broadcast path and chain ID for transaction matching
-				script.ReportTransactions(result.AllEvents, indexer, profileTrebConfig, result.BroadcastPath, networkInfo.ChainID)
-
-				// Track and report proxy relationships
-				proxyTracker := script.NewProxyTracker()
-				proxyTracker.ProcessEvents(result.AllEvents)
-				proxyTracker.PrintProxyRelationships()
 			}
+
+			// Update registry if not dry run
+			if !dryRun {
+				// Create script updater and build registry update
+				scriptUpdater := registry.NewScriptUpdater(indexer)
+				registryUpdate := scriptUpdater.BuildRegistryUpdate(
+					result.AllEvents,
+					namespace,
+					networkInfo.ChainID,
+					network,
+					scriptPath,
+				)
+				
+				// Enrich with broadcast data if available
+				if result.BroadcastPath != "" {
+					enricher := registry.NewBroadcastEnricher()
+					if err := enricher.EnrichFromBroadcastFile(registryUpdate, result.BroadcastPath); err != nil {
+						script.PrintWarningMessage(fmt.Sprintf("Failed to enrich from broadcast: %v", err))
+					}
+				}
+				
+				// Apply registry update
+				manager, err := registry.NewManager(".")
+				if err != nil {
+					script.PrintErrorMessage(fmt.Sprintf("Failed to create registry manager: %v", err))
+				} else if err := registryUpdate.Apply(manager); err != nil {
+					script.PrintErrorMessage(fmt.Sprintf("Failed to apply registry update: %v", err))
+				} else {
+					script.PrintSuccessMessage(fmt.Sprintf("Updated registry for %s network in namespace %s", network, namespace))
+				}
+			}
+
+			// Track and report proxy relationships
+			proxyTracker := script.NewProxyTracker()
+			proxyTracker.ProcessEvents(result.AllEvents)
+			proxyTracker.PrintProxyRelationships()
 		} else if !dryRun {
 			script.PrintWarningMessage("No events detected")
 		}
