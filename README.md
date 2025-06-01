@@ -26,13 +26,6 @@ Paired with [treb-sol](https://github.com/trebuchet-org/treb-sol), the Solidity 
 
 ## Installation
 
-### Using Homebrew (macOS/Linux)
-
-```bash
-brew tap trebuchet-org/treb
-brew install treb
-```
-
 ### Using trebup (Installer Script)
 
 ```bash
@@ -67,21 +60,20 @@ forge install trebuchet-org/treb-sol
 Edit `foundry.toml`:
 
 ```toml
-[profile.default.treb]
-# EOA deployment
 [profile.default.treb.senders.deployer]
 type = "private_key"
 private_key = "${DEPLOYER_PRIVATE_KEY}"
 
-# Hardware wallet deployment
-[profile.production.treb.senders.deployer]  
-type = "ledger"
-derivation_path = "m/44'/60'/0'/0/0"
-
 # Safe multisig deployment
-[profile.staging.treb.senders.deployer]
+[profile.production.treb.senders.deployer]
 type = "safe"
 safe = "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD40"
+proposer = "deployer"
+
+# Hardware wallet deployment
+[profile.production.treb.senders.proposer]  
+type = "ledger"
+derivation_path = "m/44'/60'/0'/0/0"
 ```
 
 ### 3. Write a Deployment Script
@@ -97,21 +89,19 @@ contract Deploy is TrebScript {
     using Deployer for Senders.Sender;
 
     /**
-     * @custom:env {string} owner Owner address for the contract
-     * @custom:env {string:optional} label Deployment label
+     * @custom:env {uint256} INITIAL_SUPPLY Initial Supply for the contracg
+     * @custom:env {string} LABEL Deployment label
      */
     function run() public broadcast {
         // Parameters are automatically validated and prompted if missing
-        address owner = vm.envAddress("owner");
-        string memory label = vm.envOr("label", string("v1"));
+        string memory label = vm.envString("LABEL");
+        uint256 initialSupply = vm.envUint("INITIAL_SUPPLY");
 
         // Deploy with deterministic address
         address token = sender("deployer")
             .create3("src/Token.sol:Token")
             .setLabel(label)
-            .deploy(abi.encode(owner));
-
-        // Contracts are automatically registered
+            .deploy(abi.encode("Token", "TK", initialSupply));
     }
 }
 ```
@@ -120,13 +110,13 @@ contract Deploy is TrebScript {
 
 ```bash
 # Deploy with parameters
-treb run Deploy --env owner=0x123... --env label=v1
+treb run Deploy --env label=v1
 
 # Interactive mode - prompts for missing parameters
 treb run Deploy
 
 # Deploy to different networks
-treb run Deploy --network sepolia --profile production
+treb run Deploy --network sepolia --namespace production
 
 # View deployments
 treb list
@@ -189,7 +179,6 @@ function run() public {
 ### Parameter Features
 
 - ✅ Automatic validation
-- 🎨 Color-coded status display
 - 🔍 Interactive prompts for missing values
 - 📝 Optional parameters with `{type:optional}`
 - 🚀 Fuzzy search for deployments and artifacts
@@ -205,7 +194,7 @@ treb follows a clear separation of concerns:
 
 ## 📚 Registry System
 
-The deployment registry (`deployments.json`) tracks:
+The deployment registry (`.treb/deployments.json`) tracks:
 
 - Contract addresses and deployment metadata
 - Verification status and explorer links
@@ -213,65 +202,31 @@ The deployment registry (`deployments.json`) tracks:
 - Transaction details and gas costs
 - Contract metadata (compiler version, optimization settings)
 
-Example registry entry:
-
-```json
-{
-  "projectName": "my-project",
-  "projectVersion": "1.0.0",
-  "networks": {
-    "11155111": {
-      "deployments": {
-        "Token:v1": {
-          "address": "0x...",
-          "contractName": "Token",
-          "label": "v1",
-          "type": "SINGLETON",
-          "deploymentStrategy": {
-            "method": "CREATE3",
-            "salt": "0x...",
-            "factory": "0xba5Ed..."
-          }
-        }
-      }
-    }
-  }
-}
-```
-
 ## 🔧 Configuration
-
-### Environment Variables
-
-```bash
-# Deployment configuration
-DEPLOYER_PRIVATE_KEY=0x...
-ETHERSCAN_API_KEY=...
-RPC_URL=https://...
-
-# Network selection
-DEPLOYMENT_NETWORK=sepolia
-
-# Namespace (default/staging/production)
-DEPLOYMENT_NAMESPACE=production
-```
 
 ### Foundry Profile Configuration
 
 ```toml
-# foundry.toml
-[profile.production]
-via_ir = true
-optimizer = true
-optimizer_runs = 10000
+# Reference by private key in-line for anvil well known accounts
+[profile.production.treb.senders.anvil] 
+type = "private_key"
+private_key = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 
-[profile.production.treb.senders.deployer]
-type = "safe"
-safe = "0x..."
-# Proposer uses hardware wallet
-[profile.production.treb.senders.deployer.proposer]
+# Reference by private key with env var:
+[profile.production.treb.senders.local]
+type = "private_key"
+private_key = "${LOCAL_PK}"
+
+# Hardware wallet
+[profile.production.treb.senders.proposer]
 type = "ledger"
-derivation_path = "m/44'/60'/0'/0/0"
+derivation_path = "${LEDGER_DERIVATION_PATH}"
+# Proposer uses hardware wallet
+
+# Safe sender
+[profile.production.treb.senders.safe]
+type = "safe"
+address = 0x....
 ```
 
 ## 🤝 Integration with treb-sol
@@ -284,17 +239,6 @@ treb works seamlessly with [treb-sol](https://github.com/trebuchet-org/treb-sol)
 - Harness system for secure contract interaction
 
 ## 📖 Examples
-
-### Deploy with Hardware Wallet
-
-```bash
-# Configure Ledger
-export DEPLOYMENT_NETWORK=mainnet
-export DEPLOYMENT_NAMESPACE=production
-
-# Run deployment
-treb run Deploy --profile production
-```
 
 ### Multi-Contract Deployment
 
