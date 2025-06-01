@@ -80,13 +80,13 @@ func TestBasicCommands(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			output, err := runTreb(t, tt.args...)
-			
+
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
-			
+
 			if tt.contains != "" {
 				assert.Contains(t, output, tt.contains)
 			}
@@ -100,7 +100,7 @@ func TestNonInteractiveMode(t *testing.T) {
 	output, err := runTreb(t, "gen", "deploy", "Counter", "--strategy", "CREATE3", "--non-interactive")
 	assert.Error(t, err)
 	assert.Contains(t, output, "multiple contracts found matching")
-	
+
 	// Test that help shows non-interactive flag
 	output, err = runTreb(t, "--help")
 	assert.NoError(t, err)
@@ -110,7 +110,7 @@ func TestNonInteractiveMode(t *testing.T) {
 // Test command structure
 func TestCommandStructure(t *testing.T) {
 	commands := []string{"run", "gen", "show", "verify", "list", "init", "version", "sync", "tag"}
-	
+
 	for _, cmd := range commands {
 		t.Run(fmt.Sprintf("%s command exists", cmd), func(t *testing.T) {
 			// Some commands may error without args, but --help should work
@@ -119,13 +119,13 @@ func TestCommandStructure(t *testing.T) {
 			assert.NotContains(t, output, "unknown command")
 		})
 	}
-	
+
 	// Test gen subcommands
 	t.Run("gen has deploy subcommand", func(t *testing.T) {
 		output, _ := runTreb(t, "gen", "--help")
 		assert.Contains(t, output, "deploy")
 	})
-	
+
 	t.Run("gen has library subcommand", func(t *testing.T) {
 		output, _ := runTreb(t, "gen", "--help")
 		assert.Contains(t, output, "library")

@@ -11,11 +11,11 @@ func TestABILoadingWithArtifactPaths(t *testing.T) {
 	// Create a test indexer
 	projectRoot := fixtureDir
 	indexer := contracts.NewIndexer(projectRoot)
-	
+
 	// Index contracts
 	err := indexer.Index()
 	require.NoError(t, err)
-	
+
 	// Test cases for GetContractByArtifact
 	testCases := []struct {
 		name     string
@@ -49,7 +49,7 @@ func TestABILoadingWithArtifactPaths(t *testing.T) {
 			wantNil:  true,
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			contract := indexer.GetContractByArtifact(tc.artifact)

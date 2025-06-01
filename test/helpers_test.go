@@ -146,11 +146,11 @@ func cleanupGeneratedFiles(t *testing.T) {
 	// Clean .treb directory (v2 registry structure)
 	trebDir := filepath.Join(fixtureDir, ".treb")
 	os.RemoveAll(trebDir)
-	
+
 	// Clean forge cache to ensure fresh deployments
 	cacheDir := filepath.Join(fixtureDir, "cache")
 	os.RemoveAll(cacheDir)
-	
+
 	// Clean forge out directory
 	outDir := filepath.Join(fixtureDir, "out")
 	os.RemoveAll(outDir)
@@ -159,7 +159,7 @@ func cleanupGeneratedFiles(t *testing.T) {
 // runTrebDebug runs treb command and prints output on failure for debugging
 func runTrebDebug(t *testing.T, args ...string) (string, error) {
 	t.Helper()
-	
+
 	output, err := runTreb(t, args...)
 	if err != nil {
 		t.Logf("Command failed: treb %s", strings.Join(args, " "))
@@ -172,21 +172,21 @@ func runTrebDebug(t *testing.T, args ...string) (string, error) {
 // runScript executes a script with treb run command using environment variables
 func runScript(t *testing.T, scriptPath string, envVars ...string) (string, error) {
 	t.Helper()
-	
+
 	args := []string{"run", scriptPath}
-	
+
 	// Add environment variables
 	for _, envVar := range envVars {
 		args = append(args, "--env", envVar)
 	}
-	
+
 	return runTreb(t, args...)
 }
 
 // runScriptDebug executes a script with debug output on failure
 func runScriptDebug(t *testing.T, scriptPath string, envVars ...string) (string, error) {
 	t.Helper()
-	
+
 	output, err := runScript(t, scriptPath, envVars...)
 	if err != nil {
 		t.Logf("Script failed: %s", scriptPath)

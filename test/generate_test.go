@@ -66,9 +66,9 @@ func TestGenerateCommands(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Clean before each test
 			cleanupGeneratedFiles(t)
-			
+
 			output, err := runTreb(t, tt.args...)
-			
+
 			if tt.wantErr {
 				require.Error(t, err, "Command should have failed")
 				if tt.errContains != "" {
@@ -77,7 +77,7 @@ func TestGenerateCommands(t *testing.T) {
 			} else {
 				require.NoError(t, err, "Command failed: %s", output)
 			}
-			
+
 			if tt.checkFile != "" {
 				filePath := filepath.Join(fixtureDir, tt.checkFile)
 				content, err := os.ReadFile(filePath)
