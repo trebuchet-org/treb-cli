@@ -69,7 +69,7 @@ Examples:
 
 func findDeploymentByPartialID(manager *registry.Manager, partialID string) *types.Deployment {
 	allDeployments := manager.GetAllDeployments()
-	
+
 	var matches []*types.Deployment
 	for _, dep := range allDeployments {
 		if strings.Contains(dep.ID, partialID) {
@@ -80,7 +80,7 @@ func findDeploymentByPartialID(manager *registry.Manager, partialID string) *typ
 	if len(matches) == 1 {
 		return matches[0]
 	}
-	
+
 	if len(matches) > 1 {
 		fmt.Println("Multiple deployments match:")
 		for _, dep := range matches {
@@ -128,11 +128,11 @@ func displayDeployment(dep *types.Deployment, tx *types.Transaction, manager *re
 	if dep.ProxyInfo != nil {
 		fmt.Println("\nProxy Information:")
 		fmt.Printf("  Type: %s\n", dep.ProxyInfo.Type)
-		
+
 		// Try to resolve implementation contract details
 		implDisplay := dep.ProxyInfo.Implementation
 		if implDep, err := manager.GetDeploymentByAddress(dep.ChainID, dep.ProxyInfo.Implementation); err == nil {
-			implDisplay = fmt.Sprintf("%s at %s", 
+			implDisplay = fmt.Sprintf("%s at %s",
 				color.New(color.FgYellow, color.Bold).Sprint(implDep.ContractName),
 				dep.ProxyInfo.Implementation,
 			)
@@ -142,7 +142,7 @@ func displayDeployment(dep *types.Deployment, tx *types.Transaction, manager *re
 		} else {
 			fmt.Printf("  Implementation: %s\n", implDisplay)
 		}
-		
+
 		if dep.ProxyInfo.Admin != "" {
 			fmt.Printf("  Admin: %s\n", dep.ProxyInfo.Admin)
 		}
@@ -154,8 +154,8 @@ func displayDeployment(dep *types.Deployment, tx *types.Transaction, manager *re
 				if histImpl, err := manager.GetDeployment(upgrade.ImplementationID); err == nil {
 					implName = fmt.Sprintf("%s (%s)", histImpl.ContractName, upgrade.ImplementationID)
 				}
-				fmt.Printf("    %d. %s (upgraded at %s)\n", 
-					i+1, 
+				fmt.Printf("    %d. %s (upgraded at %s)\n",
+					i+1,
 					implName,
 					upgrade.UpgradedAt.Format("2006-01-02 15:04:05"),
 				)

@@ -187,7 +187,6 @@ func (b *BroadcastFile) GetTransactionHashForAddress(address common.Address) (co
 		}
 	}
 
-
 	// For CreateX deployments through treb-sol, Foundry may not properly track the deployed contract
 	// in additionalContracts. As a fallback, if there's exactly one transaction that looks like a CreateX call,
 	// we assume it created the contract we're looking for.

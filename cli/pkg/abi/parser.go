@@ -450,12 +450,12 @@ func FormatTokenAmount(amount *big.Int) string {
 		if remainder.Cmp(big.NewInt(0)) == 0 && whole.Sign() > 0 {
 			// Clean division - format nicely
 			wholeStr := whole.String()
-			
+
 			// Add comma separators for readability
 			if len(wholeStr) > 3 {
 				wholeStr = addCommas(wholeStr)
 			}
-			
+
 			return fmt.Sprintf("%s * 10^%d", wholeStr, d.exponent)
 		}
 	}

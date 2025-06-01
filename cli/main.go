@@ -16,7 +16,7 @@ var (
 func main() {
 	// Set version info in cmd package
 	cmd.SetVersionInfo(version, commit, date)
-	
+
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
 	}

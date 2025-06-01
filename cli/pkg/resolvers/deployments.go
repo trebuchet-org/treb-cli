@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/manifoldco/promptui"
 	"github.com/fatih/color"
+	"github.com/manifoldco/promptui"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
@@ -39,7 +39,7 @@ func (c *Context) ResolveDeployment(identifier string, manager *registry.Manager
 
 	// Parse deployment ID (could be Contract, Contract:label, namespace/Contract, etc.)
 	deployments := manager.GetAllDeployments()
-	
+
 	// Filter by namespace if provided
 	if namespace != "" {
 		filtered := make([]*types.Deployment, 0)
@@ -64,28 +64,28 @@ func (c *Context) ResolveDeployment(identifier string, manager *registry.Manager
 
 	// Look for matches based on various identifier formats
 	matches := make([]*types.Deployment, 0)
-	
+
 	// Try to parse identifier parts
 	parts := strings.Split(identifier, "/")
-	
+
 	for _, d := range deployments {
 		matched := false
-		
+
 		// Simple match: just contract name or contract:label
 		if d.ContractName == identifier || d.GetShortID() == identifier {
 			matched = true
 		}
-		
+
 		// Match namespace/contract or namespace/contract:label
 		if len(parts) == 2 {
 			namespace := parts[0]
 			contractPart := parts[1]
-			
+
 			// Check if first part is a namespace
 			if d.Namespace == namespace && (d.ContractName == contractPart || d.GetShortID() == contractPart) {
 				matched = true
 			}
-			
+
 			// Check if first part is a chain ID
 			if chainID, err := strconv.ParseUint(parts[0], 10, 64); err == nil {
 				if d.ChainID == chainID && (d.ContractName == contractPart || d.GetShortID() == contractPart) {
@@ -93,7 +93,7 @@ func (c *Context) ResolveDeployment(identifier string, manager *registry.Manager
 				}
 			}
 		}
-		
+
 		// Match namespace/chain/contract or similar complex patterns
 		if len(parts) == 3 {
 			// Could be namespace/chainID/contract
@@ -105,12 +105,12 @@ func (c *Context) ResolveDeployment(identifier string, manager *registry.Manager
 				}
 			}
 		}
-		
+
 		// Match against the full deployment ID
 		if d.ID == identifier {
 			matched = true
 		}
-		
+
 		if matched {
 			matches = append(matches, d)
 		}
@@ -128,11 +128,11 @@ func (c *Context) ResolveDeployment(identifier string, manager *registry.Manager
 			// Non-interactive: return error with suggestions
 			var suggestions []string
 			for _, match := range matches {
-				suggestion := fmt.Sprintf("  - %s (chain:%d/%s/%s)", 
+				suggestion := fmt.Sprintf("  - %s (chain:%d/%s/%s)",
 					match.ID, match.ChainID, match.Namespace, match.GetDisplayName())
 				suggestions = append(suggestions, suggestion)
 			}
-			return nil, fmt.Errorf("multiple deployments found matching '%s' - be more specific:\n%s", 
+			return nil, fmt.Errorf("multiple deployments found matching '%s' - be more specific:\n%s",
 				identifier, strings.Join(suggestions, "\n"))
 		}
 	}
@@ -204,7 +204,7 @@ func formatDeploymentOptions(deployments []*types.Deployment) []string {
 		// Add tags if present
 		tagsDisplay := ""
 		if len(deployment.Tags) > 0 {
-			tagsDisplay = fmt.Sprintf(" [%s]", 
+			tagsDisplay = fmt.Sprintf(" [%s]",
 				color.New(color.FgMagenta).Sprint(strings.Join(deployment.Tags, ", ")))
 		}
 

@@ -44,14 +44,14 @@ const (
 // Deployment represents a contract deployment record
 type Deployment struct {
 	// Core identification
-	ID           string         `json:"id"`           // e.g., "production/1/Counter:v1"
-	Namespace    string         `json:"namespace"`    // e.g., "production", "staging", "test"
-	ChainID      uint64         `json:"chainId"`      
-	ContractName string         `json:"contractName"` // e.g., "Counter"
-	Label        string         `json:"label"`        // e.g., "v1", "main", "usdc"
-	Address      string         `json:"address"`      // Contract address
-	Type         DeploymentType `json:"type"`         // SINGLETON, PROXY, LIBRARY
-	TransactionID string        `json:"transactionId"` // Reference to transaction record
+	ID            string         `json:"id"`        // e.g., "production/1/Counter:v1"
+	Namespace     string         `json:"namespace"` // e.g., "production", "staging", "test"
+	ChainID       uint64         `json:"chainId"`
+	ContractName  string         `json:"contractName"`  // e.g., "Counter"
+	Label         string         `json:"label"`         // e.g., "v1", "main", "usdc"
+	Address       string         `json:"address"`       // Contract address
+	Type          DeploymentType `json:"type"`          // SINGLETON, PROXY, LIBRARY
+	TransactionID string         `json:"transactionId"` // Reference to transaction record
 
 	// Deployment strategy
 	DeploymentStrategy DeploymentStrategy `json:"deploymentStrategy"`
@@ -66,35 +66,35 @@ type Deployment struct {
 	Verification VerificationInfo `json:"verification"`
 
 	// Metadata
-	Tags      []string  `json:"tags"`      // User-defined tags
+	Tags      []string  `json:"tags"` // User-defined tags
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
-	
+
 	// V2 specific fields for verification compatibility
-	Status           Status                 `json:"status,omitempty"`           // For execution status
-	ConstructorArgs  string                 `json:"constructorArgs,omitempty"`  // For verification
-	Metadata         *ContractMetadata      `json:"metadata,omitempty"`         // Additional metadata
-	
+	Status          Status            `json:"status,omitempty"`          // For execution status
+	ConstructorArgs string            `json:"constructorArgs,omitempty"` // For verification
+	Metadata        *ContractMetadata `json:"metadata,omitempty"`        // Additional metadata
+
 	// Runtime fields (not persisted)
-	Transaction      *Transaction           `json:"-"`                          // Linked transaction data
+	Transaction *Transaction `json:"-"` // Linked transaction data
 }
 
 // DeploymentStrategy contains deployment method details
 type DeploymentStrategy struct {
-	Method         DeploymentMethod `json:"method"`         // CREATE, CREATE2, CREATE3
-	Salt           string           `json:"salt,omitempty"` // For CREATE2/CREATE3
-	InitCodeHash   string           `json:"initCodeHash,omitempty"`
-	Factory        string           `json:"factory,omitempty"`      // Factory address (e.g., CreateX)
-	ConstructorArgs string          `json:"constructorArgs,omitempty"` // Hex encoded
-	Entropy        string           `json:"entropy,omitempty"`      // Human-readable salt components
+	Method          DeploymentMethod `json:"method"`         // CREATE, CREATE2, CREATE3
+	Salt            string           `json:"salt,omitempty"` // For CREATE2/CREATE3
+	InitCodeHash    string           `json:"initCodeHash,omitempty"`
+	Factory         string           `json:"factory,omitempty"`         // Factory address (e.g., CreateX)
+	ConstructorArgs string           `json:"constructorArgs,omitempty"` // Hex encoded
+	Entropy         string           `json:"entropy,omitempty"`         // Human-readable salt components
 }
 
 // ProxyInfo contains proxy-specific information
 type ProxyInfo struct {
-	Type           string         `json:"type"`           // e.g., "ERC1967", "UUPS", "Transparent"
-	Implementation string         `json:"implementation"` // Current implementation address
+	Type           string         `json:"type"`            // e.g., "ERC1967", "UUPS", "Transparent"
+	Implementation string         `json:"implementation"`  // Current implementation address
 	Admin          string         `json:"admin,omitempty"` // Admin address (if applicable)
-	History        []ProxyUpgrade `json:"history"`        // Upgrade history
+	History        []ProxyUpgrade `json:"history"`         // Upgrade history
 }
 
 // ProxyUpgrade represents a proxy upgrade event
@@ -125,14 +125,14 @@ type VerificationInfo struct {
 // Transaction represents a blockchain transaction record
 type Transaction struct {
 	// Identification
-	ID      string            `json:"id"`      // e.g., "tx-0x1234abcd..."
+	ID      string            `json:"id"` // e.g., "tx-0x1234abcd..."
 	ChainID uint64            `json:"chainId"`
-	Hash    string            `json:"hash"`    // Transaction hash
-	Status  TransactionStatus `json:"status"`  // PENDING, EXECUTED, FAILED
+	Hash    string            `json:"hash"`   // Transaction hash
+	Status  TransactionStatus `json:"status"` // PENDING, EXECUTED, FAILED
 
 	// Transaction details
 	BlockNumber uint64 `json:"blockNumber,omitempty"`
-	Sender      string `json:"sender"`     // From address
+	Sender      string `json:"sender"` // From address
 	Nonce       uint64 `json:"nonce"`
 
 	// Deployment references
@@ -161,17 +161,17 @@ type Operation struct {
 type SafeContext struct {
 	SafeAddress     string `json:"safeAddress"`
 	SafeTxHash      string `json:"safeTxHash"`
-	BatchIndex      int    `json:"batchIndex"`      // Index within the batch
+	BatchIndex      int    `json:"batchIndex"` // Index within the batch
 	ProposerAddress string `json:"proposerAddress"`
 }
 
 // SafeTransaction represents a Safe multisig transaction batch
 type SafeTransaction struct {
-	SafeTxHash  string                  `json:"safeTxHash"`
-	SafeAddress string                  `json:"safeAddress"`
-	ChainID     uint64                  `json:"chainId"`
-	Status      TransactionStatus       `json:"status"`
-	Nonce       uint64                  `json:"nonce"`
+	SafeTxHash  string            `json:"safeTxHash"`
+	SafeAddress string            `json:"safeAddress"`
+	ChainID     uint64            `json:"chainId"`
+	Status      TransactionStatus `json:"status"`
+	Nonce       uint64            `json:"nonce"`
 
 	// Batch of transactions
 	Transactions []SafeTxData `json:"transactions"`
@@ -260,9 +260,9 @@ type SolidityRegistry map[uint64]map[string]map[string]string
 
 // RegistryFiles represents all registry files
 type RegistryFiles struct {
-	Deployments      map[string]*Deployment       `json:"-"`
-	Transactions     map[string]*Transaction      `json:"-"`
-	SafeTransactions map[string]*SafeTransaction  `json:"-"`
-	Lookups          *LookupIndexes               `json:"-"`
-	SolidityRegistry SolidityRegistry             `json:"-"`
+	Deployments      map[string]*Deployment      `json:"-"`
+	Transactions     map[string]*Transaction     `json:"-"`
+	SafeTransactions map[string]*SafeTransaction `json:"-"`
+	Lookups          *LookupIndexes              `json:"-"`
+	SolidityRegistry SolidityRegistry            `json:"-"`
 }

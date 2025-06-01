@@ -6,7 +6,7 @@ import (
 )
 
 // Initializer handles project setup and initialization
-type Initializer struct {}
+type Initializer struct{}
 
 // NewInitializer creates a new project initializer
 func NewInitializer() *Initializer {
@@ -53,8 +53,6 @@ func (i *Initializer) validateFoundryProject() error {
 	fmt.Println("✅ Valid Foundry project detected")
 	return nil
 }
-
-
 
 func (i *Initializer) checkTrebSolLibrary() error {
 	// Check if treb-sol is installed
@@ -104,7 +102,6 @@ CONTRACT_VERSION=v0.1.0
 	return nil
 }
 
-
 func (i *Initializer) createRegistry() error {
 	// Create .treb directory
 	if err := os.MkdirAll(".treb", 0755); err != nil {
@@ -119,10 +116,10 @@ func (i *Initializer) createRegistry() error {
 
 	// Create empty registry files
 	registryFiles := map[string]string{
-		".treb/deployments.json":      "{}",
-		".treb/transactions.json":     "{}",
-		".treb/safe-txs.json":         "{}",
-		".treb/registry.json":         "{}",
+		".treb/deployments.json":  "{}",
+		".treb/transactions.json": "{}",
+		".treb/safe-txs.json":     "{}",
+		".treb/registry.json":     "{}",
 	}
 
 	for filename, content := range registryFiles {
@@ -134,7 +131,6 @@ func (i *Initializer) createRegistry() error {
 	fmt.Println("📋 Created v2 registry structure in .treb/")
 	return nil
 }
-
 
 func (i *Initializer) printNextSteps() {
 	fmt.Println("")
@@ -162,4 +158,3 @@ func (i *Initializer) printNextSteps() {
 	fmt.Println("   treb show Counter")
 	fmt.Println("   treb tag Counter v1.0.0")
 }
-

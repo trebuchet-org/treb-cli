@@ -29,37 +29,37 @@ var TransactionServiceURLs = map[uint64]string{
 
 // MultisigTransaction represents a Safe multisig transaction
 type MultisigTransaction struct {
-	Safe               string             `json:"safe"`
-	To                 string             `json:"to"`
-	Value              string             `json:"value"`
-	Data               string             `json:"data"`
-	Operation          int                `json:"operation"`
-	SafeTxGas          int                `json:"safeTxGas"`
-	BaseGas            int                `json:"baseGas"`
-	GasPrice           string             `json:"gasPrice"`
-	GasToken           string             `json:"gasToken"`
-	RefundReceiver     string             `json:"refundReceiver"`
-	Nonce              int                `json:"nonce"`
-	ExecutionDate      *time.Time         `json:"executionDate"`
-	SubmissionDate     time.Time          `json:"submissionDate"`
-	Modified           time.Time          `json:"modified"`
-	BlockNumber        *int64             `json:"blockNumber"`
-	TransactionHash    *string            `json:"transactionHash"`
-	SafeTxHash         string             `json:"safeTxHash"`
-	Executor           *string            `json:"executor"`
-	IsExecuted         bool               `json:"isExecuted"`
-	IsSuccessful       *bool              `json:"isSuccessful"`
-	EthGasPrice        *string            `json:"ethGasPrice"`
-	MaxFeePerGas       *string            `json:"maxFeePerGas"`
-	MaxPriorityFeePerGas *string          `json:"maxPriorityFeePerGas"`
-	GasUsed            *int               `json:"gasUsed"`
-	Fee                *string            `json:"fee"`
-	Origin             *string            `json:"origin"`
-	DataDecoded        interface{}        `json:"dataDecoded"`
-	ConfirmationsRequired int             `json:"confirmationsRequired"`
-	Confirmations      []Confirmation     `json:"confirmations"`
-	Trusted            bool               `json:"trusted"`
-	Signatures         *string            `json:"signatures"`
+	Safe                  string         `json:"safe"`
+	To                    string         `json:"to"`
+	Value                 string         `json:"value"`
+	Data                  string         `json:"data"`
+	Operation             int            `json:"operation"`
+	SafeTxGas             int            `json:"safeTxGas"`
+	BaseGas               int            `json:"baseGas"`
+	GasPrice              string         `json:"gasPrice"`
+	GasToken              string         `json:"gasToken"`
+	RefundReceiver        string         `json:"refundReceiver"`
+	Nonce                 int            `json:"nonce"`
+	ExecutionDate         *time.Time     `json:"executionDate"`
+	SubmissionDate        time.Time      `json:"submissionDate"`
+	Modified              time.Time      `json:"modified"`
+	BlockNumber           *int64         `json:"blockNumber"`
+	TransactionHash       *string        `json:"transactionHash"`
+	SafeTxHash            string         `json:"safeTxHash"`
+	Executor              *string        `json:"executor"`
+	IsExecuted            bool           `json:"isExecuted"`
+	IsSuccessful          *bool          `json:"isSuccessful"`
+	EthGasPrice           *string        `json:"ethGasPrice"`
+	MaxFeePerGas          *string        `json:"maxFeePerGas"`
+	MaxPriorityFeePerGas  *string        `json:"maxPriorityFeePerGas"`
+	GasUsed               *int           `json:"gasUsed"`
+	Fee                   *string        `json:"fee"`
+	Origin                *string        `json:"origin"`
+	DataDecoded           interface{}    `json:"dataDecoded"`
+	ConfirmationsRequired int            `json:"confirmationsRequired"`
+	Confirmations         []Confirmation `json:"confirmations"`
+	Trusted               bool           `json:"trusted"`
+	Signatures            *string        `json:"signatures"`
 }
 
 // Confirmation represents a transaction confirmation
@@ -102,12 +102,12 @@ func (c *Client) SetDebug(debug bool) {
 // GetTransaction retrieves a transaction by its Safe transaction hash
 func (c *Client) GetTransaction(safeTxHash common.Hash) (*MultisigTransaction, error) {
 	url := fmt.Sprintf("%s/api/v1/multisig-transactions/%s/", c.baseURL, safeTxHash.Hex())
-	
+
 	// Debug logging
 	if c.debug {
 		fmt.Printf("    [DEBUG] GET %s\n", url)
 	}
-	
+
 	resp, err := c.httpClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get transaction: %w", err)
@@ -149,7 +149,7 @@ func (c *Client) GetTransaction(safeTxHash common.Hash) (*MultisigTransaction, e
 // GetPendingTransactions retrieves all pending transactions for a Safe
 func (c *Client) GetPendingTransactions(safeAddress common.Address) ([]MultisigTransaction, error) {
 	url := fmt.Sprintf("%s/api/v1/safes/%s/multisig-transactions/?executed=false", c.baseURL, safeAddress.Hex())
-	
+
 	resp, err := c.httpClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get pending transactions: %w", err)
@@ -164,7 +164,7 @@ func (c *Client) GetPendingTransactions(safeAddress common.Address) ([]MultisigT
 	var result struct {
 		Results []MultisigTransaction `json:"results"`
 	}
-	
+
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}

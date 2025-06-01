@@ -25,17 +25,17 @@ type ParsedEvent interface {
 
 // Log represents a raw event log for parsing
 type Log struct {
-	Address common.Address   `json:"address"`
-	Topics  []common.Hash    `json:"topics"`
-	Data    string           `json:"data"`
+	Address common.Address `json:"address"`
+	Topics  []common.Hash  `json:"topics"`
+	Data    string         `json:"data"`
 }
 
 // AdminChangedEvent represents a proxy admin change
 type AdminChangedEvent struct {
-	ProxyAddress   common.Address
-	PreviousAdmin  common.Address
-	NewAdmin       common.Address
-	TransactionID  common.Hash
+	ProxyAddress  common.Address
+	PreviousAdmin common.Address
+	NewAdmin      common.Address
+	TransactionID common.Hash
 }
 
 func (e *AdminChangedEvent) Type() EventType {
@@ -65,9 +65,9 @@ func (e *BeaconUpgradedEvent) String() string {
 
 // UpgradedEvent represents a proxy implementation upgrade
 type UpgradedEvent struct {
-	ProxyAddress       common.Address
+	ProxyAddress          common.Address
 	ImplementationAddress common.Address
-	TransactionID      common.Hash
+	TransactionID         common.Hash
 }
 
 func (e *UpgradedEvent) Type() EventType {
@@ -99,19 +99,19 @@ func (e *UnknownEvent) String() string {
 type ProxyRelationshipType string
 
 const (
-	ProxyTypeMinimal    ProxyRelationshipType = "MINIMAL"
-	ProxyTypeUUPS       ProxyRelationshipType = "UUPS"
+	ProxyTypeMinimal     ProxyRelationshipType = "MINIMAL"
+	ProxyTypeUUPS        ProxyRelationshipType = "UUPS"
 	ProxyTypeTransparent ProxyRelationshipType = "TRANSPARENT"
-	ProxyTypeBeacon     ProxyRelationshipType = "BEACON"
+	ProxyTypeBeacon      ProxyRelationshipType = "BEACON"
 )
 
 // ProxyRelationship represents a proxy-implementation relationship
 type ProxyRelationship struct {
-	ProxyAddress         common.Address
+	ProxyAddress          common.Address
 	ImplementationAddress common.Address
-	AdminAddress         *common.Address
-	BeaconAddress        *common.Address
-	ProxyType            ProxyRelationshipType
+	AdminAddress          *common.Address
+	BeaconAddress         *common.Address
+	ProxyType             ProxyRelationshipType
 }
 
 // ProxyDeployedEvent represents a proxy deployment event

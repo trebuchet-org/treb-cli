@@ -25,8 +25,6 @@ type BundleTransactionInfo struct {
 	IsSafe       bool // True if this is a Safe multisig transaction
 }
 
-
-
 // MatchBundleTransactions matches broadcast transactions to bundle IDs
 func MatchBundleTransactions(bundleID common.Hash, txInfos []TransactionInfo, senderAddr common.Address) *BundleTransactionInfo {
 	bundleInfo := &BundleTransactionInfo{
@@ -34,19 +32,19 @@ func MatchBundleTransactions(bundleID common.Hash, txInfos []TransactionInfo, se
 		Transactions: []TransactionInfo{},
 		IsSafe:       false,
 	}
-	
+
 	// Match transactions from the same sender
 	for _, tx := range txInfos {
 		if strings.EqualFold(tx.From, senderAddr.Hex()) {
 			bundleInfo.Transactions = append(bundleInfo.Transactions, tx)
 		}
 	}
-	
+
 	// Check if this is a Safe transaction (one tx for all deployments)
 	if len(bundleInfo.Transactions) == 1 && isMultiSendData(bundleInfo.Transactions[0].Data) {
 		bundleInfo.IsSafe = true
 	}
-	
+
 	return bundleInfo
 }
 

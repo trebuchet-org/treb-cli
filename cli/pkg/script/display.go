@@ -22,14 +22,14 @@ const (
 
 // TransactionInfo groups related transaction events using generated types
 type TransactionInfo struct {
-	TransactionID     string
-	Simulated         *treb.TrebTransactionSimulated
-	BroadcastStarted  *treb.TrebBroadcastStarted     // Marks the start of broadcast phase
-	Broadcast         *treb.TrebTransactionBroadcast
-	Deployments       []*treb.TrebContractDeployed
-	Failed            *treb.TrebTransactionFailed
-	ProxyEvents       []interface{} // Upgraded, AdminChanged, BeaconUpgraded events (still from events package)
-	SafeQueued        *treb.TrebSafeTransactionQueued // Track if this is a Safe transaction
+	TransactionID    string
+	Simulated        *treb.TrebTransactionSimulated
+	BroadcastStarted *treb.TrebBroadcastStarted // Marks the start of broadcast phase
+	Broadcast        *treb.TrebTransactionBroadcast
+	Deployments      []*treb.TrebContractDeployed
+	Failed           *treb.TrebTransactionFailed
+	ProxyEvents      []interface{}                   // Upgraded, AdminChanged, BeaconUpgraded events (still from events package)
+	SafeQueued       *treb.TrebSafeTransactionQueued // Track if this is a Safe transaction
 }
 
 // GetEventIconForGenerated returns an icon for generated event types
@@ -97,7 +97,7 @@ func FormatGeneratedDeploymentSummary(deployment *treb.TrebContractDeployed, con
 	name := ColorizeContractName(contractName)
 	address := fmt.Sprintf("%s%s%s", ColorGreen, deployment.Location.Hex(), ColorReset)
 	salt := ColorizeHash(deployment.Deployment.Salt[:])
-	
+
 	return fmt.Sprintf("%s at %s (salt: %s)", name, address, salt)
 }
 

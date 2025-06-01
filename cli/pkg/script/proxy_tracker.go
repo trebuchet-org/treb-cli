@@ -53,12 +53,12 @@ func (pt *ProxyTracker) processUpgradedEvent(event *events.UpgradedEvent) {
 	rel, exists := pt.relationships[event.ProxyAddress]
 	if !exists {
 		rel = &events.ProxyRelationship{
-			ProxyAddress:  event.ProxyAddress,
-			ProxyType:     events.ProxyTypeUUPS,
+			ProxyAddress: event.ProxyAddress,
+			ProxyType:    events.ProxyTypeUUPS,
 		}
 		pt.relationships[event.ProxyAddress] = rel
 	}
-	
+
 	// Update implementation
 	rel.ImplementationAddress = event.ImplementationAddress
 }
@@ -68,15 +68,15 @@ func (pt *ProxyTracker) processAdminChangedEvent(event *events.AdminChangedEvent
 	rel, exists := pt.relationships[event.ProxyAddress]
 	if !exists {
 		rel = &events.ProxyRelationship{
-			ProxyAddress:  event.ProxyAddress,
-			ProxyType:     events.ProxyTypeTransparent,
+			ProxyAddress: event.ProxyAddress,
+			ProxyType:    events.ProxyTypeTransparent,
 		}
 		pt.relationships[event.ProxyAddress] = rel
 	}
-	
+
 	// Update admin
 	rel.AdminAddress = &event.NewAdmin
-	
+
 	// Transparent proxies have admin changes
 	if rel.ProxyType == events.ProxyTypeUUPS {
 		rel.ProxyType = events.ProxyTypeTransparent
@@ -88,12 +88,12 @@ func (pt *ProxyTracker) processBeaconUpgradedEvent(event *events.BeaconUpgradedE
 	rel, exists := pt.relationships[event.ProxyAddress]
 	if !exists {
 		rel = &events.ProxyRelationship{
-			ProxyAddress:  event.ProxyAddress,
-			ProxyType:     events.ProxyTypeBeacon,
+			ProxyAddress: event.ProxyAddress,
+			ProxyType:    events.ProxyTypeBeacon,
 		}
 		pt.relationships[event.ProxyAddress] = rel
 	}
-	
+
 	// Update beacon
 	rel.BeaconAddress = &event.Beacon
 	rel.ProxyType = events.ProxyTypeBeacon
@@ -116,19 +116,19 @@ func (pt *ProxyTracker) UpdateDeploymentTypes(deployments []*types.DeploymentEnt
 		if rel, exists := pt.relationships[deployment.Address]; exists {
 			// Update deployment type based on proxy type
 			deployment.Type = types.ProxyDeployment
-			
+
 			// Add proxy metadata
 			if deployment.Metadata.Extra == nil {
 				deployment.Metadata.Extra = make(map[string]interface{})
 			}
-			
+
 			deployment.Metadata.Extra["proxyType"] = string(rel.ProxyType)
 			deployment.Metadata.Extra["implementation"] = rel.ImplementationAddress.Hex()
-			
+
 			if rel.AdminAddress != nil {
 				deployment.Metadata.Extra["admin"] = rel.AdminAddress.Hex()
 			}
-			
+
 			if rel.BeaconAddress != nil {
 				deployment.Metadata.Extra["beacon"] = rel.BeaconAddress.Hex()
 			}
@@ -141,26 +141,26 @@ func (pt *ProxyTracker) PrintProxyRelationships() {
 	if len(pt.relationships) == 0 {
 		return
 	}
-	
+
 	fmt.Printf("\n🔗 %sProxy Relationships Detected:%s\n", ColorBold, ColorReset)
 	for proxyAddr, rel := range pt.relationships {
 		fmt.Printf("\n  Proxy: %s%s%s\n", ColorBlue, proxyAddr.Hex(), ColorReset)
 		fmt.Printf("    Type: %s\n", rel.ProxyType)
 		fmt.Printf("    Implementation: %s%s%s\n", ColorGreen, rel.ImplementationAddress.Hex(), ColorReset)
-		
+
 		if rel.AdminAddress != nil {
 			fmt.Printf("    Admin: %s%s%s\n", ColorGray, rel.AdminAddress.Hex(), ColorReset)
 		}
-		
+
 		if rel.BeaconAddress != nil {
 			fmt.Printf("    Beacon: %s%s%s\n", ColorPurple, rel.BeaconAddress.Hex(), ColorReset)
 		}
-		
+
 		// Try to identify the proxy contract
 		if deployment, exists := pt.deployments[proxyAddr]; exists {
 			fmt.Printf("    Deployed as: %s\n", deployment.Deployment.Artifact)
 		}
-		
+
 		// Try to identify the implementation contract
 		if deployment, exists := pt.deployments[rel.ImplementationAddress]; exists {
 			fmt.Printf("    Implementation is: %s\n", deployment.Deployment.Artifact)

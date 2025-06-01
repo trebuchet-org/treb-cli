@@ -31,7 +31,7 @@ func (vm *Manager) VerifyDeployment(deployment *types.Deployment) error {
 func (vm *Manager) VerifyDeploymentWithDebug(deployment *types.Deployment, debug bool) error {
 	// Get network name from chain ID for resolver
 	networkName := getNetworkName(deployment.ChainID)
-	
+
 	// Get network info
 	networkInfo, err := vm.networkResolver.ResolveNetwork(networkName)
 	if err != nil {
@@ -160,9 +160,9 @@ func (vm *Manager) verifyOnEtherscanWithDebug(deployment *types.Deployment, netw
 
 	// Check if verification was successful
 	outputStr := string(output)
-	if strings.Contains(outputStr, "Contract successfully verified") || 
-	   strings.Contains(outputStr, "Already Verified") ||
-	   strings.Contains(outputStr, "is already verified") {
+	if strings.Contains(outputStr, "Contract successfully verified") ||
+		strings.Contains(outputStr, "Already Verified") ||
+		strings.Contains(outputStr, "is already verified") {
 		return nil
 	}
 
@@ -196,7 +196,7 @@ func (vm *Manager) verifyOnSourceifyWithDebug(deployment *types.Deployment, netw
 		args = append(args, "--compiler-version", compilerVersion)
 	}
 
-	// Add constructor args if available  
+	// Add constructor args if available
 	constructorArgs := deployment.DeploymentStrategy.ConstructorArgs
 	if constructorArgs != "" && strings.HasPrefix(constructorArgs, "0x") {
 		constructorArgs = constructorArgs[2:] // Remove 0x prefix
@@ -241,7 +241,7 @@ func (vm *Manager) verifyOnSourceifyWithDebug(deployment *types.Deployment, netw
 // buildEtherscanURL builds the Etherscan URL for a contract
 func (vm *Manager) buildEtherscanURL(networkInfo *network.NetworkInfo, address string) string {
 	var baseURL string
-	
+
 	// Map common chain IDs to their explorer URLs
 	switch networkInfo.ChainID {
 	case 1:
@@ -276,7 +276,7 @@ func (vm *Manager) buildEtherscanURL(networkInfo *network.NetworkInfo, address s
 		// For unknown chains, return empty
 		return ""
 	}
-	
+
 	return fmt.Sprintf("%s/address/%s#code", baseURL, address)
 }
 

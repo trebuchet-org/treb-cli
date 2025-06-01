@@ -42,7 +42,7 @@ func TestNewClient(t *testing.T) {
 func TestSafeTransactionServiceURLs(t *testing.T) {
 	// Verify key chains are supported
 	supportedChains := []uint64{1, 5, 10, 100, 137, 42161, 11155111, 8453}
-	
+
 	for _, chainID := range supportedChains {
 		if _, ok := TransactionServiceURLs[chainID]; !ok {
 			t.Errorf("Chain %d should be supported but is not in TransactionServiceURLs", chainID)
@@ -54,16 +54,16 @@ func TestSafeTransactionServiceURLs(t *testing.T) {
 func ExampleClient_GetTransaction() {
 	// Create client for Sepolia
 	client, _ := NewClient(11155111)
-	
+
 	// Check a specific Safe transaction
 	safeTxHash := common.HexToHash("0xf8bc36421955315c1635bfb037853fb24aa5a7d0d720f57428f82902687662e5")
-	
+
 	tx, err := client.GetTransaction(safeTxHash)
 	if err != nil {
 		// Handle error
 		return
 	}
-	
+
 	// Check if executed
 	if tx.IsExecuted {
 		// Transaction has been executed

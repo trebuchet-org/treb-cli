@@ -53,7 +53,7 @@ func (su *ScriptUpdater) BuildRegistryUpdate(
 	deploymentEvents := make(map[string][]*treb.TrebContractDeployed)
 	broadcastEvents := make(map[string]*treb.TrebTransactionBroadcast)
 	safeTransactions := make(map[string]*treb.TrebSafeTransactionQueued)
-	
+
 	for _, event := range scriptEvents {
 		switch e := event.(type) {
 		case *treb.TrebContractDeployed:
@@ -67,7 +67,7 @@ func (su *ScriptUpdater) BuildRegistryUpdate(
 			for _, richTx := range e.Transactions {
 				safeTransactions[common.BytesToHash(richTx.TransactionId[:]).Hex()] = e
 			}
-		// Proxy events and unknown events are ignored in registry building
+			// Proxy events and unknown events are ignored in registry building
 		}
 	}
 
@@ -86,7 +86,7 @@ func (su *ScriptUpdater) BuildRegistryUpdate(
 		if safeEvent, exists := safeTransactions[internalTxID]; exists {
 			// This is part of a Safe transaction - handle it separately
 			su.createOrUpdateSafeTransaction(update, safeEvent, namespace, chainID)
-			
+
 			// Add deployments without creating a regular transaction
 			for _, deployEvent := range deployEvents {
 				deployment := su.createDeploymentFromEvent(
@@ -96,7 +96,7 @@ func (su *ScriptUpdater) BuildRegistryUpdate(
 					scriptPath,
 					commitHash,
 				)
-				
+
 				// Deployment will be associated with Safe transaction
 				update.AddDeployment(internalTxID, deployment)
 			}
@@ -157,7 +157,7 @@ func (su *ScriptUpdater) BuildRegistryUpdate(
 					scriptPath,
 					commitHash,
 				)
-				
+
 				// Mark as dry-run/simulated
 				update.Metadata.DryRun = true
 				update.AddDeployment(internalTxID, deployment)
@@ -188,7 +188,7 @@ func (su *ScriptUpdater) createDeploymentFromEvent(
 			contractName = contractInfo.Name
 			contractPath = fmt.Sprintf("%s:%s", contractInfo.Path, contractInfo.Name)
 			isLibrary = contractInfo.IsLibrary
-			
+
 			// Extract compiler version from artifact metadata
 			if contractInfo.Artifact != nil {
 				compilerVersion = contractInfo.Artifact.Metadata.Compiler.Version
@@ -201,7 +201,7 @@ func (su *ScriptUpdater) createDeploymentFromEvent(
 		contractName, contractPath = extractContractNameFromArtifact(event.Deployment.Artifact)
 	}
 
-	// Final fallback to "Unknown" 
+	// Final fallback to "Unknown"
 	if contractName == "" {
 		contractName = "Unknown"
 		contractPath = "Unknown"
@@ -290,7 +290,7 @@ func (su *ScriptUpdater) createOrUpdateSafeTransaction(
 	chainID uint64,
 ) {
 	safeTxHash := common.BytesToHash(event.SafeTxHash[:]).Hex()
-	
+
 	// Check if we already have this Safe transaction
 	if existing, exists := update.SafeTransactions[safeTxHash]; exists {
 		// Update internal tx mapping
@@ -323,7 +323,7 @@ func (su *ScriptUpdater) createOrUpdateSafeTransaction(
 
 	// Build internal tx mapping
 	internalTxMapping := make(map[string]int)
-	
+
 	// Convert transactions
 	for i, richTx := range event.Transactions {
 		safeTx.Transactions = append(safeTx.Transactions, types.SafeTxData{
@@ -332,7 +332,7 @@ func (su *ScriptUpdater) createOrUpdateSafeTransaction(
 			Data:      fmt.Sprintf("0x%x", richTx.Transaction.Data),
 			Operation: 0, // Default to CALL operation
 		})
-		
+
 		internalTxMapping[common.BytesToHash(richTx.TransactionId[:]).Hex()] = i
 	}
 
@@ -354,14 +354,14 @@ func getGitCommit() string {
 func extractScriptName(scriptPath string) string {
 	// Get the base filename
 	filename := filepath.Base(scriptPath)
-	
+
 	// Extract script name by removing .s.sol extension
 	if strings.HasSuffix(filename, ".s.sol") {
 		scriptName := strings.TrimSuffix(filename, ".s.sol")
 		// Return in format "filename:scriptName"
 		return fmt.Sprintf("%s:%s", filename, scriptName)
 	}
-	
+
 	return filename
 }
 
@@ -374,12 +374,12 @@ func extractContractNameFromArtifact(artifact string) (string, string) {
 	if artifact == "" {
 		return "", ""
 	}
-	
+
 	// Handle special case of user-provided bytecode
 	if artifact == "<user-provided-bytecode>" {
 		return "UserProvidedBytecode", artifact
 	}
-	
+
 	// Check if it's in the format "path:contractName"
 	if strings.Contains(artifact, ":") {
 		parts := strings.Split(artifact, ":")
@@ -388,8 +388,7 @@ func extractContractNameFromArtifact(artifact string) (string, string) {
 			return contractName, artifact
 		}
 	}
-	
+
 	// If no colon, assume the entire string is the contract name
 	return artifact, artifact
 }
-

@@ -17,7 +17,7 @@ import (
 var (
 	// CreateX factory address (deployed on multiple chains)
 	CreateXAddress = common.HexToAddress("0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed")
-	
+
 	// Other well-known addresses
 	MultiSendAddress    = common.HexToAddress("0x40A2aCCbd92BCA938b02010E17A5b8929b49130D") // Gnosis Safe MultiSend
 	ProxyFactoryAddress = common.HexToAddress("0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67") // Gnosis Safe Proxy Factory
@@ -38,12 +38,12 @@ func NewTransactionDecoder() *TransactionDecoder {
 		artifactMap:          make(map[common.Address]string),
 		proxyImplementations: make(map[common.Address]common.Address),
 	}
-	
+
 	// Register well-known contracts
 	decoder.artifactMap[CreateXAddress] = "CreateX"
 	decoder.artifactMap[MultiSendAddress] = "MultiSend"
 	decoder.artifactMap[ProxyFactoryAddress] = "SafeProxyFactory"
-	
+
 	return decoder
 }
 
@@ -53,7 +53,7 @@ func (td *TransactionDecoder) RegisterContract(address common.Address, artifact 
 	if err != nil {
 		return fmt.Errorf("failed to parse ABI for %s: %w", artifact, err)
 	}
-	
+
 	td.contractABIs[address] = &contractABI
 	td.artifactMap[address] = artifact
 	return nil
@@ -63,7 +63,6 @@ func (td *TransactionDecoder) RegisterContract(address common.Address, artifact 
 func (td *TransactionDecoder) RegisterProxyRelationship(proxyAddress, implementationAddress common.Address) {
 	td.proxyImplementations[proxyAddress] = implementationAddress
 }
-
 
 // DecodedTransaction represents a human-readable transaction
 type DecodedTransaction struct {
@@ -113,7 +112,7 @@ func (td *TransactionDecoder) DecodeTransaction(to common.Address, data []byte, 
 
 	// Try to decode using registered ABI
 	contractABI, exists := td.contractABIs[to]
-	
+
 	// If this is a proxy and we don't have the ABI, check if we have the implementation's ABI
 	if !exists {
 		if implAddr, isProxy := td.proxyImplementations[to]; isProxy {
@@ -121,7 +120,7 @@ func (td *TransactionDecoder) DecodeTransaction(to common.Address, data []byte, 
 			// The artifact name should already include proxy indicator from registration
 		}
 	}
-	
+
 	if !exists {
 		decoded.Method = "unknown"
 		return decoded
@@ -130,12 +129,12 @@ func (td *TransactionDecoder) DecodeTransaction(to common.Address, data []byte, 
 	// Decode method call
 	if len(data) >= 4 {
 		methodID := data[:4]
-		
+
 		// Find matching method
 		for _, method := range contractABI.Methods {
 			if bytes.Equal(method.ID[:4], methodID) {
 				decoded.Method = method.Name
-				
+
 				// Decode inputs
 				if len(data) > 4 {
 					inputs, err := method.Inputs.Unpack(data[4:])
@@ -151,7 +150,7 @@ func (td *TransactionDecoder) DecodeTransaction(to common.Address, data []byte, 
 						}
 					}
 				}
-				
+
 				// Decode return data
 				if len(returnData) > 0 && len(method.Outputs) > 0 {
 					outputs, err := method.Outputs.Unpack(returnData)
@@ -293,7 +292,7 @@ func (dt *DecodedTransaction) FormatCompactWithReconciler(sender common.Address,
 		senderStr = reconciler(sender)
 	}
 	result := fmt.Sprintf("%s%s%s -> ", "\033[36m", senderStr, "\033[0m")
-	
+
 	// Add target
 	if dt.IsDeployment {
 		result += fmt.Sprintf("%sDeploy%s", "\033[32m", "\033[0m")
@@ -307,14 +306,14 @@ func (dt *DecodedTransaction) FormatCompactWithReconciler(sender common.Address,
 		} else {
 			result += fmt.Sprintf("%s%s%s.", "\033[90m", dt.To.Hex()[:10]+"...", "\033[0m")
 		}
-		
+
 		// Method name
 		if dt.Method != "unknown" {
 			result += fmt.Sprintf("%s%s%s", "\033[33m", dt.Method, "\033[0m")
 		} else {
 			result += fmt.Sprintf("%s%s%s", "\033[90m", "unknown", "\033[0m")
 		}
-		
+
 		// Arguments
 		if len(dt.Inputs) > 0 {
 			argStrs := make([]string, 0, len(dt.Inputs))
@@ -327,7 +326,7 @@ func (dt *DecodedTransaction) FormatCompactWithReconciler(sender common.Address,
 				}
 				argStrs = append(argStrs, val)
 			}
-			
+
 			if len(argStrs) <= 3 {
 				result += fmt.Sprintf("(%s)", strings.Join(argStrs, ", "))
 			} else {
@@ -337,7 +336,7 @@ func (dt *DecodedTransaction) FormatCompactWithReconciler(sender common.Address,
 			result += "()"
 		}
 	}
-	
+
 	// Add value if non-zero
 	if dt.Value != nil && dt.Value.Cmp(big.NewInt(0)) > 0 {
 		// Convert to ether (assuming value is in wei)
@@ -345,6 +344,6 @@ func (dt *DecodedTransaction) FormatCompactWithReconciler(sender common.Address,
 		ethValue.Quo(ethValue, big.NewFloat(1e18))
 		result += fmt.Sprintf(" %s{value: %s ETH}%s", "\033[90m", ethValue.Text('f', 6), "\033[0m")
 	}
-	
+
 	return result
 }

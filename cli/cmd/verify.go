@@ -92,9 +92,9 @@ func verifyAllContracts(cmd *cobra.Command, verificationManager *verification.Ma
 	// Get force flag
 	forceFlag, _ := cmd.Flags().GetBool("force")
 	debugFlag, _ := cmd.Flags().GetBool("debug")
-	
+
 	allDeployments := manager.GetAllDeployments()
-	
+
 	if debugFlag {
 		fmt.Printf("DEBUG: Found %d total deployments in registry\n", len(allDeployments))
 	}
@@ -112,7 +112,7 @@ func verifyAllContracts(cmd *cobra.Command, verificationManager *verification.Ma
 			}
 			continue
 		}
-		
+
 		// Skip deployments that are not yet deployed
 		// Check if deployment has a transaction and it's executed
 		if deployment.TransactionID == "" {
@@ -122,7 +122,7 @@ func verifyAllContracts(cmd *cobra.Command, verificationManager *verification.Ma
 			}
 			continue
 		}
-		
+
 		// Check transaction status
 		tx, err := manager.GetTransaction(deployment.TransactionID)
 		if err != nil {
@@ -132,7 +132,7 @@ func verifyAllContracts(cmd *cobra.Command, verificationManager *verification.Ma
 			}
 			continue
 		}
-		
+
 		if tx.Status != types.TransactionStatusExecuted {
 			skippedContracts = append(skippedContracts, deployment)
 			if debugFlag {
@@ -140,9 +140,9 @@ func verifyAllContracts(cmd *cobra.Command, verificationManager *verification.Ma
 			}
 			continue
 		}
-		
+
 		if debugFlag {
-			fmt.Printf("  DEBUG: Processing %s - TransactionID: %s, Status: EXECUTED, Verification Status: %s\n", 
+			fmt.Printf("  DEBUG: Processing %s - TransactionID: %s, Status: EXECUTED, Verification Status: %s\n",
 				deployment.GetDisplayName(), deployment.TransactionID, deployment.Verification.Status)
 		}
 
@@ -153,11 +153,11 @@ func verifyAllContracts(cmd *cobra.Command, verificationManager *verification.Ma
 			contractsToVerify = append(contractsToVerify, deployment)
 		} else {
 			// Without --force, verify only pending, failed, partial, and unverified contracts
-			if status == types.VerificationStatusPending || 
-			   status == types.VerificationStatusFailed || 
-			   status == types.VerificationStatusPartial || 
-			   status == types.VerificationStatusUnverified ||
-			   status == "" {
+			if status == types.VerificationStatusPending ||
+				status == types.VerificationStatusFailed ||
+				status == types.VerificationStatusPartial ||
+				status == types.VerificationStatusUnverified ||
+				status == "" {
 				contractsToVerify = append(contractsToVerify, deployment)
 			}
 			// Skip verified contracts unless force is used
@@ -170,7 +170,7 @@ func verifyAllContracts(cmd *cobra.Command, verificationManager *verification.Ma
 		for _, deployment := range skippedContracts {
 			displayName := deployment.GetDisplayName()
 			skipReason := "No TransactionID"
-			
+
 			// Determine skip reason
 			if deployment.ChainID == 31337 {
 				skipReason = "Local chain"
@@ -258,7 +258,7 @@ func verifySpecificContract(cmd *cobra.Command, identifier string, verificationM
 	forceFlag, _ := cmd.Flags().GetBool("force")
 	debugFlag, _ := cmd.Flags().GetBool("debug")
 	contractPathFlag, _ := cmd.Flags().GetString("contract-path")
-	
+
 	var deployment *types.Deployment
 	var err error
 
@@ -275,7 +275,7 @@ func verifySpecificContract(cmd *cobra.Command, identifier string, verificationM
 	} else {
 		// Parse deployment ID (could be Contract, Contract:label, namespace/Contract, etc.)
 		deployments := manager.GetAllDeployments()
-		
+
 		// Filter by namespace if provided
 		if namespaceFilter != "" {
 			filtered := make([]*types.Deployment, 0)
@@ -300,28 +300,28 @@ func verifySpecificContract(cmd *cobra.Command, identifier string, verificationM
 
 		// Look for matches based on various identifier formats
 		matches := make([]*types.Deployment, 0)
-		
+
 		// Try to parse identifier parts
 		parts := strings.Split(identifier, "/")
-		
+
 		for _, d := range deployments {
 			matched := false
-			
+
 			// Simple match: just contract name or contract:label
 			if d.ContractName == identifier || d.GetShortID() == identifier {
 				matched = true
 			}
-			
+
 			// Match namespace/contract or namespace/contract:label
 			if len(parts) == 2 {
 				namespace := parts[0]
 				contractPart := parts[1]
-				
+
 				// Check if first part is a namespace
 				if d.Namespace == namespace && (d.ContractName == contractPart || d.GetShortID() == contractPart) {
 					matched = true
 				}
-				
+
 				// Check if first part is a chain ID
 				if chainID, err := strconv.ParseUint(parts[0], 10, 64); err == nil {
 					if d.ChainID == chainID && (d.ContractName == contractPart || d.GetShortID() == contractPart) {
@@ -329,7 +329,7 @@ func verifySpecificContract(cmd *cobra.Command, identifier string, verificationM
 					}
 				}
 			}
-			
+
 			// Match namespace/chain/contract or similar complex patterns
 			if len(parts) == 3 {
 				// Could be namespace/chainID/contract
@@ -341,12 +341,12 @@ func verifySpecificContract(cmd *cobra.Command, identifier string, verificationM
 					}
 				}
 			}
-			
+
 			// Match against the full deployment ID
 			if d.ID == identifier {
 				matched = true
 			}
-			
+
 			if matched {
 				matches = append(matches, d)
 			}

@@ -1,8 +1,8 @@
 package interactive
 
 import (
-	"strings"
 	"github.com/sahilm/fuzzy"
+	"strings"
 )
 
 // FuzzySearchFunc creates a fuzzy search function for promptui
@@ -37,7 +37,7 @@ type FuzzySearcher struct {
 // NewFuzzySearcher creates a new fuzzy searcher
 func NewFuzzySearcher(items []string) *FuzzySearcher {
 	return &FuzzySearcher{
-		allItems: items,
+		allItems:    items,
 		originalMap: make(map[int]int),
 	}
 }
@@ -56,7 +56,7 @@ func (f *FuzzySearcher) CreateSearchFunc() func(input string, index int) bool {
 
 		// Perform fuzzy search
 		results := fuzzy.FindFrom(input, fuzzySource(f.allItems))
-		
+
 		// Build new mapping
 		newMap := make(map[int]int)
 		for i, result := range results {

@@ -113,17 +113,17 @@ func (pt *ProxyTracker) PrintProxyRelationships() {
 	fmt.Println("\n🔗 Proxy Relationships:")
 	for _, rel := range pt.relationships {
 		proxyType := color.New(color.FgCyan).Sprint(rel.ProxyType)
-		fmt.Printf("  %s %s (%s)\n", 
+		fmt.Printf("  %s %s (%s)\n",
 			getProxyIcon(rel.ProxyType),
 			rel.ProxyAddress.Hex()[:10],
 			proxyType,
 		)
 		fmt.Printf("    → Implementation: %s\n", rel.ImplementationAddress.Hex())
-		
+
 		if rel.AdminAddress != nil && *rel.AdminAddress != (common.Address{}) {
 			fmt.Printf("    → Admin: %s\n", rel.AdminAddress.Hex())
 		}
-		
+
 		if rel.BeaconAddress != nil && *rel.BeaconAddress != (common.Address{}) {
 			fmt.Printf("    → Beacon: %s\n", rel.BeaconAddress.Hex())
 		}

@@ -32,13 +32,13 @@ func LoadTrebConfig(projectPath string) (*FoundryFullConfig, error) {
 		fmt.Sprintf("%s/.env", projectPath),
 		fmt.Sprintf("%s/.env.local", projectPath),
 	}
-	
+
 	if err := LoadEnvFiles(envFiles...); err != nil {
 		return nil, fmt.Errorf("failed to load .env files: %w", err)
 	}
 
 	foundryPath := fmt.Sprintf("%s/foundry.toml", projectPath)
-	
+
 	// Read and parse the file
 	var config FoundryFullConfig
 	if _, err := toml.DecodeFile(foundryPath, &config); err != nil {
@@ -88,10 +88,10 @@ func (tc *TrebConfig) GetSenderNameByAddress(address string) (string, error) {
 	if tc == nil || tc.Senders == nil {
 		return "", fmt.Errorf("no senders configured")
 	}
-	
+
 	// Normalize the address for comparison
 	address = strings.ToLower(address)
-	
+
 	for name, sender := range tc.Senders {
 		switch sender.Type {
 		case "safe":
@@ -109,6 +109,6 @@ func (tc *TrebConfig) GetSenderNameByAddress(address string) (string, error) {
 			// Skip for now
 		}
 	}
-	
+
 	return "", fmt.Errorf("sender not found for address: %s", address)
 }

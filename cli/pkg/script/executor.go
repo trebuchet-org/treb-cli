@@ -48,7 +48,7 @@ type RunOptions struct {
 type RunResult struct {
 	RawOutput     []byte
 	ParsedEvents  []*treb.TrebContractDeployed // Contract deployment events using generated types
-	AllEvents     []interface{}                  // New: all event types (using generated types)
+	AllEvents     []interface{}                // New: all event types (using generated types)
 	BroadcastPath string
 	Success       bool
 }

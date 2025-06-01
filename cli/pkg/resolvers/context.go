@@ -2,8 +2,8 @@ package resolvers
 
 // Context holds the resolver configuration and state
 type Context struct {
-	interactive   bool
-	projectRoot   string
+	interactive bool
+	projectRoot string
 }
 
 // NewContext creates a new resolver context

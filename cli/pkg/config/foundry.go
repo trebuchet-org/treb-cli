@@ -19,8 +19,8 @@ type FoundryConfig struct {
 
 // ProfileFoundryConfig represents a profile's foundry configuration
 type ProfileFoundryConfig struct {
-	Sender  SenderConfig `toml:"sender,omitempty"`
-	Libraries []string       `toml:"libraries,omitempty"`
+	Sender    SenderConfig `toml:"sender,omitempty"`
+	Libraries []string     `toml:"libraries,omitempty"`
 	// Other foundry settings
 	SrcPath       string   `toml:"src,omitempty"`
 	OutPath       string   `toml:"out,omitempty"`

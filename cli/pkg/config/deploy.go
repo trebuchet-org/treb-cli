@@ -23,7 +23,7 @@ type SenderConfig struct {
 	Type           string `toml:"type"`
 	PrivateKey     string `toml:"private_key,omitempty"`
 	Safe           string `toml:"safe,omitempty"`
-	Signer         string `toml:"signer,omitempty"` // For Safe senders
+	Signer         string `toml:"signer,omitempty"`          // For Safe senders
 	DerivationPath string `toml:"derivation_path,omitempty"` // For Ledger senders
 }
 
@@ -34,13 +34,13 @@ func LoadDeployConfig(projectPath string) (*DeployConfig, error) {
 		fmt.Sprintf("%s/.env", projectPath),
 		fmt.Sprintf("%s/.env.local", projectPath),
 	}
-	
+
 	if err := LoadEnvFiles(envFiles...); err != nil {
 		return nil, fmt.Errorf("failed to load .env files: %w", err)
 	}
 
 	foundryPath := fmt.Sprintf("%s/foundry.toml", projectPath)
-	
+
 	// Check if foundry.toml exists
 	if _, err := os.Stat(foundryPath); os.IsNotExist(err) {
 		return nil, fmt.Errorf("foundry.toml not found at %s", foundryPath)
@@ -63,7 +63,7 @@ func LoadDeployConfig(projectPath string) (*DeployConfig, error) {
 // ResolveSenderName finds the sender name for a given address by checking all profiles
 func (dc *DeployConfig) ResolveSenderName(address string) string {
 	lowerAddr := strings.ToLower(address)
-	
+
 	// Check each profile
 	for profileName, profile := range dc.Profile {
 		// Check each sender in the profile
@@ -76,7 +76,7 @@ func (dc *DeployConfig) ResolveSenderName(address string) string {
 			// which is more complex, so skip for now
 		}
 	}
-	
+
 	// Return shortened address if no match found
 	if len(address) > 10 {
 		return address[:10] + "..."
@@ -98,7 +98,7 @@ func (dc *DeployConfig) GetSender(profile, senderName string) (*SenderConfig, er
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if sender, exists := profileConfig.Senders[senderName]; exists {
 		return &sender, nil
 	}
@@ -118,7 +118,7 @@ func (dc *DeployConfig) ValidateSender(profile, senderName string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	switch sender.Type {
 	case "private_key":
 		if sender.PrivateKey == "" {
@@ -155,13 +155,13 @@ func (dc *DeployConfig) GenerateEnvVars(namespace string) (map[string]string, er
 	// For now, we'll use the "treb" profile by default
 	// In the future, this could be configurable
 	envVars := make(map[string]string)
-	
+
 	// Set namespace (previously environment)
 	envVars["DEPLOYMENT_NAMESPACE"] = namespace
-	
+
 	// Note: Sender configuration will be handled separately when needed
 	// since it's no longer tied to namespace
-	
+
 	return envVars, nil
 }
 
@@ -171,14 +171,14 @@ func (dc *DeployConfig) GenerateSenderEnvVars(profile, senderName string) (map[s
 	if err != nil {
 		return nil, err
 	}
-	
+
 	envVars := make(map[string]string)
 
 	switch sender.Type {
 	case "private_key":
 		envVars["SENDER_TYPE"] = "private_key"
 		envVars["DEPLOYER_PRIVATE_KEY"] = sender.PrivateKey
-		
+
 		// Derive address from private key
 		address, err := GetAddressFromPrivateKey(sender.PrivateKey)
 		if err != nil {
@@ -192,7 +192,7 @@ func (dc *DeployConfig) GenerateSenderEnvVars(profile, senderName string) (map[s
 	case "ledger":
 		envVars["SENDER_TYPE"] = "ledger"
 		envVars["LEDGER_DERIVATION_PATH"] = sender.DerivationPath
-		
+
 		// Resolve address dynamically using cast
 		address, err := GetLedgerAddress(sender.DerivationPath)
 		if err != nil {
@@ -207,13 +207,13 @@ func (dc *DeployConfig) GenerateSenderEnvVars(profile, senderName string) (map[s
 // expandEnvVars expands ${VAR} patterns in the config
 func expandEnvVars(config *DeployConfig) error {
 	envVarRegex := regexp.MustCompile(`\$\{([^}]+)\}`)
-	
+
 	for profileName, profileConfig := range config.Profile {
 		// Expand library deployer
 		if profileConfig.LibraryDeployer != "" {
 			profileConfig.LibraryDeployer = expandString(profileConfig.LibraryDeployer, envVarRegex)
 		}
-		
+
 		// Expand sender fields
 		for senderName, sender := range profileConfig.Senders {
 			if sender.PrivateKey != "" {
@@ -228,15 +228,15 @@ func expandEnvVars(config *DeployConfig) error {
 			if sender.DerivationPath != "" {
 				sender.DerivationPath = expandString(sender.DerivationPath, envVarRegex)
 			}
-			
+
 			// Update the sender in the map
 			profileConfig.Senders[senderName] = sender
 		}
-		
+
 		// Update the config
 		config.Profile[profileName] = profileConfig
 	}
-	
+
 	return nil
 }
 

@@ -96,12 +96,12 @@ func (be *BroadcastEnricher) EnrichFromBroadcastFile(update *RegistryUpdate, bro
 				TransactionHash: tx.Hash,
 				BlockNumber:     blockNumber,
 				GasUsed:         parseGasUsed(receipt.GasUsed),
-				Timestamp:       func() uint64 {
-				if broadcastData.Timestamp < 0 {
-					return 0
-				}
-				return uint64(broadcastData.Timestamp)
-			}(), // Use broadcast timestamp
+				Timestamp: func() uint64 {
+					if broadcastData.Timestamp < 0 {
+						return 0
+					}
+					return uint64(broadcastData.Timestamp)
+				}(), // Use broadcast timestamp
 			}
 
 			// Enrich all matched deployments
@@ -131,7 +131,7 @@ func (be *BroadcastEnricher) EnrichFromBroadcastParser(update *RegistryUpdate, s
 
 	// Get the broadcast data
 	broadcastPath := filepath.Join("broadcast", scriptName, fmt.Sprintf("%d", chainID), "run-latest.json")
-	
+
 	// Use the file enricher with the actual path
 	actualPath := filepath.Join(".", broadcastPath)
 	return be.EnrichFromBroadcastFile(update, actualPath)

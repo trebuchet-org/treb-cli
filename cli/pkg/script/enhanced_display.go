@@ -34,30 +34,30 @@ func (p ExecutionPhase) String() string {
 
 // EnhancedEventDisplay provides improved event display with phase tracking and transaction decoding
 type EnhancedEventDisplay struct {
-	currentPhase      ExecutionPhase
+	currentPhase       ExecutionPhase
 	transactionDecoder *abi.TransactionDecoder
-	indexer           *contracts.Indexer
-	deployedContracts map[common.Address]string // Track contracts deployed in this execution
-	verbose           bool                      // Show extra detailed information
-	correlatedTxs     map[[32]byte]bool         // Track transaction IDs that are correlated with higher-level events
-	knownAddresses    map[common.Address]string // Track known addresses (deployers, safes, etc.)
+	indexer            *contracts.Indexer
+	deployedContracts  map[common.Address]string // Track contracts deployed in this execution
+	verbose            bool                      // Show extra detailed information
+	correlatedTxs      map[[32]byte]bool         // Track transaction IDs that are correlated with higher-level events
+	knownAddresses     map[common.Address]string // Track known addresses (deployers, safes, etc.)
 }
 
 // NewEnhancedEventDisplay creates a new enhanced event display
 func NewEnhancedEventDisplay(indexer *contracts.Indexer) *EnhancedEventDisplay {
 	display := &EnhancedEventDisplay{
-		currentPhase:      PhaseSimulation,
+		currentPhase:       PhaseSimulation,
 		transactionDecoder: abi.NewTransactionDecoder(),
-		indexer:           indexer,
-		deployedContracts: make(map[common.Address]string),
-		verbose:           false,
-		correlatedTxs:     make(map[[32]byte]bool),
-		knownAddresses:    make(map[common.Address]string),
+		indexer:            indexer,
+		deployedContracts:  make(map[common.Address]string),
+		verbose:            false,
+		correlatedTxs:      make(map[[32]byte]bool),
+		knownAddresses:     make(map[common.Address]string),
 	}
-	
+
 	// Initialize with well-known addresses
 	display.initializeWellKnownAddresses()
-	
+
 	return display
 }
 
@@ -66,7 +66,7 @@ func (d *EnhancedEventDisplay) SetSenderConfigs(senderConfigs *SenderConfigs) {
 	if senderConfigs == nil {
 		return
 	}
-	
+
 	for _, config := range senderConfigs.Configs {
 		// Register the address with a friendly name
 		if config.Account != (common.Address{}) {
@@ -84,7 +84,7 @@ func (d *EnhancedEventDisplay) SetVerbose(verbose bool) {
 func (d *EnhancedEventDisplay) initializeWellKnownAddresses() {
 	// CreateX factory
 	d.knownAddresses[common.HexToAddress("0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed")] = "CreateX"
-	
+
 	// Common Safe addresses
 	d.knownAddresses[common.HexToAddress("0x40A2aCCbd92BCA938b02010E17A5b8929b49130D")] = "MultiSend"
 	d.knownAddresses[common.HexToAddress("0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67")] = "SafeProxyFactory"
@@ -96,12 +96,12 @@ func (d *EnhancedEventDisplay) reconcileAddress(addr common.Address) string {
 	if name, exists := d.knownAddresses[addr]; exists {
 		return name
 	}
-	
+
 	// Check if it's a deployed contract
 	if artifact, exists := d.deployedContracts[addr]; exists {
 		return artifact
 	}
-	
+
 	// Return shortened address
 	return addr.Hex()[:10] + "..."
 }
@@ -115,7 +115,7 @@ func (d *EnhancedEventDisplay) ProcessEvents(allEvents []interface{}) {
 
 	// First pass: register deployed contracts for ABI resolution
 	d.registerDeployedContracts(allEvents)
-	
+
 	// Second pass: register proxy relationships
 	d.registerProxyRelationships(allEvents)
 
@@ -135,22 +135,22 @@ func (d *EnhancedEventDisplay) registerDeployedContracts(allEvents []interface{}
 		if deployment, ok := event.(*treb.TrebContractDeployed); ok {
 			artifact := deployment.Deployment.Artifact
 			address := deployment.Location
-			
+
 			// Store just the contract name for cleaner display
-		contractName := d.extractContractName(artifact)
-		d.deployedContracts[address] = contractName
-			
+			contractName := d.extractContractName(artifact)
+			d.deployedContracts[address] = contractName
+
 			// Try to load ABI from indexer
 			if d.indexer != nil {
 				contractInfo := d.indexer.GetContractByArtifact(artifact)
-				
+
 				if contractInfo != nil {
 					// Try to load ABI from the artifact path
 					var abiJSON string
 					if contractInfo.ArtifactPath != "" {
 						abiJSON = d.loadABIFromPath(contractInfo.ArtifactPath)
 					}
-					
+
 					if abiJSON != "" {
 						if err := d.transactionDecoder.RegisterContract(address, artifact, abiJSON); err != nil {
 							// Log the error for debugging
@@ -177,7 +177,7 @@ func (d *EnhancedEventDisplay) extractContractName(artifact string) string {
 	if idx := strings.LastIndex(artifact, ":"); idx != -1 {
 		return artifact[idx+1:]
 	}
-	
+
 	// Otherwise, check for path separator and .sol extension
 	if idx := strings.LastIndex(artifact, "/"); idx != -1 {
 		name := artifact[idx+1:]
@@ -185,7 +185,7 @@ func (d *EnhancedEventDisplay) extractContractName(artifact string) string {
 		name = strings.TrimSuffix(name, ".sol")
 		return name
 	}
-	
+
 	// If no separators, return as-is
 	return artifact
 }
@@ -214,14 +214,14 @@ func (d *EnhancedEventDisplay) registerProxyRelationships(allEvents []interface{
 		case *events.UpgradedEvent:
 			// Register proxy -> implementation relationship
 			d.transactionDecoder.RegisterProxyRelationship(e.ProxyAddress, e.ImplementationAddress)
-			
+
 			// Also try to copy implementation's ABI to proxy if we have it
 			if implArtifact, exists := d.deployedContracts[e.ImplementationAddress]; exists {
 				// Extract just the contract name from the artifact path
 				implName := d.extractContractName(implArtifact)
 				proxyName := fmt.Sprintf("Proxy[%s]", implName)
 				d.deployedContracts[e.ProxyAddress] = proxyName
-				
+
 				// Try to load and register ABI for the proxy using implementation's ABI
 				if d.indexer != nil {
 					contractInfo := d.indexer.GetContractByArtifact(implArtifact)
@@ -236,18 +236,18 @@ func (d *EnhancedEventDisplay) registerProxyRelationships(allEvents []interface{
 					}
 				}
 			}
-			
+
 		case *events.ProxyDeployedEvent:
 			// Register proxy -> implementation relationship from deployment
 			d.transactionDecoder.RegisterProxyRelationship(e.ProxyAddress, e.ImplementationAddress)
-			
+
 			// Also try to copy implementation's ABI to proxy if we have it
 			if implArtifact, exists := d.deployedContracts[e.ImplementationAddress]; exists {
 				// Extract just the contract name from the artifact path
 				implName := d.extractContractName(implArtifact)
 				proxyName := fmt.Sprintf("Proxy[%s]", implName)
 				d.deployedContracts[e.ProxyAddress] = proxyName
-				
+
 				// Try to load and register ABI for the proxy using implementation's ABI
 				if d.indexer != nil {
 					contractInfo := d.indexer.GetContractByArtifact(implArtifact)
@@ -274,14 +274,14 @@ func (d *EnhancedEventDisplay) correlateTransactions(allEvents []interface{}) {
 		case *treb.TrebContractDeployed:
 			// Mark this transaction ID as correlated - we'll show the ContractDeployed event instead
 			d.correlatedTxs[e.TransactionId] = true
-		
+
 		case *treb.TrebSafeTransactionQueued:
 			// Safe transactions are higher-level events that may correlate with multiple transactions
 			// For now, we don't mark these as correlated since the individual transactions
 			// might still be interesting to see
 		}
 	}
-	
+
 	// Second pass: Look for proxy-related patterns
 	// When we see proxy events (Upgraded, AdminChanged, etc.) immediately following a transaction,
 	// we can correlate them
@@ -289,7 +289,7 @@ func (d *EnhancedEventDisplay) correlateTransactions(allEvents []interface{}) {
 		// Check if this is a proxy-related event
 		var isProxyEvent bool
 		var proxyAddress common.Address
-		
+
 		switch e := event.(type) {
 		case *events.UpgradedEvent:
 			isProxyEvent = true
@@ -304,7 +304,7 @@ func (d *EnhancedEventDisplay) correlateTransactions(allEvents []interface{}) {
 			isProxyEvent = true
 			proxyAddress = e.ProxyAddress
 		}
-		
+
 		if isProxyEvent && i > 0 {
 			// Look at the previous event - if it's a transaction to the proxy address,
 			// it's likely the transaction that triggered this proxy event
@@ -344,12 +344,12 @@ func (d *EnhancedEventDisplay) displayEventsWithPhases(allEvents []interface{}) 
 func (d *EnhancedEventDisplay) printPhaseHeader() {
 	phaseColor := ColorBlue
 	phaseIcon := "🔍"
-	
+
 	if d.currentPhase == PhaseBroadcast {
 		phaseColor = ColorGreen
 		phaseIcon = "📤"
 	}
-	
+
 	fmt.Printf("\n%s%s %s Phase%s\n", ColorBold, phaseIcon, d.currentPhase.String(), ColorReset)
 	fmt.Printf("%s%s%s\n", phaseColor, strings.Repeat("─", 40), ColorReset)
 }
@@ -399,15 +399,15 @@ func (d *EnhancedEventDisplay) displayEnhancedEvent(event interface{}) {
 
 // displayDeployingContract displays a DeployingContract event
 func (d *EnhancedEventDisplay) displayDeployingContract(event *treb.TrebDeployingContract) {
-	fmt.Printf("  %sDeploying%s %s%s%s", 
-		ColorYellow, ColorReset, 
+	fmt.Printf("  %sDeploying%s %s%s%s",
+		ColorYellow, ColorReset,
 		ColorCyan, event.What, ColorReset)
-	
+
 	if event.Label != "" {
 		fmt.Printf(" (label: %s)", event.Label)
 	}
-	
-	fmt.Printf(" | InitCode: %s%s%s\n", 
+
+	fmt.Printf(" | InitCode: %s%s%s\n",
 		ColorGray, fmt.Sprintf("%x", event.InitCodeHash[:4]), ColorReset)
 }
 
@@ -420,19 +420,19 @@ func (d *EnhancedEventDisplay) displayContractDeployed(event *treb.TrebContractD
 			d.knownAddresses[event.Deployer] = "deployer"
 		}
 	}
-	
+
 	// Extract just the contract name from the artifact path
 	contractName := d.extractContractName(event.Deployment.Artifact)
-	
-	fmt.Printf("  %sDeployed%s %s%s%s at %s%s%s", 
+
+	fmt.Printf("  %sDeployed%s %s%s%s at %s%s%s",
 		ColorGreen, ColorReset,
 		ColorCyan, contractName, ColorReset,
 		ColorGreen, event.Location.Hex(), ColorReset)
-	
+
 	if event.Deployment.Label != "" {
 		fmt.Printf(" (label: %s)", event.Deployment.Label)
 	}
-	
+
 	fmt.Printf("\n     Strategy: %s | Salt: %s%s%s | Deployer: %s\n",
 		event.Deployment.CreateStrategy,
 		ColorGray, fmt.Sprintf("%x", event.Deployment.Salt[:4]), ColorReset,
@@ -443,16 +443,16 @@ func (d *EnhancedEventDisplay) displayContractDeployed(event *treb.TrebContractD
 func (d *EnhancedEventDisplay) displayTransactionSimulated(event *treb.TrebTransactionSimulated) {
 	// Decode transaction for human-readable display
 	decoded := d.transactionDecoder.DecodeTransaction(event.To, event.Data, event.Value, event.ReturnData)
-	
+
 	// Use compact format with address reconciliation
-	fmt.Printf("  %sSimulated%s %s\n", 
+	fmt.Printf("  %sSimulated%s %s\n",
 		ColorBlue, ColorReset, decoded.FormatCompactWithReconciler(event.Sender, d.reconcileAddress))
-	
+
 	// Only show label if it's not the internal harness:execute label
 	if event.Label != "" && event.Label != "harness:execute" {
 		fmt.Printf("     Label: %s\n", event.Label)
 	}
-	
+
 	// In verbose mode, show additional details
 	if d.verbose {
 		fmt.Printf("     TxID: %s%x%s\n", ColorGray, event.TransactionId[:], ColorReset)
@@ -477,16 +477,16 @@ func (d *EnhancedEventDisplay) displayTransactionSimulated(event *treb.TrebTrans
 func (d *EnhancedEventDisplay) displayTransactionBroadcast(event *treb.TrebTransactionBroadcast) {
 	// Decode transaction for human-readable display
 	decoded := d.transactionDecoder.DecodeTransaction(event.To, event.Data, event.Value, event.ReturnData)
-	
+
 	// Use compact format with address reconciliation
-	fmt.Printf("  %sBroadcast%s %s\n", 
+	fmt.Printf("  %sBroadcast%s %s\n",
 		ColorGreen, ColorReset, decoded.FormatCompactWithReconciler(event.Sender, d.reconcileAddress))
-	
+
 	// Only show label if it's not the internal harness:execute label
 	if event.Label != "" && event.Label != "harness:execute" {
 		fmt.Printf("     Label: %s\n", event.Label)
 	}
-	
+
 	// In verbose mode, show additional details
 	if d.verbose {
 		fmt.Printf("     TxID: %s%x%s\n", ColorGray, event.TransactionId[:], ColorReset)
@@ -511,11 +511,11 @@ func (d *EnhancedEventDisplay) displayTransactionBroadcast(event *treb.TrebTrans
 func (d *EnhancedEventDisplay) displayTransactionFailed(event *treb.TrebTransactionFailed) {
 	// Decode transaction for human-readable display (no return data for failed tx)
 	decoded := d.transactionDecoder.DecodeTransaction(event.To, event.Data, event.Value, nil)
-	
+
 	// Use compact format with address reconciliation
-	fmt.Printf("  %sFailed%s %s\n", 
+	fmt.Printf("  %sFailed%s %s\n",
 		ColorRed, ColorReset, decoded.FormatCompactWithReconciler(event.Sender, d.reconcileAddress))
-	
+
 	// Only show label if it's not the internal harness:execute label
 	if event.Label != "" && event.Label != "harness:execute" {
 		fmt.Printf("     Label: %s\n", event.Label)
@@ -524,11 +524,11 @@ func (d *EnhancedEventDisplay) displayTransactionFailed(event *treb.TrebTransact
 
 // displaySafeTransactionQueued displays a SafeTransactionQueued event
 func (d *EnhancedEventDisplay) displaySafeTransactionQueued(event *treb.TrebSafeTransactionQueued) {
-	fmt.Printf("  %sSafe Transaction Queued%s | Safe: %s%s%s | Proposer: %s%s%s\n", 
+	fmt.Printf("  %sSafe Transaction Queued%s | Safe: %s%s%s | Proposer: %s%s%s\n",
 		ColorPurple, ColorReset,
 		ColorBlue, event.Safe.Hex()[:10]+"...", ColorReset,
 		ColorGray, event.Proposer.Hex()[:10]+"...", ColorReset)
-	
+
 	fmt.Printf("     SafeTxHash: %s%s%s | Transactions: %d\n",
 		ColorGray, fmt.Sprintf("%x", event.SafeTxHash[:4]), ColorReset,
 		len(event.Transactions))
@@ -536,7 +536,7 @@ func (d *EnhancedEventDisplay) displaySafeTransactionQueued(event *treb.TrebSafe
 
 // displayUpgradedEvent displays an Upgraded proxy event
 func (d *EnhancedEventDisplay) displayUpgradedEvent(event *events.UpgradedEvent) {
-	fmt.Printf("  %sProxy Upgraded%s | Proxy: %s%s%s → Impl: %s%s%s\n", 
+	fmt.Printf("  %sProxy Upgraded%s | Proxy: %s%s%s → Impl: %s%s%s\n",
 		ColorYellow, ColorReset,
 		ColorBlue, event.ProxyAddress.Hex()[:10]+"...", ColorReset,
 		ColorGreen, event.ImplementationAddress.Hex()[:10]+"...", ColorReset)
@@ -544,7 +544,7 @@ func (d *EnhancedEventDisplay) displayUpgradedEvent(event *events.UpgradedEvent)
 
 // displayAdminChangedEvent displays an AdminChanged proxy event
 func (d *EnhancedEventDisplay) displayAdminChangedEvent(event *events.AdminChangedEvent) {
-	fmt.Printf("  %sAdmin Changed%s | Proxy: %s%s%s | New Admin: %s%s%s\n", 
+	fmt.Printf("  %sAdmin Changed%s | Proxy: %s%s%s | New Admin: %s%s%s\n",
 		ColorYellow, ColorReset,
 		ColorBlue, event.ProxyAddress.Hex()[:10]+"...", ColorReset,
 		ColorPurple, event.NewAdmin.Hex()[:10]+"...", ColorReset)
@@ -552,7 +552,7 @@ func (d *EnhancedEventDisplay) displayAdminChangedEvent(event *events.AdminChang
 
 // displayBeaconUpgradedEvent displays a BeaconUpgraded proxy event
 func (d *EnhancedEventDisplay) displayBeaconUpgradedEvent(event *events.BeaconUpgradedEvent) {
-	fmt.Printf("  %sBeacon Upgraded%s | Proxy: %s%s%s | Beacon: %s%s%s\n", 
+	fmt.Printf("  %sBeacon Upgraded%s | Proxy: %s%s%s | Beacon: %s%s%s\n",
 		ColorYellow, ColorReset,
 		ColorBlue, event.ProxyAddress.Hex()[:10]+"...", ColorReset,
 		ColorPurple, event.Beacon.Hex()[:10]+"...", ColorReset)
@@ -560,12 +560,12 @@ func (d *EnhancedEventDisplay) displayBeaconUpgradedEvent(event *events.BeaconUp
 
 // displayProxyDeployedEvent displays a ProxyDeployed event
 func (d *EnhancedEventDisplay) displayProxyDeployedEvent(event *events.ProxyDeployedEvent) {
-	fmt.Printf("  %sProxy Deployed%s | Type: %s | Proxy: %s%s%s → Impl: %s%s%s\n", 
+	fmt.Printf("  %sProxy Deployed%s | Type: %s | Proxy: %s%s%s → Impl: %s%s%s\n",
 		ColorGreen, ColorReset,
 		event.ProxyType,
 		ColorBlue, event.ProxyAddress.Hex()[:10]+"...", ColorReset,
 		ColorCyan, event.ImplementationAddress.Hex()[:10]+"...", ColorReset)
-	
+
 	if event.AdminAddress != nil {
 		fmt.Printf("     Admin: %s%s%s\n", ColorPurple, event.AdminAddress.Hex()[:10]+"...", ColorReset)
 	}
@@ -579,7 +579,7 @@ func (d *EnhancedEventDisplay) printExecutionSummary() {
 	if len(d.deployedContracts) > 0 {
 		fmt.Printf("\n%s📦 Deployment Summary:%s\n", ColorBold, ColorReset)
 		for address, artifact := range d.deployedContracts {
-			fmt.Printf("  • %s%s%s at %s%s%s\n", 
+			fmt.Printf("  • %s%s%s at %s%s%s\n",
 				ColorCyan, artifact, ColorReset,
 				ColorGreen, address.Hex(), ColorReset)
 		}

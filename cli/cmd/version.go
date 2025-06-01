@@ -27,7 +27,7 @@ var versionCmd = &cobra.Command{
 	Long:  `Display the current version of treb CLI with build information.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("treb %s\n", buildVersion)
-		
+
 		// Only show additional info if not default values
 		if buildCommit != "unknown" || buildDate != "unknown" {
 			fmt.Println()

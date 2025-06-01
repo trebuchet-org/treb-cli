@@ -3,7 +3,6 @@ package abi
 import (
 	"math/big"
 	"testing"
-	
 	// "github.com/ethereum/go-ethereum/common" // Uncomment when artifact test is re-enabled
 )
 
@@ -57,7 +56,7 @@ func TestFormatTokenAmount(t *testing.T) {
 
 func TestDecodeConstructorArgs_CommonPatterns(t *testing.T) {
 	parser := NewParser(".")
-	
+
 	tests := []struct {
 		name         string
 		contractName string
@@ -86,15 +85,15 @@ func TestDecodeConstructorArgs_CommonPatterns(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := parser.DecodeConstructorArgs(tt.contractName, tt.args)
-			
+
 			if tt.shouldError && err == nil {
 				t.Errorf("DecodeConstructorArgs() expected error but got none")
 			}
-			
+
 			if !tt.shouldError && err != nil {
 				t.Errorf("DecodeConstructorArgs() unexpected error: %v", err)
 			}
-			
+
 			if result != tt.expected {
 				t.Errorf("DecodeConstructorArgs() = %s, want %s", result, tt.expected)
 			}

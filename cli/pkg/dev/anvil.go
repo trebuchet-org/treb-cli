@@ -249,52 +249,52 @@ func writePidFile(pid int) error {
 func fetchCreateXBytecode() (string, error) {
 	// Use public mainnet RPC to fetch CreateX bytecode
 	mainnetRPC := "https://eth.llamarpc.com"
-	
+
 	req := RPCRequest{
 		Jsonrpc: "2.0",
 		Method:  "eth_getCode",
 		Params:  []interface{}{CreateXAddress, "latest"},
 		ID:      1,
 	}
-	
+
 	jsonData, err := json.Marshal(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal request: %w", err)
 	}
-	
+
 	httpResp, err := http.Post(mainnetRPC, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return "", fmt.Errorf("failed to make HTTP request: %w", err)
 	}
 	defer httpResp.Body.Close()
-	
+
 	if httpResp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("HTTP error: %d", httpResp.StatusCode)
 	}
-	
+
 	body, err := io.ReadAll(httpResp.Body)
 	if err != nil {
 		return "", fmt.Errorf("failed to read response: %w", err)
 	}
-	
+
 	var resp RPCResponse
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return "", fmt.Errorf("failed to unmarshal response: %w", err)
 	}
-	
+
 	if resp.Error != nil {
 		return "", fmt.Errorf("RPC error: %s", resp.Error.Message)
 	}
-	
+
 	bytecode, ok := resp.Result.(string)
 	if !ok {
 		return "", fmt.Errorf("unexpected response type: %T", resp.Result)
 	}
-	
+
 	if bytecode == "0x" || bytecode == "" {
 		return "", fmt.Errorf("CreateX contract not found at %s on mainnet", CreateXAddress)
 	}
-	
+
 	return bytecode, nil
 }
 

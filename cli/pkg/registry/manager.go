@@ -13,11 +13,11 @@ import (
 )
 
 const (
-	TrebDir                = ".treb"
-	DeploymentsFile        = "deployments.json"
-	TransactionsFile       = "transactions.json"
-	SafeTransactionsFile   = "safe-txs.json"
-	SolidityRegistryFile   = "registry.json"
+	TrebDir              = ".treb"
+	DeploymentsFile      = "deployments.json"
+	TransactionsFile     = "transactions.json"
+	SafeTransactionsFile = "safe-txs.json"
+	SolidityRegistryFile = "registry.json"
 )
 
 // Manager handles all registry operations for the new data model
@@ -34,7 +34,7 @@ type Manager struct {
 // NewManager creates a new registry manager
 func NewManager(rootDir string) (*Manager, error) {
 	trebDir := filepath.Join(rootDir, TrebDir)
-	
+
 	// Create .treb directory if it doesn't exist
 	if err := os.MkdirAll(trebDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create .treb directory: %w", err)
@@ -45,7 +45,7 @@ func NewManager(rootDir string) (*Manager, error) {
 		deployments:      make(map[string]*types.Deployment),
 		transactions:     make(map[string]*types.Transaction),
 		safeTransactions: make(map[string]*types.SafeTransaction),
-		lookups:          &types.LookupIndexes{
+		lookups: &types.LookupIndexes{
 			Version:     "1.0.0",
 			ByAddress:   make(map[uint64]map[string]string),
 			ByNamespace: make(map[string]map[uint64][]string),
@@ -103,7 +103,7 @@ func (m *Manager) load() error {
 // loadFile loads a JSON file into the given target
 func (m *Manager) loadFile(filename string, target interface{}) error {
 	path := filepath.Join(m.rootDir, TrebDir, filename)
-	
+
 	file, err := os.Open(path)
 	if err != nil {
 		return err
@@ -172,7 +172,7 @@ func (m *Manager) rebuildLookups() {
 // saveFile saves data to a JSON file
 func (m *Manager) saveFile(filename string, data interface{}) error {
 	path := filepath.Join(m.rootDir, TrebDir, filename)
-	
+
 	file, err := os.Create(path)
 	if err != nil {
 		return err
@@ -187,7 +187,7 @@ func (m *Manager) saveFile(filename string, data interface{}) error {
 // GenerateDeploymentID generates a unique deployment ID
 func (m *Manager) GenerateDeploymentID(namespace string, chainID uint64, contractName, label string, txHash string) string {
 	baseID := fmt.Sprintf("%s/%d/%s:%s", namespace, chainID, contractName, label)
-	
+
 	// Check if this ID already exists
 	if _, exists := m.deployments[baseID]; !exists {
 		return baseID
@@ -246,7 +246,7 @@ func (m *Manager) updateIndexesForDeployment(deployment *types.Deployment) {
 	// Update proxy indexes if applicable
 	if deployment.Type == types.ProxyDeployment && deployment.ProxyInfo != nil {
 		m.lookups.Proxies.ProxyToImpl[deployment.ID] = deployment.ProxyInfo.Implementation
-		
+
 		// Find implementation deployment ID by address
 		for id, dep := range m.deployments {
 			if dep.Address == deployment.ProxyInfo.Implementation {
@@ -377,7 +377,7 @@ func (m *Manager) GetAllDeploymentsHydrated() []*types.Deployment {
 	for _, deployment := range m.deployments {
 		// Create a copy to avoid modifying the original
 		dep := *deployment
-		
+
 		// Hydrate with transaction data if available
 		if dep.TransactionID != "" {
 			if tx, exists := m.transactions[dep.TransactionID]; exists {
@@ -385,7 +385,7 @@ func (m *Manager) GetAllDeploymentsHydrated() []*types.Deployment {
 				dep.Transaction = tx
 			}
 		}
-		
+
 		result = append(result, &dep)
 	}
 	return result

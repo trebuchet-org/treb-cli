@@ -40,7 +40,7 @@ Examples:
 
 		// Determine script path
 		scriptPath := filepath.Join("script", scriptName+".s.sol")
-		
+
 		// Ensure script directory exists
 		scriptDir := filepath.Dir(scriptPath)
 		if err := os.MkdirAll(scriptDir, 0755); err != nil {
@@ -54,7 +54,7 @@ Examples:
 
 		// Generate example script
 		content := generateExampleScript(filepath.Base(scriptName))
-		
+
 		// Write script file
 		if err := os.WriteFile(scriptPath, []byte(content), 0644); err != nil {
 			return fmt.Errorf("failed to write script: %w", err)
@@ -69,7 +69,7 @@ Examples:
 		fmt.Println("  • Emitting deployment events for automatic tracking")
 		fmt.Println("\nCustomize the script for your specific needs, then run with:")
 		fmt.Printf("  treb run %s --network <network>\n", scriptPath)
-		
+
 		return nil
 	},
 }
@@ -91,7 +91,7 @@ Examples:
 
 		// Script path
 		scriptPath := filepath.Join("script", "deploy", fmt.Sprintf("Deploy%s.s.sol", libraryName))
-		
+
 		// Ensure script directory exists
 		scriptDir := filepath.Dir(scriptPath)
 		if err := os.MkdirAll(scriptDir, 0755); err != nil {
@@ -105,7 +105,7 @@ Examples:
 
 		// Generate library script
 		content := generateLibraryScript(libraryName)
-		
+
 		// Write script file
 		if err := os.WriteFile(scriptPath, []byte(content), 0644); err != nil {
 			return fmt.Errorf("failed to write script: %w", err)
@@ -115,7 +115,7 @@ Examples:
 		fmt.Println("To deploy the library:")
 		fmt.Printf("  1. Update the script with your library's artifact path\n")
 		fmt.Printf("  2. Run: treb run %s --network <network>\n", scriptPath)
-		
+
 		return nil
 	},
 }
@@ -138,7 +138,7 @@ Examples:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Parse strategy flag
 		strategyStr, _ := cmd.Flags().GetString("strategy")
-		strategy := contracts.StrategyCreate3  // Default
+		strategy := contracts.StrategyCreate3 // Default
 		if strategyStr != "" {
 			var err error
 			strategy, err = contracts.ValidateStrategy(strategyStr)
@@ -153,7 +153,7 @@ Examples:
 
 		var contractInfo *contracts.ContractInfo
 		var err error
-		
+
 		if len(args) > 0 {
 			// Contract name provided - use resolver which handles full paths properly
 			contractName := args[0]
@@ -167,12 +167,12 @@ Examples:
 			if err != nil {
 				return fmt.Errorf("failed to initialize contract indexer: %w", err)
 			}
-			
+
 			deployableContracts := indexer.GetDeployableContracts()
 			if len(deployableContracts) == 0 {
 				return fmt.Errorf("no deployable contracts found in project")
 			}
-			
+
 			contractInfo, err = interactive.SelectContract(deployableContracts, "Select a contract to deploy:")
 			if err != nil {
 				return err
@@ -194,7 +194,7 @@ Examples:
 		fmt.Println("  • Deploy using the configured sender")
 		fmt.Println("  • Use the LABEL environment variable for versioning")
 		fmt.Println("  • Emit events for automatic registry tracking")
-		
+
 		return nil
 	},
 }
@@ -202,7 +202,7 @@ Examples:
 func init() {
 	// Add strategy flag to genDeployCmd
 	genDeployCmd.Flags().String("strategy", "", "Deployment strategy: CREATE2 or CREATE3 (default: CREATE3)")
-	
+
 	genCmd.AddCommand(genExampleCmd)
 	genCmd.AddCommand(genLibraryCmd)
 	genCmd.AddCommand(genDeployCmd)

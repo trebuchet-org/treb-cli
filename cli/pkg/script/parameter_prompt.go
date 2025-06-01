@@ -182,7 +182,7 @@ func (p *ParameterPrompter) promptSender(message string) (string, error) {
 func (p *ParameterPrompter) promptDeployment(message string) (string, error) {
 	// Get all deployments for the namespace and chain
 	deployments := p.resolver.registryManager.GetAllDeployments()
-	
+
 	// Filter by namespace and chain
 	var matches []*types.Deployment
 	for _, d := range deployments {
@@ -192,7 +192,7 @@ func (p *ParameterPrompter) promptDeployment(message string) (string, error) {
 	}
 
 	if len(matches) == 0 {
-		return "", fmt.Errorf("no deployments found for namespace %s on chain %d", 
+		return "", fmt.Errorf("no deployments found for namespace %s on chain %d",
 			p.resolver.namespace, p.resolver.chainID)
 	}
 
@@ -217,7 +217,7 @@ func (p *ParameterPrompter) promptArtifact(message string) (string, error) {
 		return "", fmt.Errorf("no contracts found")
 	}
 
-	contract, err := interactive.SelectContract(allContracts, "Select artifact for: " + message)
+	contract, err := interactive.SelectContract(allContracts, "Select artifact for: "+message)
 	if err != nil {
 		return "", err
 	}

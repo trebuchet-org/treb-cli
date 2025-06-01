@@ -51,15 +51,15 @@ func (f *Forge) RunScript(scriptPath string, flags []string, envVars map[string]
 // RunScriptWithArgs runs a forge script with optional function arguments
 func (f *Forge) RunScriptWithArgs(scriptPath string, flags []string, envVars map[string]string, functionArgs []string) (string, error) {
 	args := []string{"script", scriptPath}
-	
+
 	// Add function arguments BEFORE other flags when using --sig
 	// This is important for forge's argument parsing
 	if len(functionArgs) > 0 {
 		args = append(args, functionArgs...)
 	}
-	
+
 	args = append(args, flags...)
-	
+
 	// Debug: print the full command
 	if envVars != nil {
 		if _, debug := envVars["DEBUG"]; debug || os.Getenv("TREB_DEBUG") != "" {
@@ -68,7 +68,7 @@ func (f *Forge) RunScriptWithArgs(scriptPath string, flags []string, envVars map
 	} else if os.Getenv("TREB_DEBUG") != "" {
 		fmt.Printf("Running forge command: forge %s\n", strings.Join(args, " "))
 	}
-	
+
 	cmd := exec.Command("forge", args...)
 	cmd.Dir = f.projectRoot
 	cmd.Env = os.Environ()

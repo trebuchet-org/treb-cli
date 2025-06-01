@@ -12,13 +12,13 @@ import (
 
 // ParameterResolver resolves meta types to their actual values
 type ParameterResolver struct {
-	projectPath    string
-	context        *resolvers.Context
-	trebConfig     *config.TrebConfig
-	interactive    bool
-	namespace      string
-	network        string
-	chainID        uint64
+	projectPath     string
+	context         *resolvers.Context
+	trebConfig      *config.TrebConfig
+	interactive     bool
+	namespace       string
+	network         string
+	chainID         uint64
 	contractIndexer *contracts.Indexer
 	registryManager *registry.Manager
 }
@@ -26,7 +26,7 @@ type ParameterResolver struct {
 // NewParameterResolver creates a new parameter resolver
 func NewParameterResolver(projectPath string, trebConfig *config.TrebConfig, namespace, network string, chainID uint64, interactive bool) (*ParameterResolver, error) {
 	ctx := resolvers.NewContext(projectPath, interactive)
-	
+
 	// Initialize contract indexer
 	indexer, err := contracts.GetGlobalIndexer(projectPath)
 	if err != nil {

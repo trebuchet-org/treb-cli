@@ -44,11 +44,10 @@ Examples:
 
 func init() {
 	rootCmd.AddCommand(tagCmd)
-	
+
 	tagCmd.Flags().StringVar(&addTag, "add", "", "Add a tag to the deployment")
 	tagCmd.Flags().StringVar(&removeTag, "remove", "", "Remove a tag from the deployment")
 }
-
 
 func manageDeploymentTags(identifier string) error {
 	// Initialize v2 registry manager
@@ -97,7 +96,7 @@ func findDeployment(identifier string, manager *registry.Manager) (*types.Deploy
 				matches = append(matches, deployment)
 				continue
 			}
-			
+
 			// Check full ID match
 			if strings.Contains(strings.ToLower(deployment.ID), strings.ToLower(identifier)) {
 				matches = append(matches, deployment)
@@ -148,7 +147,7 @@ func showDeploymentTags(deployment *types.Deployment) error {
 		sortedTags := make([]string, len(deployment.Tags))
 		copy(sortedTags, deployment.Tags)
 		sort.Strings(sortedTags)
-		
+
 		for i, tag := range sortedTags {
 			if i > 0 {
 				fmt.Print(", ")
@@ -181,7 +180,7 @@ func addDeploymentTag(deployment *types.Deployment, tag string, manager *registr
 	if deployment.Label != "" {
 		displayName += ":" + deployment.Label
 	}
-	
+
 	color.New(color.FgGreen).Printf("✅ Added tag '%s' to %s/%d/%s\n",
 		tag,
 		deployment.Namespace,
@@ -236,7 +235,7 @@ func removeDeploymentTag(deployment *types.Deployment, tag string, manager *regi
 	if deployment.Label != "" {
 		displayName += ":" + deployment.Label
 	}
-	
+
 	color.New(color.FgGreen).Printf("✅ Removed tag '%s' from %s/%d/%s\n",
 		tag,
 		deployment.Namespace,
@@ -252,7 +251,7 @@ func removeDeploymentTag(deployment *types.Deployment, tag string, manager *regi
 			remainingTags = append(remainingTags, t)
 		}
 	}
-	
+
 	if len(remainingTags) == 0 {
 		color.New(color.Faint).Print("No tags")
 	} else {

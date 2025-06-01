@@ -42,10 +42,10 @@ type StatusOutput struct {
 
 // ParsedForgeOutput contains all the parsed outputs from forge script
 type ParsedForgeOutput struct {
-	ScriptOutput   *ForgeScriptOutput
-	GasEstimate    *GasEstimate
-	StatusOutput   *StatusOutput
-	BroadcastPath  string
+	ScriptOutput  *ForgeScriptOutput
+	GasEstimate   *GasEstimate
+	StatusOutput  *StatusOutput
+	BroadcastPath string
 }
 
 // ParseForgeOutput parses the JSON output from forge script
@@ -162,5 +162,5 @@ func ParseAllEvents(output *ForgeScriptOutput) ([]interface{}, error) {
 	return events, nil
 }
 
-// ParseEvents function removed - deployment events are now extracted directly 
+// ParseEvents function removed - deployment events are now extracted directly
 // from AllEvents in executor.go using type switches on generated types
