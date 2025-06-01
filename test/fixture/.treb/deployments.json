@@ -31,6 +31,222 @@
     "createdAt": "2025-05-31T22:20:44.609474+02:00",
     "updatedAt": "2025-05-31T22:20:44.609474+02:00"
   },
+  "default/31337/ERC1967Proxy:123": {
+    "id": "default/31337/ERC1967Proxy:123",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "ERC1967Proxy",
+    "label": "123",
+    "address": "0xAE17941Fc17842293C9678560b75fBbEBa2caEaC",
+    "type": "PROXY",
+    "transactionId": "tx-0x83f340e95e4e53157a2735a7f88b183896262d83e62f7fce87d2cf1c80f9b780",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266004b0536b10cd265133d12d0",
+      "initCodeHash": "0x1cedd28912554d7a4533f3723df3b9105cce5549d627a89bca7024daa3016544",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x0000000000000000000000003de6ee63b426efecbad6ee940399ce985dedfbce00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000",
+      "entropy": "default/ERC1967Proxy:123"
+    },
+    "proxyInfo": {
+      "type": "UUPS",
+      "implementation": "0x3dE6EE63b426efEcBAD6ee940399ce985DedFBce",
+      "history": []
+    },
+    "artifact": {
+      "path": "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
+      "compilerVersion": "0.8.27+commit.40a35a09",
+      "bytecodeHash": "0x49945270a289d183adf52e288c3c12e78172e546742643be864ef3b2c1f23079",
+      "scriptPath": "DeployUCProxy.s.sol:DeployUCProxy",
+      "gitCommit": "c3ba607ed372ffe5af0a074b758228a25add7e2b"
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": [],
+    "createdAt": "2025-06-01T17:59:54.07668+02:00",
+    "updatedAt": "2025-06-01T17:59:54.07668+02:00"
+  },
+  "default/31337/ERC1967Proxy:1234": {
+    "id": "default/31337/ERC1967Proxy:1234",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "ERC1967Proxy",
+    "label": "1234",
+    "address": "0x79BD0CCCcd61eb45A552167C5673633CA113c12F",
+    "type": "PROXY",
+    "transactionId": "tx-0xbe4179c272d8173f62a6049993f80c3af2f5c7f043d6dfe5d33c9b50827d7791",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600a34958fb836c05d8673a5d",
+      "initCodeHash": "0x4f0be2d982253a3a1bd5a989a82a2c29102b45ab4f2819d09c0a6c324b97032d",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x00000000000000000000000003b42c2819322f761003c1c7c11031a3af23368a00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000",
+      "entropy": "default/ERC1967Proxy:1234"
+    },
+    "proxyInfo": {
+      "type": "UUPS",
+      "implementation": "0x03b42C2819322f761003c1c7c11031A3aF23368A",
+      "history": []
+    },
+    "artifact": {
+      "path": "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
+      "compilerVersion": "0.8.27+commit.40a35a09",
+      "bytecodeHash": "0x49945270a289d183adf52e288c3c12e78172e546742643be864ef3b2c1f23079",
+      "scriptPath": "DeployUCProxy.s.sol:DeployUCProxy",
+      "gitCommit": "c3ba607ed372ffe5af0a074b758228a25add7e2b"
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": [],
+    "createdAt": "2025-06-01T17:56:05.838193+02:00",
+    "updatedAt": "2025-06-01T17:56:05.838193+02:00"
+  },
+  "default/31337/ERC1967Proxy:test": {
+    "id": "default/31337/ERC1967Proxy:test",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "ERC1967Proxy",
+    "label": "test",
+    "address": "0x7D9541D9965Aa9F458469769b76aA837d65e1C5C",
+    "type": "PROXY",
+    "transactionId": "tx-0x8bd88ae779815e9e41166ef77dcf6795c2460e9cf2ab5534b69c9ae6ddee95da",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266004669df9be0328942fdf3a7",
+      "initCodeHash": "0x7ad811f2241bead4bb839ddc0a472debfd8c66be03f4c058bb9f737d6bcf125b",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x0000000000000000000000000388812b568719aa8d0fd360dcb4c1abab0e5bfd00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000",
+      "entropy": "default/ERC1967Proxy:test"
+    },
+    "proxyInfo": {
+      "type": "UUPS",
+      "implementation": "0x0388812B568719aA8d0Fd360dcB4c1ABAb0e5bFD",
+      "history": []
+    },
+    "artifact": {
+      "path": "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
+      "compilerVersion": "0.8.27+commit.40a35a09",
+      "bytecodeHash": "0x49945270a289d183adf52e288c3c12e78172e546742643be864ef3b2c1f23079",
+      "scriptPath": "DeployUCProxy.s.sol:DeployUCProxy",
+      "gitCommit": "c3ba607ed372ffe5af0a074b758228a25add7e2b"
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": [],
+    "createdAt": "2025-06-01T17:59:26.806819+02:00",
+    "updatedAt": "2025-06-01T17:59:26.806819+02:00"
+  },
+  "default/31337/ERC1967Proxy:test12": {
+    "id": "default/31337/ERC1967Proxy:test12",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "ERC1967Proxy",
+    "label": "test12",
+    "address": "0xd39bfD8B880Ad34a9c5d90E329136E4FaB13fbE4",
+    "type": "PROXY",
+    "transactionId": "tx-0x0d1cc7fab839238b0756021009d838ffdb0f058a9b6aff80886dcbd4c6a062ee",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600b5adff450d50da614f8d50",
+      "initCodeHash": "0x28c0c7d050cf97b1af5bac4212869861cce1bb2cb244dbac22446a7669a48dfa",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x00000000000000000000000081016b1ff3b07244d634b35888ab15a32381644f00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000",
+      "entropy": "default/ERC1967Proxy:test12"
+    },
+    "proxyInfo": {
+      "type": "UUPS",
+      "implementation": "0x81016b1FF3B07244D634b35888ab15A32381644F",
+      "history": []
+    },
+    "artifact": {
+      "path": "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
+      "compilerVersion": "0.8.27+commit.40a35a09",
+      "bytecodeHash": "0x49945270a289d183adf52e288c3c12e78172e546742643be864ef3b2c1f23079",
+      "scriptPath": "DeployerUC",
+      "gitCommit": "c3ba607ed372ffe5af0a074b758228a25add7e2b"
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": [],
+    "createdAt": "2025-06-01T17:45:23.057009+02:00",
+    "updatedAt": "2025-06-01T17:45:23.057009+02:00"
+  },
+  "default/31337/ERC1967Proxy:test1234": {
+    "id": "default/31337/ERC1967Proxy:test1234",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "ERC1967Proxy",
+    "label": "test1234",
+    "address": "0xaC2A07C00A139D6003Da13B81Ab4DE274e5CED31",
+    "type": "PROXY",
+    "transactionId": "tx-0x8b7dc61460e4738e1b546fb265369244b3481cb97ac3a777272d12a6cb4bada3",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb922660040ddc4959db5fdc9065465",
+      "initCodeHash": "0x0411abc75296261661c4eb5988887ca1a5ba94f5096dabe90ed03691c858442c",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x0000000000000000000000007e877d3f02d56c7cf1940e0b047a78af593b867000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000",
+      "entropy": "default/ERC1967Proxy:test1234"
+    },
+    "proxyInfo": {
+      "type": "UUPS",
+      "implementation": "0x7e877D3f02D56C7CF1940E0b047a78AF593B8670",
+      "history": []
+    },
+    "artifact": {
+      "path": "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
+      "compilerVersion": "0.8.27+commit.40a35a09",
+      "bytecodeHash": "0x49945270a289d183adf52e288c3c12e78172e546742643be864ef3b2c1f23079",
+      "scriptPath": "DeployUCProxy.s.sol:DeployUCProxy",
+      "gitCommit": "c3ba607ed372ffe5af0a074b758228a25add7e2b"
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": [],
+    "createdAt": "2025-06-01T17:55:53.17488+02:00",
+    "updatedAt": "2025-06-01T17:55:53.17488+02:00"
+  },
+  "default/31337/ERC1967Proxy:test23": {
+    "id": "default/31337/ERC1967Proxy:test23",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "ERC1967Proxy",
+    "label": "test23",
+    "address": "0xA49a55d373D45720D9E412101FcCa7ef48180A06",
+    "type": "PROXY",
+    "transactionId": "tx-0x86559ad1bf767f63757edc71984665d3341a85ee6ceee8d04b23f33bab3f4d95",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600c5fe2e453b15435a1b15f5",
+      "initCodeHash": "0x86be8a843c93495f8cee7f89e155188473a29c17c6896e2b7d9152bc54012a02",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x0000000000000000000000008a81a3ee50a2bba4b7036802b0edada3eee1523400000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000",
+      "entropy": "default/ERC1967Proxy:test23"
+    },
+    "proxyInfo": {
+      "type": "UUPS",
+      "implementation": "0x8A81A3eE50a2bba4b7036802b0EDADa3eeE15234",
+      "history": []
+    },
+    "artifact": {
+      "path": "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
+      "compilerVersion": "0.8.27+commit.40a35a09",
+      "bytecodeHash": "0x49945270a289d183adf52e288c3c12e78172e546742643be864ef3b2c1f23079",
+      "scriptPath": "Deploy",
+      "gitCommit": "c3ba607ed372ffe5af0a074b758228a25add7e2b"
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": [],
+    "createdAt": "2025-06-01T17:40:57.996373+02:00",
+    "updatedAt": "2025-06-01T17:40:57.996373+02:00"
+  },
   "default/31337/SampleToken:list-show-test": {
     "id": "default/31337/SampleToken:list-show-test",
     "namespace": "default",
@@ -62,5 +278,197 @@
     "tags": [],
     "createdAt": "2025-05-31T22:20:44.609485+02:00",
     "updatedAt": "2025-05-31T22:20:44.609485+02:00"
+  },
+  "default/31337/UpgradeableCounter:123": {
+    "id": "default/31337/UpgradeableCounter:123",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "UpgradeableCounter",
+    "label": "123",
+    "address": "0x3dE6EE63b426efEcBAD6ee940399ce985DedFBce",
+    "type": "SINGLETON",
+    "transactionId": "tx-0x6b07b31888199f7909e4b6a3722bf280054081e1363bc0c97dbe5aca7c94d806",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb922660099fbba6b63d69fbe29f1df",
+      "initCodeHash": "0x5486ce6c86ba56c7bb877d0f3b9753c251076afae58a4f9ce7fed3ae56b6732a",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x",
+      "entropy": "default/src/UpgradeableCounter.sol:UpgradeableCounter:123"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/UpgradeableCounter.sol:UpgradeableCounter",
+      "compilerVersion": "0.8.27+commit.40a35a09",
+      "bytecodeHash": "0x5486ce6c86ba56c7bb877d0f3b9753c251076afae58a4f9ce7fed3ae56b6732a",
+      "scriptPath": "DeployUCProxy.s.sol:DeployUCProxy",
+      "gitCommit": "c3ba607ed372ffe5af0a074b758228a25add7e2b"
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": [],
+    "createdAt": "2025-06-01T17:59:54.076649+02:00",
+    "updatedAt": "2025-06-01T17:59:54.076649+02:00"
+  },
+  "default/31337/UpgradeableCounter:1234": {
+    "id": "default/31337/UpgradeableCounter:1234",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "UpgradeableCounter",
+    "label": "1234",
+    "address": "0x03b42C2819322f761003c1c7c11031A3aF23368A",
+    "type": "SINGLETON",
+    "transactionId": "tx-0xc0a35990fa915ca7e51dca74fd8104e9809c3fad48f7e66b9a69852f1f7c73f7",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600348e7433b3252b2434b656",
+      "initCodeHash": "0x5486ce6c86ba56c7bb877d0f3b9753c251076afae58a4f9ce7fed3ae56b6732a",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x",
+      "entropy": "default/src/UpgradeableCounter.sol:UpgradeableCounter:1234"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/UpgradeableCounter.sol:UpgradeableCounter",
+      "compilerVersion": "0.8.27+commit.40a35a09",
+      "bytecodeHash": "0x5486ce6c86ba56c7bb877d0f3b9753c251076afae58a4f9ce7fed3ae56b6732a",
+      "scriptPath": "DeployUCProxy.s.sol:DeployUCProxy",
+      "gitCommit": "c3ba607ed372ffe5af0a074b758228a25add7e2b"
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": [],
+    "createdAt": "2025-06-01T17:56:05.838175+02:00",
+    "updatedAt": "2025-06-01T17:56:05.838175+02:00"
+  },
+  "default/31337/UpgradeableCounter:test": {
+    "id": "default/31337/UpgradeableCounter:test",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "UpgradeableCounter",
+    "label": "test",
+    "address": "0x0388812B568719aA8d0Fd360dcB4c1ABAb0e5bFD",
+    "type": "SINGLETON",
+    "transactionId": "tx-0xf2ed9ab7815e6b648d3c5772820616ce6db4cbcbabbceecb8a488d1a256ad425",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266003633c475c96b4ef255e7af",
+      "initCodeHash": "0x5486ce6c86ba56c7bb877d0f3b9753c251076afae58a4f9ce7fed3ae56b6732a",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x",
+      "entropy": "default/src/UpgradeableCounter.sol:UpgradeableCounter:test"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/UpgradeableCounter.sol:UpgradeableCounter",
+      "compilerVersion": "0.8.27+commit.40a35a09",
+      "bytecodeHash": "0x5486ce6c86ba56c7bb877d0f3b9753c251076afae58a4f9ce7fed3ae56b6732a",
+      "scriptPath": "DeployUCProxy.s.sol:DeployUCProxy",
+      "gitCommit": "c3ba607ed372ffe5af0a074b758228a25add7e2b"
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": [],
+    "createdAt": "2025-06-01T17:59:26.806791+02:00",
+    "updatedAt": "2025-06-01T17:59:26.806791+02:00"
+  },
+  "default/31337/UpgradeableCounter:test12": {
+    "id": "default/31337/UpgradeableCounter:test12",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "UpgradeableCounter",
+    "label": "test12",
+    "address": "0x81016b1FF3B07244D634b35888ab15A32381644F",
+    "type": "SINGLETON",
+    "transactionId": "tx-0xaf7248980f037c88e51cf430cb9b6e892838408bd580e006085a8a5d8c23cd63",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600411b6b48ff04ea907ea325",
+      "initCodeHash": "0x5486ce6c86ba56c7bb877d0f3b9753c251076afae58a4f9ce7fed3ae56b6732a",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x",
+      "entropy": "default/src/UpgradeableCounter.sol:UpgradeableCounter:test12"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/UpgradeableCounter.sol:UpgradeableCounter",
+      "compilerVersion": "0.8.27+commit.40a35a09",
+      "bytecodeHash": "0x5486ce6c86ba56c7bb877d0f3b9753c251076afae58a4f9ce7fed3ae56b6732a",
+      "scriptPath": "DeployerUC",
+      "gitCommit": "c3ba607ed372ffe5af0a074b758228a25add7e2b"
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": [],
+    "createdAt": "2025-06-01T17:45:23.056972+02:00",
+    "updatedAt": "2025-06-01T17:45:23.056972+02:00"
+  },
+  "default/31337/UpgradeableCounter:test1234": {
+    "id": "default/31337/UpgradeableCounter:test1234",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "UpgradeableCounter",
+    "label": "test1234",
+    "address": "0x7e877D3f02D56C7CF1940E0b047a78AF593B8670",
+    "type": "SINGLETON",
+    "transactionId": "tx-0xc2002dd36fa1e75093ffba3944e832af0e7a5dcee2a8efab7126028bad88a0fa",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600e8df2bc28672f16cf47519",
+      "initCodeHash": "0x5486ce6c86ba56c7bb877d0f3b9753c251076afae58a4f9ce7fed3ae56b6732a",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x",
+      "entropy": "default/src/UpgradeableCounter.sol:UpgradeableCounter:test1234"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/UpgradeableCounter.sol:UpgradeableCounter",
+      "compilerVersion": "0.8.27+commit.40a35a09",
+      "bytecodeHash": "0x5486ce6c86ba56c7bb877d0f3b9753c251076afae58a4f9ce7fed3ae56b6732a",
+      "scriptPath": "DeployUCProxy.s.sol:DeployUCProxy",
+      "gitCommit": "c3ba607ed372ffe5af0a074b758228a25add7e2b"
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": [],
+    "createdAt": "2025-06-01T17:55:53.174862+02:00",
+    "updatedAt": "2025-06-01T17:55:53.174862+02:00"
+  },
+  "default/31337/UpgradeableCounter:test23": {
+    "id": "default/31337/UpgradeableCounter:test23",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "UpgradeableCounter",
+    "label": "test23",
+    "address": "0x8A81A3eE50a2bba4b7036802b0EDADa3eeE15234",
+    "type": "SINGLETON",
+    "transactionId": "tx-0x30dd3486d01ed60de55e3e946ec2086b8c10b8c4931925e73be6512abe73e154",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266004f8d7c4227cd0115505f06",
+      "initCodeHash": "0x5486ce6c86ba56c7bb877d0f3b9753c251076afae58a4f9ce7fed3ae56b6732a",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x",
+      "entropy": "default/src/UpgradeableCounter.sol:UpgradeableCounter:test23"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/UpgradeableCounter.sol:UpgradeableCounter",
+      "compilerVersion": "0.8.27+commit.40a35a09",
+      "bytecodeHash": "0x5486ce6c86ba56c7bb877d0f3b9753c251076afae58a4f9ce7fed3ae56b6732a",
+      "scriptPath": "Deploy",
+      "gitCommit": "c3ba607ed372ffe5af0a074b758228a25add7e2b"
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": [],
+    "createdAt": "2025-06-01T17:40:57.996342+02:00",
+    "updatedAt": "2025-06-01T17:40:57.996342+02:00"
   }
 }

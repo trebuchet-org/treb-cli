@@ -23,27 +23,23 @@ contract DeployerUCProxy is TrebScript {
     /**
      * @custom:env {string} label Label for the proxy and implementation
      * @custom:env {sender} deployer The sender which will deploy the contract
-     * @custom:env {deployment} implementation Implementation to use for the proxy
-     * @custom:env {artifact} implArtifact The implementation artifact to deploy
-     * @custom:env {artifact} proxyArtifact The proxy artifact to deploy
+     * @custom:env {deployment:optional} implementation Implementation to use for the proxy
      */
     function run() public broadcast {
         string memory label = vm.envOr("label", string(""));
         address implementation = vm.envOr("implementation", address(0));
-        string memory implArtifact = vm.envOr("implArtifact", string(""));
-        string memory proxyArtifact = vm.envOr("proxyArtifact", string(""));
         Senders.Sender storage deployer = sender(
             vm.envOr("deployer", string("deployer"))
         );
 
         if (implementation == address(0)) {
             implementation = deployer
-                .create3(implArtifact)
+                .create3("src/UpgradeableCounter.sol:UpgradeableCounter")
                 .setLabel(label)
                 .deploy();
         }
 
-        address proxy = deployer.create3(proxyArtifact).setLabel(label).deploy(
+        address proxy = deployer.create3("ERC1967Proxy").setLabel(label).deploy(
             abi.encode(implementation, "")
         );
 

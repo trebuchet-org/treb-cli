@@ -6,11 +6,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	netpkg "github.com/trebuchet-org/treb-cli/cli/pkg/network"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/resolvers"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/script"
 )
 
@@ -24,10 +26,30 @@ This command executes Foundry scripts while:
 - Parsing deployment events from script execution
 - Recording deployments in the registry
 - Supporting multiple sender types (private key, Safe, hardware wallet)
+- Automatically parsing and validating script parameters from natspec
+
+Script Parameters:
+Scripts can define parameters using custom natspec tags:
+  /**
+   * @custom:env {string} label Label for the deployment
+   * @custom:env {address} owner Owner address for the contract
+   * @custom:env {string:optional} description Optional description
+   */
+  function run() public { ... }
+
+Supported parameter types:
+- Base types: string, address, uint256, int256, bytes32, bytes
+- Meta types: sender (sender ID), deployment (contract reference), artifact (contract name)
 
 Examples:
   # Run a deployment script
   treb run script/deploy/DeployCounter.s.sol
+
+  # Run with parameters via --env flags
+  treb run script/deploy/DeployCounter.s.sol --env label=v2 --env owner=0x123...
+
+  # Run with deployment reference
+  treb run script/deploy/DeployProxy.s.sol --env implementation=Counter:v1
 
   # Run with dry-run to see what would happen
   treb run script/deploy/DeployCounter.s.sol --dry-run
@@ -41,9 +63,10 @@ Examples:
 	Run: func(cmd *cobra.Command, args []string) {
 		scriptPath := args[0]
 
-		// Check if script exists
-		if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
-			checkError(fmt.Errorf("script file not found: %s", scriptPath))
+		resolver := resolvers.NewContext(".", !IsNonInteractive())
+		scriptContract, err := resolver.ResolveContract(scriptPath, contracts.ScriptFilter())
+		if err != nil {
+			checkError(fmt.Errorf("failed to resolve contract: %w", err))
 		}
 
 		// Get flags
@@ -94,6 +117,102 @@ Examples:
 			checkError(fmt.Errorf("failed to resolve network: %w", err))
 		}
 
+		// Load treb config for parameter resolution
+		fullConfig, err := config.LoadTrebConfig(".")
+		if err != nil {
+			checkError(fmt.Errorf("failed to load treb config: %w", err))
+		}
+
+		trebConfig, err := fullConfig.GetProfileTrebConfig(profile)
+		if err != nil {
+			checkError(fmt.Errorf("failed to get profile config: %w", err))
+		}
+
+		// Parse script parameters from natspec if artifact is available
+		if scriptContract.Artifact != nil {
+			paramParser := script.NewParameterParser()
+			params, err := paramParser.ParseFromArtifact(scriptContract.Artifact)
+			if err != nil {
+				checkError(fmt.Errorf("failed to parse script parameters: %w", err))
+			}
+
+			if len(params) > 0 {
+				// Create parameter resolver
+				paramResolver, err := script.NewParameterResolver(".", trebConfig, namespace, network, networkInfo.ChainID, !IsNonInteractive())
+				if err != nil {
+					checkError(fmt.Errorf("failed to create parameter resolver: %w", err))
+				}
+
+				// Resolve all parameters
+				resolvedEnvVars, err := paramResolver.ResolveAll(params, parsedEnvVars)
+				if err != nil {
+					if IsNonInteractive() {
+						checkError(fmt.Errorf("parameter resolution failed: %w", err))
+					}
+					// In interactive mode, we'll prompt for missing values
+				}
+
+				// Check for missing required parameters
+				var missingRequired []script.Parameter
+				for _, param := range params {
+					if !param.Optional && resolvedEnvVars[param.Name] == "" {
+						missingRequired = append(missingRequired, param)
+					}
+				}
+
+				// Handle missing parameters
+				if len(missingRequired) > 0 {
+					if IsNonInteractive() {
+						var missingNames []string
+						for _, p := range missingRequired {
+							missingNames = append(missingNames, p.Name)
+						}
+						checkError(fmt.Errorf("missing required parameters: %s", strings.Join(missingNames, ", ")))
+					} else {
+						// Interactive mode: prompt for missing values
+						fmt.Println("The script supports the following parameters:")
+						for _, p := range params {
+							var status, nameColor string
+							if resolvedEnvVars[p.Name] != "" {
+								// Present - green
+								status = color.GreenString("✓")
+								nameColor = color.GreenString(p.Name)
+							} else if p.Optional {
+								// Optional and missing - yellow
+								status = color.YellowString("○")
+								nameColor = color.YellowString(p.Name)
+							} else {
+								// Required and missing - red
+								status = color.RedString("✗")
+								nameColor = color.RedString(p.Name)
+							}
+							fmt.Printf("  %s %s (%s): %s\n", status, nameColor, p.Type, p.Description)
+						}
+						fmt.Println("\nMissing one or more required parameters.")
+
+						prompter := script.NewParameterPrompter(paramResolver)
+						promptedVars, err := prompter.PromptForMissingParameters(params, resolvedEnvVars)
+						if err != nil {
+							checkError(fmt.Errorf("failed to prompt for parameters: %w", err))
+						}
+
+						// Re-resolve with prompted values
+						resolvedEnvVars, err = paramResolver.ResolveAll(params, promptedVars)
+						if err != nil {
+							checkError(fmt.Errorf("failed to resolve prompted parameters: %w", err))
+						}
+					}
+				}
+
+				// Update parsedEnvVars with resolved values
+				for k, v := range resolvedEnvVars {
+					if v != "" {
+						parsedEnvVars[k] = v
+					}
+				}
+			}
+		}
+
 		// Create script executor
 		executor := script.NewExecutor(".", networkInfo)
 
@@ -105,8 +224,8 @@ Examples:
 		}
 
 		// Run the script
-		script.PrintDeploymentBanner(fmt.Sprintf("Running script: %s", filepath.Base(scriptPath)), network, profile)
-		
+		script.PrintDeploymentBanner(fmt.Sprintf("Running script: %s", filepath.Base(scriptContract.Path)), network, profile)
+
 		// Debug mode always implies dry run to prevent Safe transaction creation
 		if debug || debugJSON {
 			dryRun = true
@@ -116,7 +235,7 @@ Examples:
 		}
 
 		opts := script.RunOptions{
-			ScriptPath: scriptPath,
+			ScriptPath: scriptContract.Path,
 			Network:    network,
 			Profile:    profile,
 			Namespace:  namespace,
@@ -145,16 +264,12 @@ Examples:
 			// Use enhanced display system for better formatting and phase tracking
 			enhancedDisplay := script.NewEnhancedEventDisplay(indexer)
 			enhancedDisplay.SetVerbose(verbose)
-			
+
 			// Load sender configs to improve address display
-			if trebConfig, err := config.LoadTrebConfig("."); err == nil {
-				if profileConfig, err := trebConfig.GetProfileTrebConfig(profile); err == nil {
-					if senderConfigs, err := script.BuildSenderConfigs(profileConfig); err == nil {
-						enhancedDisplay.SetSenderConfigs(senderConfigs)
-					}
-				}
+			if senderConfigs, err := script.BuildSenderConfigs(trebConfig); err == nil {
+				enhancedDisplay.SetSenderConfigs(senderConfigs)
 			}
-			
+
 			enhancedDisplay.ProcessEvents(result.AllEvents)
 
 			// Update registry if not dry run
@@ -168,7 +283,7 @@ Examples:
 					network,
 					scriptPath,
 				)
-				
+
 				// Enrich with broadcast data if available
 				if result.BroadcastPath != "" {
 					enricher := registry.NewBroadcastEnricher()
@@ -176,7 +291,7 @@ Examples:
 						script.PrintWarningMessage(fmt.Sprintf("Failed to enrich from broadcast: %v", err))
 					}
 				}
-				
+
 				// Apply registry update
 				manager, err := registry.NewManager(".")
 				if err != nil {

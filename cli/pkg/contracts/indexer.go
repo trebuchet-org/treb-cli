@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/forge"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -100,6 +101,15 @@ func ProjectFilter() QueryFilter {
 	}
 }
 
+func ScriptFilter() QueryFilter {
+	return QueryFilter{
+		IncludeLibraries: false,
+		IncludeAbstract:  false,
+		IncludeInterface: false,
+		PathPattern:      "^script/.*$",
+	}
+}
+
 // AllFilter returns a filter that includes everything
 func AllFilter() QueryFilter {
 	return QueryFilter{
@@ -179,6 +189,13 @@ func (i *Indexer) getLibraryPaths() []string {
 
 // Index discovers all contracts and artifacts
 func (i *Indexer) Index() error {
+	// Trigger a forge build to ensure artifacts are up to date
+	forgeExecutor := forge.NewForge(i.projectRoot)
+	if err := forgeExecutor.Build(); err != nil {
+		// Show the build output and fail
+		return fmt.Errorf("failed to build contracts: %w", err)
+	}
+
 	// First, index all .sol files
 	if err := i.indexSolidityFiles(); err != nil {
 		return fmt.Errorf("failed to index Solidity files: %w", err)
@@ -197,10 +214,15 @@ func (i *Indexer) indexSolidityFiles() error {
 	// Collect all paths to process
 	var paths []string
 
-	// Always include src/
+	// Always include src/ and script/
 	srcPath := filepath.Join(i.projectRoot, "src")
 	if _, err := os.Stat(srcPath); err == nil {
 		paths = append(paths, srcPath)
+	}
+
+	scriptPath := filepath.Join(i.projectRoot, "script")
+	if _, err := os.Stat(scriptPath); err == nil {
+		paths = append(paths, scriptPath)
 	}
 
 	// Always include library paths from remappings
@@ -393,7 +415,7 @@ func (i *Indexer) processArtifact(artifactPath string) error {
 			relPath, _ := filepath.Rel(i.projectRoot, artifactPath)
 			contract.ArtifactPath = relPath
 			contract.Artifact = &artifact
-			
+
 			// Calculate and store bytecode hash
 			if hash, err := i.calculateBytecodeHash(contract); err == nil {
 				i.bytecodeHashIndex[hash] = contract
@@ -410,7 +432,7 @@ func (i *Indexer) processArtifact(artifactPath string) error {
 					relPath, _ := filepath.Rel(i.projectRoot, artifactPath)
 					contract.ArtifactPath = relPath
 					contract.Artifact = &artifact
-					
+
 					// Calculate and store bytecode hash
 					if hash, err := i.calculateBytecodeHash(contract); err == nil {
 						i.bytecodeHashIndex[hash] = contract
@@ -505,7 +527,7 @@ func (i *Indexer) SearchContracts(pattern string) []*ContractInfo {
 	seen := make(map[string]bool)
 
 	for _, contract := range i.contracts {
-		if strings.Contains(strings.ToLower(contract.Name), pattern) {
+		if strings.Contains(strings.ToLower(contract.Name), pattern) || strings.Contains(strings.ToLower(contract.Path), pattern) {
 			key := fmt.Sprintf("%s:%s", contract.Path, contract.Name)
 			if !seen[key] {
 				seen[key] = true
@@ -721,7 +743,7 @@ func (i *Indexer) calculateBytecodeHash(contract *ContractInfo) (string, error) 
 	hasher := sha3.NewLegacyKeccak256()
 	hasher.Write(bytecodeBytes)
 	hash := hasher.Sum(nil)
-	
+
 	// Return as hex string with 0x prefix
 	return "0x" + hex.EncodeToString(hash), nil
 }
@@ -739,4 +761,12 @@ func (i *Indexer) GetContractByBytecodeHash(hash string) *ContractInfo {
 	hash = "0x" + hash
 
 	return i.bytecodeHashIndex[hash]
+}
+
+func (c *ContractInfo) SourcePreview() string {
+	content, err := os.ReadFile(c.Path)
+	if err != nil {
+		return fmt.Sprintf("Error reading file: %v", err)
+	}
+	return string(content)
 }
