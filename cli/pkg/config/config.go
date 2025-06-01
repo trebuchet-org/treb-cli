@@ -11,7 +11,6 @@ import (
 type Config struct {
 	Namespace string `json:"namespace"`
 	Network   string `json:"network"`
-	Sender    string `json:"sender"`
 }
 
 // DefaultConfig returns the default configuration
@@ -19,7 +18,6 @@ func DefaultConfig() *Config {
 	return &Config{
 		Namespace: "default",
 		Network:   "",
-		Sender:    "",
 	}
 }
 
@@ -87,8 +85,6 @@ func (m *Manager) Set(key, value string) error {
 		config.Namespace = value
 	case "network":
 		config.Network = value
-	case "sender":
-		config.Sender = value
 	default:
 		return fmt.Errorf("unknown config key: %s", key)
 	}
@@ -108,8 +104,6 @@ func (m *Manager) Get(key string) (string, error) {
 		return config.Namespace, nil
 	case "network":
 		return config.Network, nil
-	case "sender":
-		return config.Sender, nil
 	default:
 		return "", fmt.Errorf("unknown config key: %s", key)
 	}
