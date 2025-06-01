@@ -1,0 +1,53 @@
+name: Lint
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+        
+    - name: Install golangci-lint
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.55.2
+        
+    - name: Check go fmt
+      run: |
+        echo "==> Checking gofmt..."
+        unformatted=$(gofmt -l .)
+        if [ -n "$unformatted" ]; then
+          echo "The following files are not formatted correctly:"
+          echo "$unformatted"
+          echo ""
+          echo "Please run 'gofmt -w .' to format your code"
+          exit 1
+        fi
+        echo "✅ All files are properly formatted"
+        
+    - name: Run golangci-lint
+      run: |
+        echo "==> Running golangci-lint..."
+        golangci-lint run --timeout=5m ./...
+        
+    - name: Verify no missing gofmt
+      run: |
+        echo "==> Double-checking formatting with go fmt..."
+        if ! go fmt ./... | grep -q .; then
+          echo "✅ No formatting issues found"
+        else
+          echo "❌ Found formatting issues. Please run 'go fmt ./...'"
+          exit 1
+        fi
