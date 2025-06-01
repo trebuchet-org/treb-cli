@@ -246,7 +246,7 @@ func (d *Deployment) GetDisplayName() string {
 	return d.ContractName
 }
 
-// GetShortID returns the short identifier (contractName:label)
+// GetShortID returns the short identifier (contractName:label or just contractName)
 func (d *Deployment) GetShortID() string {
 	if d.Label != "" {
 		return fmt.Sprintf("%s:%s", d.ContractName, d.Label)

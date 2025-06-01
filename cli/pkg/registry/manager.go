@@ -186,7 +186,13 @@ func (m *Manager) saveFile(filename string, data interface{}) error {
 
 // GenerateDeploymentID generates a unique deployment ID
 func (m *Manager) GenerateDeploymentID(namespace string, chainID uint64, contractName, label string, txHash string) string {
-	baseID := fmt.Sprintf("%s/%d/%s:%s", namespace, chainID, contractName, label)
+	// Build baseID with or without label
+	var baseID string
+	if label != "" {
+		baseID = fmt.Sprintf("%s/%d/%s:%s", namespace, chainID, contractName, label)
+	} else {
+		baseID = fmt.Sprintf("%s/%d/%s", namespace, chainID, contractName)
+	}
 
 	// Check if this ID already exists
 	if _, exists := m.deployments[baseID]; !exists {
@@ -269,7 +275,13 @@ func (m *Manager) updateSolidityRegistry(deployment *types.Deployment) {
 		m.solidityRegistry[deployment.ChainID][deployment.Namespace] = make(map[string]string)
 	}
 
-	key := fmt.Sprintf("%s:%s", deployment.ContractName, deployment.Label)
+	// Use same key format as GetShortID
+	var key string
+	if deployment.Label != "" {
+		key = fmt.Sprintf("%s:%s", deployment.ContractName, deployment.Label)
+	} else {
+		key = deployment.ContractName
+	}
 	m.solidityRegistry[deployment.ChainID][deployment.Namespace][key] = deployment.Address
 }
 
