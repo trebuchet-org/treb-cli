@@ -14,27 +14,30 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeab
 /// @title DeployerUCProxy
 /// @notice This script deploys a proxy for an upgradeable counter contract
 /// @dev This script uses the deployer sender to deploy the proxy and implementation
-/// @dev The label is used to identify the deployment
-/// @dev The deployer is the sender that will deploy the proxy and implementation
-/// @dev The implementation is the upgradeable counter contract
 /// @dev The proxy is the ERC1967 proxy contract
-/// @custom:env-arg string label
-/// @custom:env-arg string deployer
 contract DeployerUCProxy is TrebScript {
     using Senders for Senders.Sender;
     using Deployer for Senders.Sender;
     using Deployer for Deployer.Deployment;
 
+    /**
+     * @custom:env {string} label Label for the proxy and implementation
+     * @custom:env {sender} deployer The sender which will deploy the contract
+     * @custom:env {deployment:optional} implementation Implementation to use for the proxy
+     */
     function run() public broadcast {
-        string memory label = vm.envString("label");
-        string memory _deployer = vm.envString("deployer");
+        string memory label = vm.envOr("label", string(""));
+        address implementation = vm.envOr("implementation", address(0));
+        Senders.Sender storage deployer = sender(
+            vm.envOr("deployer", string("deployer"))
+        );
 
-        Senders.Sender storage deployer = sender(_deployer);
-
-        address implementation = deployer
-            .create3("src/UpgradeableCounter.sol:UpgradeableCounter")
-            .setLabel(label)
-            .deploy();
+        if (implementation == address(0)) {
+            implementation = deployer
+                .create3("src/UpgradeableCounter.sol:UpgradeableCounter")
+                .setLabel(label)
+                .deploy();
+        }
 
         address proxy = deployer.create3("ERC1967Proxy").setLabel(label).deploy(
             abi.encode(implementation, "")

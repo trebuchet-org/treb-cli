@@ -109,7 +109,7 @@ func TestNonInteractiveMode(t *testing.T) {
 
 // Test command structure
 func TestCommandStructure(t *testing.T) {
-	commands := []string{"run", "gen", "show", "verify", "list", "init", "version", "context", "sync", "tag"}
+	commands := []string{"run", "gen", "show", "verify", "list", "init", "version", "sync", "tag"}
 	
 	for _, cmd := range commands {
 		t.Run(fmt.Sprintf("%s command exists", cmd), func(t *testing.T) {

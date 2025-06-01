@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/trebuchet-org/treb-cli/cli/pkg/project"
 	"github.com/spf13/cobra"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/project"
 )
 
 var initCmd = &cobra.Command{
@@ -18,8 +18,3 @@ and creating the deployment registry.`,
 		}
 	},
 }
-
-func init() {
-	// No flags needed
-}
-

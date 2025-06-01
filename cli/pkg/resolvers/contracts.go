@@ -95,9 +95,9 @@ func (c *Context) ResolveContractForProxy(nameOrPath string) (*contracts.Contrac
 // Uses filter that only includes libraries
 func (c *Context) ResolveContractForLibrary(nameOrPath string) (*contracts.ContractInfo, error) {
 	filter := contracts.QueryFilter{
-		IncludeLibraries:  true,
-		IncludeInterface:  false,
-		IncludeAbstract:   false,
+		IncludeLibraries: true,
+		IncludeInterface: false,
+		IncludeAbstract:  false,
 	}
 	return c.ResolveContract(nameOrPath, filter)
 }

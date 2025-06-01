@@ -120,7 +120,7 @@ func parseForgeError(err error, output string) error {
 	// Extract any explicit error message
 	errorRegex := regexp.MustCompile(`Error:\s+(.+)`)
 	if match := errorRegex.FindStringSubmatch(output); len(match) > 1 {
-		return fmt.Errorf(match[1])
+		return fmt.Errorf("%s", match[1])
 	}
 
 	// If no specific error found, return the original error with partial output
