@@ -152,6 +152,11 @@ Examples:
 					// In interactive mode, we'll prompt for missing values
 				}
 
+				// Ensure we have a valid map even if resolution had errors
+				if resolvedEnvVars == nil {
+					resolvedEnvVars = make(map[string]string)
+				}
+
 				// Check for missing required parameters
 				var missingRequired []script.Parameter
 				for _, param := range params {

@@ -25,17 +25,19 @@ func SelectContract(matches []*contracts.ContractInfo, prompt string) (*contract
 
 	templates := &promptui.SelectTemplates{
 		Label:    "{{ . }}",
-		Active:   "👉 {{ . | cyan }}",
+		Active:   "* {{ . | cyan }}",
 		Inactive: "   {{ . | faint }}",
-		Selected: "👍 {{ . | green }}",
+		Selected: "✓ {{ . | green }}",
 		Help:     color.New(color.FgYellow).Sprint("Use arrow keys to navigate, Enter to select"),
 	}
 
 	promptSelect := promptui.Select{
-		Label:     prompt,
-		Items:     options,
-		Templates: templates,
-		Size:      10,
+		Label:             prompt,
+		Items:             options,
+		Templates:         templates,
+		Size:              10,
+		StartInSearchMode: true,
+		Searcher:          FuzzySearchFunc(options),
 	}
 
 	index, _, err := promptSelect.Run()

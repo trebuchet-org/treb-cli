@@ -124,6 +124,7 @@ func (r *ParameterResolver) resolveArtifact(artifactRef string) (string, error) 
 // ResolveAll resolves all parameter values
 func (r *ParameterResolver) ResolveAll(params []Parameter, envVars map[string]string) (map[string]string, error) {
 	resolved := make(map[string]string)
+	var validationErrors []string
 
 	for _, param := range params {
 		value, exists := envVars[param.Name]
@@ -134,23 +135,34 @@ func (r *ParameterResolver) ResolveAll(params []Parameter, envVars map[string]st
 		// Validate the raw value first
 		parser := NewParameterParser()
 		if err := parser.ValidateValue(param, value); err != nil {
-			if !r.interactive || param.Optional {
-				return nil, err
+			if !r.interactive {
+				validationErrors = append(validationErrors, fmt.Sprintf("%s: %v", param.Name, err))
 			}
-			// In interactive mode, we'll prompt for required values later
+			// In interactive mode, we'll prompt for invalid values later
+			resolved[param.Name] = "" // Mark as needing resolution
+			continue
 		}
 
 		// Resolve meta types
 		if value != "" {
 			resolvedValue, err := r.ResolveValue(param, value)
 			if err != nil {
-				return nil, fmt.Errorf("failed to resolve %s parameter '%s': %w", param.Type, param.Name, err)
+				if !r.interactive {
+					validationErrors = append(validationErrors, fmt.Sprintf("%s: %v", param.Name, err))
+				}
+				resolved[param.Name] = "" // Mark as needing resolution
+				continue
 			}
 			resolved[param.Name] = resolvedValue
 		} else if !param.Optional {
 			// Mark as needing resolution
 			resolved[param.Name] = ""
 		}
+	}
+
+	// Return validation errors in non-interactive mode
+	if len(validationErrors) > 0 && !r.interactive {
+		return resolved, fmt.Errorf("parameter validation failed:\n  %s", strings.Join(validationErrors, "\n  "))
 	}
 
 	return resolved, nil

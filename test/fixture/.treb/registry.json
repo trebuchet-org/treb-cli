@@ -2,7 +2,11 @@
   "31337": {
     "default": {
       "Counter:list-show-test": "0xE5673f9194DF31187b80d5Eb0DC67c2529B8Da2D",
-      "SampleToken:list-show-test": "0xD328909E5d61c6e34762DF29154e4473C3D3E85C"
+      "ERC1967Proxy:Test": "0xd8D09744a21AE70237a494b4C901534ef5a20Be3",
+      "ERC1967Proxy:test12": "0xd39bfD8B880Ad34a9c5d90E329136E4FaB13fbE4",
+      "SampleToken:list-show-test": "0xD328909E5d61c6e34762DF29154e4473C3D3E85C",
+      "UpgradeableCounter:Test": "0xE6aFc3331B464283752Afa97d716Cdd76De93179",
+      "UpgradeableCounter:test12": "0x81016b1FF3B07244D634b35888ab15A32381644F"
     }
   }
 }

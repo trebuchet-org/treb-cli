@@ -26,10 +26,12 @@ func (s *Selector) SelectOption(prompt string, options []string, defaultIndex in
 	}
 
 	promptSelect := promptui.Select{
-		Label:     prompt,
-		Items:     options,
-		CursorPos: defaultIndex,
-		Size:      10,
+		Label:             prompt,
+		Items:             options,
+		CursorPos:         defaultIndex,
+		Size:              10,
+		StartInSearchMode: true,
+		Searcher:          FuzzySearchFunc(options),
 		Templates: &promptui.SelectTemplates{
 			Label:    "{{ . }}?",
 			Active:   "\U0001F449 {{ . | cyan }}",
