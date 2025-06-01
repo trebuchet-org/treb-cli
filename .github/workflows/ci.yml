@@ -114,3 +114,8 @@ jobs:
         with:
           version: latest
           args: --timeout=5m
+
+      - uses: Jerome1337/gofmt-action@v1.0.5
+        with:
+          gofmt-path: './cli'
+          gofmt-flags: '-l -d'
