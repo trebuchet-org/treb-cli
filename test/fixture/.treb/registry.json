@@ -2,19 +2,7 @@
   "31337": {
     "default": {
       "Counter:list-show-test": "0xE5673f9194DF31187b80d5Eb0DC67c2529B8Da2D",
-      "ERC1967Proxy:123": "0xAE17941Fc17842293C9678560b75fBbEBa2caEaC",
-      "ERC1967Proxy:1234": "0x79BD0CCCcd61eb45A552167C5673633CA113c12F",
-      "ERC1967Proxy:test": "0x7D9541D9965Aa9F458469769b76aA837d65e1C5C",
-      "ERC1967Proxy:test12": "0xd39bfD8B880Ad34a9c5d90E329136E4FaB13fbE4",
-      "ERC1967Proxy:test1234": "0xaC2A07C00A139D6003Da13B81Ab4DE274e5CED31",
-      "ERC1967Proxy:test23": "0xA49a55d373D45720D9E412101FcCa7ef48180A06",
-      "SampleToken:list-show-test": "0xD328909E5d61c6e34762DF29154e4473C3D3E85C",
-      "UpgradeableCounter:123": "0x3dE6EE63b426efEcBAD6ee940399ce985DedFBce",
-      "UpgradeableCounter:1234": "0x03b42C2819322f761003c1c7c11031A3aF23368A",
-      "UpgradeableCounter:test": "0x0388812B568719aA8d0Fd360dcB4c1ABAb0e5bFD",
-      "UpgradeableCounter:test12": "0x81016b1FF3B07244D634b35888ab15A32381644F",
-      "UpgradeableCounter:test1234": "0x7e877D3f02D56C7CF1940E0b047a78AF593B8670",
-      "UpgradeableCounter:test23": "0x8A81A3eE50a2bba4b7036802b0EDADa3eeE15234"
+      "SampleToken:list-show-test": "0xD328909E5d61c6e34762DF29154e4473C3D3E85C"
     }
   }
 }
