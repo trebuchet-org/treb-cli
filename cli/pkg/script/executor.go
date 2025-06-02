@@ -267,10 +267,46 @@ func (e *Executor) buildForgeArgs(opts RunOptions) []string {
 	// Add FFI flag to enable foreign function interface (needed for Safe deployers)
 	args = append(args, "--ffi")
 
+	// Check if we need to add ledger flags
+	if ledgerPath := e.getLedgerDerivationPath(opts); ledgerPath != "" {
+		args = append(args, "--ledger")
+		args = append(args, "--hd-paths", ledgerPath)
+		
+		if opts.Debug {
+			fmt.Printf("Using ledger with derivation path: %s\n", ledgerPath)
+		}
+	}
+
 	// Add any additional arguments
 	args = append(args, opts.AdditionalArgs...)
 
 	return args
+}
+
+// getLedgerDerivationPath checks if any configured sender is a ledger and returns its derivation path
+func (e *Executor) getLedgerDerivationPath(opts RunOptions) string {
+	// Load treb config to check senders
+	trebConfig, err := config.LoadTrebConfig(e.projectPath)
+	if err != nil {
+		return ""
+	}
+
+	// Get profile treb configuration
+	profileTrebConfig, err := trebConfig.GetProfileTrebConfig(opts.Profile)
+	if err != nil {
+		return ""
+	}
+
+	// Check each sender for ledger type
+	for _, sender := range profileTrebConfig.Senders {
+		if sender.Type == "ledger" {
+			// Return the first ledger's derivation path
+			// Note: Foundry only supports one hardware wallet per script execution
+			return sender.DerivationPath
+		}
+	}
+
+	return ""
 }
 
 // parseOutput parses the forge script output to extract events

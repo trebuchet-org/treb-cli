@@ -60,8 +60,25 @@ func BuildSenderConfigs(trebConfig *config.TrebConfig) (*SenderConfigs, error) {
 	}
 	sort.Strings(senderIDs)
 
-	// Process all senders from the profile in sorted order
+	// First pass: Build all non-Safe senders
+	var safeSenders []string
 	for _, id := range senderIDs {
+		sender := trebConfig.Senders[id]
+		if sender.Type == "safe" {
+			safeSenders = append(safeSenders, id)
+			continue
+		}
+
+		senderConfig, err := buildSenderInitConfig(id, sender, trebConfig.Senders)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build sender %s: %w", id, err)
+		}
+
+		configs.Configs = append(configs.Configs, *senderConfig)
+	}
+
+	// Second pass: Build Safe senders (after their signers are built)
+	for _, id := range safeSenders {
 		sender := trebConfig.Senders[id]
 		senderConfig, err := buildSenderInitConfig(id, sender, trebConfig.Senders)
 		if err != nil {
@@ -112,9 +129,13 @@ func buildSenderInitConfig(id string, sender config.SenderConfig, allSenders map
 		}
 
 		// Validate that the signer exists in the sender configs
-		if _, exists := allSenders[sender.Signer]; !exists {
+		signerSender, exists := allSenders[sender.Signer]
+		if !exists {
 			return nil, fmt.Errorf("safe signer '%s' not found in sender configurations", sender.Signer)
 		}
+
+		// Debug log
+		fmt.Printf("DEBUG: Safe sender %s using signer %s (type: %s)\n", id, sender.Signer, signerSender.Type)
 
 		// For Safe senders, config contains the proposer name as string
 		stringType, _ := abi.NewType("string", "", nil)
@@ -137,6 +158,12 @@ func buildSenderInitConfig(id string, sender config.SenderConfig, allSenders map
 			return nil, fmt.Errorf("ledger sender requires an address to be specified")
 		}
 
+		// Parse the address to ensure it's valid
+		address := common.HexToAddress(sender.Address)
+		if address == (common.Address{}) {
+			return nil, fmt.Errorf("invalid ledger address: %s", sender.Address)
+		}
+
 		// For hardware wallet senders, config contains the derivation path as string
 		stringType, _ := abi.NewType("string", "", nil)
 		args := abi.Arguments{{Type: stringType}}
@@ -145,9 +172,12 @@ func buildSenderInitConfig(id string, sender config.SenderConfig, allSenders map
 			return nil, fmt.Errorf("failed to encode Ledger config: %w", err)
 		}
 
+		// Debug log
+		fmt.Printf("DEBUG: Ledger sender %s configured with address %s, derivation path %s\n", id, address.Hex(), sender.DerivationPath)
+
 		return &SenderInitConfig{
 			Name:       id,
-			Account:    common.HexToAddress(sender.Address),
+			Account:    address,
 			SenderType: SENDER_TYPE_LEDGER,
 			Config:     configData,
 		}, nil
@@ -178,6 +208,13 @@ func buildSenderInitConfig(id string, sender config.SenderConfig, allSenders map
 
 // EncodeSenderConfigs encodes the sender configs for passing as environment variable
 func EncodeSenderConfigs(configs *SenderConfigs) (string, error) {
+	// Debug: Print all sender configs before encoding
+	fmt.Printf("DEBUG: Encoding %d sender configs:\n", len(configs.Configs))
+	for i, config := range configs.Configs {
+		fmt.Printf("  [%d] Name: %s, Account: %s, Type: %x, ConfigLen: %d\n",
+			i, config.Name, config.Account.Hex(), config.SenderType, len(config.Config))
+	}
+
 	// Use standard ABI encoding for array of structs - this is much more reliable than manual encoding
 	tupleType, err := abi.NewType("tuple[]", "", []abi.ArgumentMarshaling{
 		{Name: "name", Type: "string"},

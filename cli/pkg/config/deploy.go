@@ -144,6 +144,9 @@ func (dc *DeployConfig) ValidateSender(profile, senderName string) error {
 		if sender.DerivationPath == "" {
 			return fmt.Errorf("ledger sender requires 'derivation_path' field")
 		}
+		if sender.Address == "" {
+			return fmt.Errorf("ledger sender requires 'address' field")
+		}
 	default:
 		return fmt.Errorf("unsupported sender type: %s", sender.Type)
 	}
@@ -193,13 +196,7 @@ func (dc *DeployConfig) GenerateSenderEnvVars(profile, senderName string) (map[s
 	case "ledger":
 		envVars["SENDER_TYPE"] = "ledger"
 		envVars["LEDGER_DERIVATION_PATH"] = sender.DerivationPath
-
-		// Resolve address dynamically using cast
-		address, err := GetLedgerAddress(sender.DerivationPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to resolve ledger address: %w", err)
-		}
-		envVars["SENDER_ADDRESS"] = address
+		envVars["SENDER_ADDRESS"] = sender.Address
 	}
 
 	return envVars, nil
@@ -228,6 +225,9 @@ func expandEnvVars(config *DeployConfig) error {
 			}
 			if sender.DerivationPath != "" {
 				sender.DerivationPath = expandString(sender.DerivationPath, envVarRegex)
+			}
+			if sender.Address != "" {
+				sender.Address = expandString(sender.Address, envVarRegex)
 			}
 
 			// Update the sender in the map
