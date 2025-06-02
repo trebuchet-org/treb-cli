@@ -134,9 +134,6 @@ func buildSenderInitConfig(id string, sender config.SenderConfig, allSenders map
 			return nil, fmt.Errorf("safe signer '%s' not found in sender configurations", sender.Signer)
 		}
 
-		// Debug log
-		fmt.Printf("DEBUG: Safe sender %s using signer %s (type: %s)\n", id, sender.Signer, signerSender.Type)
-
 		// For Safe senders, config contains the proposer name as string
 		stringType, _ := abi.NewType("string", "", nil)
 		args := abi.Arguments{{Type: stringType}}
@@ -172,9 +169,6 @@ func buildSenderInitConfig(id string, sender config.SenderConfig, allSenders map
 			return nil, fmt.Errorf("failed to encode Ledger config: %w", err)
 		}
 
-		// Debug log
-		fmt.Printf("DEBUG: Ledger sender %s configured with address %s, derivation path %s\n", id, address.Hex(), sender.DerivationPath)
-
 		return &SenderInitConfig{
 			Name:       id,
 			Account:    address,
@@ -208,12 +202,6 @@ func buildSenderInitConfig(id string, sender config.SenderConfig, allSenders map
 
 // EncodeSenderConfigs encodes the sender configs for passing as environment variable
 func EncodeSenderConfigs(configs *SenderConfigs) (string, error) {
-	// Debug: Print all sender configs before encoding
-	fmt.Printf("DEBUG: Encoding %d sender configs:\n", len(configs.Configs))
-	for i, config := range configs.Configs {
-		fmt.Printf("  [%d] Name: %s, Account: %s, Type: %x, ConfigLen: %d\n",
-			i, config.Name, config.Account.Hex(), config.SenderType, len(config.Config))
-	}
 
 	// Use standard ABI encoding for array of structs - this is much more reliable than manual encoding
 	tupleType, err := abi.NewType("tuple[]", "", []abi.ArgumentMarshaling{

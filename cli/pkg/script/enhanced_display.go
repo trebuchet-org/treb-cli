@@ -144,6 +144,20 @@ func (d *EnhancedEventDisplay) ProcessEvents(allEvents []interface{}) {
 	d.printExecutionSummary()
 }
 
+// DisplayLogs displays console.log output from the script
+func (d *EnhancedEventDisplay) DisplayLogs(logs []string) {
+	if len(logs) == 0 {
+		return
+	}
+
+	fmt.Printf("\n%s📝 Script Logs:%s\n", ColorBold, ColorReset)
+	fmt.Printf("%s%s%s\n", ColorGray, strings.Repeat("─", 40), ColorReset)
+
+	for _, log := range logs {
+		fmt.Printf("  %s\n", log)
+	}
+}
+
 // registerDeployedContracts processes ContractDeployed events to register ABIs for transaction decoding
 func (d *EnhancedEventDisplay) registerDeployedContracts(allEvents []interface{}) {
 	for _, event := range allEvents {

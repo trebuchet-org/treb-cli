@@ -49,6 +49,7 @@ type RunResult struct {
 	RawOutput     []byte
 	ParsedEvents  []*treb.TrebContractDeployed // Contract deployment events using generated types
 	AllEvents     []interface{}                // New: all event types (using generated types)
+	Logs          []string                     // Console.log output from the script
 	BroadcastPath string
 	Success       bool
 }
@@ -143,7 +144,7 @@ func (e *Executor) Run(opts RunOptions) (*RunResult, error) {
 	}
 
 	// Parse events from the output (only in normal mode or debug-json mode)
-	events, allEvents, err := e.parseOutput(result.RawOutput)
+	events, allEvents, logs, err := e.parseOutput(result.RawOutput)
 	if err != nil {
 		if opts.DebugJSON {
 			fmt.Printf("Warning: failed to parse events: %v\n", err)
@@ -151,6 +152,7 @@ func (e *Executor) Run(opts RunOptions) (*RunResult, error) {
 	} else {
 		result.ParsedEvents = events
 		result.AllEvents = allEvents
+		result.Logs = logs
 	}
 
 	// Find broadcast file if any
@@ -195,17 +197,6 @@ func (e *Executor) buildEnvironment(opts RunOptions) ([]string, error) {
 	// Add SENDER_CONFIGS
 	env = append(env, fmt.Sprintf("SENDER_CONFIGS=%s", encodedConfigs))
 
-	// Debug: print sender configs
-	if opts.Debug {
-		fmt.Printf("SENDER_CONFIGS: %s\n", encodedConfigs)
-		// Print sender names
-		var senderNames []string
-		for _, config := range senderConfigs.Configs {
-			senderNames = append(senderNames, config.Name)
-		}
-		fmt.Printf("Configured senders: %v\n", senderNames)
-	}
-
 	// Add NAMESPACE
 	namespace := opts.Namespace
 	if namespace == "" {
@@ -225,17 +216,6 @@ func (e *Executor) buildEnvironment(opts RunOptions) ([]string, error) {
 	// Add any custom environment variables
 	for key, value := range opts.EnvVars {
 		env = append(env, fmt.Sprintf("%s=%s", key, value))
-	}
-
-	// Debug: print environment info
-	if opts.Debug {
-		fmt.Printf("NAMESPACE: %s\n", namespace)
-		if len(opts.EnvVars) > 0 {
-			fmt.Println("Custom environment variables:")
-			for k, v := range opts.EnvVars {
-				fmt.Printf("  %s=%s\n", k, v)
-			}
-		}
 	}
 
 	return env, nil
@@ -271,10 +251,7 @@ func (e *Executor) buildForgeArgs(opts RunOptions) []string {
 	if ledgerPath := e.getLedgerDerivationPath(opts); ledgerPath != "" {
 		args = append(args, "--ledger")
 		args = append(args, "--hd-paths", ledgerPath)
-		
-		if opts.Debug {
-			fmt.Printf("Using ledger with derivation path: %s\n", ledgerPath)
-		}
+
 	}
 
 	// Add any additional arguments
@@ -310,17 +287,17 @@ func (e *Executor) getLedgerDerivationPath(opts RunOptions) string {
 }
 
 // parseOutput parses the forge script output to extract events
-func (e *Executor) parseOutput(output []byte) ([]*treb.TrebContractDeployed, []interface{}, error) {
+func (e *Executor) parseOutput(output []byte) ([]*treb.TrebContractDeployed, []interface{}, []string, error) {
 	// Parse the forge output
 	forgeOutput, err := ParseForgeOutput(output)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to parse forge output: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to parse forge output: %w", err)
 	}
 
 	// Extract all events from the parsed output
 	allEvents, err := ParseAllEvents(forgeOutput)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to parse all events: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to parse all events: %w", err)
 	}
 
 	// Extract deployment events from allEvents
@@ -331,7 +308,7 @@ func (e *Executor) parseOutput(output []byte) ([]*treb.TrebContractDeployed, []i
 		}
 	}
 
-	return deploymentEvents, allEvents, nil
+	return deploymentEvents, allEvents, forgeOutput.Logs, nil
 }
 
 // findBroadcastFile finds the broadcast file for the executed script

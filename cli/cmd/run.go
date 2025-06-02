@@ -265,7 +265,7 @@ Examples:
 		}
 
 		// Report all parsed events using enhanced display
-		if len(result.AllEvents) > 0 {
+		if len(result.AllEvents) > 0 || len(result.Logs) > 0 {
 			// Use enhanced display system for better formatting and phase tracking
 			enhancedDisplay := script.NewEnhancedEventDisplay(indexer)
 			enhancedDisplay.SetVerbose(verbose)
@@ -280,6 +280,10 @@ Examples:
 				enhancedDisplay.SetRegistryResolver(manager, networkInfo.ChainID)
 			}
 
+			// Display logs first
+			enhancedDisplay.DisplayLogs(result.Logs)
+
+			// Then display events
 			enhancedDisplay.ProcessEvents(result.AllEvents)
 
 			// Update registry if not dry run
