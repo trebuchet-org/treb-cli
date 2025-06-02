@@ -33,6 +33,11 @@ type ContractInfo struct {
 	Artifact     *Artifact `json:"artifact,omitempty"`
 }
 
+// GetArtifactPath returns the artifact path for this contract
+func (c *ContractInfo) GetArtifactPath() string {
+	return c.ArtifactPath
+}
+
 // ArtifactMetadata represents the metadata section of a Foundry artifact
 type ArtifactMetadata struct {
 	Compiler struct {

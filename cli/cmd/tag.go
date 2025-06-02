@@ -128,7 +128,7 @@ func showDeploymentTags(deployment *types.Deployment) error {
 	addressStyle := color.New(color.FgGreen, color.Bold)
 	tagStyle := color.New(color.FgCyan)
 
-	displayName := deployment.ContractName
+	displayName := deployment.ContractDisplayName()
 	if deployment.Label != "" {
 		displayName += ":" + deployment.Label
 	}
@@ -176,7 +176,7 @@ func addDeploymentTag(deployment *types.Deployment, tag string, manager *registr
 	}
 
 	// Show success
-	displayName := deployment.ContractName
+	displayName := deployment.ContractDisplayName()
 	if deployment.Label != "" {
 		displayName += ":" + deployment.Label
 	}
@@ -231,7 +231,7 @@ func removeDeploymentTag(deployment *types.Deployment, tag string, manager *regi
 	}
 
 	// Show success
-	displayName := deployment.ContractName
+	displayName := deployment.ContractDisplayName()
 	if deployment.Label != "" {
 		displayName += ":" + deployment.Label
 	}

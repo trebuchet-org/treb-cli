@@ -167,6 +167,28 @@ func (m *Manager) rebuildLookups() {
 			m.lookups.Pending.SafeTxs = append(m.lookups.Pending.SafeTxs, hash)
 		}
 	}
+	
+	// Second pass: resolve implementation pointers for proxies
+	m.resolveImplementations()
+}
+
+// resolveImplementations resolves implementation pointers for proxy deployments
+func (m *Manager) resolveImplementations() {
+	for _, deployment := range m.deployments {
+		if deployment.Type == types.ProxyDeployment && deployment.ProxyInfo != nil && deployment.ProxyInfo.Implementation != "" {
+			// Try to find the implementation deployment
+			implAddr := strings.ToLower(deployment.ProxyInfo.Implementation)
+			
+			// Look through all deployments on the same chain
+			for _, potentialImpl := range m.deployments {
+				if potentialImpl.ChainID == deployment.ChainID && 
+				   strings.ToLower(potentialImpl.Address) == implAddr {
+					deployment.Implementation = potentialImpl
+					break
+				}
+			}
+		}
+	}
 }
 
 // saveFile saves data to a JSON file
@@ -275,12 +297,13 @@ func (m *Manager) updateSolidityRegistry(deployment *types.Deployment) {
 		m.solidityRegistry[deployment.ChainID][deployment.Namespace] = make(map[string]string)
 	}
 
-	// Use same key format as GetShortID
+	// Use display name for registry key to support aliases
+	displayName := deployment.ContractDisplayName()
 	var key string
 	if deployment.Label != "" {
-		key = fmt.Sprintf("%s:%s", deployment.ContractName, deployment.Label)
+		key = fmt.Sprintf("%s:%s", displayName, deployment.Label)
 	} else {
-		key = deployment.ContractName
+		key = displayName
 	}
 	m.solidityRegistry[deployment.ChainID][deployment.Namespace][key] = deployment.Address
 }

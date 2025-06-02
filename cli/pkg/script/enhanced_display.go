@@ -11,6 +11,7 @@ import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/abi/treb"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/events"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 )
 
 // ExecutionPhase represents the current phase of script execution
@@ -78,6 +79,20 @@ func (d *EnhancedEventDisplay) SetSenderConfigs(senderConfigs *SenderConfigs) {
 // SetVerbose enables or disables verbose output
 func (d *EnhancedEventDisplay) SetVerbose(verbose bool) {
 	d.verbose = verbose
+}
+
+// SetRegistryResolver configures the transaction decoder to use registry-based ABI resolution
+func (d *EnhancedEventDisplay) SetRegistryResolver(registryManager *registry.Manager, chainID uint64) {
+	if registryManager != nil && d.indexer != nil {
+		// Wrap the indexer to satisfy the interface
+		indexerAdapter := &indexerAdapter{indexer: d.indexer}
+		resolver := abi.NewRegistryABIResolver(registryManager, indexerAdapter, chainID)
+		// Enable debug if verbose mode is on
+		if r, ok := resolver.(*abi.RegistryABIResolver); ok && d.verbose {
+			r.EnableDebug(true)
+		}
+		d.transactionDecoder.SetABIResolver(resolver)
+	}
 }
 
 // initializeWellKnownAddresses populates the known addresses map with common addresses

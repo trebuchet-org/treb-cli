@@ -66,9 +66,9 @@ type Deployment struct {
 	Verification VerificationInfo `json:"verification"`
 
 	// Metadata
-	Tags      []string  `json:"tags"` // User-defined tags
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	Tags              []string  `json:"tags"`              // User-defined tags
+	CreatedAt         time.Time `json:"createdAt"`
+	UpdatedAt         time.Time `json:"updatedAt"`
 
 	// V2 specific fields for verification compatibility
 	Status          Status            `json:"status,omitempty"`          // For execution status
@@ -76,7 +76,14 @@ type Deployment struct {
 	Metadata        *ContractMetadata `json:"metadata,omitempty"`        // Additional metadata
 
 	// Runtime fields (not persisted)
-	Transaction *Transaction `json:"-"` // Linked transaction data
+	Transaction    *Transaction `json:"-"` // Linked transaction data
+	Implementation *Deployment  `json:"-"` // Resolved implementation for proxies
+}
+
+// ContractDisplayName returns the display name for the deployment
+func (d *Deployment) ContractDisplayName() string {
+	// Return the standard short ID format (ContractName:Label or just ContractName)
+	return d.GetShortID()
 }
 
 // DeploymentStrategy contains deployment method details

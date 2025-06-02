@@ -7,24 +7,38 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+	netpkg "github.com/trebuchet-org/treb-cli/cli/pkg/network"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/resolvers"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
 var showCmd = &cobra.Command{
-	Use:   "show <deployment-id>",
+	Use:   "show <deployment>",
 	Short: "Show detailed deployment information from registry",
 	Long: `Show detailed information about a specific deployment.
 
-The deployment ID format is: <namespace>/<chain-id>/<contract-name>:<label>
+You can specify deployments using:
+- Contract name: "Counter"
+- Contract with label: "Counter:v2"
+- Namespace/contract: "staging/Counter"
+- Chain/contract: "11155111/Counter"
+- Full deployment ID: "production/1/Counter:v1"
+- Contract address: "0x1234..."
+- Alias: "MyCounter"
 
 Examples:
+  treb show Counter
+  treb show Counter:v2
+  treb show 0x1234567890abcdef...
   treb show production/1/Counter:v1
-  treb show staging/31337/Token:usdc`,
+  treb show MyCounter`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		deploymentID := args[0]
+		deploymentRef := args[0]
 		jsonOutput, _ := cmd.Flags().GetBool("json")
+		network, _ := cmd.Flags().GetString("network")
+		namespace, _ := cmd.Flags().GetString("namespace")
 
 		// Create registry manager
 		manager, err := registry.NewManager(".")
@@ -32,14 +46,24 @@ Examples:
 			checkError(fmt.Errorf("failed to load registry: %w", err))
 		}
 
-		// Get deployment
-		deployment, err := manager.GetDeployment(deploymentID)
-		if err != nil {
-			// Try to find by partial match
-			deployment = findDeploymentByPartialID(manager, deploymentID)
-			if deployment == nil {
-				checkError(fmt.Errorf("deployment not found: %s", deploymentID))
+		// Create deployment resolver
+		resolver := resolvers.NewContext(".", !IsNonInteractive())
+
+		// Resolve network to get chain ID if needed
+		var chainID uint64
+		if network != "" {
+			netResolver := netpkg.NewResolver(".")
+			networkInfo, err := netResolver.ResolveNetwork(network)
+			if err != nil {
+				checkError(fmt.Errorf("failed to resolve network: %w", err))
 			}
+			chainID = networkInfo.ChainID
+		}
+
+		// Use the deployment resolver to find the deployment
+		deployment, err := resolver.ResolveDeployment(deploymentRef, manager, chainID, namespace)
+		if err != nil {
+			checkError(fmt.Errorf("failed to resolve deployment: %w", err))
 		}
 
 		// Get associated transaction
@@ -67,30 +91,6 @@ Examples:
 	},
 }
 
-func findDeploymentByPartialID(manager *registry.Manager, partialID string) *types.Deployment {
-	allDeployments := manager.GetAllDeployments()
-
-	var matches []*types.Deployment
-	for _, dep := range allDeployments {
-		if strings.Contains(dep.ID, partialID) {
-			matches = append(matches, dep)
-		}
-	}
-
-	if len(matches) == 1 {
-		return matches[0]
-	}
-
-	if len(matches) > 1 {
-		fmt.Println("Multiple deployments match:")
-		for _, dep := range matches {
-			fmt.Printf("  - %s\n", dep.ID)
-		}
-		checkError(fmt.Errorf("ambiguous deployment ID: %s", partialID))
-	}
-
-	return nil
-}
 
 func displayDeployment(dep *types.Deployment, tx *types.Transaction, manager *registry.Manager) {
 	// Header
@@ -99,7 +99,7 @@ func displayDeployment(dep *types.Deployment, tx *types.Transaction, manager *re
 
 	// Basic Info
 	fmt.Println("\nBasic Information:")
-	fmt.Printf("  Contract: %s\n", color.New(color.FgYellow).Sprint(dep.ContractName))
+	fmt.Printf("  Contract: %s\n", color.New(color.FgYellow).Sprint(dep.ContractDisplayName()))
 	fmt.Printf("  Address: %s\n", dep.Address)
 	fmt.Printf("  Type: %s\n", dep.Type)
 	fmt.Printf("  Namespace: %s\n", dep.Namespace)
@@ -133,7 +133,7 @@ func displayDeployment(dep *types.Deployment, tx *types.Transaction, manager *re
 		implDisplay := dep.ProxyInfo.Implementation
 		if implDep, err := manager.GetDeploymentByAddress(dep.ChainID, dep.ProxyInfo.Implementation); err == nil {
 			implDisplay = fmt.Sprintf("%s at %s",
-				color.New(color.FgYellow, color.Bold).Sprint(implDep.ContractName),
+				color.New(color.FgYellow, color.Bold).Sprint(implDep.ContractDisplayName()),
 				dep.ProxyInfo.Implementation,
 			)
 			// Also show the implementation deployment ID
@@ -152,7 +152,7 @@ func displayDeployment(dep *types.Deployment, tx *types.Transaction, manager *re
 				// Try to resolve the implementation name
 				implName := upgrade.ImplementationID
 				if histImpl, err := manager.GetDeployment(upgrade.ImplementationID); err == nil {
-					implName = fmt.Sprintf("%s (%s)", histImpl.ContractName, upgrade.ImplementationID)
+					implName = fmt.Sprintf("%s (%s)", histImpl.ContractDisplayName(), upgrade.ImplementationID)
 				}
 				fmt.Printf("    %d. %s (upgraded at %s)\n",
 					i+1,
@@ -231,4 +231,8 @@ func init() {
 
 	// Output format flag
 	showCmd.Flags().Bool("json", false, "Output in JSON format")
+	
+	// Network and namespace flags for better resolution
+	showCmd.Flags().StringP("network", "n", "", "Network to use (e.g., mainnet, sepolia)")
+	showCmd.Flags().String("namespace", "", "Namespace to use (defaults to current context)")
 }

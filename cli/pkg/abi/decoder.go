@@ -23,12 +23,21 @@ var (
 	ProxyFactoryAddress = common.HexToAddress("0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67") // Gnosis Safe Proxy Factory
 )
 
+// ABIResolver is an interface for resolving ABIs for contract addresses
+type ABIResolver interface {
+	// ResolveABI attempts to find and load the ABI for a given address
+	// Returns the contract name and ABI JSON, or empty strings if not found
+	ResolveABI(address common.Address) (contractName string, abiJSON string, isProxy bool, implAddress *common.Address)
+}
+
 // TransactionDecoder provides utilities for decoding transaction data using ABI
 type TransactionDecoder struct {
 	contractABIs map[common.Address]*abi.ABI
 	artifactMap  map[common.Address]string
 	// Proxy relationships: proxy address -> implementation address
 	proxyImplementations map[common.Address]common.Address
+	// Optional ABI resolver for on-demand loading
+	abiResolver ABIResolver
 }
 
 // NewTransactionDecoder creates a new transaction decoder
@@ -45,6 +54,11 @@ func NewTransactionDecoder() *TransactionDecoder {
 	decoder.artifactMap[ProxyFactoryAddress] = "SafeProxyFactory"
 
 	return decoder
+}
+
+// SetABIResolver sets the ABI resolver for on-demand loading
+func (td *TransactionDecoder) SetABIResolver(resolver ABIResolver) {
+	td.abiResolver = resolver
 }
 
 // RegisterContract registers a contract's ABI for transaction decoding
@@ -118,6 +132,26 @@ func (td *TransactionDecoder) DecodeTransaction(to common.Address, data []byte, 
 		if implAddr, isProxy := td.proxyImplementations[to]; isProxy {
 			contractABI, exists = td.contractABIs[implAddr]
 			// The artifact name should already include proxy indicator from registration
+		}
+	}
+
+	// If still not found, try the ABI resolver
+	if !exists && td.abiResolver != nil {
+		if contractName, abiJSON, isProxy, implAddr := td.abiResolver.ResolveABI(to); abiJSON != "" {
+			// Register the contract
+			if err := td.RegisterContract(to, contractName, abiJSON); err == nil {
+				contractABI = td.contractABIs[to]
+				exists = true
+				
+				// Update the artifact name with the resolved name
+				td.artifactMap[to] = contractName
+				decoded.ToArtifact = contractName  // Update the decoded transaction's artifact name
+				
+				// Handle proxy relationship if discovered
+				if isProxy && implAddr != nil {
+					td.RegisterProxyRelationship(to, *implAddr)
+				}
+			}
 		}
 	}
 
@@ -327,11 +361,8 @@ func (dt *DecodedTransaction) FormatCompactWithReconciler(sender common.Address,
 				argStrs = append(argStrs, val)
 			}
 
-			if len(argStrs) <= 3 {
-				result += fmt.Sprintf("(%s)", strings.Join(argStrs, ", "))
-			} else {
-				result += fmt.Sprintf("(%s, ...%d more)", strings.Join(argStrs[:2], ", "), len(argStrs)-2)
-			}
+			// Always show all arguments
+			result += fmt.Sprintf("(%s)", strings.Join(argStrs, ", "))
 		} else {
 			result += "()"
 		}

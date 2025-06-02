@@ -64,7 +64,7 @@ var listCmd = &cobra.Command{
 			if chainID != 0 && dep.ChainID != chainID {
 				continue
 			}
-			if contractName != "" && dep.ContractName != contractName {
+			if contractName != "" && dep.ContractName != contractName && dep.ContractDisplayName() != contractName {
 				continue
 			}
 			deployments = append(deployments, dep)
@@ -275,12 +275,8 @@ func buildDeploymentTable(deployments []*types.Deployment, manager *registry.Man
 		if deployment.ProxyInfo != nil {
 			implDisplayName := deployment.ProxyInfo.Implementation[:10] + "..." // fallback short address
 			if implDep, err := manager.GetDeploymentByAddress(deployment.ChainID, deployment.ProxyInfo.Implementation); err == nil {
-				// Show short deployment ID: namespace/contract:label
-				shortID := implDep.ContractName
-				if implDep.Label != "" {
-					shortID += ":" + implDep.Label
-				}
-				implDisplayName = shortID
+				// Use the display name which already includes the label if any
+				implDisplayName = implDep.ContractDisplayName()
 			}
 
 			implRow := implPrefixStyle.Sprintf("└─ %s", implDisplayName)
@@ -300,10 +296,7 @@ func buildDeploymentTable(deployments []*types.Deployment, manager *registry.Man
 
 // getColoredDisplayName returns a colored display name for deployment
 func getColoredDisplayName(dep *types.Deployment) string {
-	name := dep.ContractName
-	if dep.Label != "" {
-		name += ":" + dep.Label
-	}
+	name := dep.ContractDisplayName()
 
 	switch dep.Type {
 	case types.ProxyDeployment:

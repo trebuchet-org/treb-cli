@@ -275,6 +275,11 @@ Examples:
 				enhancedDisplay.SetSenderConfigs(senderConfigs)
 			}
 
+			// Enable registry-based ABI resolution for better transaction decoding
+			if manager, err := registry.NewManager("."); err == nil {
+				enhancedDisplay.SetRegistryResolver(manager, networkInfo.ChainID)
+			}
+
 			enhancedDisplay.ProcessEvents(result.AllEvents)
 
 			// Update registry if not dry run
