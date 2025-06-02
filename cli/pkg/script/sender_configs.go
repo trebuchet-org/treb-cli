@@ -132,9 +132,10 @@ func buildSenderInitConfig(id string, sender config.SenderConfig, allSenders map
 		}, nil
 
 	case "ledger":
-		// For hardware wallets, we can't derive the address without the device
-		// We'll use a zero address as placeholder - the hardware wallet will provide the actual address
-		placeholderAddress := common.Address{}
+		// Validate address is provided
+		if sender.Address == "" {
+			return nil, fmt.Errorf("ledger sender requires an address to be specified")
+		}
 
 		// For hardware wallet senders, config contains the derivation path as string
 		stringType, _ := abi.NewType("string", "", nil)
@@ -146,11 +147,30 @@ func buildSenderInitConfig(id string, sender config.SenderConfig, allSenders map
 
 		return &SenderInitConfig{
 			Name:       id,
-			Account:    placeholderAddress,
+			Account:    common.HexToAddress(sender.Address),
 			SenderType: SENDER_TYPE_LEDGER,
 			Config:     configData,
 		}, nil
+	case "trezor":
+		// Validate address is provided
+		if sender.Address == "" {
+			return nil, fmt.Errorf("trezor sender requires an address to be specified")
+		}
 
+		// For hardware wallet senders, config contains the derivation path as string
+		stringType, _ := abi.NewType("string", "", nil)
+		args := abi.Arguments{{Type: stringType}}
+		configData, err := args.Pack(sender.DerivationPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode Ledger config: %w", err)
+		}
+
+		return &SenderInitConfig{
+			Name:       id,
+			Account:    common.HexToAddress(sender.Address),
+			SenderType: SENDER_TYPE_LEDGER,
+			Config:     configData,
+		}, nil
 	default:
 		return nil, fmt.Errorf("unsupported sender type: %s", sender.Type)
 	}

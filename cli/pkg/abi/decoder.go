@@ -142,11 +142,11 @@ func (td *TransactionDecoder) DecodeTransaction(to common.Address, data []byte, 
 			if err := td.RegisterContract(to, contractName, abiJSON); err == nil {
 				contractABI = td.contractABIs[to]
 				exists = true
-				
+
 				// Update the artifact name with the resolved name
 				td.artifactMap[to] = contractName
-				decoded.ToArtifact = contractName  // Update the decoded transaction's artifact name
-				
+				decoded.ToArtifact = contractName // Update the decoded transaction's artifact name
+
 				// Handle proxy relationship if discovered
 				if isProxy && implAddr != nil {
 					td.RegisterProxyRelationship(to, *implAddr)

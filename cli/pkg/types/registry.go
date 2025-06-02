@@ -66,9 +66,9 @@ type Deployment struct {
 	Verification VerificationInfo `json:"verification"`
 
 	// Metadata
-	Tags              []string  `json:"tags"`              // User-defined tags
-	CreatedAt         time.Time `json:"createdAt"`
-	UpdatedAt         time.Time `json:"updatedAt"`
+	Tags      []string  `json:"tags"` // User-defined tags
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 
 	// V2 specific fields for verification compatibility
 	Status          Status            `json:"status,omitempty"`          // For execution status

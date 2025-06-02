@@ -167,7 +167,7 @@ func (m *Manager) rebuildLookups() {
 			m.lookups.Pending.SafeTxs = append(m.lookups.Pending.SafeTxs, hash)
 		}
 	}
-	
+
 	// Second pass: resolve implementation pointers for proxies
 	m.resolveImplementations()
 }
@@ -178,11 +178,11 @@ func (m *Manager) resolveImplementations() {
 		if deployment.Type == types.ProxyDeployment && deployment.ProxyInfo != nil && deployment.ProxyInfo.Implementation != "" {
 			// Try to find the implementation deployment
 			implAddr := strings.ToLower(deployment.ProxyInfo.Implementation)
-			
+
 			// Look through all deployments on the same chain
 			for _, potentialImpl := range m.deployments {
-				if potentialImpl.ChainID == deployment.ChainID && 
-				   strings.ToLower(potentialImpl.Address) == implAddr {
+				if potentialImpl.ChainID == deployment.ChainID &&
+					strings.ToLower(potentialImpl.Address) == implAddr {
 					deployment.Implementation = potentialImpl
 					break
 				}

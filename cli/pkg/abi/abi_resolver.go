@@ -66,7 +66,7 @@ func (r *RegistryABIResolver) ResolveABI(address common.Address) (contractName s
 		deployment, err = r.deploymentLookup.GetDeploymentByAddress(r.chainID, address.Hex())
 		if err != nil || deployment == nil {
 			if r.debug {
-				fmt.Printf("[ABIResolver] No deployment found for address %s (tried %s and %s): %v\n", 
+				fmt.Printf("[ABIResolver] No deployment found for address %s (tried %s and %s): %v\n",
 					address.Hex(), normalizedAddr, address.Hex(), err)
 			}
 			return "", "", false, nil
@@ -75,7 +75,7 @@ func (r *RegistryABIResolver) ResolveABI(address common.Address) (contractName s
 
 	if r.debug {
 		displayName := deployment.ContractDisplayName()
-		fmt.Printf("[ABIResolver] Found deployment: %s (type=%s, artifact=%s)\n", 
+		fmt.Printf("[ABIResolver] Found deployment: %s (type=%s, artifact=%s)\n",
 			displayName, deployment.Type, deployment.Artifact.Path)
 		if deployment.ProxyInfo != nil {
 			fmt.Printf("[ABIResolver] Proxy info: impl=%s\n", deployment.ProxyInfo.Implementation)
@@ -87,7 +87,7 @@ func (r *RegistryABIResolver) ResolveABI(address common.Address) (contractName s
 		if r.debug {
 			fmt.Printf("[ABIResolver] Proxy detected, looking up implementation at %s\n", deployment.ProxyInfo.Implementation)
 		}
-		
+
 		// Normalize implementation address too
 		normalizedImpl := strings.ToLower(deployment.ProxyInfo.Implementation)
 		implDeployment, err := r.deploymentLookup.GetDeploymentByAddress(r.chainID, normalizedImpl)
@@ -105,12 +105,12 @@ func (r *RegistryABIResolver) ResolveABI(address common.Address) (contractName s
 				return contractName, abiJSON, true, &implAddr
 			}
 		}
-		
+
 		if r.debug {
 			implDisplayName := implDeployment.ContractDisplayName()
 			fmt.Printf("[ABIResolver] Found implementation deployment: %s\n", implDisplayName)
 		}
-		
+
 		// Load the implementation's ABI
 		_, abiJSON, _, _ := r.loadContractABI(implDeployment)
 		if abiJSON == "" {
@@ -122,7 +122,7 @@ func (r *RegistryABIResolver) ResolveABI(address common.Address) (contractName s
 			implAddr := common.HexToAddress(deployment.ProxyInfo.Implementation)
 			return contractName, abiJSON, true, &implAddr
 		}
-		
+
 		// Return implementation ABI with proxy info
 		implAddr := common.HexToAddress(deployment.ProxyInfo.Implementation)
 		// Use the proxy's display name
@@ -142,7 +142,7 @@ func (r *RegistryABIResolver) loadContractABI(deployment *types.Deployment) (con
 	if r.debug {
 		fmt.Printf("[ABIResolver] Loading ABI for %s from artifact %s\n", deployment.ContractName, deployment.Artifact.Path)
 	}
-	
+
 	// Get contract info from the indexer using the artifact path
 	contractInfo := r.contractLookup.GetContractByArtifact(deployment.Artifact.Path)
 	if contractInfo == nil {
@@ -163,7 +163,7 @@ func (r *RegistryABIResolver) loadContractABI(deployment *types.Deployment) (con
 	if r.debug {
 		fmt.Printf("[ABIResolver] Loading ABI from artifact file: %s\n", artifactPath)
 	}
-	
+
 	// Load ABI from the artifact file
 	abiJSON = r.loadABIFromArtifact(artifactPath)
 	if abiJSON == "" {
@@ -178,7 +178,7 @@ func (r *RegistryABIResolver) loadContractABI(deployment *types.Deployment) (con
 	if deployment.Label != "" {
 		contractName = fmt.Sprintf("%s:%s", deployment.ContractName, deployment.Label)
 	}
-	
+
 	if r.debug {
 		fmt.Printf("[ABIResolver] Successfully loaded ABI for %s\n", contractName)
 	}
@@ -202,23 +202,4 @@ func (r *RegistryABIResolver) loadABIFromArtifact(path string) string {
 	}
 
 	return string(artifact.ABI)
-}
-
-// extractContractName extracts just the contract name from an artifact path
-func (r *RegistryABIResolver) extractContractName(artifact string) string {
-	// First check if it has a colon separator (Foundry format)
-	if idx := strings.LastIndex(artifact, ":"); idx != -1 {
-		return artifact[idx+1:]
-	}
-
-	// Otherwise, check for path separator and .sol extension
-	if idx := strings.LastIndex(artifact, "/"); idx != -1 {
-		name := artifact[idx+1:]
-		// Remove .sol extension if present
-		name = strings.TrimSuffix(name, ".sol")
-		return name
-	}
-
-	// If no separators, return as-is
-	return artifact
 }

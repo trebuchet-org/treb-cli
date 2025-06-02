@@ -33,14 +33,14 @@ func TestRegistryABIResolver(t *testing.T) {
 	// Create a mock artifact file
 	artifactDir := filepath.Join(tmpDir, "out", "src", "Counter.sol")
 	require.NoError(t, os.MkdirAll(artifactDir, 0755))
-	
+
 	mockABI := `[{"inputs":[],"name":"increment","outputs":[],"stateMutability":"nonpayable","type":"function"}]`
 	artifact := map[string]interface{}{
 		"abi": json.RawMessage(mockABI),
 	}
 	artifactData, err := json.Marshal(artifact)
 	require.NoError(t, err)
-	
+
 	artifactPath := filepath.Join(artifactDir, "Counter.json")
 	require.NoError(t, os.WriteFile(artifactPath, artifactData, 0644))
 
@@ -71,7 +71,7 @@ func TestRegistryABIResolver(t *testing.T) {
 	t.Run("resolve known contract", func(t *testing.T) {
 		address := common.HexToAddress("0x1234567890123456789012345678901234567890")
 		contractName, abiJSON, isProxy, implAddr := resolver.ResolveABI(address)
-		
+
 		assert.Equal(t, "Counter", contractName)
 		assert.Equal(t, mockABI, abiJSON)
 		assert.False(t, isProxy)
@@ -82,7 +82,7 @@ func TestRegistryABIResolver(t *testing.T) {
 	t.Run("resolve unknown contract", func(t *testing.T) {
 		address := common.HexToAddress("0x0000000000000000000000000000000000000000")
 		contractName, abiJSON, isProxy, implAddr := resolver.ResolveABI(address)
-		
+
 		assert.Empty(t, contractName)
 		assert.Empty(t, abiJSON)
 		assert.False(t, isProxy)
@@ -108,31 +108,31 @@ func TestRegistryABIResolver(t *testing.T) {
 				Implementation: "0x1234567890123456789012345678901234567890",
 			},
 		}
-		
+
 		// Create minimal proxy artifact
 		proxyArtifactDir := filepath.Join(tmpDir, "out", "src", "ProxyCounter.sol")
 		require.NoError(t, os.MkdirAll(proxyArtifactDir, 0755))
-		
+
 		mockProxyABI := `[{"inputs":[],"name":"implementation","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"}]`
 		proxyArtifact := map[string]interface{}{
 			"abi": json.RawMessage(mockProxyABI),
 		}
 		proxyArtifactData, err := json.Marshal(proxyArtifact)
 		require.NoError(t, err)
-		
+
 		proxyArtifactPath := filepath.Join(proxyArtifactDir, "ProxyCounter.json")
 		require.NoError(t, os.WriteFile(proxyArtifactPath, proxyArtifactData, 0644))
-		
+
 		// Add proxy contract info to indexer
 		indexer.contracts["src/ProxyCounter.sol:ProxyCounter"] = &mockContractInfo{
 			artifactPath: proxyArtifactPath,
 		}
-		
+
 		manager.deployments["0x2234567890123456789012345678901234567890"] = proxyDeployment
-		
+
 		address := common.HexToAddress("0x2234567890123456789012345678901234567890")
 		contractName, abiJSON, isProxy, implAddr := resolver.ResolveABI(address)
-		
+
 		// Should return implementation ABI with proxy naming
 		assert.Equal(t, "ProxyCounter[Counter]", contractName)
 		assert.Equal(t, mockABI, abiJSON) // Should be implementation ABI, not proxy ABI
@@ -154,7 +154,6 @@ func (m *mockRegistryManager) GetDeploymentByAddress(chainID uint64, address str
 	}
 	return nil, nil
 }
-
 
 type mockContractInfo struct {
 	artifactPath string

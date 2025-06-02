@@ -21,6 +21,7 @@ type ProfileConfig struct {
 
 type SenderConfig struct {
 	Type           string `toml:"type"`
+	Address        string `toml:"address,omitempty"`
 	PrivateKey     string `toml:"private_key,omitempty"`
 	Safe           string `toml:"safe,omitempty"`
 	Signer         string `toml:"signer,omitempty"`          // For Safe senders

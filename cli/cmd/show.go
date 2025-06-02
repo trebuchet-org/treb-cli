@@ -91,7 +91,6 @@ Examples:
 	},
 }
 
-
 func displayDeployment(dep *types.Deployment, tx *types.Transaction, manager *registry.Manager) {
 	// Header
 	color.New(color.FgCyan, color.Bold).Printf("Deployment: %s\n", dep.ID)
@@ -231,7 +230,7 @@ func init() {
 
 	// Output format flag
 	showCmd.Flags().Bool("json", false, "Output in JSON format")
-	
+
 	// Network and namespace flags for better resolution
 	showCmd.Flags().StringP("network", "n", "", "Network to use (e.g., mainnet, sepolia)")
 	showCmd.Flags().String("namespace", "", "Namespace to use (defaults to current context)")
