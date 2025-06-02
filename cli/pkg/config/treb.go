@@ -60,6 +60,9 @@ func LoadTrebConfig(projectPath string) (*FoundryFullConfig, error) {
 			if sender.DerivationPath != "" {
 				sender.DerivationPath = expandEnvVar(sender.DerivationPath)
 			}
+			if sender.Address != "" {
+				sender.Address = expandEnvVar(sender.Address)
+			}
 			// Update the sender in the map
 			profile.Treb.Senders[senderName] = sender
 		}
@@ -80,7 +83,14 @@ func (fc *FoundryFullConfig) GetProfileTrebConfig(profileName string) (*TrebConf
 
 // expandEnvVar expands environment variables in a string
 func expandEnvVar(s string) string {
-	return os.ExpandEnv(s)
+	expanded := os.ExpandEnv(s)
+	// Debug: log expansion if it changed
+	if expanded != s {
+		fmt.Printf("DEBUG: Expanded '%s' to '%s'\n", s, expanded)
+	} else if strings.Contains(s, "$") {
+		fmt.Printf("DEBUG: Failed to expand '%s' (env var might not be set)\n", s)
+	}
+	return expanded
 }
 
 // GetSenderNameByAddress looks up a sender name by its address
