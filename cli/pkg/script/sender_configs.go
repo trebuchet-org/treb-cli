@@ -129,7 +129,7 @@ func buildSenderInitConfig(id string, sender config.SenderConfig, allSenders map
 		}
 
 		// Validate that the signer exists in the sender configs
-		signerSender, exists := allSenders[sender.Signer]
+		_, exists := allSenders[sender.Signer]
 		if !exists {
 			return nil, fmt.Errorf("safe signer '%s' not found in sender configurations", sender.Signer)
 		}
