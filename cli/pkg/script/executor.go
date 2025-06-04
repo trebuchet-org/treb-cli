@@ -1,26 +1,20 @@
 package script
 
 import (
-	"bufio"
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
-	"time"
 
 	"github.com/trebuchet-org/treb-cli/cli/pkg/abi/treb"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/forge"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
 )
 
-// Executor handles running Foundry scripts and parsing their output
+// Executor is a refactored version using the forge package for script execution
 type Executor struct {
 	projectPath string
 	network     *network.NetworkInfo
+	forge       *forge.Forge
+	parser      *forge.EventParser
 }
 
 // NewExecutor creates a new script executor
@@ -28,6 +22,8 @@ func NewExecutor(projectPath string, network *network.NetworkInfo) *Executor {
 	return &Executor{
 		projectPath: projectPath,
 		network:     network,
+		forge:       forge.NewForge(projectPath),
+		parser:      forge.NewEventParser(),
 	}
 }
 
@@ -54,121 +50,75 @@ type RunResult struct {
 	Success       bool
 }
 
-// Run executes a Foundry script and parses the output
+// Run executes a Foundry script and returns structured results
 func (e *Executor) Run(opts RunOptions) (*RunResult, error) {
+	// Convert to forge options
+	forgeOpts := forge.ScriptOptions{
+		ScriptPath:     opts.ScriptPath,
+		Network:        opts.Network,
+		RpcUrl:         e.network.RpcUrl,
+		Profile:        opts.Profile,
+		DryRun:         opts.DryRun,
+		Broadcast:      !opts.DryRun,
+		Debug:          opts.Debug,
+		JSON:           true, // Always use JSON for structured parsing
+		AdditionalArgs: opts.AdditionalArgs,
+	}
+
 	// Build environment variables
 	env, err := e.buildEnvironment(opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build environment: %w", err)
 	}
-
-	// Build forge script command
-	args := e.buildForgeArgs(opts)
-
-	// Print command in debug mode
-	if opts.Debug {
-		fmt.Printf("Running command: forge %s\n", strings.Join(args, " "))
-	}
+	forgeOpts.EnvVars = env
 
 	// Execute the script
-	cmd := exec.Command("forge", args...)
-	cmd.Dir = e.projectPath
-	cmd.Env = append(os.Environ(), env...)
-
-	// Capture output
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if opts.Debug && !opts.DebugJSON {
-		// Also print to console in debug mode (but not in JSON mode)
-		cmd.Stdout = io.MultiWriter(&stdout, os.Stdout)
-		cmd.Stderr = io.MultiWriter(&stderr, os.Stderr)
-	}
-
-	err = cmd.Run()
+	scriptResult, err := e.forge.Run(forgeOpts)
 	if err != nil {
-		return &RunResult{
-			RawOutput: append(stdout.Bytes(), stderr.Bytes()...),
-			Success:   false,
-		}, fmt.Errorf("forge script failed: %w\nstderr: %s", err, stderr.String())
+		return nil, err
 	}
 
-	// Parse the output
+	// Build result
 	result := &RunResult{
-		RawOutput: stdout.Bytes(),
-		Success:   true,
+		RawOutput: scriptResult.RawOutput,
+		Success:   scriptResult.Success,
 	}
 
-	// Handle output based on debug mode
-	if opts.Debug && !opts.DebugJSON {
-		// Plain debug mode - don't save to file or attempt parsing
-		// Output already printed to console via MultiWriter
-		return result, nil
+	// Handle errors
+	if scriptResult.Error != nil {
+		return result, scriptResult.Error
 	}
 
-	// If debug JSON mode, save raw output to file and print it
-	if opts.DebugJSON {
-		// Create a unique run directory
-		runUUID := fmt.Sprintf("%d", time.Now().Unix())
-		debugDir := filepath.Join(e.projectPath, "out", ".treb-debug", runUUID)
-		if err := os.MkdirAll(debugDir, 0755); err != nil {
-			fmt.Printf("Warning: failed to create debug directory: %v\n", err)
-		} else {
-			// Save raw output
-			rawPath := filepath.Join(debugDir, "raw-output.json")
-			if err := os.WriteFile(rawPath, result.RawOutput, 0644); err != nil {
-				fmt.Printf("Warning: failed to write raw output: %v\n", err)
+	// Parse events if we have output
+	if scriptResult.ParsedOutput != nil && scriptResult.ParsedOutput.ScriptOutput != nil {
+		// Parse all events
+		allEvents, err := e.parser.ParseEvents(scriptResult.ParsedOutput.ScriptOutput)
+		if err != nil {
+			// Don't fail on parse errors, just log them
+			if opts.Debug || opts.DebugJSON {
+				fmt.Printf("Warning: failed to parse events: %v\n", err)
 			}
-
-			// Parse and save parsed/ignored output
-			parsedPath := filepath.Join(debugDir, "parsed-output.json")
-			ignoredPath := filepath.Join(debugDir, "ignored-output.txt")
-			e.debugParseOutput(result.RawOutput, parsedPath, ignoredPath)
-
-			fmt.Printf("Debug output written to: %s\n", debugDir)
-			fmt.Printf("  - raw-output.json: Complete forge output\n")
-			fmt.Printf("  - parsed-output.json: Successfully parsed JSON objects\n")
-			fmt.Printf("  - ignored-output.txt: Lines that were not parsed\n")
 		}
 
-		// Also save to legacy location for compatibility
-		debugPath := filepath.Join(e.projectPath, "debug-output.json")
-		if err := os.WriteFile(debugPath, result.RawOutput, 0644); err != nil {
-			fmt.Printf("Warning: failed to write legacy debug output: %v\n", err)
-		}
-
-		fmt.Printf("\n=== Raw JSON Output ===\n")
-		fmt.Print(string(result.RawOutput))
-		fmt.Printf("\n=== End Raw JSON Output ===\n")
-	}
-
-	// Parse events from the output (only in normal mode or debug-json mode)
-	events, allEvents, logs, err := e.parseOutput(result.RawOutput)
-	if err != nil {
-		if opts.DebugJSON {
-			fmt.Printf("Warning: failed to parse events: %v\n", err)
-		}
-	} else {
-		result.ParsedEvents = events
 		result.AllEvents = allEvents
-		result.Logs = logs
+		result.ParsedEvents = forge.ExtractDeploymentEvents(allEvents)
+		result.Logs = scriptResult.ParsedOutput.ConsoleLogs
 	}
 
-	// Find broadcast file if any
-	if !opts.DryRun {
-		broadcastPath := e.findBroadcastFile(opts.ScriptPath, opts.Network)
-		if broadcastPath != "" {
-			result.BroadcastPath = broadcastPath
-		}
-	}
+	// Set broadcast path
+	result.BroadcastPath = scriptResult.BroadcastPath
 
 	return result, nil
 }
 
-// buildEnvironment builds the environment variables for the script
-func (e *Executor) buildEnvironment(opts RunOptions) ([]string, error) {
-	env := []string{}
+// buildEnvironment builds environment variables for the script
+func (e *Executor) buildEnvironment(opts RunOptions) (map[string]string, error) {
+	env := make(map[string]string)
+
+	// Copy additional env vars
+	for k, v := range opts.EnvVars {
+		env[k] = v
+	}
 
 	// Load treb config to get senders
 	trebConfig, err := config.LoadTrebConfig(e.projectPath)
@@ -194,217 +144,58 @@ func (e *Executor) buildEnvironment(opts RunOptions) ([]string, error) {
 		return nil, fmt.Errorf("failed to encode sender configs: %w", err)
 	}
 
-	// Add SENDER_CONFIGS
-	env = append(env, fmt.Sprintf("SENDER_CONFIGS=%s", encodedConfigs))
+	// Add core environment variables
+	env["SENDER_CONFIGS"] = encodedConfigs
+	env["NAMESPACE"] = opts.Namespace
+	env["NETWORK"] = e.network.Name
+	env["FOUNDRY_PROFILE"] = opts.Profile
 
-	// Add NAMESPACE
-	namespace := opts.Namespace
-	if namespace == "" {
-		// Fallback to environment variable
-		namespace = os.Getenv("DEPLOYMENT_NAMESPACE")
-		if namespace == "" {
-			namespace = "default"
-		}
-	}
-	env = append(env, fmt.Sprintf("NAMESPACE=%s", namespace))
-
-	// Add DRYRUN flag
-	if opts.DryRun {
-		env = append(env, "DRYRUN=true")
-	}
-
-	// Add any custom environment variables
-	for key, value := range opts.EnvVars {
-		env = append(env, fmt.Sprintf("%s=%s", key, value))
+	// Add library deployer if configured
+	if profileTrebConfig.LibraryDeployer != "" {
+		env["TREB_LIB_DEPLOYER"] = profileTrebConfig.LibraryDeployer
 	}
 
 	return env, nil
 }
 
-// buildForgeArgs builds the forge script command arguments
-func (e *Executor) buildForgeArgs(opts RunOptions) []string {
-	args := []string{"script"}
-
-	// Add script path
-	args = append(args, opts.ScriptPath)
-	args = append(args, "--rpc-url", e.network.RpcUrl)
-
-	// Add broadcast flag if not dry run and not debug mode
-	if !opts.DryRun && !opts.Debug {
-		args = append(args, "--broadcast")
+// ExecuteRaw provides direct access to forge script execution
+// This is useful for commands that don't need event parsing
+func (e *Executor) ExecuteRaw(scriptPath string, functionSig string, args []string, dryRun bool) (*forge.ScriptResult, error) {
+	opts := forge.ScriptOptions{
+		ScriptPath:   scriptPath,
+		FunctionName: functionSig,
+		FunctionArgs: args,
+		Network:      e.network.Name,
+		RpcUrl:       e.network.RpcUrl,
+		DryRun:       dryRun,
+		Broadcast:    !dryRun,
+		JSON:         true,
 	}
 
-	// Add JSON output flag only when NOT in plain debug mode
-	if !opts.Debug || opts.DebugJSON {
-		// Add JSON flag for normal mode or debug-json mode
-		args = append(args, "--json")
-	}
-	// Plain debug mode (--debug only) will not add --json flag
-
-	// Add verbosity for better error messages
-	args = append(args, "-vvvv")
-
-	// Add FFI flag to enable foreign function interface (needed for Safe deployers)
-	args = append(args, "--ffi")
-
-
-	// Add any additional arguments
-	args = append(args, opts.AdditionalArgs...)
-
-	return args
+	return e.forge.Run(opts)
 }
 
-
-// parseOutput parses the forge script output to extract events
-func (e *Executor) parseOutput(output []byte) ([]*treb.TrebContractDeployed, []interface{}, []string, error) {
-	// Parse the forge output
-	forgeOutput, err := ParseForgeOutput(output)
+// ParseEventsFromOutput parses events from raw forge output
+// This is useful when you have output from another source
+func (e *Executor) ParseEventsFromOutput(output []byte) ([]interface{}, []*treb.TrebContractDeployed, error) {
+	// Parse the output
+	parsed, err := e.forge.ParseOutput(output)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to parse forge output: %w", err)
+		return nil, nil, err
 	}
 
-	// Extract all events from the parsed output
-	allEvents, err := ParseAllEvents(forgeOutput)
+	if parsed.ScriptOutput == nil {
+		return nil, nil, fmt.Errorf("no script output found")
+	}
+
+	// Parse events
+	allEvents, err := e.parser.ParseEvents(parsed.ScriptOutput)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to parse all events: %w", err)
+		return nil, nil, err
 	}
 
-	// Extract deployment events from allEvents
-	var deploymentEvents []*treb.TrebContractDeployed
-	for _, event := range allEvents {
-		if deployment, ok := event.(*treb.TrebContractDeployed); ok {
-			deploymentEvents = append(deploymentEvents, deployment)
-		}
-	}
+	// Extract deployment events
+	deploymentEvents := forge.ExtractDeploymentEvents(allEvents)
 
-	return deploymentEvents, allEvents, forgeOutput.Logs, nil
-}
-
-// findBroadcastFile finds the broadcast file for the executed script
-func (e *Executor) findBroadcastFile(scriptPath, networkName string) string {
-	// Get script name from path
-	scriptName := filepath.Base(scriptPath)
-
-	// Resolve network to get actual chain ID from RPC
-	resolver := network.NewResolver(e.projectPath)
-	networkInfo, err := resolver.ResolveNetwork(networkName)
-	if err != nil {
-		// Can't determine chain ID, so can't find broadcast file
-		return ""
-	}
-
-	chainIDStr := fmt.Sprintf("%d", networkInfo.ChainID)
-
-	// Look for broadcast file
-	broadcastPath := filepath.Join(e.projectPath, "broadcast", scriptName, chainIDStr, "run-latest.json")
-	if _, err := os.Stat(broadcastPath); err == nil {
-		return broadcastPath
-	}
-
-	// Check without extension
-	scriptNameNoExt := strings.TrimSuffix(scriptName, filepath.Ext(scriptName))
-	broadcastPath = filepath.Join(e.projectPath, "broadcast", scriptNameNoExt, chainIDStr, "run-latest.json")
-	if _, err := os.Stat(broadcastPath); err == nil {
-		return broadcastPath
-	}
-
-	return ""
-}
-
-// debugParseOutput parses the forge output and separates parsed vs ignored lines
-func (e *Executor) debugParseOutput(output []byte, parsedPath, ignoredPath string) {
-	var parsedObjects []json.RawMessage
-	var ignoredLines []string
-
-	// Use ParseCompleteForgeOutput to try to parse all JSON objects
-	parsedOutput, _ := ParseCompleteForgeOutput(output)
-
-	// Collect successfully parsed objects
-	if parsedOutput != nil {
-		if parsedOutput.ScriptOutput != nil {
-			if data, err := json.Marshal(parsedOutput.ScriptOutput); err == nil {
-				parsedObjects = append(parsedObjects, json.RawMessage(data))
-			}
-		}
-		if parsedOutput.GasEstimate != nil {
-			if data, err := json.Marshal(parsedOutput.GasEstimate); err == nil {
-				parsedObjects = append(parsedObjects, json.RawMessage(data))
-			}
-		}
-		if parsedOutput.StatusOutput != nil {
-			if data, err := json.Marshal(parsedOutput.StatusOutput); err == nil {
-				parsedObjects = append(parsedObjects, json.RawMessage(data))
-			}
-		}
-	}
-
-	// Now scan through the output line by line to find what was ignored
-	scanner := bufio.NewScanner(bytes.NewReader(output))
-	const maxTokenSize = 200 * 1024 * 1024 // 200MB
-	buf := make([]byte, maxTokenSize)
-	scanner.Buffer(buf, maxTokenSize)
-
-	lineNumber := 0
-	for scanner.Scan() {
-		lineNumber++
-		line := scanner.Text()
-
-		// Skip empty lines
-		if strings.TrimSpace(line) == "" {
-			continue
-		}
-
-		// Check if this line is a JSON object that we could parse
-		if strings.HasPrefix(strings.TrimSpace(line), "{") {
-			var testJSON json.RawMessage
-			if err := json.Unmarshal([]byte(line), &testJSON); err == nil {
-				// It's valid JSON, check if we already parsed it
-				wasParsed := false
-
-				// Check against our known parsed types
-				var forgeOut ForgeScriptOutput
-				var gasEst GasEstimate
-				var statusOut StatusOutput
-
-				if err := json.Unmarshal([]byte(line), &forgeOut); err == nil && forgeOut.RawLogs != nil {
-					wasParsed = true
-				} else if err := json.Unmarshal([]byte(line), &gasEst); err == nil && gasEst.Chain != 0 {
-					wasParsed = true
-				} else if err := json.Unmarshal([]byte(line), &statusOut); err == nil && statusOut.Status != "" {
-					wasParsed = true
-				}
-
-				if !wasParsed {
-					// This is a JSON object we didn't parse
-					parsedObjects = append(parsedObjects, json.RawMessage(line))
-					ignoredLines = append(ignoredLines, line)
-				}
-			} else {
-				// Not valid JSON but starts with {
-				ignoredLines = append(ignoredLines, line)
-			}
-		} else {
-			// Non-JSON line
-			ignoredLines = append(ignoredLines, line)
-		}
-	}
-
-	// Write parsed objects to file
-	if len(parsedObjects) > 0 {
-		parsedData, _ := json.MarshalIndent(map[string]interface{}{
-			"parsed_objects": parsedObjects,
-			"count":          len(parsedObjects),
-		}, "", "  ")
-		if err := os.WriteFile(parsedPath, parsedData, 0644); err != nil {
-			fmt.Printf("Warning: failed to write parsed debug file: %v\n", err)
-		}
-	}
-
-	// Write ignored lines to file
-	if len(ignoredLines) > 0 {
-		ignoredData := []byte(strings.Join(ignoredLines, "\n"))
-		if err := os.WriteFile(ignoredPath, ignoredData, 0644); err != nil {
-			fmt.Printf("Warning: failed to write ignored debug file: %v\n", err)
-		}
-	}
+	return allEvents, deploymentEvents, nil
 }

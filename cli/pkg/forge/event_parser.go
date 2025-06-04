@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/abi/treb"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/events"
 )
@@ -30,7 +31,7 @@ func (ep *EventParser) ParseEvents(output *ScriptOutput) ([]interface{}, error) 
 	}
 
 	var parsedEvents []interface{}
-	
+
 	for _, rawLog := range output.RawLogs {
 		if len(rawLog.Topics) == 0 {
 			continue
@@ -146,9 +147,9 @@ func (ep *EventParser) parseProxyEvent(rawLog EventLog) (interface{}, error) {
 
 	// Known proxy event signatures
 	var (
-		upgradedTopic       = common.HexToHash("0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b")
-		adminChangedTopic   = common.HexToHash("0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f")
-		beaconUpgradedTopic = common.HexToHash("0x1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e")
+		upgradedTopic       = crypto.Keccak256Hash([]byte("Upgraded(address)"))
+		adminChangedTopic   = crypto.Keccak256Hash([]byte("AdminChanged(address,address)"))
+		beaconUpgradedTopic = crypto.Keccak256Hash([]byte("BeaconUpgraded(address)"))
 	)
 
 	switch eventSig {
@@ -168,7 +169,7 @@ func (ep *EventParser) parseUpgradedEvent(log events.Log) (*events.UpgradedEvent
 	if len(log.Topics) < 2 {
 		return nil, fmt.Errorf("invalid Upgraded event: not enough topics")
 	}
-	
+
 	return &events.UpgradedEvent{
 		ProxyAddress:          log.Address,
 		ImplementationAddress: common.HexToAddress(log.Topics[1].Hex()),
@@ -180,7 +181,7 @@ func (ep *EventParser) parseAdminChangedEvent(log events.Log) (*events.AdminChan
 	if len(log.Topics) < 3 {
 		return nil, fmt.Errorf("invalid AdminChanged event: not enough topics")
 	}
-	
+
 	return &events.AdminChangedEvent{
 		ProxyAddress:  log.Address,
 		PreviousAdmin: common.HexToAddress(log.Topics[1].Hex()),
@@ -193,7 +194,7 @@ func (ep *EventParser) parseBeaconUpgradedEvent(log events.Log) (*events.BeaconU
 	if len(log.Topics) < 2 {
 		return nil, fmt.Errorf("invalid BeaconUpgraded event: not enough topics")
 	}
-	
+
 	return &events.BeaconUpgradedEvent{
 		ProxyAddress: log.Address,
 		Beacon:       common.HexToAddress(log.Topics[1].Hex()),
@@ -203,12 +204,12 @@ func (ep *EventParser) parseBeaconUpgradedEvent(log events.Log) (*events.BeaconU
 // ExtractDeploymentEvents filters deployment events from all events
 func ExtractDeploymentEvents(allEvents []interface{}) []*treb.TrebContractDeployed {
 	var deploymentEvents []*treb.TrebContractDeployed
-	
+
 	for _, event := range allEvents {
 		if deployEvent, ok := event.(*treb.TrebContractDeployed); ok {
 			deploymentEvents = append(deploymentEvents, deployEvent)
 		}
 	}
-	
+
 	return deploymentEvents
 }

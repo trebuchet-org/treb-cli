@@ -16,10 +16,11 @@ import (
 // SenderInitConfig represents a single sender configuration for the new Senders library
 // This matches the Solidity SenderInitConfig struct in Senders.sol
 type SenderInitConfig struct {
-	Name       string
-	Account    common.Address
-	SenderType [8]byte // bytes8 magic constant
-	Config     []byte  // ABI-encoded config data
+	Name         string
+	Account      common.Address
+	SenderType   [8]byte // bytes8 magic constant
+	CanBroadcast bool
+	Config       []byte // ABI-encoded config data
 }
 
 // SenderConfigs represents the complete array of sender configurations
@@ -110,10 +111,11 @@ func buildSenderInitConfig(id string, sender config.SenderConfig, allSenders map
 		}
 
 		return &SenderInitConfig{
-			Name:       id,
-			Account:    key.Address,
-			SenderType: SENDER_TYPE_IN_MEMORY, // Use in-memory for private key senders
-			Config:     configData,
+			Name:         id,
+			Account:      key.Address,
+			SenderType:   SENDER_TYPE_IN_MEMORY, // Use in-memory for private key senders
+			CanBroadcast: true,
+			Config:       configData,
 		}, nil
 
 	case "safe":
@@ -143,10 +145,11 @@ func buildSenderInitConfig(id string, sender config.SenderConfig, allSenders map
 		}
 
 		return &SenderInitConfig{
-			Name:       id,
-			Account:    safe,
-			SenderType: SENDER_TYPE_GNOSIS_SAFE,
-			Config:     configData,
+			Name:         id,
+			Account:      safe,
+			SenderType:   SENDER_TYPE_GNOSIS_SAFE,
+			CanBroadcast: true,
+			Config:       configData,
 		}, nil
 
 	case "ledger":
@@ -170,10 +173,11 @@ func buildSenderInitConfig(id string, sender config.SenderConfig, allSenders map
 		}
 
 		return &SenderInitConfig{
-			Name:       id,
-			Account:    address,
-			SenderType: SENDER_TYPE_LEDGER,
-			Config:     configData,
+			Name:         id,
+			Account:      address,
+			SenderType:   SENDER_TYPE_LEDGER,
+			CanBroadcast: true,
+			Config:       configData,
 		}, nil
 	case "trezor":
 		// Validate address is provided
@@ -190,10 +194,11 @@ func buildSenderInitConfig(id string, sender config.SenderConfig, allSenders map
 		}
 
 		return &SenderInitConfig{
-			Name:       id,
-			Account:    common.HexToAddress(sender.Address),
-			SenderType: SENDER_TYPE_LEDGER,
-			Config:     configData,
+			Name:         id,
+			Account:      common.HexToAddress(sender.Address),
+			SenderType:   SENDER_TYPE_LEDGER,
+			CanBroadcast: true,
+			Config:       configData,
 		}, nil
 	default:
 		return nil, fmt.Errorf("unsupported sender type: %s", sender.Type)
@@ -208,6 +213,7 @@ func EncodeSenderConfigs(configs *SenderConfigs) (string, error) {
 		{Name: "name", Type: "string"},
 		{Name: "account", Type: "address"},
 		{Name: "senderType", Type: "bytes8"},
+		{Name: "canBroadcast", Type: "bool"},
 		{Name: "config", Type: "bytes"},
 	})
 	if err != nil {

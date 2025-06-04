@@ -130,12 +130,6 @@ func parseForgeError(err error, output string) error {
 	return fmt.Errorf("%v\nOutput: %s", err, output)
 }
 
-// CreateScriptRunner creates a new script runner for this project
-func (f *Forge) CreateScriptRunner() *ScriptRunner {
-	return NewScriptRunner(f.projectRoot)
-}
-
-// CreateEventParser creates a new event parser
 func (f *Forge) CreateEventParser() *EventParser {
 	return NewEventParser()
 }

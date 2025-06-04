@@ -20,7 +20,7 @@ func NewProxyTracker() *ProxyTracker {
 }
 
 // ProcessEvents processes events to identify proxy relationships
-func (pt *ProxyTracker) ProcessEvents(events []ParsedEvent) {
+func (pt *ProxyTracker) ProcessEvents(events []interface{}) {
 	// First pass: Create relationships from proxy deployment events
 	for _, event := range events {
 		switch e := event.(type) {

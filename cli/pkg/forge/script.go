@@ -15,18 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// ScriptRunner handles Foundry script execution with enhanced output parsing
-type ScriptRunner struct {
-	forge *Forge
-}
-
-// NewScriptRunner creates a new script runner
-func NewScriptRunner(projectRoot string) *ScriptRunner {
-	return &ScriptRunner{
-		forge: NewForge(projectRoot),
-	}
-}
-
 // ScriptOptions contains options for running a script
 type ScriptOptions struct {
 	ScriptPath     string
@@ -55,10 +43,10 @@ type ScriptResult struct {
 
 // ParsedOutput contains all parsed outputs from forge script
 type ParsedOutput struct {
-	ScriptOutput  *ScriptOutput   // Main script output with logs and events
-	GasEstimate   *GasEstimate    // Gas estimation
-	StatusOutput  *StatusOutput   // Status with broadcast path
-	ConsoleLogs   []string        // Extracted console.log messages
+	ScriptOutput *ScriptOutput // Main script output with logs and events
+	GasEstimate  *GasEstimate  // Gas estimation
+	StatusOutput *StatusOutput // Status with broadcast path
+	ConsoleLogs  []string      // Extracted console.log messages
 }
 
 // ScriptOutput represents the main output structure from forge script --json
@@ -92,12 +80,12 @@ type StatusOutput struct {
 }
 
 // Run executes a Foundry script with the given options
-func (sr *ScriptRunner) Run(opts ScriptOptions) (*ScriptResult, error) {
+func (f *Forge) Run(opts ScriptOptions) (*ScriptResult, error) {
 	// Build forge command arguments
-	args := sr.buildArgs(opts)
-	
+	args := f.buildArgs(opts)
+
 	// Build environment variables
-	env := sr.buildEnv(opts.EnvVars)
+	env := f.buildEnv(opts.EnvVars, opts.Profile)
 
 	if opts.Debug {
 		fmt.Printf("Running: forge %s\n", strings.Join(args, " "))
@@ -108,7 +96,7 @@ func (sr *ScriptRunner) Run(opts ScriptOptions) (*ScriptResult, error) {
 
 	// Execute the script
 	cmd := exec.Command("forge", args...)
-	cmd.Dir = sr.forge.projectRoot
+	cmd.Dir = f.projectRoot
 	cmd.Env = append(os.Environ(), env...)
 
 	var stdout, stderr bytes.Buffer
@@ -122,7 +110,7 @@ func (sr *ScriptRunner) Run(opts ScriptOptions) (*ScriptResult, error) {
 	}
 
 	err := cmd.Run()
-	
+
 	result := &ScriptResult{
 		Success:   err == nil,
 		RawOutput: stdout.Bytes(),
@@ -135,34 +123,34 @@ func (sr *ScriptRunner) Run(opts ScriptOptions) (*ScriptResult, error) {
 
 	// Parse output if JSON format was requested
 	if opts.JSON {
-		parsed, parseErr := sr.ParseOutput(stdout.Bytes())
+		parsed, parseErr := f.ParseOutput(stdout.Bytes())
 		if parseErr != nil {
 			result.Error = fmt.Errorf("failed to parse output: %w", parseErr)
 		} else {
 			result.ParsedOutput = parsed
-			
+
 			// Extract broadcast path if available
 			if parsed.StatusOutput != nil && parsed.StatusOutput.Transactions != "" {
 				result.BroadcastPath = parsed.StatusOutput.Transactions
 			}
 		}
-		
+
 		// Save debug output if requested
 		if opts.Debug {
-			sr.saveDebugOutput(stdout.Bytes())
+			f.saveDebugOutput(stdout.Bytes())
 		}
 	}
 
 	// Find broadcast file if broadcast was enabled and no dry run
 	if opts.Broadcast && !opts.DryRun && result.BroadcastPath == "" {
-		result.BroadcastPath = sr.findBroadcastFile(opts.ScriptPath, opts.Network)
+		result.BroadcastPath = f.findBroadcastFile(opts.ScriptPath, opts.Network)
 	}
 
 	return result, nil
 }
 
 // buildArgs builds the forge script command arguments
-func (sr *ScriptRunner) buildArgs(opts ScriptOptions) []string {
+func (f *Forge) buildArgs(opts ScriptOptions) []string {
 	args := []string{"script", opts.ScriptPath}
 
 	// Add function signature if specified
@@ -180,11 +168,6 @@ func (sr *ScriptRunner) buildArgs(opts ScriptOptions) []string {
 		args = append(args, "--rpc-url", opts.Network)
 	}
 
-	// Profile
-	if opts.Profile != "" {
-		args = append(args, "--profile", opts.Profile)
-	}
-
 	// Broadcast/dry run
 	if opts.Broadcast {
 		args = append(args, "--broadcast")
@@ -198,6 +181,8 @@ func (sr *ScriptRunner) buildArgs(opts ScriptOptions) []string {
 		args = append(args, "--json")
 	}
 
+	args = append(args, "-vvvv")
+
 	// Additional arguments
 	args = append(args, opts.AdditionalArgs...)
 
@@ -205,16 +190,20 @@ func (sr *ScriptRunner) buildArgs(opts ScriptOptions) []string {
 }
 
 // buildEnv builds environment variable array
-func (sr *ScriptRunner) buildEnv(envVars map[string]string) []string {
+func (f *Forge) buildEnv(envVars map[string]string, profile string) []string {
 	var env []string
 	for k, v := range envVars {
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
+
+	// Profile
+	env = append(env, fmt.Sprintf("FOUNDRY_PROFILE=%s", profile))
+
 	return env
 }
 
 // ParseOutput parses the JSON output from forge script
-func (sr *ScriptRunner) ParseOutput(output []byte) (*ParsedOutput, error) {
+func (f *Forge) ParseOutput(output []byte) (*ParsedOutput, error) {
 	result := &ParsedOutput{}
 
 	// First try to parse the entire output as a single JSON object
@@ -223,14 +212,14 @@ func (sr *ScriptRunner) ParseOutput(output []byte) (*ParsedOutput, error) {
 		// Check if this looks like the main output (has raw_logs)
 		if mainOutput.RawLogs != nil {
 			result.ScriptOutput = &mainOutput
-			result.ConsoleLogs = sr.extractConsoleLogs(mainOutput.Logs)
+			result.ConsoleLogs = f.extractConsoleLogs(mainOutput.Logs)
 			return result, nil
 		}
 	}
 
 	// If that fails, parse line by line for multi-object output
 	scanner := bufio.NewScanner(bytes.NewReader(output))
-	
+
 	// Increase buffer size to handle large JSON lines
 	const maxTokenSize = 200 * 1024 * 1024 // 200MB
 	buf := make([]byte, maxTokenSize)
@@ -248,7 +237,7 @@ func (sr *ScriptRunner) ParseOutput(output []byte) (*ParsedOutput, error) {
 			if err := json.Unmarshal(line, &lineOutput); err == nil {
 				if lineOutput.RawLogs != nil {
 					result.ScriptOutput = &lineOutput
-					result.ConsoleLogs = sr.extractConsoleLogs(lineOutput.Logs)
+					result.ConsoleLogs = f.extractConsoleLogs(lineOutput.Logs)
 					continue
 				}
 			}
@@ -289,7 +278,7 @@ func (sr *ScriptRunner) ParseOutput(output []byte) (*ParsedOutput, error) {
 }
 
 // extractConsoleLogs extracts console.log messages from forge logs
-func (sr *ScriptRunner) extractConsoleLogs(logs []string) []string {
+func (f *Forge) extractConsoleLogs(logs []string) []string {
 	var consoleLogs []string
 	for _, log := range logs {
 		// Forge prefixes console.log with "Logs:"
@@ -304,13 +293,13 @@ func (sr *ScriptRunner) extractConsoleLogs(logs []string) []string {
 }
 
 // findBroadcastFile attempts to find the broadcast file for a script
-func (sr *ScriptRunner) findBroadcastFile(scriptPath, network string) string {
+func (f *Forge) findBroadcastFile(scriptPath, network string) string {
 	// Extract script name from path
 	scriptName := filepath.Base(scriptPath)
 	scriptName = strings.TrimSuffix(scriptName, filepath.Ext(scriptName))
 
 	// Try to find the latest broadcast file
-	broadcastDir := filepath.Join(sr.forge.projectRoot, "broadcast", scriptName)
+	broadcastDir := filepath.Join(f.projectRoot, "broadcast", scriptName)
 	if network != "" {
 		// Network might be a chain ID or name, try to resolve it
 		// For now, just use it as is
@@ -326,10 +315,10 @@ func (sr *ScriptRunner) findBroadcastFile(scriptPath, network string) string {
 }
 
 // saveDebugOutput saves raw output for debugging
-func (sr *ScriptRunner) saveDebugOutput(output []byte) {
+func (f *Forge) saveDebugOutput(output []byte) {
 	runUUID := fmt.Sprintf("%d", time.Now().Unix())
-	debugDir := filepath.Join(sr.forge.projectRoot, "out", ".treb-debug", runUUID)
-	
+	debugDir := filepath.Join(f.projectRoot, "out", ".treb-debug", runUUID)
+
 	if err := os.MkdirAll(debugDir, 0755); err != nil {
 		fmt.Printf("Warning: failed to create debug directory: %v\n", err)
 		return

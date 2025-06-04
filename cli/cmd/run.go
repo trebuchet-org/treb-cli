@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/events"
 	netpkg "github.com/trebuchet-org/treb-cli/cli/pkg/network"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/resolvers"
@@ -316,7 +317,7 @@ Examples:
 			}
 
 			// Track and report proxy relationships
-			proxyTracker := script.NewProxyTracker()
+			proxyTracker := events.NewProxyTracker()
 			proxyTracker.ProcessEvents(result.AllEvents)
 			proxyTracker.PrintProxyRelationships()
 		} else if !dryRun {

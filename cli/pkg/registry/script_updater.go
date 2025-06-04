@@ -39,15 +39,7 @@ func (su *ScriptUpdater) BuildRegistryUpdate(
 	// Create new registry update
 	update := NewRegistryUpdate(namespace, chainID, networkName, scriptPath)
 
-	// Process events to identify proxy relationships (convert interface{} events for proxy tracker)
-	var parsedEvents []events.ParsedEvent
-	for _, event := range scriptEvents {
-		if parsedEvent, ok := event.(events.ParsedEvent); ok {
-			parsedEvents = append(parsedEvents, parsedEvent)
-		}
-	}
-	su.proxyTracker.ProcessEvents(parsedEvents)
-
+	su.proxyTracker.ProcessEvents(scriptEvents)
 	// First pass: collect all deployment events and broadcast events
 	// Handle generated types only (legacy events removed from events package)
 	deploymentEvents := make(map[string][]*treb.TrebContractDeployed)
