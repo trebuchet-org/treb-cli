@@ -20,7 +20,7 @@ import (
 // - Namespace/chain/contract: "staging/11155111/Counter"
 // - Full deployment ID
 // - Address (requires chainID)
-func (c *Context) ResolveDeployment(identifier string, manager *registry.Manager, chainID uint64, namespace string) (*types.Deployment, error) {
+func (c *DeploymentsResolver) ResolveDeployment(identifier string, manager *registry.Manager, chainID uint64, namespace string) (*types.Deployment, error) {
 	var deployment *types.Deployment
 	var err error
 
@@ -139,7 +139,7 @@ func (c *Context) ResolveDeployment(identifier string, manager *registry.Manager
 }
 
 // selectDeployment helps users select a deployment when multiple matches exist
-func (c *Context) selectDeployment(matches []*types.Deployment, prompt string) (*types.Deployment, error) {
+func (c *DeploymentsResolver) selectDeployment(matches []*types.Deployment, prompt string) (*types.Deployment, error) {
 	if len(matches) == 0 {
 		return nil, fmt.Errorf("no deployments found")
 	}

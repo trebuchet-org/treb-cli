@@ -14,6 +14,7 @@ import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/resolvers"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/script"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
 var runCmd = &cobra.Command{
@@ -63,8 +64,12 @@ Examples:
 	Run: func(cmd *cobra.Command, args []string) {
 		scriptPath := args[0]
 
-		resolver := resolvers.NewContext(".", !IsNonInteractive())
-		scriptContract, err := resolver.ResolveContract(scriptPath, contracts.ScriptFilter())
+		indexer, err := contracts.GetGlobalIndexer(".")
+		if err != nil {
+			checkError(fmt.Errorf("failed to initialize contract indexer: %w", err))
+		}
+		resolver := resolvers.NewContractsResolver(indexer, !IsNonInteractive())
+		scriptContract, err := resolver.ResolveContract(scriptPath, types.DefaultContractsFilter())
 		if err != nil {
 			checkError(fmt.Errorf("failed to resolve contract: %w", err))
 		}
@@ -220,13 +225,6 @@ Examples:
 
 		// Create script executor
 		executor := script.NewExecutor(".", networkInfo)
-
-		// Initialize indexer for contract identification
-		indexer, err := contracts.GetGlobalIndexer(".")
-		if err != nil {
-			fmt.Printf("Warning: Could not initialize contract indexer: %v\n", err)
-			indexer = nil
-		}
 
 		// Run the script
 		script.PrintDeploymentBanner(fmt.Sprintf("Running script: %s", filepath.Base(scriptContract.Path)), network, profile)

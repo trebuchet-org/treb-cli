@@ -56,7 +56,7 @@ type Transaction struct {
 
 // TrebMetaData contains all meta data concerning the Treb contract.
 var TrebMetaData = bind.MetaData{
-	ABI: "[{\"type\":\"function\",\"name\":\"IS_SCRIPT\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"execute\",\"inputs\":[{\"name\":\"_senderId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"_transactions\",\"type\":\"tuple[]\",\"internalType\":\"structTransaction[]\",\"components\":[{\"name\":\"label\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"to\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"value\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"outputs\":[{\"name\":\"bundleTransactions\",\"type\":\"tuple[]\",\"internalType\":\"structRichTransaction[]\",\"components\":[{\"name\":\"transaction\",\"type\":\"tuple\",\"internalType\":\"structTransaction\",\"components\":[{\"name\":\"label\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"to\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"value\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"name\":\"transactionId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"senderId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"status\",\"type\":\"uint8\",\"internalType\":\"enumTransactionStatus\"},{\"name\":\"simulatedReturnData\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"executedReturnData\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"execute\",\"inputs\":[{\"name\":\"_senderId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"_transaction\",\"type\":\"tuple\",\"internalType\":\"structTransaction\",\"components\":[{\"name\":\"label\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"to\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"value\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"outputs\":[{\"name\":\"bundleTransaction\",\"type\":\"tuple\",\"internalType\":\"structRichTransaction\",\"components\":[{\"name\":\"transaction\",\"type\":\"tuple\",\"internalType\":\"structTransaction\",\"components\":[{\"name\":\"label\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"to\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"value\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"name\":\"transactionId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"senderId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"status\",\"type\":\"uint8\",\"internalType\":\"enumTransactionStatus\"},{\"name\":\"simulatedReturnData\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"executedReturnData\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"lookup\",\"inputs\":[{\"name\":\"_identifier\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"_env\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"_chainId\",\"type\":\"string\",\"internalType\":\"string\"}],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"lookup\",\"inputs\":[{\"name\":\"_identifier\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"_env\",\"type\":\"string\",\"internalType\":\"string\"}],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"lookup\",\"inputs\":[{\"name\":\"_identifier\",\"type\":\"string\",\"internalType\":\"string\"}],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"event\",\"name\":\"BroadcastStarted\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ContractDeployed\",\"inputs\":[{\"name\":\"deployer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"location\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"transactionId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"deployment\",\"type\":\"tuple\",\"indexed\":false,\"internalType\":\"structDeployer.EventDeployment\",\"components\":[{\"name\":\"artifact\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"label\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"entropy\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"salt\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"bytecodeHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"initCodeHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"constructorArgs\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"createStrategy\",\"type\":\"string\",\"internalType\":\"string\"}]}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DeployingContract\",\"inputs\":[{\"name\":\"what\",\"type\":\"string\",\"indexed\":false,\"internalType\":\"string\"},{\"name\":\"label\",\"type\":\"string\",\"indexed\":false,\"internalType\":\"string\"},{\"name\":\"initCodeHash\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"SafeTransactionQueued\",\"inputs\":[{\"name\":\"safeTxHash\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"safe\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"proposer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"transactions\",\"type\":\"tuple[]\",\"indexed\":false,\"internalType\":\"structRichTransaction[]\",\"components\":[{\"name\":\"transaction\",\"type\":\"tuple\",\"internalType\":\"structTransaction\",\"components\":[{\"name\":\"label\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"to\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"value\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"name\":\"transactionId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"senderId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"status\",\"type\":\"uint8\",\"internalType\":\"enumTransactionStatus\"},{\"name\":\"simulatedReturnData\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"executedReturnData\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TransactionBroadcast\",\"inputs\":[{\"name\":\"transactionId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"to\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"data\",\"type\":\"bytes\",\"indexed\":false,\"internalType\":\"bytes\"},{\"name\":\"label\",\"type\":\"string\",\"indexed\":false,\"internalType\":\"string\"},{\"name\":\"returnData\",\"type\":\"bytes\",\"indexed\":false,\"internalType\":\"bytes\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TransactionFailed\",\"inputs\":[{\"name\":\"transactionId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"to\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"data\",\"type\":\"bytes\",\"indexed\":false,\"internalType\":\"bytes\"},{\"name\":\"label\",\"type\":\"string\",\"indexed\":false,\"internalType\":\"string\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TransactionSimulated\",\"inputs\":[{\"name\":\"transactionId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"to\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"data\",\"type\":\"bytes\",\"indexed\":false,\"internalType\":\"bytes\"},{\"name\":\"label\",\"type\":\"string\",\"indexed\":false,\"internalType\":\"string\"},{\"name\":\"returnData\",\"type\":\"bytes\",\"indexed\":false,\"internalType\":\"bytes\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"CustomQueueReceiverNotImplemented\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EmptyTransactionArray\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidTargetAddress\",\"inputs\":[{\"name\":\"index\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"NoSenderInitConfigs\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"SenderNotFound\",\"inputs\":[{\"name\":\"id\",\"type\":\"string\",\"internalType\":\"string\"}]}]",
+	ABI: "[{\"type\":\"function\",\"name\":\"IS_SCRIPT\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"execute\",\"inputs\":[{\"name\":\"_senderId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"_transactions\",\"type\":\"tuple[]\",\"internalType\":\"structTransaction[]\",\"components\":[{\"name\":\"label\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"to\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"value\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"outputs\":[{\"name\":\"bundleTransactions\",\"type\":\"tuple[]\",\"internalType\":\"structRichTransaction[]\",\"components\":[{\"name\":\"transaction\",\"type\":\"tuple\",\"internalType\":\"structTransaction\",\"components\":[{\"name\":\"label\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"to\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"value\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"name\":\"transactionId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"senderId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"status\",\"type\":\"uint8\",\"internalType\":\"enumTransactionStatus\"},{\"name\":\"simulatedReturnData\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"executedReturnData\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"execute\",\"inputs\":[{\"name\":\"_senderId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"_transaction\",\"type\":\"tuple\",\"internalType\":\"structTransaction\",\"components\":[{\"name\":\"label\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"to\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"value\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}],\"outputs\":[{\"name\":\"bundleTransaction\",\"type\":\"tuple\",\"internalType\":\"structRichTransaction\",\"components\":[{\"name\":\"transaction\",\"type\":\"tuple\",\"internalType\":\"structTransaction\",\"components\":[{\"name\":\"label\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"to\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"value\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"name\":\"transactionId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"senderId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"status\",\"type\":\"uint8\",\"internalType\":\"enumTransactionStatus\"},{\"name\":\"simulatedReturnData\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"executedReturnData\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"lookup\",\"inputs\":[{\"name\":\"_identifier\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"_env\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"_chainId\",\"type\":\"string\",\"internalType\":\"string\"}],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"lookup\",\"inputs\":[{\"name\":\"_identifier\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"_env\",\"type\":\"string\",\"internalType\":\"string\"}],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"lookup\",\"inputs\":[{\"name\":\"_identifier\",\"type\":\"string\",\"internalType\":\"string\"}],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"event\",\"name\":\"BroadcastStarted\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ContractDeployed\",\"inputs\":[{\"name\":\"deployer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"location\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"transactionId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"deployment\",\"type\":\"tuple\",\"indexed\":false,\"internalType\":\"structDeployer.EventDeployment\",\"components\":[{\"name\":\"artifact\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"label\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"entropy\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"salt\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"bytecodeHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"initCodeHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"constructorArgs\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"createStrategy\",\"type\":\"string\",\"internalType\":\"string\"}]}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DeployingContract\",\"inputs\":[{\"name\":\"what\",\"type\":\"string\",\"indexed\":false,\"internalType\":\"string\"},{\"name\":\"label\",\"type\":\"string\",\"indexed\":false,\"internalType\":\"string\"},{\"name\":\"initCodeHash\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"SafeTransactionQueued\",\"inputs\":[{\"name\":\"safeTxHash\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"safe\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"proposer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"transactions\",\"type\":\"tuple[]\",\"indexed\":false,\"internalType\":\"structRichTransaction[]\",\"components\":[{\"name\":\"transaction\",\"type\":\"tuple\",\"internalType\":\"structTransaction\",\"components\":[{\"name\":\"label\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"to\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"value\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"name\":\"transactionId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"senderId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"status\",\"type\":\"uint8\",\"internalType\":\"enumTransactionStatus\"},{\"name\":\"simulatedReturnData\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"executedReturnData\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TransactionBroadcast\",\"inputs\":[{\"name\":\"transactionId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"to\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"data\",\"type\":\"bytes\",\"indexed\":false,\"internalType\":\"bytes\"},{\"name\":\"label\",\"type\":\"string\",\"indexed\":false,\"internalType\":\"string\"},{\"name\":\"returnData\",\"type\":\"bytes\",\"indexed\":false,\"internalType\":\"bytes\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TransactionFailed\",\"inputs\":[{\"name\":\"transactionId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"to\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"data\",\"type\":\"bytes\",\"indexed\":false,\"internalType\":\"bytes\"},{\"name\":\"label\",\"type\":\"string\",\"indexed\":false,\"internalType\":\"string\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TransactionSimulated\",\"inputs\":[{\"name\":\"transactionId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"to\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"data\",\"type\":\"bytes\",\"indexed\":false,\"internalType\":\"bytes\"},{\"name\":\"label\",\"type\":\"string\",\"indexed\":false,\"internalType\":\"string\"},{\"name\":\"returnData\",\"type\":\"bytes\",\"indexed\":false,\"internalType\":\"bytes\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"CannotBroadcast\",\"inputs\":[{\"name\":\"name\",\"type\":\"string\",\"internalType\":\"string\"}]},{\"type\":\"error\",\"name\":\"CustomQueueReceiverNotImplemented\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EmptyTransactionArray\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidCast\",\"inputs\":[{\"name\":\"name\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"senderType\",\"type\":\"bytes8\",\"internalType\":\"bytes8\"},{\"name\":\"requiredType\",\"type\":\"bytes8\",\"internalType\":\"bytes8\"}]},{\"type\":\"error\",\"name\":\"InvalidGnosisSafeConfig\",\"inputs\":[{\"name\":\"name\",\"type\":\"string\",\"internalType\":\"string\"}]},{\"type\":\"error\",\"name\":\"InvalidHardwareWalletConfig\",\"inputs\":[{\"name\":\"name\",\"type\":\"string\",\"internalType\":\"string\"}]},{\"type\":\"error\",\"name\":\"InvalidPrivateKey\",\"inputs\":[{\"name\":\"name\",\"type\":\"string\",\"internalType\":\"string\"}]},{\"type\":\"error\",\"name\":\"InvalidSenderType\",\"inputs\":[{\"name\":\"name\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"senderType\",\"type\":\"bytes8\",\"internalType\":\"bytes8\"}]},{\"type\":\"error\",\"name\":\"InvalidTargetAddress\",\"inputs\":[{\"name\":\"index\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"NoSenderInitConfigs\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NoSenders\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"RegistryAlreadyInitialized\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"SenderNotFound\",\"inputs\":[{\"name\":\"id\",\"type\":\"string\",\"internalType\":\"string\"}]}]",
 	ID:  "Treb",
 }
 
@@ -544,11 +544,29 @@ func (treb *Treb) UnpackTransactionSimulatedEvent(log *types.Log) (*TrebTransact
 // UnpackError attempts to decode the provided error data using user-defined
 // error definitions.
 func (treb *Treb) UnpackError(raw []byte) (any, error) {
+	if bytes.Equal(raw[:4], treb.abi.Errors["CannotBroadcast"].ID.Bytes()[:4]) {
+		return treb.UnpackCannotBroadcastError(raw[4:])
+	}
 	if bytes.Equal(raw[:4], treb.abi.Errors["CustomQueueReceiverNotImplemented"].ID.Bytes()[:4]) {
 		return treb.UnpackCustomQueueReceiverNotImplementedError(raw[4:])
 	}
 	if bytes.Equal(raw[:4], treb.abi.Errors["EmptyTransactionArray"].ID.Bytes()[:4]) {
 		return treb.UnpackEmptyTransactionArrayError(raw[4:])
+	}
+	if bytes.Equal(raw[:4], treb.abi.Errors["InvalidCast"].ID.Bytes()[:4]) {
+		return treb.UnpackInvalidCastError(raw[4:])
+	}
+	if bytes.Equal(raw[:4], treb.abi.Errors["InvalidGnosisSafeConfig"].ID.Bytes()[:4]) {
+		return treb.UnpackInvalidGnosisSafeConfigError(raw[4:])
+	}
+	if bytes.Equal(raw[:4], treb.abi.Errors["InvalidHardwareWalletConfig"].ID.Bytes()[:4]) {
+		return treb.UnpackInvalidHardwareWalletConfigError(raw[4:])
+	}
+	if bytes.Equal(raw[:4], treb.abi.Errors["InvalidPrivateKey"].ID.Bytes()[:4]) {
+		return treb.UnpackInvalidPrivateKeyError(raw[4:])
+	}
+	if bytes.Equal(raw[:4], treb.abi.Errors["InvalidSenderType"].ID.Bytes()[:4]) {
+		return treb.UnpackInvalidSenderTypeError(raw[4:])
 	}
 	if bytes.Equal(raw[:4], treb.abi.Errors["InvalidTargetAddress"].ID.Bytes()[:4]) {
 		return treb.UnpackInvalidTargetAddressError(raw[4:])
@@ -556,10 +574,40 @@ func (treb *Treb) UnpackError(raw []byte) (any, error) {
 	if bytes.Equal(raw[:4], treb.abi.Errors["NoSenderInitConfigs"].ID.Bytes()[:4]) {
 		return treb.UnpackNoSenderInitConfigsError(raw[4:])
 	}
+	if bytes.Equal(raw[:4], treb.abi.Errors["NoSenders"].ID.Bytes()[:4]) {
+		return treb.UnpackNoSendersError(raw[4:])
+	}
+	if bytes.Equal(raw[:4], treb.abi.Errors["RegistryAlreadyInitialized"].ID.Bytes()[:4]) {
+		return treb.UnpackRegistryAlreadyInitializedError(raw[4:])
+	}
 	if bytes.Equal(raw[:4], treb.abi.Errors["SenderNotFound"].ID.Bytes()[:4]) {
 		return treb.UnpackSenderNotFoundError(raw[4:])
 	}
 	return nil, errors.New("Unknown error")
+}
+
+// TrebCannotBroadcast represents a CannotBroadcast error raised by the Treb contract.
+type TrebCannotBroadcast struct {
+	Name string
+}
+
+// ErrorID returns the hash of canonical representation of the error's signature.
+//
+// Solidity: error CannotBroadcast(string name)
+func TrebCannotBroadcastErrorID() common.Hash {
+	return common.HexToHash("0xa9ffa69eb3aded301074c975209fae6970590c096078daea97a71370ad8ed989")
+}
+
+// UnpackCannotBroadcastError is the Go binding used to decode the provided
+// error data into the corresponding Go error struct.
+//
+// Solidity: error CannotBroadcast(string name)
+func (treb *Treb) UnpackCannotBroadcastError(raw []byte) (*TrebCannotBroadcast, error) {
+	out := new(TrebCannotBroadcast)
+	if err := treb.abi.UnpackIntoInterface(out, "CannotBroadcast", raw); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // TrebCustomQueueReceiverNotImplemented represents a CustomQueueReceiverNotImplemented error raised by the Treb contract.
@@ -608,6 +656,129 @@ func (treb *Treb) UnpackEmptyTransactionArrayError(raw []byte) (*TrebEmptyTransa
 	return out, nil
 }
 
+// TrebInvalidCast represents a InvalidCast error raised by the Treb contract.
+type TrebInvalidCast struct {
+	Name         string
+	SenderType   [8]byte
+	RequiredType [8]byte
+}
+
+// ErrorID returns the hash of canonical representation of the error's signature.
+//
+// Solidity: error InvalidCast(string name, bytes8 senderType, bytes8 requiredType)
+func TrebInvalidCastErrorID() common.Hash {
+	return common.HexToHash("0x79a8423788bb88795cca353715459b27b8fb138a95e092ef6d04dababf519768")
+}
+
+// UnpackInvalidCastError is the Go binding used to decode the provided
+// error data into the corresponding Go error struct.
+//
+// Solidity: error InvalidCast(string name, bytes8 senderType, bytes8 requiredType)
+func (treb *Treb) UnpackInvalidCastError(raw []byte) (*TrebInvalidCast, error) {
+	out := new(TrebInvalidCast)
+	if err := treb.abi.UnpackIntoInterface(out, "InvalidCast", raw); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// TrebInvalidGnosisSafeConfig represents a InvalidGnosisSafeConfig error raised by the Treb contract.
+type TrebInvalidGnosisSafeConfig struct {
+	Name string
+}
+
+// ErrorID returns the hash of canonical representation of the error's signature.
+//
+// Solidity: error InvalidGnosisSafeConfig(string name)
+func TrebInvalidGnosisSafeConfigErrorID() common.Hash {
+	return common.HexToHash("0xcfb2a22d773dfd9dba48c604e8b29812fdae3987f9650d9b33c6060c4ccef260")
+}
+
+// UnpackInvalidGnosisSafeConfigError is the Go binding used to decode the provided
+// error data into the corresponding Go error struct.
+//
+// Solidity: error InvalidGnosisSafeConfig(string name)
+func (treb *Treb) UnpackInvalidGnosisSafeConfigError(raw []byte) (*TrebInvalidGnosisSafeConfig, error) {
+	out := new(TrebInvalidGnosisSafeConfig)
+	if err := treb.abi.UnpackIntoInterface(out, "InvalidGnosisSafeConfig", raw); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// TrebInvalidHardwareWalletConfig represents a InvalidHardwareWalletConfig error raised by the Treb contract.
+type TrebInvalidHardwareWalletConfig struct {
+	Name string
+}
+
+// ErrorID returns the hash of canonical representation of the error's signature.
+//
+// Solidity: error InvalidHardwareWalletConfig(string name)
+func TrebInvalidHardwareWalletConfigErrorID() common.Hash {
+	return common.HexToHash("0xe0a45569763f40bee0cc188b2a42ce35d87ed20f4d4058fc29312d819937a848")
+}
+
+// UnpackInvalidHardwareWalletConfigError is the Go binding used to decode the provided
+// error data into the corresponding Go error struct.
+//
+// Solidity: error InvalidHardwareWalletConfig(string name)
+func (treb *Treb) UnpackInvalidHardwareWalletConfigError(raw []byte) (*TrebInvalidHardwareWalletConfig, error) {
+	out := new(TrebInvalidHardwareWalletConfig)
+	if err := treb.abi.UnpackIntoInterface(out, "InvalidHardwareWalletConfig", raw); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// TrebInvalidPrivateKey represents a InvalidPrivateKey error raised by the Treb contract.
+type TrebInvalidPrivateKey struct {
+	Name string
+}
+
+// ErrorID returns the hash of canonical representation of the error's signature.
+//
+// Solidity: error InvalidPrivateKey(string name)
+func TrebInvalidPrivateKeyErrorID() common.Hash {
+	return common.HexToHash("0xfd535ce181601dacc4ca77b345792169029526dd291251c53f5907a045870302")
+}
+
+// UnpackInvalidPrivateKeyError is the Go binding used to decode the provided
+// error data into the corresponding Go error struct.
+//
+// Solidity: error InvalidPrivateKey(string name)
+func (treb *Treb) UnpackInvalidPrivateKeyError(raw []byte) (*TrebInvalidPrivateKey, error) {
+	out := new(TrebInvalidPrivateKey)
+	if err := treb.abi.UnpackIntoInterface(out, "InvalidPrivateKey", raw); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// TrebInvalidSenderType represents a InvalidSenderType error raised by the Treb contract.
+type TrebInvalidSenderType struct {
+	Name       string
+	SenderType [8]byte
+}
+
+// ErrorID returns the hash of canonical representation of the error's signature.
+//
+// Solidity: error InvalidSenderType(string name, bytes8 senderType)
+func TrebInvalidSenderTypeErrorID() common.Hash {
+	return common.HexToHash("0xe9e4fb967f35609fb25b4aef1a5daeeeaad9c42a393296df2fbd217fe45ed237")
+}
+
+// UnpackInvalidSenderTypeError is the Go binding used to decode the provided
+// error data into the corresponding Go error struct.
+//
+// Solidity: error InvalidSenderType(string name, bytes8 senderType)
+func (treb *Treb) UnpackInvalidSenderTypeError(raw []byte) (*TrebInvalidSenderType, error) {
+	out := new(TrebInvalidSenderType)
+	if err := treb.abi.UnpackIntoInterface(out, "InvalidSenderType", raw); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TrebInvalidTargetAddress represents a InvalidTargetAddress error raised by the Treb contract.
 type TrebInvalidTargetAddress struct {
 	Index *big.Int
@@ -650,6 +821,52 @@ func TrebNoSenderInitConfigsErrorID() common.Hash {
 func (treb *Treb) UnpackNoSenderInitConfigsError(raw []byte) (*TrebNoSenderInitConfigs, error) {
 	out := new(TrebNoSenderInitConfigs)
 	if err := treb.abi.UnpackIntoInterface(out, "NoSenderInitConfigs", raw); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// TrebNoSenders represents a NoSenders error raised by the Treb contract.
+type TrebNoSenders struct {
+}
+
+// ErrorID returns the hash of canonical representation of the error's signature.
+//
+// Solidity: error NoSenders()
+func TrebNoSendersErrorID() common.Hash {
+	return common.HexToHash("0x8ed3da9fa1748fc520020edf888e336305eba6d0d436f7872fd2ed6d94779a08")
+}
+
+// UnpackNoSendersError is the Go binding used to decode the provided
+// error data into the corresponding Go error struct.
+//
+// Solidity: error NoSenders()
+func (treb *Treb) UnpackNoSendersError(raw []byte) (*TrebNoSenders, error) {
+	out := new(TrebNoSenders)
+	if err := treb.abi.UnpackIntoInterface(out, "NoSenders", raw); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// TrebRegistryAlreadyInitialized represents a RegistryAlreadyInitialized error raised by the Treb contract.
+type TrebRegistryAlreadyInitialized struct {
+}
+
+// ErrorID returns the hash of canonical representation of the error's signature.
+//
+// Solidity: error RegistryAlreadyInitialized()
+func TrebRegistryAlreadyInitializedErrorID() common.Hash {
+	return common.HexToHash("0xe45872b6a5ff45395b94a3dee286e55723252f81ac28a70cd42855b8c9dc108c")
+}
+
+// UnpackRegistryAlreadyInitializedError is the Go binding used to decode the provided
+// error data into the corresponding Go error struct.
+//
+// Solidity: error RegistryAlreadyInitialized()
+func (treb *Treb) UnpackRegistryAlreadyInitializedError(raw []byte) (*TrebRegistryAlreadyInitialized, error) {
+	out := new(TrebRegistryAlreadyInitialized)
+	if err := treb.abi.UnpackIntoInterface(out, "RegistryAlreadyInitialized", raw); err != nil {
 		return nil, err
 	}
 	return out, nil

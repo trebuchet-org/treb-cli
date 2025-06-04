@@ -9,6 +9,7 @@ import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/interactive"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/resolvers"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
 // genCmd represents the gen command
@@ -149,15 +150,18 @@ Examples:
 
 		// Create resolver context
 		isInteractive := !rootCmd.PersistentFlags().Changed("non-interactive")
-		ctx := resolvers.NewContext(".", isInteractive)
+		indexer, err := contracts.GetGlobalIndexer(".")
+		if err != nil {
+			return fmt.Errorf("failed to initialize contract indexer: %w", err)
+		}
+		ctx := resolvers.NewContractsResolver(indexer, isInteractive)
 
 		var contractInfo *contracts.ContractInfo
-		var err error
 
 		if len(args) > 0 {
 			// Contract name provided - use resolver which handles full paths properly
 			contractName := args[0]
-			contractInfo, err = ctx.ResolveContract(contractName, contracts.DefaultFilter())
+			contractInfo, err = ctx.ResolveContract(contractName, types.DefaultContractsFilter())
 			if err != nil {
 				return err
 			}

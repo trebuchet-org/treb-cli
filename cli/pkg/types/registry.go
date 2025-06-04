@@ -5,12 +5,15 @@ import (
 	"time"
 )
 
-// Use DeploymentType from deployment.go
-// DeploymentType constants:
-// - SingletonDeployment = "SINGLETON"
-// - ProxyDeployment = "PROXY"
-// - LibraryDeployment = "LIBRARY"
-// - UnknownDeployment = "UNKNOWN"
+// DeploymentType represents the type of deployment
+type DeploymentType string
+
+const (
+	SingletonDeployment DeploymentType = "SINGLETON"
+	ProxyDeployment     DeploymentType = "PROXY"
+	LibraryDeployment   DeploymentType = "LIBRARY"
+	UnknownDeployment   DeploymentType = "UNKNOWN"
+)
 
 // DeploymentMethod represents how the contract was deployed
 type DeploymentMethod string

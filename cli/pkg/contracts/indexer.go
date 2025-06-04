@@ -1,7 +1,6 @@
 package contracts
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -13,7 +12,7 @@ import (
 
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/forge"
-	"golang.org/x/crypto/sha3"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
 var (
@@ -21,108 +20,9 @@ var (
 	indexerMutex  sync.Once
 )
 
-// ContractInfo represents information about a discovered contract
-type ContractInfo struct {
-	Name         string    `json:"name"`
-	Path         string    `json:"path"`
-	ArtifactPath string    `json:"artifactPath,omitempty"`
-	Version      string    `json:"version,omitempty"`
-	IsLibrary    bool      `json:"isLibrary"`
-	IsInterface  bool      `json:"isInterface"`
-	IsAbstract   bool      `json:"isAbstract"`
-	Artifact     *Artifact `json:"artifact,omitempty"`
-}
-
-// GetArtifactPath returns the artifact path for this contract
-func (c *ContractInfo) GetArtifactPath() string {
-	return c.ArtifactPath
-}
-
-// ArtifactMetadata represents the metadata section of a Foundry artifact
-type ArtifactMetadata struct {
-	Compiler struct {
-		Version string `json:"version"`
-	} `json:"compiler"`
-	Language string `json:"language"`
-	Output   struct {
-		ABI      json.RawMessage `json:"abi"`
-		DevDoc   json.RawMessage `json:"devdoc"`
-		UserDoc  json.RawMessage `json:"userdoc"`
-		Metadata string          `json:"metadata"`
-	} `json:"output"`
-	Settings struct {
-		CompilationTarget map[string]string `json:"compilationTarget"`
-	} `json:"settings"`
-}
-
-// BytecodeObject represents the bytecode section of an artifact
-type BytecodeObject struct {
-	Object         string                          `json:"object"`
-	LinkReferences map[string]map[string][]LinkRef `json:"linkReferences"`
-	SourceMap      string                          `json:"sourceMap"`
-}
-
-// LinkRef represents a library link reference
-type LinkRef struct {
-	Start  int `json:"start"`
-	Length int `json:"length"`
-}
-
-// Artifact represents a Foundry compilation artifact
-type Artifact struct {
-	ABI               json.RawMessage   `json:"abi"`
-	Bytecode          BytecodeObject    `json:"bytecode"`
-	DeployedBytecode  BytecodeObject    `json:"deployedBytecode"`
-	MethodIdentifiers map[string]string `json:"methodIdentifiers"`
-	RawMetadata       string            `json:"rawMetadata"`
-	Metadata          ArtifactMetadata  `json:"metadata"`
-}
-
-// QueryFilter defines filtering options for contract queries
-type QueryFilter struct {
-	IncludeLibraries bool
-	IncludeAbstract  bool
-	IncludeInterface bool
-	NamePattern      string // regex pattern for name matching
-	PathPattern      string // regex pattern for path matching
-}
-
-// DefaultFilter returns a filter that includes only deployable contracts (no libs, interfaces, or abstract)
-func DefaultFilter() QueryFilter {
-	return QueryFilter{
-		IncludeLibraries: false,
-		IncludeAbstract:  false,
-		IncludeInterface: false,
-	}
-}
-
-// DefaultFilter returns a filter that includes only deployable contracts (no libs, interfaces, or abstract)
-func ProjectFilter() QueryFilter {
-	return QueryFilter{
-		IncludeLibraries: false,
-		IncludeAbstract:  false,
-		IncludeInterface: false,
-		PathPattern:      "^src/.*$",
-	}
-}
-
-func ScriptFilter() QueryFilter {
-	return QueryFilter{
-		IncludeLibraries: false,
-		IncludeAbstract:  false,
-		IncludeInterface: false,
-		PathPattern:      "^script/.*$",
-	}
-}
-
-// AllFilter returns a filter that includes everything
-func AllFilter() QueryFilter {
-	return QueryFilter{
-		IncludeLibraries: true,
-		IncludeAbstract:  true,
-		IncludeInterface: true,
-	}
-}
+type ContractInfo = types.ContractInfo
+type Artifact = types.Artifact
+type QueryFilter = types.ContractQueryFilter
 
 // Indexer discovers and indexes contracts and their artifacts
 type Indexer struct {
@@ -422,7 +322,7 @@ func (i *Indexer) processArtifact(artifactPath string) error {
 			contract.Artifact = &artifact
 
 			// Calculate and store bytecode hash
-			if hash, err := i.calculateBytecodeHash(contract); err == nil {
+			if hash, err := contract.CalculateBytecodeHash(); err == nil {
 				i.bytecodeHashIndex[hash] = contract
 			}
 			i.mu.Unlock()
@@ -439,7 +339,7 @@ func (i *Indexer) processArtifact(artifactPath string) error {
 					contract.Artifact = &artifact
 
 					// Calculate and store bytecode hash
-					if hash, err := i.calculateBytecodeHash(contract); err == nil {
+					if hash, err := contract.CalculateBytecodeHash(); err == nil {
 						i.bytecodeHashIndex[hash] = contract
 					}
 					break
@@ -635,7 +535,7 @@ func (i *Indexer) FindContractByName(name string, filter QueryFilter) []*Contrac
 
 // GetDeployableContracts returns all deployable contracts (no libs, interfaces, or abstract)
 func (i *Indexer) GetDeployableContracts() []*ContractInfo {
-	return i.QueryContracts(DefaultFilter())
+	return i.QueryContracts(types.DefaultContractsFilter())
 }
 
 // GetProxyContractsFiltered returns proxy contracts using the filter
@@ -666,93 +566,6 @@ func ResetGlobalIndexer() {
 	indexerMutex = sync.Once{}
 }
 
-// GetSourceHash returns the source hash for this contract
-func (c *ContractInfo) GetSourceHash() string {
-	if c.Artifact == nil {
-		return ""
-	}
-
-	// For now, return a simple hash of the contract path and name
-	// In the future, this could be a more sophisticated hash of the actual source code
-	return fmt.Sprintf("%s:%s", c.Path, c.Name)
-}
-
-// LibraryRequirement represents a library dependency
-type LibraryRequirement struct {
-	Path string
-	Name string
-}
-
-// GetRequiredLibraries returns the libraries required by this contract
-func (c *ContractInfo) GetRequiredLibraries() []LibraryRequirement {
-	if c.Artifact == nil {
-		return nil
-	}
-
-	var libs []LibraryRequirement
-	seen := make(map[string]bool)
-
-	// Check bytecode link references
-	for path, libMap := range c.Artifact.Bytecode.LinkReferences {
-		for libName := range libMap {
-			key := fmt.Sprintf("%s:%s", path, libName)
-			if !seen[key] {
-				seen[key] = true
-				libs = append(libs, LibraryRequirement{
-					Path: path,
-					Name: libName,
-				})
-			}
-		}
-	}
-
-	// Also check deployed bytecode link references
-	for path, libMap := range c.Artifact.DeployedBytecode.LinkReferences {
-		for libName := range libMap {
-			key := fmt.Sprintf("%s:%s", path, libName)
-			if !seen[key] {
-				seen[key] = true
-				libs = append(libs, LibraryRequirement{
-					Path: path,
-					Name: libName,
-				})
-			}
-		}
-	}
-
-	return libs
-}
-
-// calculateBytecodeHash computes the keccak256 hash of the contract's bytecode
-func (i *Indexer) calculateBytecodeHash(contract *ContractInfo) (string, error) {
-	if contract.Artifact == nil {
-		return "", fmt.Errorf("no artifact found for contract %s", contract.Name)
-	}
-
-	// Get the creation bytecode
-	bytecode := contract.Artifact.Bytecode.Object
-	if bytecode == "" || bytecode == "0x" {
-		return "", fmt.Errorf("no bytecode found for contract %s", contract.Name)
-	}
-
-	// Remove 0x prefix if present
-	bytecode = strings.TrimPrefix(bytecode, "0x")
-
-	// Decode hex string to bytes
-	bytecodeBytes, err := hex.DecodeString(bytecode)
-	if err != nil {
-		return "", fmt.Errorf("failed to decode bytecode: %w", err)
-	}
-
-	// Calculate keccak256 hash
-	hasher := sha3.NewLegacyKeccak256()
-	hasher.Write(bytecodeBytes)
-	hash := hasher.Sum(nil)
-
-	// Return as hex string with 0x prefix
-	return "0x" + hex.EncodeToString(hash), nil
-}
-
 // GetContractByBytecodeHash returns a contract by its bytecode hash
 func (i *Indexer) GetContractByBytecodeHash(hash string) *ContractInfo {
 	i.mu.RLock()
@@ -766,12 +579,4 @@ func (i *Indexer) GetContractByBytecodeHash(hash string) *ContractInfo {
 	hash = "0x" + hash
 
 	return i.bytecodeHashIndex[hash]
-}
-
-func (c *ContractInfo) SourcePreview() string {
-	content, err := os.ReadFile(c.Path)
-	if err != nil {
-		return fmt.Sprintf("Error reading file: %v", err)
-	}
-	return string(content)
 }

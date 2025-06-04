@@ -17,15 +17,6 @@ const (
 	StatusUnknown  Status = "UNKNOWN"
 )
 
-type DeploymentType string
-
-const (
-	SingletonDeployment DeploymentType = "SINGLETON"
-	ProxyDeployment     DeploymentType = "PROXY"
-	LibraryDeployment   DeploymentType = "LIBRARY"
-	UnknownDeployment   DeploymentType = "UNKNOWN"
-)
-
 type DeployStrategy string
 
 const (

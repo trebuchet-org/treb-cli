@@ -4,7 +4,16 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/abi/treb"
 )
+
+type BroadcastStarted = treb.TrebBroadcastStarted
+type ContractDeployed = treb.TrebContractDeployed
+type DeployingContract = treb.TrebDeployingContract
+type SafeTransactionQueued = treb.TrebSafeTransactionQueued
+type TransactionBroadcast = treb.TrebTransactionBroadcast
+type TransactionFailed = treb.TrebTransactionFailed
+type TransactionSimulated = treb.TrebTransactionSimulated
 
 // EventType represents the type of event
 type EventType string

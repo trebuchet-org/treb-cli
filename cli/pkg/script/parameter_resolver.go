@@ -8,12 +8,20 @@ import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/resolvers"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
 // ParameterResolver resolves meta types to their actual values
 type ParameterResolver struct {
-	projectPath     string
-	context         *resolvers.Context
+	projectPath string
+	resolvers   struct {
+		contracts   *resolvers.ContractsResolver
+		deployments *resolvers.DeploymentsResolver
+	}
+	lookup struct {
+		contracts   types.ContractLookup
+		deployments types.DeploymentLookup
+	}
 	trebConfig      *config.TrebConfig
 	interactive     bool
 	namespace       string
@@ -25,13 +33,11 @@ type ParameterResolver struct {
 
 // NewParameterResolver creates a new parameter resolver
 func NewParameterResolver(projectPath string, trebConfig *config.TrebConfig, namespace, network string, chainID uint64, interactive bool) (*ParameterResolver, error) {
-	ctx := resolvers.NewContext(projectPath, interactive)
-
-	// Initialize contract indexer
 	indexer, err := contracts.GetGlobalIndexer(projectPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize contract indexer: %w", err)
 	}
+	ctx := resolvers.NewContractsResolver(indexer, interactive)
 
 	// Initialize registry manager
 	manager, err := registry.NewManager(projectPath)
@@ -39,15 +45,29 @@ func NewParameterResolver(projectPath string, trebConfig *config.TrebConfig, nam
 		return nil, fmt.Errorf("failed to initialize registry manager: %w", err)
 	}
 
+	deployments := resolvers.NewDeploymentsResolver(manager, interactive)
+
 	return &ParameterResolver{
-		projectPath:     projectPath,
-		context:         ctx,
+		projectPath: projectPath,
+		resolvers: struct {
+			contracts   *resolvers.ContractsResolver
+			deployments *resolvers.DeploymentsResolver
+		}{
+			contracts:   ctx,
+			deployments: deployments,
+		},
+		lookup: struct {
+			contracts   types.ContractLookup
+			deployments types.DeploymentLookup
+		}{
+			contracts:   indexer,
+			deployments: manager,
+		},
 		trebConfig:      trebConfig,
 		interactive:     interactive,
 		namespace:       namespace,
 		network:         network,
 		chainID:         chainID,
-		contractIndexer: indexer,
 		registryManager: manager,
 	}, nil
 }
@@ -93,8 +113,7 @@ func (r *ParameterResolver) resolveSender(senderID string) (string, error) {
 
 // resolveDeployment resolves a deployment reference to an address
 func (r *ParameterResolver) resolveDeployment(deploymentRef string) (string, error) {
-	// Use the deployment resolver
-	deployment, err := r.context.ResolveDeployment(deploymentRef, r.registryManager, r.chainID, r.namespace)
+	deployment, err := r.resolvers.deployments.ResolveDeployment(deploymentRef, r.registryManager, r.chainID, r.namespace)
 	if err != nil {
 		return "", fmt.Errorf("failed to resolve deployment '%s': %w", deploymentRef, err)
 	}
@@ -105,7 +124,7 @@ func (r *ParameterResolver) resolveDeployment(deploymentRef string) (string, err
 // resolveArtifact resolves an artifact reference to the format "path/to/file.sol:ContractName"
 func (r *ParameterResolver) resolveArtifact(artifactRef string) (string, error) {
 	// Try to resolve as a contract name
-	contractInfo, err := r.context.ResolveContract(artifactRef, contracts.AllFilter())
+	contractInfo, err := r.resolvers.contracts.ResolveContract(artifactRef, types.AllContractsFilter())
 	if err != nil {
 		return "", fmt.Errorf("failed to resolve artifact '%s': %w", artifactRef, err)
 	}
