@@ -8,12 +8,12 @@ import (
 	"strings"
 )
 
-// Executor handles Forge command execution with enhanced output
+// Forge handles Forge command execution with enhanced output
 type Forge struct {
 	projectRoot string
 }
 
-// NewExecutor creates a new Forge executor
+// NewForge creates a new Forge executor
 func NewForge(projectRoot string) *Forge {
 	return &Forge{
 		projectRoot: projectRoot,
@@ -128,4 +128,14 @@ func parseForgeError(err error, output string) error {
 		return fmt.Errorf("%v\nOutput (last 500 chars): ...%s", err, output[len(output)-500:])
 	}
 	return fmt.Errorf("%v\nOutput: %s", err, output)
+}
+
+// CreateScriptRunner creates a new script runner for this project
+func (f *Forge) CreateScriptRunner() *ScriptRunner {
+	return NewScriptRunner(f.projectRoot)
+}
+
+// CreateEventParser creates a new event parser
+func (f *Forge) CreateEventParser() *EventParser {
+	return NewEventParser()
 }
