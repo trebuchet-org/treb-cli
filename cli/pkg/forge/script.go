@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/creack/pty"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -85,7 +86,7 @@ func (f *Forge) Run(opts ScriptOptions) (*ScriptResult, error) {
 	args := f.buildArgs(opts)
 
 	// Build environment variables
-	env := f.buildEnv(opts.EnvVars, opts.Profile)
+	env := f.buildEnv(opts)
 
 	if opts.Debug {
 		fmt.Printf("Running: forge %s\n", strings.Join(args, " "))
@@ -99,46 +100,117 @@ func (f *Forge) Run(opts ScriptOptions) (*ScriptResult, error) {
 	cmd.Dir = f.projectRoot
 	cmd.Env = append(os.Environ(), env...)
 
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	// In debug mode without JSON, also print to console
-	if opts.Debug && !opts.JSON {
-		cmd.Stdout = io.MultiWriter(&stdout, os.Stdout)
-		cmd.Stderr = io.MultiWriter(&stderr, os.Stderr)
+	// Start with PTY for proper color handling
+	ptyFile, err := pty.Start(cmd)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start pty: %w", err)
 	}
-
-	err := cmd.Run()
+	defer ptyFile.Close()
 
 	result := &ScriptResult{
-		Success:   err == nil,
-		RawOutput: stdout.Bytes(),
+		Success: true, // Will be updated based on command exit
 	}
 
-	if err != nil {
-		result.Error = fmt.Errorf("forge script failed: %w\nstderr: %s", err, stderr.String())
-		return result, nil // Return result with error, don't fail entirely
+	// Debug mode: direct copy to stdout
+	if opts.Debug && !opts.JSON {
+		// Simple copy for debug mode
+		io.Copy(os.Stdout, ptyFile)
+		
+		// Wait for command to finish
+		if err := cmd.Wait(); err != nil {
+			result.Success = false
+			result.Error = fmt.Errorf("forge script failed: %w", err)
+		}
+		
+		return result, nil
 	}
 
-	// Parse output if JSON format was requested
-	if opts.JSON {
-		parsed, parseErr := f.ParseOutput(stdout.Bytes())
-		if parseErr != nil {
-			result.Error = fmt.Errorf("failed to parse output: %w", parseErr)
-		} else {
-			result.ParsedOutput = parsed
+	// Normal mode: process output with scanner
+	// Create debug directory for this run
+	runUUID := fmt.Sprintf("%d", time.Now().Unix())
+	debugDir := filepath.Join(f.projectRoot, "out", ".treb-debug", runUUID)
+	if err := os.MkdirAll(debugDir, 0755); err != nil {
+		fmt.Printf("Warning: failed to create debug directory: %v\n", err)
+		// Continue anyway
+		debugDir = ""
+	}
 
-			// Extract broadcast path if available
-			if parsed.StatusOutput != nil && parsed.StatusOutput.Transactions != "" {
-				result.BroadcastPath = parsed.StatusOutput.Transactions
+	// Create channels for parsed entities
+	entityChan := make(chan ParsedEntity, 100)
+	errChan := make(chan error, 1)
+	
+	// Collect all output for raw output
+	var outputBuffer bytes.Buffer
+	teeReader := io.TeeReader(ptyFile, &outputBuffer)
+	
+	// Start output processor
+	processor := NewOutputProcessor(debugDir)
+	
+	// Process output in goroutine
+	go func() {
+		if err := processor.ProcessOutput(teeReader, entityChan); err != nil {
+			errChan <- err
+		}
+		close(entityChan)
+		close(errChan)
+	}()
+
+	// Collect parsed entities
+	parsedOutput := &ParsedOutput{
+		ConsoleLogs: []string{},
+	}
+	
+	for entity := range entityChan {
+		switch entity.Type {
+		case "ScriptOutput":
+			if output, ok := entity.Data.(ScriptOutput); ok {
+				parsedOutput.ScriptOutput = &output
+				// Extract console logs
+				parsedOutput.ConsoleLogs = append(parsedOutput.ConsoleLogs, f.extractConsoleLogs(output.Logs)...)
+			}
+		case "GasEstimate":
+			if gas, ok := entity.Data.(GasEstimate); ok {
+				parsedOutput.GasEstimate = &gas
+			}
+		case "StatusOutput":
+			if status, ok := entity.Data.(StatusOutput); ok {
+				parsedOutput.StatusOutput = &status
+				// Extract broadcast path
+				if status.Transactions != "" {
+					result.BroadcastPath = status.Transactions
+				}
+			}
+		case "ConsoleLog":
+			if log, ok := entity.Data.(string); ok {
+				parsedOutput.ConsoleLogs = append(parsedOutput.ConsoleLogs, log)
 			}
 		}
+	}
 
-		// Save debug output if requested
-		if opts.Debug {
-			f.saveDebugOutput(stdout.Bytes())
+	// Check for processing errors
+	select {
+	case err := <-errChan:
+		if err != nil {
+			result.Error = fmt.Errorf("output processing error: %w", err)
 		}
+	default:
+	}
+
+	// Wait for command to finish
+	if err := cmd.Wait(); err != nil {
+		result.Success = false
+		if result.Error == nil {
+			result.Error = fmt.Errorf("forge script failed: %w", err)
+		}
+	}
+
+	// Set results
+	result.RawOutput = outputBuffer.Bytes()
+	result.ParsedOutput = parsedOutput
+
+	// Save debug output if requested
+	if opts.Debug && opts.JSON && len(result.RawOutput) > 0 {
+		f.saveDebugOutput(result.RawOutput)
 	}
 
 	// Find broadcast file if broadcast was enabled and no dry run
@@ -190,14 +262,18 @@ func (f *Forge) buildArgs(opts ScriptOptions) []string {
 }
 
 // buildEnv builds environment variable array
-func (f *Forge) buildEnv(envVars map[string]string, profile string) []string {
+func (f *Forge) buildEnv(opts ScriptOptions) []string {
 	var env []string
-	for k, v := range envVars {
+	for k, v := range opts.EnvVars {
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
 
 	// Profile
-	env = append(env, fmt.Sprintf("FOUNDRY_PROFILE=%s", profile))
+	env = append(env, fmt.Sprintf("FOUNDRY_PROFILE=%s", opts.Profile))
+
+	if opts.Debug {
+		env = append(env, "QUIET=true")
+	}
 
 	return env
 }

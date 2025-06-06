@@ -1,4 +1,4 @@
-package forge
+package events
 
 import (
 	"encoding/hex"
@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/abi/treb"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/events"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/forge"
 )
 
 // EventParser parses events from forge script output
@@ -25,7 +25,7 @@ func NewEventParser() *EventParser {
 }
 
 // ParseEvents parses all events from script output
-func (ep *EventParser) ParseEvents(output *ScriptOutput) ([]interface{}, error) {
+func (ep *EventParser) ParseEvents(output *forge.ScriptOutput) ([]interface{}, error) {
 	if output == nil || output.RawLogs == nil {
 		return nil, nil
 	}
@@ -54,7 +54,7 @@ func (ep *EventParser) ParseEvents(output *ScriptOutput) ([]interface{}, error) 
 }
 
 // ParseEvent parses a single event log
-func (ep *EventParser) ParseEvent(rawLog EventLog) (interface{}, error) {
+func (ep *EventParser) ParseEvent(rawLog forge.EventLog) (interface{}, error) {
 	if len(rawLog.Topics) == 0 {
 		return nil, fmt.Errorf("log has no topics")
 	}
@@ -116,7 +116,7 @@ func (ep *EventParser) ParseEvent(rawLog EventLog) (interface{}, error) {
 }
 
 // convertToTypesLog converts EventLog to types.Log
-func (ep *EventParser) convertToTypesLog(rawLog EventLog) (*types.Log, error) {
+func (ep *EventParser) convertToTypesLog(rawLog forge.EventLog) (*types.Log, error) {
 	// Decode hex data
 	data, err := hex.DecodeString(strings.TrimPrefix(rawLog.Data, "0x"))
 	if err != nil {
@@ -131,16 +131,9 @@ func (ep *EventParser) convertToTypesLog(rawLog EventLog) (*types.Log, error) {
 }
 
 // parseProxyEvent attempts to parse proxy-related events
-func (ep *EventParser) parseProxyEvent(rawLog EventLog) (interface{}, error) {
+func (ep *EventParser) parseProxyEvent(rawLog forge.EventLog) (interface{}, error) {
 	if len(rawLog.Topics) == 0 {
 		return nil, fmt.Errorf("no topics")
-	}
-
-	// Convert to events.Log format
-	eventsLog := events.Log{
-		Address: rawLog.Address,
-		Topics:  rawLog.Topics,
-		Data:    rawLog.Data,
 	}
 
 	eventSig := rawLog.Topics[0]
@@ -154,35 +147,35 @@ func (ep *EventParser) parseProxyEvent(rawLog EventLog) (interface{}, error) {
 
 	switch eventSig {
 	case upgradedTopic:
-		return ep.parseUpgradedEvent(eventsLog)
+		return ep.parseUpgradedEvent(rawLog)
 	case adminChangedTopic:
-		return ep.parseAdminChangedEvent(eventsLog)
+		return ep.parseAdminChangedEvent(rawLog)
 	case beaconUpgradedTopic:
-		return ep.parseBeaconUpgradedEvent(eventsLog)
+		return ep.parseBeaconUpgradedEvent(rawLog)
 	}
 
 	return nil, fmt.Errorf("not a proxy event")
 }
 
 // parseUpgradedEvent parses an Upgraded event
-func (ep *EventParser) parseUpgradedEvent(log events.Log) (*events.UpgradedEvent, error) {
+func (ep *EventParser) parseUpgradedEvent(log forge.EventLog) (*UpgradedEvent, error) {
 	if len(log.Topics) < 2 {
 		return nil, fmt.Errorf("invalid Upgraded event: not enough topics")
 	}
 
-	return &events.UpgradedEvent{
+	return &UpgradedEvent{
 		ProxyAddress:          log.Address,
 		ImplementationAddress: common.HexToAddress(log.Topics[1].Hex()),
 	}, nil
 }
 
 // parseAdminChangedEvent parses an AdminChanged event
-func (ep *EventParser) parseAdminChangedEvent(log events.Log) (*events.AdminChangedEvent, error) {
+func (ep *EventParser) parseAdminChangedEvent(log forge.EventLog) (*AdminChangedEvent, error) {
 	if len(log.Topics) < 3 {
 		return nil, fmt.Errorf("invalid AdminChanged event: not enough topics")
 	}
 
-	return &events.AdminChangedEvent{
+	return &AdminChangedEvent{
 		ProxyAddress:  log.Address,
 		PreviousAdmin: common.HexToAddress(log.Topics[1].Hex()),
 		NewAdmin:      common.HexToAddress(log.Topics[2].Hex()),
@@ -190,12 +183,12 @@ func (ep *EventParser) parseAdminChangedEvent(log events.Log) (*events.AdminChan
 }
 
 // parseBeaconUpgradedEvent parses a BeaconUpgraded event
-func (ep *EventParser) parseBeaconUpgradedEvent(log events.Log) (*events.BeaconUpgradedEvent, error) {
+func (ep *EventParser) parseBeaconUpgradedEvent(log forge.EventLog) (*BeaconUpgradedEvent, error) {
 	if len(log.Topics) < 2 {
 		return nil, fmt.Errorf("invalid BeaconUpgraded event: not enough topics")
 	}
 
-	return &events.BeaconUpgradedEvent{
+	return &BeaconUpgradedEvent{
 		ProxyAddress: log.Address,
 		Beacon:       common.HexToAddress(log.Topics[1].Hex()),
 	}, nil

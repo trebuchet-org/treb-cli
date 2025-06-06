@@ -5,6 +5,7 @@ import (
 
 	"github.com/trebuchet-org/treb-cli/cli/pkg/abi/treb"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/events"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/forge"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
 )
@@ -14,7 +15,7 @@ type Executor struct {
 	projectPath string
 	network     *network.NetworkInfo
 	forge       *forge.Forge
-	parser      *forge.EventParser
+	parser      *events.EventParser
 }
 
 // NewExecutor creates a new script executor
@@ -23,7 +24,7 @@ func NewExecutor(projectPath string, network *network.NetworkInfo) *Executor {
 		projectPath: projectPath,
 		network:     network,
 		forge:       forge.NewForge(projectPath),
-		parser:      forge.NewEventParser(),
+		parser:      events.NewEventParser(),
 	}
 }
 
@@ -61,7 +62,7 @@ func (e *Executor) Run(opts RunOptions) (*RunResult, error) {
 		DryRun:         opts.DryRun,
 		Broadcast:      !opts.DryRun,
 		Debug:          opts.Debug,
-		JSON:           true, // Always use JSON for structured parsing
+		JSON:           !opts.Debug || opts.DebugJSON,
 		AdditionalArgs: opts.AdditionalArgs,
 	}
 
@@ -101,7 +102,7 @@ func (e *Executor) Run(opts RunOptions) (*RunResult, error) {
 		}
 
 		result.AllEvents = allEvents
-		result.ParsedEvents = forge.ExtractDeploymentEvents(allEvents)
+		result.ParsedEvents = events.ExtractDeploymentEvents(allEvents)
 		result.Logs = scriptResult.ParsedOutput.ConsoleLogs
 	}
 
@@ -195,7 +196,7 @@ func (e *Executor) ParseEventsFromOutput(output []byte) ([]interface{}, []*treb.
 	}
 
 	// Extract deployment events
-	deploymentEvents := forge.ExtractDeploymentEvents(allEvents)
+	deploymentEvents := events.ExtractDeploymentEvents(allEvents)
 
 	return allEvents, deploymentEvents, nil
 }

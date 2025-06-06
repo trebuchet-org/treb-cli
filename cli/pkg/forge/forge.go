@@ -129,7 +129,3 @@ func parseForgeError(err error, output string) error {
 	}
 	return fmt.Errorf("%v\nOutput: %s", err, output)
 }
-
-func (f *Forge) CreateEventParser() *EventParser {
-	return NewEventParser()
-}

@@ -285,6 +285,10 @@ func (i *Indexer) indexArtifacts() error {
 			return nil
 		}
 
+		if strings.HasPrefix(path, "out/.treb-debug") {
+			return nil
+		}
+
 		// Look for .json files that aren't .dbg.json
 		if !d.IsDir() && strings.HasSuffix(path, ".json") && !strings.HasSuffix(path, ".dbg.json") {
 			if err := i.processArtifact(path); err != nil {
