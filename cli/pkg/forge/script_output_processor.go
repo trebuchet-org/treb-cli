@@ -19,8 +19,6 @@ import (
 type Stage string
 
 const (
-	StageInitializing Stage = "Initializing"
-	StageCompiling    Stage = "Compiling"
 	StageSimulating   Stage = "Simulating"
 	StageBroadcasting Stage = "Broadcasting"
 	StageCompleted    Stage = "Completed"
@@ -28,9 +26,9 @@ const (
 
 // ParsedEntity represents different types of parsed output
 type ParsedEntity struct {
-	Type   string
-	Data   interface{}
-	Stage  Stage
+	Type    string
+	Data    interface{}
+	Stage   Stage
 	RawLine string
 }
 
@@ -41,6 +39,8 @@ type OutputProcessor struct {
 	currentStage Stage
 	spinner      *spinner.Spinner
 	stages       []StageInfo
+	hasReceipts  bool     // Track if we've seen any Receipt entities
+	textOutput   []string // Collect non-JSON text output
 	mu           sync.Mutex
 }
 
@@ -50,6 +50,7 @@ type StageInfo struct {
 	StartTime time.Time
 	EndTime   time.Time
 	Completed bool
+	Skipped   bool
 	Lines     int
 }
 
@@ -57,89 +58,135 @@ type StageInfo struct {
 func NewOutputProcessor(debugDir string) *OutputProcessor {
 	// Create custom spinner with colors
 	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-	s.Suffix = " " + string(StageInitializing)
+	s.Suffix = " " + string(StageSimulating)
 	s.HideCursor = true
-	
+
 	return &OutputProcessor{
 		debugDir:     debugDir,
 		ignoredCount: 0,
-		currentStage: StageInitializing,
+		currentStage: "", // Start with empty stage so enterStage works properly
 		spinner:      s,
 		stages:       []StageInfo{},
+		hasReceipts:  false,
+		textOutput:   []string{},
 	}
 }
 
 // ProcessOutput processes output in real-time, returning parsed entities via channel
 func (op *OutputProcessor) ProcessOutput(reader io.Reader, entityChan chan<- ParsedEntity) error {
 	scanner := bufio.NewScanner(reader)
-	
+
 	// Start with larger buffer for long lines
-	const maxTokenSize = 10 * 1024 * 1024 // 10MB
+	const maxTokenSize = 200 * 1024 * 1024 // 10MB
 	buf := make([]byte, maxTokenSize)
 	scanner.Buffer(buf, maxTokenSize)
-	
+
 	// Start spinner
 	op.spinner.Start()
 	defer op.spinner.Stop()
-	
+
 	// Track current stage
-	op.enterStage(StageInitializing)
-	
+	op.enterStage(StageSimulating)
+
 	lineNum := 0
 	for scanner.Scan() {
 		lineNum++
 		line := scanner.Text()
-		
+
 		// Skip empty lines
 		if strings.TrimSpace(line) == "" {
 			continue
 		}
-		
-		// Try to detect stage changes from content
-		op.detectStageFromContent(line)
-		
+
 		// Process the line
 		if entity, parsed := op.parseLine(line); parsed {
 			// Update stage based on parsed entity
 			op.updateStageFromEntity(entity)
-			
-			// Send parsed entity
-			select {
-			case entityChan <- entity:
-			default:
-				// Channel might be full, log warning
-				fmt.Printf("Warning: entity channel full, dropping entity\n")
+
+			if entity.Type == "UnknownJSON" {
+				// Save JSON lines individually for debugging
+				op.saveIgnoredLine(line)
 			}
+
+			// Send parsed entity
+			entityChan <- entity
 		} else if strings.TrimSpace(line) != "" {
-			// Save unparsed lines
-			op.saveIgnoredLine(line)
+			// Collect non-JSON text output
+			op.mu.Lock()
+			op.textOutput = append(op.textOutput, line)
+			op.mu.Unlock()
 		}
-		
+
 		// Update spinner
 		op.updateSpinner()
 	}
-	
+
 	if err := scanner.Err(); err != nil {
 		return fmt.Errorf("scanner error: %w", err)
 	}
+
+	// Complete current stage if not already completed
+	op.completeCurrentStage()
+
+	// Handle final stage cleanup
+	op.mu.Lock()
 	
-	// Mark completion
-	op.enterStage(StageCompleted)
+	// Check if we have a Broadcasting stage
+	hasBroadcastingStage := false
+	for i := range op.stages {
+		if op.stages[i].Stage == StageBroadcasting {
+			hasBroadcastingStage = true
+			// If broadcasting stage exists but no receipts, mark it as skipped
+			if !op.hasReceipts {
+				op.stages[i].Skipped = true
+				if op.stages[i].EndTime.IsZero() {
+					op.stages[i].EndTime = time.Now()
+				}
+			}
+		}
+	}
+	
+	// If we never entered broadcasting stage (dry-run without gas estimate), add it as skipped
+	if !hasBroadcastingStage && op.currentStage == StageSimulating {
+		op.stages = append(op.stages, StageInfo{
+			Stage:     StageBroadcasting,
+			StartTime: time.Now(),
+			EndTime:   time.Now(),
+			Completed: false,
+			Skipped:   true,
+		})
+	}
+	
+	op.mu.Unlock()
+
+	// Send collected text output as final entity
+	op.mu.Lock()
+	if len(op.textOutput) > 0 {
+		entityChan <- ParsedEntity{
+			Type:    "TextOutput",
+			Data:    strings.Join(op.textOutput, "\n"),
+			Stage:   op.currentStage,
+			RawLine: "", // No single raw line for combined output
+		}
+	}
+	op.mu.Unlock()
+
 	op.printSummary()
-	
+
 	return nil
 }
 
 // parseLine attempts to parse a line into a known entity
 func (op *OutputProcessor) parseLine(line string) (ParsedEntity, bool) {
-	// Remove ANSI color codes for parsing
-	cleanLine := stripANSI(line)
-	
+	reader := strings.NewReader(line)
+	decoder := json.NewDecoder(reader)
+	decoder.DisallowUnknownFields() // This enforces strict matching
+
 	// Check if it's JSON
-	if strings.HasPrefix(strings.TrimSpace(cleanLine), "{") {
+	if strings.HasPrefix(strings.TrimSpace(line), "{") {
 		// Try to parse as ScriptOutput
 		var scriptOutput ScriptOutput
-		if err := json.Unmarshal([]byte(cleanLine), &scriptOutput); err == nil {
+		if err := decoder.Decode(&scriptOutput); err == nil {
 			if scriptOutput.RawLogs != nil {
 				return ParsedEntity{
 					Type:    "ScriptOutput",
@@ -148,11 +195,13 @@ func (op *OutputProcessor) parseLine(line string) (ParsedEntity, bool) {
 					RawLine: line,
 				}, true
 			}
+		} else {
+			reader.Reset(line)
 		}
-		
+
 		// Try to parse as GasEstimate
 		var gasEstimate GasEstimate
-		if err := json.Unmarshal([]byte(cleanLine), &gasEstimate); err == nil {
+		if err := decoder.Decode(&gasEstimate); err == nil {
 			if gasEstimate.Chain != 0 {
 				return ParsedEntity{
 					Type:    "GasEstimate",
@@ -161,11 +210,26 @@ func (op *OutputProcessor) parseLine(line string) (ParsedEntity, bool) {
 					RawLine: line,
 				}, true
 			}
+		} else {
+			reader.Reset(line)
 		}
-		
+
+		// Try to parse as Receipt
+		var receipt Receipt
+		if err := decoder.Decode(&receipt); err == nil {
+			return ParsedEntity{
+				Type:    "Receipt",
+				Data:    receipt,
+				Stage:   op.currentStage,
+				RawLine: line,
+			}, true
+		} else {
+			reader.Reset(line)
+		}
+
 		// Try to parse as StatusOutput
 		var statusOutput StatusOutput
-		if err := json.Unmarshal([]byte(cleanLine), &statusOutput); err == nil {
+		if err := decoder.Decode(&statusOutput); err == nil {
 			if statusOutput.Status != "" {
 				return ParsedEntity{
 					Type:    "StatusOutput",
@@ -174,57 +238,55 @@ func (op *OutputProcessor) parseLine(line string) (ParsedEntity, bool) {
 					RawLine: line,
 				}, true
 			}
+		} else {
+			reader.Reset(line)
 		}
-		
+
+		// Try to parse as TraceOutput
+		var traceOutput TraceOutput
+		if err := decoder.Decode(&traceOutput); err == nil {
+			if len(traceOutput.Arena) > 0 {
+				return ParsedEntity{
+					Type:    "TraceOutput",
+					Data:    traceOutput,
+					Stage:   op.currentStage,
+					RawLine: line,
+				}, true
+			}
+		} else {
+			reader.Reset(line)
+		}
+
 		// It's JSON but we don't recognize it
 		return ParsedEntity{
 			Type:    "UnknownJSON",
-			Data:    cleanLine,
-			Stage:   op.currentStage,
-			RawLine: line,
-		}, true
-	}
-	
-	// Check for console.log
-	if strings.Contains(line, "console.log") || strings.Contains(line, "Logs:") {
-		return ParsedEntity{
-			Type:    "ConsoleLog",
 			Data:    line,
 			Stage:   op.currentStage,
 			RawLine: line,
 		}, true
 	}
-	
-	return ParsedEntity{}, false
-}
 
-// detectStageFromContent tries to detect stage changes from line content
-func (op *OutputProcessor) detectStageFromContent(line string) {
-	lower := strings.ToLower(line)
-	
-	if strings.Contains(lower, "compiling") {
-		op.enterStage(StageCompiling)
-	} else if strings.Contains(lower, "simulating") || strings.Contains(lower, "simulation") {
-		op.enterStage(StageSimulating)
-	} else if strings.Contains(lower, "broadcasting") || strings.Contains(lower, "broadcast") {
-		op.enterStage(StageBroadcasting)
-	}
+	return ParsedEntity{}, false
 }
 
 // updateStageFromEntity updates stage based on parsed entity type
 func (op *OutputProcessor) updateStageFromEntity(entity ParsedEntity) {
 	switch entity.Type {
-	case "ScriptOutput":
-		// Script output usually means we're in simulation
-		if op.currentStage == StageInitializing || op.currentStage == StageCompiling {
-			op.enterStage(StageSimulating)
+	case "Receipt":
+		// Track that we've seen receipts
+		op.mu.Lock()
+		op.hasReceipts = true
+		op.mu.Unlock()
+	case "GasEstimate":
+		// After gas estimate, we move to broadcasting
+		if op.currentStage == StageSimulating {
+			op.enterStage(StageBroadcasting)
 		}
 	case "StatusOutput":
-		// Status output often indicates broadcast completion
-		if status, ok := entity.Data.(StatusOutput); ok {
-			if status.Status == "success" && op.currentStage != StageBroadcasting {
-				op.enterStage(StageBroadcasting)
-			}
+		// After status output, we're completed
+		// Note: StatusOutput might come even in dry-run mode
+		if op.currentStage == StageBroadcasting || op.currentStage == StageSimulating {
+			op.enterStage(StageCompleted)
 		}
 	}
 }
@@ -233,42 +295,60 @@ func (op *OutputProcessor) updateStageFromEntity(entity ParsedEntity) {
 func (op *OutputProcessor) enterStage(stage Stage) {
 	op.mu.Lock()
 	defer op.mu.Unlock()
-	
+
+	// Don't re-enter the same stage
 	if op.currentStage == stage {
 		return
 	}
-	
-	// Complete current stage
-	if len(op.stages) > 0 {
+
+	// Complete current stage if there is one
+	if len(op.stages) > 0 && op.currentStage != "" {
 		op.stages[len(op.stages)-1].EndTime = time.Now()
 		op.stages[len(op.stages)-1].Completed = true
 	}
-	
+
 	// Start new stage
 	op.currentStage = stage
 	op.stages = append(op.stages, StageInfo{
 		Stage:     stage,
 		StartTime: time.Now(),
 		Completed: false,
+		Skipped:   false,
 	})
-	
-	// Update display
-	op.updateSpinner()
+
+	go op.updateSpinner()
+}
+
+// completeCurrentStage marks the current stage as completed
+func (op *OutputProcessor) completeCurrentStage() {
+	op.mu.Lock()
+	defer op.mu.Unlock()
+
+	if len(op.stages) > 0 {
+		lastStage := &op.stages[len(op.stages)-1]
+		if !lastStage.Completed {
+			lastStage.EndTime = time.Now()
+			lastStage.Completed = true
+		}
+	}
 }
 
 // updateSpinner updates the spinner display
 func (op *OutputProcessor) updateSpinner() {
 	op.mu.Lock()
 	defer op.mu.Unlock()
-	
+
 	// Build multi-line display
 	var lines []string
-	
+
 	for _, stage := range op.stages {
 		var icon string
 		var stageColor *color.Color
-		
-		if stage.Completed {
+
+		if stage.Skipped {
+			icon = "⊘"
+			stageColor = color.New(color.FgWhite, color.Faint)
+		} else if stage.Completed {
 			icon = "✓"
 			stageColor = color.New(color.FgGreen)
 		} else if stage.Stage == op.currentStage {
@@ -278,17 +358,17 @@ func (op *OutputProcessor) updateSpinner() {
 			icon = "○"
 			stageColor = color.New(color.FgWhite)
 		}
-		
+
 		duration := ""
 		if !stage.EndTime.IsZero() {
 			duration = fmt.Sprintf(" (%s)", stage.EndTime.Sub(stage.StartTime).Round(time.Millisecond))
-		} else if stage.Stage == op.currentStage {
+		} else if stage.Stage == op.currentStage && !stage.Skipped {
 			duration = fmt.Sprintf(" (%s)", time.Since(stage.StartTime).Round(time.Second))
 		}
-		
+
 		lines = append(lines, fmt.Sprintf("%s %s%s", icon, stageColor.Sprint(stage.Stage), duration))
 	}
-	
+
 	// Update spinner suffix with current stage info
 	op.spinner.Suffix = fmt.Sprintf(" %s", strings.Join(lines, " → "))
 }
@@ -299,7 +379,7 @@ func (op *OutputProcessor) saveIgnoredLine(line string) {
 	op.ignoredCount++
 	count := op.ignoredCount
 	op.mu.Unlock()
-	
+
 	filename := filepath.Join(op.debugDir, fmt.Sprintf("ignored-line%d.txt", count))
 	if err := os.WriteFile(filename, []byte(line), 0644); err != nil {
 		// Silently ignore write errors
@@ -310,64 +390,49 @@ func (op *OutputProcessor) saveIgnoredLine(line string) {
 // printSummary prints a summary of the execution
 func (op *OutputProcessor) printSummary() {
 	op.spinner.Stop()
-	
+
 	fmt.Println("\n📊 Execution Summary:")
 	fmt.Println(strings.Repeat("─", 50))
-	
+
 	totalDuration := time.Duration(0)
 	for _, stage := range op.stages {
+		// Skip the Completed stage in summary
+		if stage.Stage == StageCompleted {
+			continue
+		}
+
 		var duration time.Duration
 		if !stage.EndTime.IsZero() {
 			duration = stage.EndTime.Sub(stage.StartTime)
 		} else {
 			duration = time.Since(stage.StartTime)
 		}
-		totalDuration += duration
-		
-		icon := "✓"
-		if !stage.Completed {
-			icon = "✗"
+
+		// Only add to total duration if not skipped
+		if !stage.Skipped {
+			totalDuration += duration
 		}
-		
-		fmt.Printf("%s %-15s %s\n", icon, stage.Stage, duration.Round(time.Millisecond))
+
+		var icon string
+		var status string
+		if stage.Skipped {
+			icon = "⊘"
+			status = "skipped"
+		} else if stage.Completed {
+			icon = "✓"
+			status = duration.Round(time.Millisecond).String()
+		} else {
+			icon = "✗"
+			status = duration.Round(time.Millisecond).String()
+		}
+
+		fmt.Printf("%s %-15s %s\n", icon, stage.Stage, status)
 	}
-	
+
 	fmt.Println(strings.Repeat("─", 50))
 	fmt.Printf("Total Duration: %s\n", totalDuration.Round(time.Millisecond))
-	
+
 	if op.ignoredCount > 0 {
 		fmt.Printf("\n⚠️  %d lines couldn't be parsed (saved in %s)\n", op.ignoredCount, op.debugDir)
 	}
-}
-
-// stripANSI removes ANSI color codes from a string
-func stripANSI(str string) string {
-	// This is a simple implementation - could be improved with a proper ANSI stripping library
-	// For now, we'll just handle the most common cases
-	result := str
-	
-	// Remove color codes
-	for _, code := range []string{
-		"\033[0m", "\033[1m", "\033[2m", "\033[3m", "\033[4m",
-		"\033[30m", "\033[31m", "\033[32m", "\033[33m", "\033[34m", "\033[35m", "\033[36m", "\033[37m",
-		"\033[90m", "\033[91m", "\033[92m", "\033[93m", "\033[94m", "\033[95m", "\033[96m", "\033[97m",
-	} {
-		result = strings.ReplaceAll(result, code, "")
-	}
-	
-	// Remove more complex ANSI sequences
-	// This is a simplified approach - a proper regex would be better
-	for strings.Contains(result, "\033[") {
-		start := strings.Index(result, "\033[")
-		if start == -1 {
-			break
-		}
-		end := strings.IndexAny(result[start:], "mGKHJ")
-		if end == -1 {
-			break
-		}
-		result = result[:start] + result[start+end+1:]
-	}
-	
-	return result
 }

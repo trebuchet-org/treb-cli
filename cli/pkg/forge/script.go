@@ -47,15 +47,22 @@ type ParsedOutput struct {
 	ScriptOutput *ScriptOutput // Main script output with logs and events
 	GasEstimate  *GasEstimate  // Gas estimation
 	StatusOutput *StatusOutput // Status with broadcast path
+	TraceOutputs []TraceOutput // Detailed execution traces (can be multiple)
 	ConsoleLogs  []string      // Extracted console.log messages
+	TextOutput   string        // Raw text output from forge (non-JSON lines)
 }
 
 // ScriptOutput represents the main output structure from forge script --json
 type ScriptOutput struct {
-	Logs    []string   `json:"logs"`
-	Success bool       `json:"success"`
-	RawLogs []EventLog `json:"raw_logs"`
-	GasUsed uint64     `json:"gas_used"`
+	Address          *string                `json:"address,omitempty"`
+	Logs             []string               `json:"logs"`
+	Success          bool                   `json:"success"`
+	RawLogs          []EventLog             `json:"raw_logs"`
+	GasUsed          uint64                 `json:"gas_used"`
+	LabeledAddresses map[string]string      `json:"labeled_addresses"`
+	Returned         string                 `json:"returned"`
+	Returns          map[string]interface{} `json:"returns"`
+	Traces           interface{}            `json:"traces"`
 }
 
 // EventLog represents a raw log entry from the script output
@@ -71,6 +78,17 @@ type GasEstimate struct {
 	EstimatedGasPrice       string `json:"estimated_gas_price"`
 	EstimatedTotalGasUsed   uint64 `json:"estimated_total_gas_used"`
 	EstimatedAmountRequired string `json:"estimated_amount_required"`
+	TokenSymbol             string `json:"token_symbol"`
+}
+
+type Receipt struct {
+	Chain           string `json:"chain"`
+	Status          string `json:"status"`
+	TxHash          string `json:"tx_hash"`
+	ContractAddress string `json:"contract_address"`
+	BlockNumber     uint64 `json:"block_number"`
+	GasUsed         uint64 `json:"gas_used"`
+	GasPrice        uint64 `json:"gas_price"`
 }
 
 // StatusOutput represents the status output from forge
@@ -78,6 +96,80 @@ type StatusOutput struct {
 	Status       string `json:"status"`
 	Transactions string `json:"transactions"` // Path to broadcast file
 	Sensitive    string `json:"sensitive"`
+}
+
+// TraceOutput represents the trace output from forge script with detailed execution traces
+type TraceOutput struct {
+	Arena []TraceNode `json:"arena"`
+}
+
+// TraceNode represents a single node in the execution trace tree
+type TraceNode struct {
+	Parent   *int        `json:"parent"`
+	Children []int       `json:"children"`
+	Idx      int         `json:"idx"`
+	Trace    TraceInfo   `json:"trace"`
+	Logs     []LogEntry  `json:"logs"`
+	Ordering []OrderItem `json:"ordering"`
+}
+
+// TraceInfo contains detailed trace information for a single call
+type TraceInfo struct {
+	Depth                        int             `json:"depth"`
+	Success                      bool            `json:"success"`
+	Caller                       common.Address  `json:"caller"`
+	Address                      common.Address  `json:"address"`
+	MaybePrecompile              *bool           `json:"maybe_precompile"`
+	SelfdestructAddress          *common.Address `json:"selfdestruct_address"`
+	SelfdestructRefundTarget     *common.Address `json:"selfdestruct_refund_target"`
+	SelfdestructTransferredValue *string         `json:"selfdestruct_transferred_value"`
+	Kind                         string          `json:"kind"`
+	Value                        string          `json:"value"`
+	Data                         string          `json:"data"`
+	Output                       string          `json:"output"`
+	GasUsed                      uint64          `json:"gas_used"`
+	GasLimit                     uint64          `json:"gas_limit"`
+	Status                       string          `json:"status"`
+	Steps                        []interface{}   `json:"steps"`
+	Decoded                      *DecodedCall    `json:"decoded"`
+}
+
+// DecodedCall represents decoded call data
+type DecodedCall struct {
+	Label      string        `json:"label"`
+	ReturnData string        `json:"return_data"`
+	CallData   *CallDataInfo `json:"call_data"`
+}
+
+// CallDataInfo contains decoded call data information
+type CallDataInfo struct {
+	Signature string   `json:"signature"`
+	Args      []string `json:"args"`
+}
+
+// LogEntry represents a log entry in the trace
+type LogEntry struct {
+	RawLog   RawLogEntry `json:"raw_log"`
+	Decoded  DecodedLog  `json:"decoded"`
+	Position int         `json:"position"`
+}
+
+// RawLogEntry represents raw log data
+type RawLogEntry struct {
+	Topics []common.Hash `json:"topics"`
+	Data   string        `json:"data"`
+}
+
+// DecodedLog represents decoded log information
+type DecodedLog struct {
+	Name   string     `json:"name"`
+	Params [][]string `json:"params"`
+}
+
+// OrderItem represents an item in the execution ordering
+type OrderItem struct {
+	Call *int `json:"Call,omitempty"`
+	Log  *int `json:"Log,omitempty"`
 }
 
 // Run executes a Foundry script with the given options
@@ -115,13 +207,13 @@ func (f *Forge) Run(opts ScriptOptions) (*ScriptResult, error) {
 	if opts.Debug && !opts.JSON {
 		// Simple copy for debug mode
 		io.Copy(os.Stdout, ptyFile)
-		
+
 		// Wait for command to finish
 		if err := cmd.Wait(); err != nil {
 			result.Success = false
 			result.Error = fmt.Errorf("forge script failed: %w", err)
 		}
-		
+
 		return result, nil
 	}
 
@@ -138,14 +230,14 @@ func (f *Forge) Run(opts ScriptOptions) (*ScriptResult, error) {
 	// Create channels for parsed entities
 	entityChan := make(chan ParsedEntity, 100)
 	errChan := make(chan error, 1)
-	
+
 	// Collect all output for raw output
 	var outputBuffer bytes.Buffer
 	teeReader := io.TeeReader(ptyFile, &outputBuffer)
-	
+
 	// Start output processor
 	processor := NewOutputProcessor(debugDir)
-	
+
 	// Process output in goroutine
 	go func() {
 		if err := processor.ProcessOutput(teeReader, entityChan); err != nil {
@@ -157,9 +249,10 @@ func (f *Forge) Run(opts ScriptOptions) (*ScriptResult, error) {
 
 	// Collect parsed entities
 	parsedOutput := &ParsedOutput{
-		ConsoleLogs: []string{},
+		ConsoleLogs:  []string{},
+		TraceOutputs: []TraceOutput{},
 	}
-	
+
 	for entity := range entityChan {
 		switch entity.Type {
 		case "ScriptOutput":
@@ -180,9 +273,13 @@ func (f *Forge) Run(opts ScriptOptions) (*ScriptResult, error) {
 					result.BroadcastPath = status.Transactions
 				}
 			}
-		case "ConsoleLog":
-			if log, ok := entity.Data.(string); ok {
-				parsedOutput.ConsoleLogs = append(parsedOutput.ConsoleLogs, log)
+		case "TraceOutput":
+			if trace, ok := entity.Data.(TraceOutput); ok {
+				parsedOutput.TraceOutputs = append(parsedOutput.TraceOutputs, trace)
+			}
+		case "TextOutput":
+			if text, ok := entity.Data.(string); ok {
+				parsedOutput.TextOutput = text
 			}
 		}
 	}
@@ -207,6 +304,14 @@ func (f *Forge) Run(opts ScriptOptions) (*ScriptResult, error) {
 	// Set results
 	result.RawOutput = outputBuffer.Bytes()
 	result.ParsedOutput = parsedOutput
+
+	// Print text output if script failed or in debug/verbose mode
+	if parsedOutput.TextOutput != "" && (result.Error != nil || opts.Debug) {
+		fmt.Println("\n📝 Forge Output:")
+		fmt.Println(strings.Repeat("─", 50))
+		fmt.Println(parsedOutput.TextOutput)
+		fmt.Println(strings.Repeat("─", 50))
+	}
 
 	// Save debug output if requested
 	if opts.Debug && opts.JSON && len(result.RawOutput) > 0 {
