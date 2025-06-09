@@ -290,30 +290,16 @@ Examples:
 			displayHandler.DisplayExecution(execution)
 
 			// Update registry if not dry run
-			// TODO: Re-enable registry update when script_updater is fixed
-			/*
 			if !dryRun && execution != nil {
-				// Create script updater and build registry update
-				scriptUpdater := registry.NewScriptUpdater(indexer)
-				registryUpdate := scriptUpdater.BuildRegistryUpdateFromExecution(
-					execution,
-					namespace,
-					networkInfo.ChainID,
-					network,
-					scriptPath,
-				)
-
-				// Apply registry update
 				manager, err := registry.NewManager(".")
 				if err != nil {
 					display.PrintErrorMessage(fmt.Sprintf("Failed to create registry manager: %v", err))
-				} else if err := registryUpdate.Apply(manager); err != nil {
-					display.PrintErrorMessage(fmt.Sprintf("Failed to apply registry update: %v", err))
+				} else if err := manager.UpdateFromScriptExecution(execution, namespace, network, scriptPath); err != nil {
+					display.PrintErrorMessage(fmt.Sprintf("Failed to update registry: %v", err))
 				} else {
 					display.PrintSuccessMessage(fmt.Sprintf("Updated registry for %s network in namespace %s", network, namespace))
 				}
 			}
-			*/
 		} else if !dryRun {
 			display.PrintWarningMessage("No events detected")
 		}

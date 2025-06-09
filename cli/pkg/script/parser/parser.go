@@ -17,6 +17,7 @@ import (
 type Parser struct {
 	eventParser        *events.EventParser
 	transactions       map[[32]byte]*Transaction
+	transactionOrder   [][32]byte // Track order of transactions
 	proxyRelationships map[common.Address]*ProxyRelationship
 	mu                 sync.RWMutex
 }
@@ -26,6 +27,7 @@ func NewParser() *Parser {
 	return &Parser{
 		eventParser:        events.NewEventParser(),
 		transactions:       make(map[[32]byte]*Transaction),
+		transactionOrder:   make([][32]byte, 0),
 		proxyRelationships: make(map[common.Address]*ProxyRelationship),
 	}
 }
@@ -34,6 +36,7 @@ func NewParser() *Parser {
 func (p *Parser) Parse(result *forge.ScriptResult, network string, chainID uint64) (*ScriptExecution, error) {
 	// Reset parser state
 	p.transactions = make(map[[32]byte]*Transaction)
+	p.transactionOrder = make([][32]byte, 0)
 	p.proxyRelationships = make(map[common.Address]*ProxyRelationship)
 
 	execution := &ScriptExecution{
@@ -129,6 +132,7 @@ func (p *Parser) processTransactionSimulated(event *bindings.TrebTransactionSimu
 	}
 
 	p.transactions[event.SimulatedTx.TransactionId] = tx
+	p.transactionOrder = append(p.transactionOrder, event.SimulatedTx.TransactionId)
 }
 
 // processSafeTransactionQueued processes a SafeTransactionQueued event
@@ -258,10 +262,12 @@ func (p *Parser) getTransactions() []*Transaction {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
-	// Collect all transactions
-	txs := make([]*Transaction, 0, len(p.transactions))
-	for _, tx := range p.transactions {
-		txs = append(txs, tx)
+	// Return transactions in the order they were simulated
+	txs := make([]*Transaction, 0, len(p.transactionOrder))
+	for _, txID := range p.transactionOrder {
+		if tx, exists := p.transactions[txID]; exists {
+			txs = append(txs, tx)
+		}
 	}
 
 	return txs
