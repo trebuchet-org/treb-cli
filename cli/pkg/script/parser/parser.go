@@ -286,14 +286,20 @@ func (p *Parser) enrichFromBroadcast(execution *ScriptExecution, broadcastPath s
 				continue
 			}
 
+			toMatches := execTx.Transaction.To == common.HexToAddress(tx.Transaction.To)
+			execTxDataHash := common.BytesToHash(execTx.Transaction.Data)
+			txDataHash := common.BytesToHash(common.FromHex(tx.Transaction.Data))
+			dataMatches := execTxDataHash == txDataHash
+			fromMatches := execTx.Sender == common.HexToAddress(tx.Transaction.From)
+
 			// Match by to address and data (simplified)
-			if execTx.Transaction.To == common.HexToAddress(tx.Transaction.To) &&
-				common.Bytes2Hex(execTx.Transaction.Data) == tx.Transaction.Data &&
-				execTx.Sender == common.HexToAddress(tx.Transaction.From) {
-				// Update status to executed
-				execTx.Status = types.TransactionStatusExecuted
-				txHash := common.HexToHash(tx.Hash)
-				execTx.TxHash = &txHash
+			if toMatches && dataMatches && fromMatches {
+				// Update status to executed if we have a hash
+				if tx.Hash != "" {
+					execTx.Status = types.TransactionStatusExecuted
+					txHash := common.HexToHash(tx.Hash)
+					execTx.TxHash = &txHash
+				}
 				// Additional enrichment could go here
 				break
 			}
