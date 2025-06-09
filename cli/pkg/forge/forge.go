@@ -50,7 +50,7 @@ func (f *Forge) RunScript(scriptPath string, flags []string, envVars map[string]
 
 // RunScriptWithArgs runs a forge script with optional function arguments
 func (f *Forge) RunScriptWithArgs(scriptPath string, flags []string, envVars map[string]string, functionArgs []string) (string, error) {
-	args := []string{"script", scriptPath}
+	args := []string{"script", scriptPath, "--ffi"}
 
 	// Add function arguments BEFORE other flags when using --sig
 	// This is important for forge's argument parsing

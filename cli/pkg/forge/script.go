@@ -336,7 +336,7 @@ func (f *Forge) Run(opts ScriptOptions) (*ScriptResult, error) {
 
 // buildArgs builds the forge script command arguments
 func (f *Forge) buildArgs(opts ScriptOptions) []string {
-	args := []string{"script", opts.ScriptPath}
+	args := []string{"script", opts.ScriptPath, "--ffi"}
 
 	// Add function signature if specified
 	if opts.FunctionName != "" {

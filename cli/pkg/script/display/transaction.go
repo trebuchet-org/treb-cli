@@ -16,10 +16,11 @@ import (
 
 // TransactionDisplay handles enhanced transaction display with event parsing
 type TransactionDisplay struct {
-	display      *Display
-	abiResolver  abi.ABIResolver
-	eventParser  *events.EventParser
-	parsedEvents map[string]interface{} // Cache for parsed events by topic0
+	display           *Display
+	abiResolver       abi.ABIResolver
+	eventParser       *events.EventParser
+	parsedEvents      map[string]interface{} // Cache for parsed events by topic0
+	currentTx         *parser.Transaction    // Current transaction being displayed
 }
 
 // NewTransactionDisplay creates a new transaction display handler
@@ -38,21 +39,27 @@ func (td *TransactionDisplay) SetABIResolver(resolver abi.ABIResolver) {
 
 // DisplayTransactionWithEvents displays a transaction with all its events
 func (td *TransactionDisplay) DisplayTransactionWithEvents(tx *parser.Transaction) {
+	// Set current transaction for reference in nested calls
+	td.currentTx = tx
+	
 	// Display basic transaction info
 	td.displayTransactionHeader(tx)
-	
+
 	// If we have trace data, display the full trace tree
 	if tx.TraceData != nil && len(tx.TraceData.Arena) > 0 {
 		td.displayTraceTree(tx.TraceData)
 	} else if td.display.verbose {
-		// TODO: In verbose mode without trace data, we could try to extract events 
+		// TODO: In verbose mode without trace data, we could try to extract events
 		// from the main ScriptOutput by correlating transaction IDs with events.
 		// This would help when TraceOutputs are not available.
 		fmt.Printf("│  %s(No trace data available for detailed trace analysis)%s\n", ColorGray, ColorReset)
 	}
-	
+
 	// Display transaction footer with gas, block, etc.
 	td.displayTransactionFooter(tx)
+	
+	// Clear current transaction
+	td.currentTx = nil
 }
 
 // displayTransactionHeader displays the transaction header
@@ -60,7 +67,7 @@ func (td *TransactionDisplay) displayTransactionHeader(tx *parser.Transaction) {
 	// Determine status color and text
 	var statusColor *color.Color
 	var statusText string
-	
+
 	switch tx.Status {
 	case types.TransactionStatusSimulated:
 		statusColor = color.New(color.FgWhite, color.Faint)
@@ -78,23 +85,23 @@ func (td *TransactionDisplay) displayTransactionHeader(tx *parser.Transaction) {
 		statusColor = color.New(color.FgWhite)
 		statusText = "unknown  "
 	}
-	
+
 	// Format transaction summary
 	to := td.display.reconcileAddress(tx.Transaction.To)
 	sender := td.display.reconcileAddress(tx.Sender)
-	
+
 	// Try to decode the transaction
 	var methodStr string
 	decoded := td.display.transactionDecoder.DecodeTransaction(
-		tx.Transaction.To, 
-		tx.Transaction.Data, 
-		tx.Transaction.Value, 
+		tx.Transaction.To,
+		tx.Transaction.Data,
+		tx.Transaction.Value,
 		tx.ReturnData,
 	)
-	
+
 	if decoded != nil && decoded.Method != "" {
 		methodStr = decoded.Method
-		
+
 		// Format arguments
 		if len(decoded.Inputs) > 0 {
 			var argStrs []string
@@ -106,15 +113,15 @@ func (td *TransactionDisplay) displayTransactionHeader(tx *parser.Transaction) {
 					argStrs = append(argStrs, valueStr)
 				}
 			}
-			
+
 			argsJoined := strings.Join(argStrs, ", ")
-			
+
 			// Truncate args if too long in non-verbose mode
 			maxLen := 60
 			if len(argsJoined) > maxLen && !td.display.verbose {
 				argsJoined = argsJoined[:maxLen-3] + "..."
 			}
-			
+
 			methodStr += fmt.Sprintf("(%s)", argsJoined)
 		} else {
 			methodStr += "()"
@@ -127,11 +134,14 @@ func (td *TransactionDisplay) displayTransactionHeader(tx *parser.Transaction) {
 			methodStr = "transfer()"
 		}
 	}
-	
+
 	// Print header (no indent before status)
-	fmt.Printf("\n%s %s → %s::%s\n", 
+	// Extract function name and args for coloring
+	funcName, args := extractFunctionParts(methodStr)
+	fmt.Printf("\n%s %s%s%s → %s::%s%s%s%s\n",
 		statusColor.Sprint(statusText),
-		sender, to, methodStr)
+		ColorGreen, sender, ColorReset,
+		to, ColorYellow, funcName, ColorReset, args)
 }
 
 // displayTraceTree displays the full trace tree with calls and events
@@ -139,7 +149,7 @@ func (td *TransactionDisplay) displayTraceTree(trace *forge.TraceOutput) {
 	if len(trace.Arena) == 0 {
 		return
 	}
-	
+
 	// Start with the root node
 	td.displayTraceNode(&trace.Arena[0], trace.Arena, []bool{}, true)
 }
@@ -149,7 +159,7 @@ func (td *TransactionDisplay) displayTraceNode(node *forge.TraceNode, arena []fo
 	// Process items in order
 	for i, orderItem := range node.Ordering {
 		isLastItem := i == len(node.Ordering)-1
-		
+
 		if orderItem.Log != nil {
 			// Display log event
 			if *orderItem.Log < len(node.Logs) {
@@ -173,13 +183,13 @@ func (td *TransactionDisplay) displayTraceNode(node *forge.TraceNode, arena []fo
 func (td *TransactionDisplay) displayCallInTree(node *forge.TraceNode, arena []forge.TraceNode, parentIsLast []bool, isLast bool) {
 	// Build tree prefix
 	prefix := td.buildTreePrefix(parentIsLast, isLast)
-	
+
 	// Format the call
 	callStr := td.formatCall(node)
-	
+
 	// Display the call
 	fmt.Printf("%s%s\n", prefix, callStr)
-	
+
 	// Recursively display children
 	newIsLast := append(append([]bool{}, parentIsLast...), isLast)
 	td.displayTraceNode(node, arena, newIsLast, false)
@@ -189,10 +199,10 @@ func (td *TransactionDisplay) displayCallInTree(node *forge.TraceNode, arena []f
 func (td *TransactionDisplay) displayLogInTree(log forge.LogEntry, address common.Address, parentIsLast []bool, isLast bool) {
 	// Build tree prefix
 	prefix := td.buildTreePrefix(parentIsLast, isLast)
-	
+
 	// Format the event
 	eventStr := td.formatLogEvent(log, address)
-	
+
 	// Display the event
 	fmt.Printf("%s%s\n", prefix, eventStr)
 }
@@ -200,7 +210,7 @@ func (td *TransactionDisplay) displayLogInTree(log forge.LogEntry, address commo
 // buildTreePrefix builds the tree prefix for proper indentation
 func (td *TransactionDisplay) buildTreePrefix(parentIsLast []bool, isLast bool) string {
 	var prefix string
-	
+
 	// Build parent prefixes
 	for _, last := range parentIsLast {
 		if last {
@@ -209,14 +219,14 @@ func (td *TransactionDisplay) buildTreePrefix(parentIsLast []bool, isLast bool) 
 			prefix += "│  "
 		}
 	}
-	
+
 	// Add current item prefix
 	if isLast {
 		prefix += "└─ "
 	} else {
 		prefix += "├─ "
 	}
-	
+
 	return prefix
 }
 
@@ -224,48 +234,141 @@ func (td *TransactionDisplay) buildTreePrefix(parentIsLast []bool, isLast bool) 
 func (td *TransactionDisplay) formatCall(node *forge.TraceNode) string {
 	// Get the target address
 	to := td.display.reconcileAddress(node.Trace.Address)
-	
+
 	// Try to decode the call
 	var callStr string
-	if node.Trace.Decoded != nil && node.Trace.Decoded.CallData != nil {
-		// Use decoded signature
-		callStr = node.Trace.Decoded.CallData.Signature
+	
+	// Special handling for CREATE/CREATE2
+	if node.Trace.Kind == "CREATE" || node.Trace.Kind == "CREATE2" {
+		// Try to get contract name and constructor info
+		contractName := ""
+		constructorArgs := ""
 		
-		// Add args if available and not too long
-		if len(node.Trace.Decoded.CallData.Args) > 0 && !strings.Contains(callStr, "(") {
-			args := strings.Join(node.Trace.Decoded.CallData.Args, ", ")
-			if len(args) > 40 {
-				args = args[:37] + "..."
+		// First check if we have the contract name from deployments
+		if node.Trace.Address != (common.Address{}) {
+			// Check in the current transaction's deployments first
+			if td.currentTx != nil {
+				for _, dep := range td.currentTx.Deployments {
+					if dep.Address == node.Trace.Address {
+						contractName = dep.ContractName
+						break
+					}
+				}
 			}
-			callStr += fmt.Sprintf("(%s)", args)
+			
+			// If not found, check in display's deployed contracts
+			if contractName == "" {
+				if name, exists := td.display.deployedContracts[node.Trace.Address]; exists {
+					// Extract just the contract name without proxy suffix
+					if idx := strings.Index(name, "["); idx > 0 {
+						contractName = name[:idx]
+					} else {
+						contractName = name
+					}
+				}
+			}
+		}
+		
+		// Check if there's decoded info (forge might decode CREATE ops)
+		if node.Trace.Decoded != nil {
+			// Use the label as contract name if we don't have one
+			if contractName == "" && node.Trace.Decoded.Label != "" {
+				contractName = node.Trace.Decoded.Label
+			}
+			
+			// Try to extract constructor args
+			if node.Trace.Decoded.CallData != nil && len(node.Trace.Decoded.CallData.Args) > 0 {
+				// Format constructor args properly
+				var argStrs []string
+				for _, arg := range node.Trace.Decoded.CallData.Args {
+					formattedValue := td.formatArgValue(arg)
+					argStrs = append(argStrs, formattedValue)
+				}
+				
+				argsJoined := strings.Join(argStrs, ", ")
+				if len(argsJoined) > 60 {
+					argsJoined = argsJoined[:57] + "..."
+				}
+				constructorArgs = fmt.Sprintf("(%s)", argsJoined)
+			}
+		}
+		
+		// TODO: If we still don't have constructor args but have the bytecode,
+		// we could try to decode them from the end of the bytecode (after the contract code).
+		// Constructor args are ABI-encoded and appended to the contract bytecode.
+		
+		// Format the creation call
+		if contractName != "" {
+			// Ensure we have parentheses even if no args
+			if constructorArgs == "" {
+				constructorArgs = "()"
+			}
+			callStr = fmt.Sprintf("new %s%s", contractName, constructorArgs)
+		} else {
+			// Fallback to showing bytecode size
+			callStr = fmt.Sprintf("%s(%d bytes)", strings.ToLower(node.Trace.Kind), len(node.Trace.Data)/2-1)
+		}
+	} else if node.Trace.Decoded != nil && node.Trace.Decoded.CallData != nil {
+		// Regular call with decoded info
+		signature := node.Trace.Decoded.CallData.Signature
+		
+		// Extract just the function name from signature (before the parenthesis)
+		funcNameOnly := signature
+		if parenIdx := strings.Index(signature, "("); parenIdx != -1 {
+			funcNameOnly = signature[:parenIdx]
+		}
+		
+		// Format with actual argument values
+		if len(node.Trace.Decoded.CallData.Args) > 0 {
+			// Format args with truncation
+			var argStrs []string
+			for _, arg := range node.Trace.Decoded.CallData.Args {
+				formattedValue := td.formatArgValue(arg)
+				argStrs = append(argStrs, formattedValue)
+			}
+			
+			argsJoined := strings.Join(argStrs, ", ")
+			if len(argsJoined) > 60 {
+				argsJoined = argsJoined[:57] + "..."
+			}
+			callStr = fmt.Sprintf("%s(%s)", funcNameOnly, argsJoined)
+		} else {
+			callStr = fmt.Sprintf("%s()", funcNameOnly)
 		}
 	} else {
 		// Fallback to selector or call type
 		if len(node.Trace.Data) >= 10 { // 0x + 8 chars for selector
 			callStr = node.Trace.Data[:10] + "..."
-		} else if node.Trace.Kind == "CREATE" || node.Trace.Kind == "CREATE2" {
-			callStr = fmt.Sprintf("%s(%d bytes)", strings.ToLower(node.Trace.Kind), len(node.Trace.Data)/2-1)
 		} else {
 			callStr = "call()"
 		}
 	}
-	
+
 	// Format based on call kind
 	var formatted string
 	switch node.Trace.Kind {
 	case "CREATE", "CREATE2":
-		formatted = fmt.Sprintf("%s%s%s", ColorGreen, callStr, ColorReset)
+		// Check if this is a deployment from transaction
+		deploymentIcon := ""
+		if _, exists := td.display.deployedContracts[node.Trace.Address]; exists {
+			deploymentIcon = "🚀 "
+		}
+		
+		formatted = fmt.Sprintf("%s%s%s%s", deploymentIcon, ColorGreen, callStr, ColorReset)
 		if node.Trace.Address != (common.Address{}) {
 			formatted += fmt.Sprintf(" → %s", node.Trace.Address.Hex())
 		}
 	case "STATICCALL":
-		formatted = fmt.Sprintf("%s → %s::%s%s%s (view)", to, ColorBlue, callStr, ColorReset)
+		funcName, args := extractFunctionParts(callStr)
+		formatted = fmt.Sprintf("%s::%s%s%s%s (view)", to, ColorYellow, funcName, ColorReset, args)
 	case "DELEGATECALL":
-		formatted = fmt.Sprintf("%s → %s::%s%s%s (delegate)", to, ColorYellow, callStr, ColorReset)
+		funcName, args := extractFunctionParts(callStr)
+		formatted = fmt.Sprintf("%s::%s%s%s%s (delegate)", to, ColorYellow, funcName, ColorReset, args)
 	default:
-		formatted = fmt.Sprintf("%s → %s::%s", to, callStr)
+		funcName, args := extractFunctionParts(callStr)
+		formatted = fmt.Sprintf("%s::%s%s%s%s", to, ColorYellow, funcName, ColorReset, args)
 	}
-	
+
 	// Add revert reason if failed
 	if !node.Trace.Success {
 		formatted += fmt.Sprintf(" %s[REVERTED]%s", ColorRed, ColorReset)
@@ -274,18 +377,29 @@ func (td *TransactionDisplay) formatCall(node *forge.TraceNode) string {
 			// TODO: Implement revert reason decoding
 		}
 	}
-	
+
 	return formatted
+}
+
+// extractFunctionParts splits a function call string into name and arguments
+func extractFunctionParts(callStr string) (funcName string, args string) {
+	// Handle cases like "transfer(to: 0x1234..., amount: 1000)"
+	parenIdx := strings.Index(callStr, "(")
+	if parenIdx != -1 {
+		return callStr[:parenIdx], callStr[parenIdx:]
+	}
+	// No parentheses, it's just a function name or selector
+	return callStr, ""
 }
 
 // formatLogEvent formats a log event for display
 func (td *TransactionDisplay) formatLogEvent(log forge.LogEntry, address common.Address) string {
 	var eventStr string
-	
+
 	// Check if forge decoded it
 	if log.Decoded.Name != "" {
 		eventStr = fmt.Sprintf("%s%s%s", ColorCyan, log.Decoded.Name, ColorReset)
-		
+
 		// Add args
 		if len(log.Decoded.Params) > 0 {
 			args := td.formatDecodedLogParams(log.Decoded.Params)
@@ -306,35 +420,34 @@ func (td *TransactionDisplay) formatLogEvent(log forge.LogEntry, address common.
 	} else {
 		eventStr = fmt.Sprintf("%sAnonymousEvent%s", ColorGray, ColorReset)
 	}
-	
-	return fmt.Sprintf("📝 %s", eventStr)
+
+	return eventStr
 }
 
 // formatDecodedLogParams formats decoded log parameters
 func (td *TransactionDisplay) formatDecodedLogParams(params [][]string) string {
 	var argStrs []string
-	
+
 	for _, param := range params {
 		if len(param) >= 2 {
 			name := param[0]
 			value := param[1]
-			
+
 			// Truncate value if needed
 			formattedValue := td.formatArgValue(value)
 			argStrs = append(argStrs, fmt.Sprintf("%s: %s", name, formattedValue))
 		}
 	}
-	
+
 	result := strings.Join(argStrs, ", ")
-	
+
 	// Truncate if too long
 	if len(result) > 60 && !td.display.verbose {
 		return result[:57] + "..."
 	}
-	
+
 	return result
 }
-
 
 // formatArgValue formats a single argument value with appropriate truncation
 func (td *TransactionDisplay) formatArgValue(value interface{}) string {
@@ -389,7 +502,7 @@ func (td *TransactionDisplay) formatArgValue(value interface{}) string {
 				return "0x..." // Simplified for unknown byte arrays
 			}
 		}
-		
+
 		if len(str) > 32 {
 			return str[:29] + "..."
 		}
@@ -400,23 +513,23 @@ func (td *TransactionDisplay) formatArgValue(value interface{}) string {
 // displayTransactionFooter displays transaction footer info
 func (td *TransactionDisplay) displayTransactionFooter(tx *parser.Transaction) {
 	var details []string
-	
+
 	if tx.TxHash != nil {
 		details = append(details, fmt.Sprintf("Tx: %s", tx.TxHash.Hex()))
 	}
-	
+
 	if tx.SafeTxHash != nil {
 		details = append(details, fmt.Sprintf("Safe Tx: %s", tx.SafeTxHash.Hex()))
 	}
-	
+
 	if tx.BlockNumber != nil {
 		details = append(details, fmt.Sprintf("Block: %d", *tx.BlockNumber))
 	}
-	
+
 	if tx.GasUsed != nil {
 		details = append(details, fmt.Sprintf("Gas: %d", *tx.GasUsed))
 	}
-	
+
 	if len(details) > 0 {
 		fmt.Printf("└─ %s%s%s\n", ColorGray, strings.Join(details, " | "), ColorReset)
 	}
@@ -428,22 +541,22 @@ func getWellKnownEventName(topic0 common.Hash) (string, bool) {
 		// ERC20 events
 		crypto.Keccak256Hash([]byte("Transfer(address,address,uint256)")).Hex(): "Transfer",
 		crypto.Keccak256Hash([]byte("Approval(address,address,uint256)")).Hex(): "Approval",
-		
+
 		// Proxy events
-		crypto.Keccak256Hash([]byte("Upgraded(address)")).Hex():                              "Upgraded",
-		crypto.Keccak256Hash([]byte("AdminChanged(address,address)")).Hex():                  "AdminChanged",
-		crypto.Keccak256Hash([]byte("BeaconUpgraded(address)")).Hex():                        "BeaconUpgraded",
-		crypto.Keccak256Hash([]byte("ProxyDeployed(address,address,string)")).Hex():          "ProxyDeployed",
-		
+		crypto.Keccak256Hash([]byte("Upgraded(address)")).Hex():                     "Upgraded",
+		crypto.Keccak256Hash([]byte("AdminChanged(address,address)")).Hex():         "AdminChanged",
+		crypto.Keccak256Hash([]byte("BeaconUpgraded(address)")).Hex():               "BeaconUpgraded",
+		crypto.Keccak256Hash([]byte("ProxyDeployed(address,address,string)")).Hex(): "ProxyDeployed",
+
 		// Ownable events
-		crypto.Keccak256Hash([]byte("OwnershipTransferred(address,address)")).Hex():          "OwnershipTransferred",
-		
+		crypto.Keccak256Hash([]byte("OwnershipTransferred(address,address)")).Hex(): "OwnershipTransferred",
+
 		// Safe events
 		crypto.Keccak256Hash([]byte("SafeSetup(address,address[],uint256,address,address)")).Hex(): "SafeSetup",
 		crypto.Keccak256Hash([]byte("ExecutionSuccess(bytes32,uint256)")).Hex():                    "ExecutionSuccess",
 		crypto.Keccak256Hash([]byte("ExecutionFailure(bytes32,uint256)")).Hex():                    "ExecutionFailure",
 	}
-	
+
 	if name, ok := wellKnownEvents[topic0.Hex()]; ok {
 		return name, true
 	}
