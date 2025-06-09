@@ -374,30 +374,18 @@ func verifySpecificContract(cmd *cobra.Command, identifier string, verificationM
 	}
 
 	// Handle manual contract path override
-	var originalContractPath, originalSourceHash string
+	var originalContractPath string
 	var contractPathOverridden bool
 
 	if contractPathFlag != "" {
-		// Initialize metadata if needed
-		if deployment.Metadata == nil {
-			deployment.Metadata = &types.ContractMetadata{}
-		}
-
 		// Save original values
-		originalContractPath = deployment.Metadata.ContractPath
-		originalSourceHash = deployment.Metadata.SourceHash
+		originalContractPath = deployment.Artifact.Path
 		contractPathOverridden = true
 
 		// Override with manual contract path
-		deployment.Metadata.ContractPath = contractPathFlag
+		deployment.Artifact.Path = contractPathFlag
 
-		// Calculate new source hash for the manual contract path
-		if newSourceHash, err := calculateSourceHashFromPath(contractPathFlag); err == nil {
-			deployment.Metadata.SourceHash = newSourceHash
-			color.New(color.FgYellow).Printf("Using manual contract path: %s\n", contractPathFlag)
-		} else {
-			color.New(color.FgYellow).Printf("Warning: Could not calculate source hash for manual path: %v\n", err)
-		}
+		color.New(color.FgYellow).Printf("Using manual contract path: %s\n", contractPathFlag)
 	}
 
 	displayName := deployment.GetDisplayName()
@@ -422,8 +410,7 @@ func verifySpecificContract(cmd *cobra.Command, identifier string, verificationM
 	if err != nil {
 		// If verification failed and we overrode the contract path, restore original values
 		if contractPathOverridden {
-			deployment.Metadata.ContractPath = originalContractPath
-			deployment.Metadata.SourceHash = originalSourceHash
+			deployment.Artifact.Path = originalContractPath
 		}
 		color.New(color.FgRed).Printf("✗ Verification failed: %v\n", err)
 		return err

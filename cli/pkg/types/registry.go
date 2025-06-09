@@ -28,9 +28,10 @@ const (
 type TransactionStatus string
 
 const (
-	TransactionStatusPending  TransactionStatus = "PENDING"
-	TransactionStatusExecuted TransactionStatus = "EXECUTED"
-	TransactionStatusFailed   TransactionStatus = "FAILED"
+	TransactionStatusSimulated TransactionStatus = "SIMULATED"
+	TransactionStatusQueued    TransactionStatus = "QUEUED"
+	TransactionStatusExecuted  TransactionStatus = "EXECUTED"
+	TransactionStatusFailed    TransactionStatus = "FAILED"
 )
 
 // VerificationStatus represents the verification status
@@ -72,11 +73,6 @@ type Deployment struct {
 	Tags      []string  `json:"tags"` // User-defined tags
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
-
-	// V2 specific fields for verification compatibility
-	Status          Status            `json:"status,omitempty"`          // For execution status
-	ConstructorArgs string            `json:"constructorArgs,omitempty"` // For verification
-	Metadata        *ContractMetadata `json:"metadata,omitempty"`        // Additional metadata
 
 	// Runtime fields (not persisted)
 	Transaction    *Transaction `json:"-"` // Linked transaction data
@@ -121,6 +117,13 @@ type ArtifactInfo struct {
 	BytecodeHash    string `json:"bytecodeHash"`    // Hash of deployed bytecode
 	ScriptPath      string `json:"scriptPath"`      // e.g., "DeployCounter.s.sol:DeployCounter"
 	GitCommit       string `json:"gitCommit"`       // Git commit hash at deployment time
+}
+
+// VerifierStatus represents the status of a verifier
+type VerifierStatus struct {
+	Status string `json:"status"` // verified/pending/failed
+	URL    string `json:"url,omitempty"`
+	Reason string `json:"reason,omitempty"`
 }
 
 // VerificationInfo contains verification details

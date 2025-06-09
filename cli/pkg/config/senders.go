@@ -1,4 +1,4 @@
-package script
+package config
 
 import (
 	"crypto/ecdsa"
@@ -10,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 )
 
 // SenderInitConfig represents a single sender configuration for the new Senders library
@@ -44,7 +43,7 @@ var (
 )
 
 // BuildSenderConfigs builds sender configurations from the treb config
-func BuildSenderConfigs(trebConfig *config.TrebConfig) (*SenderConfigs, error) {
+func BuildSenderConfigs(trebConfig *TrebConfig) (*SenderConfigs, error) {
 	configs := &SenderConfigs{
 		Configs: []SenderInitConfig{},
 	}
@@ -93,7 +92,7 @@ func BuildSenderConfigs(trebConfig *config.TrebConfig) (*SenderConfigs, error) {
 }
 
 // buildSenderInitConfig builds a single sender configuration using the new format
-func buildSenderInitConfig(id string, sender config.SenderConfig, allSenders map[string]config.SenderConfig) (*SenderInitConfig, error) {
+func buildSenderInitConfig(id string, sender SenderConfig, allSenders map[string]SenderConfig) (*SenderInitConfig, error) {
 	switch sender.Type {
 	case "private_key":
 		// Parse private key to get address

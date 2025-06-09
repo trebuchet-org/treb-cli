@@ -10,11 +10,13 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/events"
 	netpkg "github.com/trebuchet-org/treb-cli/cli/pkg/network"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/resolvers"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/script"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/script/display"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/script/executor"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/script/parameters"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/script/parser"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
@@ -136,7 +138,7 @@ Examples:
 
 		// Parse script parameters from natspec if artifact is available
 		if scriptContract.Artifact != nil {
-			paramParser := script.NewParameterParser()
+			paramParser := parameters.NewParameterParser()
 			params, err := paramParser.ParseFromArtifact(scriptContract.Artifact)
 			if err != nil {
 				checkError(fmt.Errorf("failed to parse script parameters: %w", err))
@@ -144,7 +146,7 @@ Examples:
 
 			if len(params) > 0 {
 				// Create parameter resolver
-				paramResolver, err := script.NewParameterResolver(".", trebConfig, namespace, network, networkInfo.ChainID, !IsNonInteractive())
+				paramResolver, err := parameters.NewParameterResolver(".", trebConfig, namespace, network, networkInfo.ChainID, !IsNonInteractive())
 				if err != nil {
 					checkError(fmt.Errorf("failed to create parameter resolver: %w", err))
 				}
@@ -164,7 +166,7 @@ Examples:
 				}
 
 				// Check for missing required parameters
-				var missingRequired []script.Parameter
+				var missingRequired []parameters.Parameter
 				for _, param := range params {
 					if !param.Optional && resolvedEnvVars[param.Name] == "" {
 						missingRequired = append(missingRequired, param)
@@ -201,7 +203,7 @@ Examples:
 						}
 						fmt.Println("\nMissing one or more required parameters.")
 
-						prompter := script.NewParameterPrompter(paramResolver)
+						prompter := parameters.NewParameterPrompter(paramResolver)
 						promptedVars, err := prompter.PromptForMissingParameters(params, resolvedEnvVars)
 						if err != nil {
 							checkError(fmt.Errorf("failed to prompt for parameters: %w", err))
@@ -225,20 +227,18 @@ Examples:
 		}
 
 		// Create script executor
-		executor := script.NewExecutor(".", networkInfo)
+		scriptExecutor := executor.NewExecutor(".", networkInfo)
 
 		// Run the script
-		script.PrintDeploymentBanner(fmt.Sprintf("Running script: %s", filepath.Base(scriptContract.Path)), network, profile)
 
 		// Debug mode always implies dry run to prevent Safe transaction creation
 		if debug || debugJSON {
 			dryRun = true
-			fmt.Println("Mode: Debug (dry run, no broadcast)")
-		} else if dryRun {
-			fmt.Println("Mode: Dry run (no broadcast)")
 		}
 
-		opts := script.RunOptions{
+		display.PrintDeploymentBanner(filepath.Base(scriptContract.Path), network, profile, dryRun)
+
+		opts := executor.RunOptions{
 			ScriptPath: scriptContract.Path,
 			Network:    network,
 			Profile:    profile,
@@ -249,11 +249,11 @@ Examples:
 			DebugJSON:  debugJSON,
 		}
 
-		result, err := executor.Run(opts)
+		result, err := scriptExecutor.Run(opts)
 		checkError(err)
 
 		if !result.Success {
-			script.PrintErrorMessage("Script execution failed")
+			display.PrintErrorMessage("Script execution failed")
 			os.Exit(1)
 		}
 
@@ -263,65 +263,59 @@ Examples:
 			fmt.Printf("Raw output size: %d bytes\n", len(result.RawOutput))
 		}
 
-		// Report all parsed events using enhanced display
-		if len(result.AllEvents) > 0 || len(result.Logs) > 0 {
-			// Use enhanced display system for better formatting and phase tracking
-			enhancedDisplay := script.NewEnhancedEventDisplay(indexer)
-			enhancedDisplay.SetVerbose(verbose)
+		// Parse the script result into a unified execution
+		scriptParser := parser.NewParser()
+		execution, err := scriptParser.Parse(result, network, networkInfo.ChainID)
+		if err != nil {
+			display.PrintWarningMessage(fmt.Sprintf("Failed to parse script execution: %v", err))
+		}
+
+		// Display the execution results
+		if execution != nil && (len(execution.Transactions) > 0 || len(execution.Events) > 0 || len(execution.Logs) > 0) {
+			// Create display handler
+			displayHandler := display.NewDisplay(indexer)
+			displayHandler.SetVerbose(verbose)
 
 			// Load sender configs to improve address display
-			if senderConfigs, err := script.BuildSenderConfigs(trebConfig); err == nil {
-				enhancedDisplay.SetSenderConfigs(senderConfigs)
+			if senderConfigs, err := config.BuildSenderConfigs(trebConfig); err == nil {
+				displayHandler.SetSenderConfigs(senderConfigs)
 			}
 
 			// Enable registry-based ABI resolution for better transaction decoding
 			if manager, err := registry.NewManager("."); err == nil {
-				enhancedDisplay.SetRegistryResolver(manager, networkInfo.ChainID)
+				displayHandler.SetRegistryResolver(manager, networkInfo.ChainID)
 			}
 
-			// Display logs first
-			enhancedDisplay.DisplayLogs(result.Logs)
-
-			// Then display events
-			enhancedDisplay.ProcessEvents(result.AllEvents)
+			// Display the execution
+			displayHandler.DisplayExecution(execution)
 
 			// Update registry if not dry run
-			if !dryRun {
+			// TODO: Re-enable registry update when script_updater is fixed
+			/*
+			if !dryRun && execution != nil {
 				// Create script updater and build registry update
 				scriptUpdater := registry.NewScriptUpdater(indexer)
-				registryUpdate := scriptUpdater.BuildRegistryUpdate(
-					result.AllEvents,
+				registryUpdate := scriptUpdater.BuildRegistryUpdateFromExecution(
+					execution,
 					namespace,
 					networkInfo.ChainID,
 					network,
 					scriptPath,
 				)
 
-				// Enrich with broadcast data if available
-				if result.BroadcastPath != "" {
-					enricher := registry.NewBroadcastEnricher()
-					if err := enricher.EnrichFromBroadcastFile(registryUpdate, result.BroadcastPath); err != nil {
-						script.PrintWarningMessage(fmt.Sprintf("Failed to enrich from broadcast: %v", err))
-					}
-				}
-
 				// Apply registry update
 				manager, err := registry.NewManager(".")
 				if err != nil {
-					script.PrintErrorMessage(fmt.Sprintf("Failed to create registry manager: %v", err))
+					display.PrintErrorMessage(fmt.Sprintf("Failed to create registry manager: %v", err))
 				} else if err := registryUpdate.Apply(manager); err != nil {
-					script.PrintErrorMessage(fmt.Sprintf("Failed to apply registry update: %v", err))
+					display.PrintErrorMessage(fmt.Sprintf("Failed to apply registry update: %v", err))
 				} else {
-					script.PrintSuccessMessage(fmt.Sprintf("Updated registry for %s network in namespace %s", network, namespace))
+					display.PrintSuccessMessage(fmt.Sprintf("Updated registry for %s network in namespace %s", network, namespace))
 				}
 			}
-
-			// Track and report proxy relationships
-			proxyTracker := events.NewProxyTracker()
-			proxyTracker.ProcessEvents(result.AllEvents)
-			proxyTracker.PrintProxyRelationships()
+			*/
 		} else if !dryRun {
-			script.PrintWarningMessage("No events detected")
+			display.PrintWarningMessage("No events detected")
 		}
 
 		// Report broadcast file if found
@@ -329,7 +323,7 @@ Examples:
 			fmt.Printf("\nBroadcast file: %s\n", result.BroadcastPath)
 		}
 
-		script.PrintSuccessMessage("Script execution completed successfully")
+		display.PrintSuccessMessage("Script execution completed successfully")
 	},
 }
 

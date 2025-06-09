@@ -11,6 +11,7 @@ import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/abi/treb"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/events"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/script/parser"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
@@ -26,6 +27,169 @@ func NewScriptUpdater(indexer *contracts.Indexer) *ScriptUpdater {
 		indexer:      indexer,
 		proxyTracker: events.NewProxyTracker(),
 	}
+}
+
+// BuildRegistryUpdateFromExecution builds a registry update from a parsed script execution
+func (su *ScriptUpdater) BuildRegistryUpdateFromExecution(
+	execution *parser.ScriptExecution,
+	namespace string,
+	chainID uint64,
+	networkName string,
+	scriptPath string,
+) *RegistryUpdate {
+	// Create new registry update
+	update := NewRegistryUpdate(namespace, chainID, networkName, scriptPath)
+
+	// Process each deployment
+	for _, dep := range execution.Deployments {
+		// Create deployment record
+		deployment := su.createDeploymentFromRecord(dep, namespace, chainID, execution)
+		
+		// Add to update
+		update.AddDeployment(deployment)
+		
+		// Handle proxy relationships
+		if proxyInfo, isProxy := execution.GetProxyInfo(dep.Address); isProxy {
+			deployment.Type = types.DeploymentTypeProxy
+			deployment.ProxyInfo = &types.ProxyInfo{
+				Type:                  proxyInfo.ProxyType,
+				ImplementationAddress: proxyInfo.Implementation.Hex(),
+			}
+			
+			// Find implementation deployment
+			if implDep := execution.GetDeploymentByAddress(proxyInfo.Implementation); implDep != nil {
+				implDeployment := su.createDeploymentFromRecord(implDep, namespace, chainID, execution)
+				update.AddImplementation(proxyInfo.Implementation.Hex(), implDeployment)
+			}
+		}
+	}
+	
+	// Process transactions
+	for _, tx := range execution.Transactions {
+		// Create transaction record
+		transaction := su.createTransactionFromExecution(tx, chainID)
+		
+		// Link deployments to transaction
+		for _, dep := range tx.Deployments {
+			deploymentID := types.FormatDeploymentID(namespace, chainID, dep.ContractName, dep.Label)
+			transaction.Deployments = append(transaction.Deployments, deploymentID)
+		}
+		
+		update.AddTransaction(transaction)
+	}
+	
+	// Process Safe transactions
+	for _, safeTx := range execution.SafeTransactions {
+		update.AddSafeTransaction(&types.SafeTransaction{
+			SafeTxHash:  safeTx.SafeTxHash.Hex(),
+			SafeAddress: safeTx.Safe.Hex(),
+			ChainID:     chainID,
+			Status:      types.TransactionStatusQeueud,
+			ProposedBy:  safeTx.Proposer.Hex(),
+			ProposedAt:  time.Now(),
+			TransactionIDs: func() []string {
+				ids := make([]string, len(safeTx.TransactionIDs))
+				for i, id := range safeTx.TransactionIDs {
+					// Find the transaction
+					if tx := execution.GetTransactionByID(id); tx != nil {
+						ids[i] = tx.GetRegistryTransactionID()
+					}
+				}
+				return ids
+			}(),
+		})
+	}
+	
+	return update
+}
+
+// createDeploymentFromRecord creates a deployment from a deployment record
+func (su *ScriptUpdater) createDeploymentFromRecord(
+	record *parser.DeploymentRecord,
+	namespace string,
+	chainID uint64,
+	execution *parser.ScriptExecution,
+) *types.Deployment {
+	// Extract contract info
+	contractName, artifactPath := su.parseArtifact(record.Deployment.Artifact)
+	
+	// Determine deployment type
+	deploymentType := types.DeploymentTypeSingleton
+	
+	// Get transaction ID
+	var transactionID string
+	if tx := execution.GetTransactionByID(record.TransactionID); tx != nil {
+		transactionID = tx.GetRegistryTransactionID()
+	}
+	
+	deployment := &types.Deployment{
+		ID:            types.FormatDeploymentID(namespace, chainID, contractName, record.Deployment.Label),
+		Namespace:     namespace,
+		ChainID:       chainID,
+		ContractName:  contractName,
+		Label:         record.Deployment.Label,
+		Address:       record.Address.Hex(),
+		Type:          deploymentType,
+		TransactionID: transactionID,
+		DeploymentStrategy: types.DeploymentStrategy{
+			Method:       mapCreateStrategy(record.Deployment.CreateStrategy),
+			Salt:         fmt.Sprintf("0x%x", record.Deployment.Salt),
+			InitCodeHash: fmt.Sprintf("0x%x", record.Deployment.InitCodeHash),
+		},
+		Artifact: types.ArtifactInfo{
+			Path:         artifactPath,
+			ContractName: contractName,
+		},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	
+	// Get compiler info if available
+	if su.indexer != nil {
+		if contract := su.indexer.GetContractByArtifact(record.Deployment.Artifact); contract != nil {
+			deployment.Artifact.CompilerVersion = contract.CompilerVersion
+			deployment.Artifact.SourceHash = contract.SourceHash
+		}
+	}
+	
+	return deployment
+}
+
+// createTransactionFromExecution creates a transaction record from execution data
+func (su *ScriptUpdater) createTransactionFromExecution(
+	tx *parser.Transaction,
+	chainID uint64,
+) *types.Transaction {
+	transaction := &types.Transaction{
+		ID:      tx.GetRegistryTransactionID(),
+		ChainID: chainID,
+		Status:  tx.Status,
+		CreatedAt: time.Now(),
+	}
+	
+	// Add execution details if available
+	if tx.TxHash != nil {
+		transaction.Hash = tx.TxHash.Hex()
+	}
+	if tx.BlockNumber != nil {
+		transaction.BlockNumber = *tx.BlockNumber
+	}
+	if tx.GasUsed != nil {
+		transaction.GasUsed = *tx.GasUsed
+	}
+	
+	// Add Safe context if this is a Safe transaction
+	if tx.SafeTxHash != nil && tx.SafeAddress != nil {
+		transaction.SafeContext = &types.SafeContext{
+			SafeAddress: tx.SafeAddress.Hex(),
+			SafeTxHash:  tx.SafeTxHash.Hex(),
+		}
+		if tx.SafeBatchIdx != nil {
+			transaction.SafeContext.BatchIndex = *tx.SafeBatchIdx
+		}
+	}
+	
+	return transaction
 }
 
 // BuildRegistryUpdate builds a registry update from script events using generated types

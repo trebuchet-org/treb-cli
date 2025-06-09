@@ -48,6 +48,7 @@ type ParsedOutput struct {
 	GasEstimate  *GasEstimate  // Gas estimation
 	StatusOutput *StatusOutput // Status with broadcast path
 	TraceOutputs []TraceOutput // Detailed execution traces (can be multiple)
+	Receipts     []Receipt     // Transaction receipts for broadcast transactions
 	ConsoleLogs  []string      // Extracted console.log messages
 	TextOutput   string        // Raw text output from forge (non-JSON lines)
 }
@@ -280,6 +281,13 @@ func (f *Forge) Run(opts ScriptOptions) (*ScriptResult, error) {
 		case "TextOutput":
 			if text, ok := entity.Data.(string); ok {
 				parsedOutput.TextOutput = text
+			}
+		case "Receipt":
+			if receipt, ok := entity.Data.(Receipt); ok {
+				if parsedOutput.Receipts == nil {
+					parsedOutput.Receipts = []Receipt{}
+				}
+				parsedOutput.Receipts = append(parsedOutput.Receipts, receipt)
 			}
 		}
 	}

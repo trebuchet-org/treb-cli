@@ -164,7 +164,7 @@ func (ru *RegistryUpdate) Apply(manager *Manager) error {
 		} else {
 			// Use internal ID for pending/dry-run transactions
 			tx.ID = fmt.Sprintf("tx-internal-%s", internalID)
-			tx.Status = types.TransactionStatusPending
+			tx.Status = types.TransactionStatusQueued
 		}
 
 		if err := manager.AddTransaction(tx); err != nil {

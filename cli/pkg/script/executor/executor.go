@@ -1,21 +1,18 @@
-package script
+package executor
 
 import (
 	"fmt"
 
-	"github.com/trebuchet-org/treb-cli/cli/pkg/abi/treb"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/events"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/forge"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
 )
 
-// Executor is a refactored version using the forge package for script execution
+// Executor handles script execution using the forge package
 type Executor struct {
 	projectPath string
 	network     *network.NetworkInfo
 	forge       *forge.Forge
-	parser      *events.EventParser
 }
 
 // NewExecutor creates a new script executor
@@ -24,7 +21,6 @@ func NewExecutor(projectPath string, network *network.NetworkInfo) *Executor {
 		projectPath: projectPath,
 		network:     network,
 		forge:       forge.NewForge(projectPath),
-		parser:      events.NewEventParser(),
 	}
 }
 
@@ -41,18 +37,8 @@ type RunOptions struct {
 	AdditionalArgs []string
 }
 
-// RunResult contains the result of running a script
-type RunResult struct {
-	RawOutput     []byte
-	ParsedEvents  []*treb.TrebContractDeployed // Contract deployment events using generated types
-	AllEvents     []interface{}                // New: all event types (using generated types)
-	Logs          []string                     // Console.log output from the script
-	BroadcastPath string
-	Success       bool
-}
-
-// Run executes a Foundry script and returns structured results
-func (e *Executor) Run(opts RunOptions) (*RunResult, error) {
+// Run executes a Foundry script and returns the raw forge result
+func (e *Executor) Run(opts RunOptions) (*forge.ScriptResult, error) {
 	// Convert to forge options
 	forgeOpts := forge.ScriptOptions{
 		ScriptPath:     opts.ScriptPath,
@@ -74,42 +60,7 @@ func (e *Executor) Run(opts RunOptions) (*RunResult, error) {
 	forgeOpts.EnvVars = env
 
 	// Execute the script
-	scriptResult, err := e.forge.Run(forgeOpts)
-	if err != nil {
-		return nil, err
-	}
-
-	// Build result
-	result := &RunResult{
-		RawOutput: scriptResult.RawOutput,
-		Success:   scriptResult.Success,
-	}
-
-	// Handle errors
-	if scriptResult.Error != nil {
-		return result, scriptResult.Error
-	}
-
-	// Parse events if we have output
-	if scriptResult.ParsedOutput != nil && scriptResult.ParsedOutput.ScriptOutput != nil {
-		// Parse all events
-		allEvents, err := e.parser.ParseEvents(scriptResult.ParsedOutput.ScriptOutput)
-		if err != nil {
-			// Don't fail on parse errors, just log them
-			if opts.Debug || opts.DebugJSON {
-				fmt.Printf("Warning: failed to parse events: %v\n", err)
-			}
-		}
-
-		result.AllEvents = allEvents
-		result.ParsedEvents = events.ExtractDeploymentEvents(allEvents)
-		result.Logs = scriptResult.ParsedOutput.ConsoleLogs
-	}
-
-	// Set broadcast path
-	result.BroadcastPath = scriptResult.BroadcastPath
-
-	return result, nil
+	return e.forge.Run(forgeOpts)
 }
 
 // buildEnvironment builds environment variables for the script
@@ -134,13 +85,13 @@ func (e *Executor) buildEnvironment(opts RunOptions) (map[string]string, error) 
 	}
 
 	// Build sender configs
-	senderConfigs, err := BuildSenderConfigs(profileTrebConfig)
+	senderConfigs, err := config.BuildSenderConfigs(profileTrebConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build sender configs: %w", err)
 	}
 
 	// Encode sender configs
-	encodedConfigs, err := EncodeSenderConfigs(senderConfigs)
+	encodedConfigs, err := config.EncodeSenderConfigs(senderConfigs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode sender configs: %w", err)
 	}
@@ -174,29 +125,4 @@ func (e *Executor) ExecuteRaw(scriptPath string, functionSig string, args []stri
 	}
 
 	return e.forge.Run(opts)
-}
-
-// ParseEventsFromOutput parses events from raw forge output
-// This is useful when you have output from another source
-func (e *Executor) ParseEventsFromOutput(output []byte) ([]interface{}, []*treb.TrebContractDeployed, error) {
-	// Parse the output
-	parsed, err := e.forge.ParseOutput(output)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if parsed.ScriptOutput == nil {
-		return nil, nil, fmt.Errorf("no script output found")
-	}
-
-	// Parse events
-	allEvents, err := e.parser.ParseEvents(parsed.ScriptOutput)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Extract deployment events
-	deploymentEvents := events.ExtractDeploymentEvents(allEvents)
-
-	return allEvents, deploymentEvents, nil
 }

@@ -8,19 +8,19 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/abi/treb"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/abi/bindings"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/forge"
 )
 
 // EventParser parses events from forge script output
 type EventParser struct {
-	trebContract *treb.Treb
+	trebContract *bindings.Treb
 }
 
 // NewEventParser creates a new event parser
 func NewEventParser() *EventParser {
 	return &EventParser{
-		trebContract: treb.NewTreb(),
+		trebContract: bindings.NewTreb(),
 	}
 }
 
@@ -72,23 +72,11 @@ func (ep *EventParser) ParseEvent(rawLog forge.EventLog) (interface{}, error) {
 		name   string
 		parser func(*types.Log) (interface{}, error)
 	}{
-		{"BroadcastStarted", func(log *types.Log) (interface{}, error) {
-			return ep.trebContract.UnpackBroadcastStartedEvent(log)
-		}},
 		{"ContractDeployed", func(log *types.Log) (interface{}, error) {
 			return ep.trebContract.UnpackContractDeployedEvent(log)
 		}},
-		{"DeployingContract", func(log *types.Log) (interface{}, error) {
-			return ep.trebContract.UnpackDeployingContractEvent(log)
-		}},
 		{"SafeTransactionQueued", func(log *types.Log) (interface{}, error) {
 			return ep.trebContract.UnpackSafeTransactionQueuedEvent(log)
-		}},
-		{"TransactionBroadcast", func(log *types.Log) (interface{}, error) {
-			return ep.trebContract.UnpackTransactionBroadcastEvent(log)
-		}},
-		{"TransactionFailed", func(log *types.Log) (interface{}, error) {
-			return ep.trebContract.UnpackTransactionFailedEvent(log)
 		}},
 		{"TransactionSimulated", func(log *types.Log) (interface{}, error) {
 			return ep.trebContract.UnpackTransactionSimulatedEvent(log)
@@ -195,11 +183,11 @@ func (ep *EventParser) parseBeaconUpgradedEvent(log forge.EventLog) (*BeaconUpgr
 }
 
 // ExtractDeploymentEvents filters deployment events from all events
-func ExtractDeploymentEvents(allEvents []interface{}) []*treb.TrebContractDeployed {
-	var deploymentEvents []*treb.TrebContractDeployed
+func ExtractDeploymentEvents(allEvents []interface{}) []*bindings.TrebContractDeployed {
+	var deploymentEvents []*bindings.TrebContractDeployed
 
 	for _, event := range allEvents {
-		if deployEvent, ok := event.(*treb.TrebContractDeployed); ok {
+		if deployEvent, ok := event.(*bindings.TrebContractDeployed); ok {
 			deploymentEvents = append(deploymentEvents, deployEvent)
 		}
 	}
