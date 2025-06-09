@@ -7,19 +7,18 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/fatih/color"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/abi"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/events"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/script/parser"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
 // Display handles the display of script execution results
 type Display struct {
-	transactionDecoder *abi.TransactionDecoder
+	transactionDecoder  *abi.TransactionDecoder
+	transactionDisplay  *TransactionDisplay
 	indexer            *contracts.Indexer
 	deployedContracts  map[common.Address]string // Track contracts deployed in this execution
 	verbose            bool                      // Show extra detailed information
@@ -38,6 +37,9 @@ func NewDisplay(indexer *contracts.Indexer) *Display {
 
 	// Initialize with well-known addresses
 	display.initializeWellKnownAddresses()
+	
+	// Initialize transaction display
+	display.transactionDisplay = NewTransactionDisplay(display)
 
 	return display
 }
@@ -72,6 +74,7 @@ func (d *Display) SetRegistryResolver(registryManager *registry.Manager, chainID
 			r.EnableDebug(true)
 		}
 		d.transactionDecoder.SetABIResolver(resolver)
+		d.transactionDisplay.SetABIResolver(resolver)
 	}
 }
 
@@ -90,9 +93,6 @@ func (d *Display) DisplayExecution(execution *parser.ScriptExecution) {
 
 	// Display transactions
 	d.displayTransactions(execution.Transactions)
-
-	// Display other events
-	d.displayOtherEvents(execution.Events)
 
 	// Display execution summary
 	d.printExecutionSummary()
@@ -159,49 +159,12 @@ func (d *Display) displayTransactions(transactions []*parser.Transaction) {
 		return
 	}
 
-	fmt.Printf("\n%s🔄 Transactions:%s\n", ColorBold, ColorReset)
+	fmt.Printf("%s🔄 Transactions:%s\n", ColorBold, ColorReset)
 	fmt.Printf("%s%s%s\n", ColorGray, strings.Repeat("─", 50), ColorReset)
 
 	for _, tx := range transactions {
-		// Determine status color and prefix
-		var statusColor *color.Color
-		var statusText string
-
-		switch tx.Status {
-		case types.TransactionStatusSimulated:
-			statusColor = color.New(color.FgWhite, color.Faint)
-			statusText = "simulated"
-		case types.TransactionStatusQueued:
-			statusColor = color.New(color.FgYellow)
-			statusText = "queued   "
-		case types.TransactionStatusExecuted:
-			statusColor = color.New(color.FgGreen)
-			statusText = "executed "
-		case types.TransactionStatusFailed:
-			statusColor = color.New(color.FgRed)
-			statusText = "failed   "
-		default:
-			statusColor = color.New(color.FgWhite)
-			statusText = "unknown  "
-		}
-
-		// Print status prefix and transaction summary
-		fmt.Printf("  %s %s\n",
-			statusColor.Sprint(statusText),
-			d.formatTransactionSummary(tx))
-
-		// Print details if available
-		if details := d.formatTransactionDetails(tx); details != "" {
-			fmt.Println(details)
-		}
-
-		// In verbose mode, show additional information
-		if d.verbose {
-			fmt.Printf("     Registry ID: %s\n", d.getRegistryTransactionID(tx))
-			if tx.Transaction.Label != "" && tx.Transaction.Label != "harness:execute" {
-				fmt.Printf("     Label: %s\n", tx.Transaction.Label)
-			}
-		}
+		// Use enhanced transaction display
+		d.transactionDisplay.DisplayTransactionWithEvents(tx)
 	}
 }
 
@@ -295,11 +258,15 @@ func (d *Display) displayProxyDeployedEvent(event *events.ProxyDeployedEvent) {
 func (d *Display) printExecutionSummary() {
 	if len(d.deployedContracts) > 0 {
 		fmt.Printf("\n%s📦 Deployment Summary:%s\n", ColorBold, ColorReset)
+		fmt.Printf("%s%s%s\n", ColorGray, strings.Repeat("─", 50), ColorReset)
+		
 		for address, artifact := range d.deployedContracts {
-			fmt.Printf("  • %s%s%s at %s%s%s\n",
+			fmt.Printf("%s%s%s at %s%s%s\n",
 				ColorCyan, artifact, ColorReset,
 				ColorGreen, address.Hex(), ColorReset)
 		}
+		
+		fmt.Println() // Add newline after deployment summary
 	}
 }
 

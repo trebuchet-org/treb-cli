@@ -391,47 +391,7 @@ func (op *OutputProcessor) saveIgnoredLine(line string) {
 func (op *OutputProcessor) printSummary() {
 	op.spinner.Stop()
 
-	fmt.Println("\n📊 Execution Summary:")
-	fmt.Println(strings.Repeat("─", 50))
-
-	totalDuration := time.Duration(0)
-	for _, stage := range op.stages {
-		// Skip the Completed stage in summary
-		if stage.Stage == StageCompleted {
-			continue
-		}
-
-		var duration time.Duration
-		if !stage.EndTime.IsZero() {
-			duration = stage.EndTime.Sub(stage.StartTime)
-		} else {
-			duration = time.Since(stage.StartTime)
-		}
-
-		// Only add to total duration if not skipped
-		if !stage.Skipped {
-			totalDuration += duration
-		}
-
-		var icon string
-		var status string
-		if stage.Skipped {
-			icon = "⊘"
-			status = "skipped"
-		} else if stage.Completed {
-			icon = "✓"
-			status = duration.Round(time.Millisecond).String()
-		} else {
-			icon = "✗"
-			status = duration.Round(time.Millisecond).String()
-		}
-
-		fmt.Printf("%s %-15s %s\n", icon, stage.Stage, status)
-	}
-
-	fmt.Println(strings.Repeat("─", 50))
-	fmt.Printf("Total Duration: %s\n", totalDuration.Round(time.Millisecond))
-
+	// Only show warning if there were parsing issues
 	if op.ignoredCount > 0 {
 		fmt.Printf("\n⚠️  %d lines couldn't be parsed (saved in %s)\n", op.ignoredCount, op.debugDir)
 	}

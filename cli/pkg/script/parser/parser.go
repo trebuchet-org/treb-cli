@@ -87,13 +87,11 @@ func (p *Parser) Parse(result *forge.ScriptResult, network string, chainID uint6
 		// Enrich with forge output data
 		if result.ParsedOutput != nil {
 			// Process trace outputs
+			// TODO: The current implementation assumes one trace per transaction, but forge 
+			// may output multiple traces (one per transaction). We need to improve the 
+			// correlation logic to properly match each trace to its corresponding transaction.
 			for _, trace := range result.ParsedOutput.TraceOutputs {
 				p.processTraceOutput(&trace)
-			}
-
-			// Process receipts
-			for _, receipt := range result.ParsedOutput.Receipts {
-				p.processReceipt(&receipt)
 			}
 
 			// Extract console logs
@@ -212,47 +210,27 @@ func (p *Parser) processTraceOutput(trace *forge.TraceOutput) {
 	defer p.mu.Unlock()
 
 	// Walk through trace nodes
-	p.walkTraceNodes(trace.Arena)
-}
-
-// walkTraceNodes walks through trace nodes to match with transactions
-func (p *Parser) walkTraceNodes(nodes []forge.TraceNode) {
-	for i := range nodes {
-		node := &nodes[i]
-		if node.Trace.Kind == "CALL" || node.Trace.Kind == "CREATE" || node.Trace.Kind == "CREATE2" {
-			// Try to match with existing transactions
-			for _, tx := range p.transactions {
-				// Match by various criteria (simplified)
-				if tx.Transaction.To == node.Trace.Address && tx.Sender == node.Trace.Caller && common.Bytes2Hex(tx.Transaction.Data) == strings.TrimPrefix(node.Trace.Data, "0x") {
-					tx.TraceData = node
-					break
-				}
-			}
-		}
+	if len(trace.Arena) == 0 {
+		return
 	}
-}
-
-// processReceipt processes a receipt to enrich transactions
-func (p *Parser) processReceipt(receipt *forge.Receipt) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	// Try to match with existing transactions by various criteria
-	for _, tx := range p.transactions {
-		// This is simplified - in practice we'd need more sophisticated matching
-		if tx.TraceData != nil && tx.TraceData.Trace.Success {
-			tx.ReceiptData = receipt
-			if receipt.TxHash != "" {
-				txHash := common.HexToHash(receipt.TxHash)
-				tx.TxHash = &txHash
+	
+	root := &trace.Arena[0]
+	if root.Trace.Kind == "CALL" || root.Trace.Kind == "CREATE" || root.Trace.Kind == "CREATE2" {
+		// Try to match with existing transactions
+		for _, tx := range p.transactions {
+			// Match by various criteria
+			toMatches := tx.Transaction.To == root.Trace.Address
+			fromMatches := tx.Sender == root.Trace.Caller
+			
+			// Compare data (handle 0x prefix)
+			txData := common.Bytes2Hex(tx.Transaction.Data)
+			traceData := strings.TrimPrefix(root.Trace.Data, "0x")
+			dataMatches := txData == traceData
+			
+			if toMatches && fromMatches && dataMatches {
+				tx.TraceData = trace
+				break
 			}
-			if receipt.BlockNumber > 0 {
-				tx.BlockNumber = &receipt.BlockNumber
-			}
-			if receipt.GasUsed > 0 {
-				tx.GasUsed = &receipt.GasUsed
-			}
-			break
 		}
 	}
 }
@@ -305,6 +283,13 @@ func (p *Parser) enrichFromBroadcast(execution *ScriptExecution, broadcastPath s
 					execTx.Status = types.TransactionStatusExecuted
 					txHash := common.HexToHash(tx.Hash)
 					execTx.TxHash = &txHash
+					for _, receipt := range execution.ParsedOutput.Receipts {
+						if receipt.TxHash == tx.Hash {
+							execTx.GasUsed = &receipt.GasUsed
+							execTx.BlockNumber = &receipt.BlockNumber
+							break
+						}
+					}
 				}
 				// Additional enrichment could go here
 				break

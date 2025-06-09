@@ -304,10 +304,7 @@ Examples:
 			display.PrintWarningMessage("No events detected")
 		}
 
-		// Report broadcast file if found
-		if result.BroadcastPath != "" {
-			fmt.Printf("\nBroadcast file: %s\n", result.BroadcastPath)
-		}
+		// Broadcast file path is available in result.BroadcastPath if needed
 
 		display.PrintSuccessMessage("Script execution completed successfully")
 	},

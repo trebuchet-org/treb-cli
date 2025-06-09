@@ -63,7 +63,7 @@ type Transaction struct {
 	SafeTxHash   *common.Hash
 	SafeBatchIdx *int
 	Deployments  []DeploymentInfo
-	TraceData    *forge.TraceNode
+	TraceData    *forge.TraceOutput
 	ReceiptData  *forge.Receipt
 }
 
