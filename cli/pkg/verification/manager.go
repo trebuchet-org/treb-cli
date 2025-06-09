@@ -106,11 +106,6 @@ func (vm *Manager) verifyOnEtherscanWithDebug(deployment *types.Deployment, netw
 
 	// Get contract path from artifact
 	contractPath := deployment.Artifact.Path
-	if deployment.Metadata != nil && deployment.Metadata.ContractPath != "" {
-		// Override with manual contract path if provided
-		contractPath = deployment.Metadata.ContractPath
-	}
-
 	// Build the forge verify-contract command
 	args := []string{
 		"verify-contract",
@@ -122,9 +117,6 @@ func (vm *Manager) verifyOnEtherscanWithDebug(deployment *types.Deployment, netw
 
 	// Add compiler version if available
 	compilerVersion := deployment.Artifact.CompilerVersion
-	if deployment.Metadata != nil && deployment.Metadata.Compiler != "" {
-		compilerVersion = deployment.Metadata.Compiler
-	}
 	if compilerVersion != "" {
 		args = append(args, "--compiler-version", compilerVersion)
 	}
@@ -172,10 +164,6 @@ func (vm *Manager) verifyOnEtherscanWithDebug(deployment *types.Deployment, netw
 func (vm *Manager) verifyOnSourceifyWithDebug(deployment *types.Deployment, networkInfo *network.NetworkInfo, debug bool) error {
 	// Get contract path from artifact
 	contractPath := deployment.Artifact.Path
-	if deployment.Metadata != nil && deployment.Metadata.ContractPath != "" {
-		// Override with manual contract path if provided
-		contractPath = deployment.Metadata.ContractPath
-	}
 
 	// Build the forge verify-contract command for Sourcify
 	args := []string{
@@ -189,9 +177,6 @@ func (vm *Manager) verifyOnSourceifyWithDebug(deployment *types.Deployment, netw
 
 	// Add compiler version if available
 	compilerVersion := deployment.Artifact.CompilerVersion
-	if deployment.Metadata != nil && deployment.Metadata.Compiler != "" {
-		compilerVersion = deployment.Metadata.Compiler
-	}
 	if compilerVersion != "" {
 		args = append(args, "--compiler-version", compilerVersion)
 	}

@@ -42,7 +42,7 @@ type TxData struct {
 	To                   string        `json:"to"`
 	Gas                  string        `json:"gas"`
 	Value                string        `json:"value"`
-	Data                 string        `json:"data"`
+	Data                 string        `json:"input"`
 	Nonce                string        `json:"nonce"`
 	AccessList           []interface{} `json:"accessList"`
 	ChainId              string        `json:"chainId"`

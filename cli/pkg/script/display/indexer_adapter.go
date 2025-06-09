@@ -1,4 +1,4 @@
-package script
+package display
 
 import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/abi"

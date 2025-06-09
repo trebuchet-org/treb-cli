@@ -78,7 +78,7 @@ func syncPendingSafeTransactions(manager *registry.Manager, debug bool) error {
 	// Filter pending ones
 	var pendingSafeTxs []*types.SafeTransaction
 	for _, safeTx := range safeTxs {
-		if safeTx.Status == types.TransactionStatusPending {
+		if safeTx.Status == types.TransactionStatusQueued {
 			pendingSafeTxs = append(pendingSafeTxs, safeTx)
 		}
 	}
@@ -230,7 +230,7 @@ func syncPendingTransactions(manager *registry.Manager, debug bool) error {
 	// Filter pending ones
 	var pendingTxs []*types.Transaction
 	for _, tx := range allTxs {
-		if tx.Status == types.TransactionStatusPending {
+		if tx.Status == types.TransactionStatusQueued {
 			pendingTxs = append(pendingTxs, tx)
 		}
 	}

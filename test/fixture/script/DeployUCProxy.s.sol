@@ -40,7 +40,7 @@ contract DeployerUCProxy is TrebScript {
         }
 
         address proxy = deployer.create3("ERC1967Proxy").setLabel(label).deploy(
-            abi.encode(implementation, "")
+            abi.encode(implementation, abi.encodeWithSelector(UpgradeableCounter.initialize.selector, deployer.account))
         );
 
         UpgradeableCounter(deployer.harness(proxy)).increment();

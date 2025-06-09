@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/abi/bindings"
 )
 
 // Well-known contract addresses
@@ -52,6 +53,8 @@ func NewTransactionDecoder() *TransactionDecoder {
 	decoder.artifactMap[CreateXAddress] = "CreateX"
 	decoder.artifactMap[MultiSendAddress] = "MultiSend"
 	decoder.artifactMap[ProxyFactoryAddress] = "SafeProxyFactory"
+
+	decoder.RegisterContract(CreateXAddress, "CreateX", bindings.CreateXMetaData.ABI)
 
 	return decoder
 }
@@ -167,7 +170,7 @@ func (td *TransactionDecoder) DecodeTransaction(to common.Address, data []byte, 
 		// Find matching method
 		for _, method := range contractABI.Methods {
 			if bytes.Equal(method.ID[:4], methodID) {
-				decoded.Method = method.Name
+				decoded.Method = method.RawName
 
 				// Decode inputs
 				if len(data) > 4 {

@@ -47,7 +47,7 @@ Examples:
 		}
 
 		// Create deployment resolver
-		resolver := resolvers.NewContext(".", !IsNonInteractive())
+		resolver := resolvers.NewDeploymentsResolver(manager, !IsNonInteractive())
 
 		// Resolve network to get chain ID if needed
 		var chainID uint64
