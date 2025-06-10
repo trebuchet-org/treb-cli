@@ -179,20 +179,65 @@ func (td *TransactionDisplay) displayTraceNode(node *forge.TraceNode, arena []fo
 	}
 }
 
+// displayTraceNodeWithReturnCheck displays trace node children, adjusting isLast based on whether there's a return address
+func (td *TransactionDisplay) displayTraceNodeWithReturnCheck(node *forge.TraceNode, arena []forge.TraceNode, isLast []bool, hasReturnAfter bool) {
+	// Process items in order
+	for i, orderItem := range node.Ordering {
+		// If there's a return address after, no item is truly the last
+		isLastItem := i == len(node.Ordering)-1 && !hasReturnAfter
+
+		if orderItem.Log != nil {
+			// Display log event
+			if *orderItem.Log < len(node.Logs) {
+				td.displayLogInTree(node.Logs[*orderItem.Log], node.Trace.Address, isLast, isLastItem)
+			}
+		} else if orderItem.Call != nil {
+			// Display subcall
+			childIdx := *orderItem.Call
+			if childIdx < len(node.Children) {
+				childNodeIdx := node.Children[childIdx]
+				if childNodeIdx < len(arena) {
+					childNode := &arena[childNodeIdx]
+					td.displayCallInTree(childNode, arena, isLast, isLastItem)
+				}
+			}
+		}
+	}
+}
+
 // displayCallInTree displays a call node in the tree
 func (td *TransactionDisplay) displayCallInTree(node *forge.TraceNode, arena []forge.TraceNode, parentIsLast []bool, isLast bool) {
 	// Build tree prefix
 	prefix := td.buildTreePrefix(parentIsLast, isLast)
 
-	// Format the call
-	callStr := td.formatCall(node)
+	// Special handling for CREATE/CREATE2
+	if node.Trace.Kind == "CREATE" || node.Trace.Kind == "CREATE2" {
+		// Display the main create call with multiline constructor args
+		td.displayCreateCallWithArgs(node, prefix)
 
-	// Display the call
-	fmt.Printf("%s%s\n", prefix, callStr)
+		// Create new parentIsLast for children
+		newIsLast := append(append([]bool{}, parentIsLast...), isLast)
 
-	// Recursively display children
-	newIsLast := append(append([]bool{}, parentIsLast...), isLast)
-	td.displayTraceNode(node, arena, newIsLast, false)
+		// Check if we have a return address
+		hasReturnAddress := node.Trace.Address != (common.Address{})
+
+		// Display children (events, etc)
+		td.displayTraceNodeWithReturnCheck(node, arena, newIsLast, hasReturnAddress)
+
+		// Display return address as last item
+		if hasReturnAddress {
+			returnPrefix := td.buildTreePrefix(newIsLast, true)
+			fmt.Printf("%s%s[return]%s %s\n", returnPrefix, ColorGray, ColorReset, node.Trace.Address.Hex())
+		}
+	} else {
+		// Format regular calls
+		callStr := td.formatCall(node)
+		fmt.Printf("%s%s\n", prefix, callStr)
+
+		// Recursively display children
+		newIsLast := append(append([]bool{}, parentIsLast...), isLast)
+		td.displayTraceNode(node, arena, newIsLast, false)
+	}
 }
 
 // displayLogInTree displays a log event in the tree
@@ -293,9 +338,25 @@ func (td *TransactionDisplay) formatCall(node *forge.TraceNode) string {
 			}
 		}
 
-		// TODO: If we still don't have constructor args but have the bytecode,
-		// we could try to decode them from the end of the bytecode (after the contract code).
-		// Constructor args are ABI-encoded and appended to the contract bytecode.
+		// If we still don't have constructor args, try to decode from deployment record
+		if constructorArgs == "" && contractName != "" && td.display.execution != nil {
+			// Find the deployment record for this address
+			for _, dep := range td.display.execution.Deployments {
+				if dep.Address == node.Trace.Address {
+					// Try to decode constructor args
+					if len(dep.Deployment.ConstructorArgs) > 0 {
+						decoded, err := td.display.transactionDecoder.DecodeConstructor(
+							dep.Deployment.Artifact,
+							dep.Deployment.ConstructorArgs,
+						)
+						if err == nil && decoded != nil {
+							constructorArgs = decoded.FormatCompact()
+						}
+					}
+					break
+				}
+			}
+		}
 
 		// Format the creation call
 		if contractName != "" {
@@ -561,4 +622,145 @@ func getWellKnownEventName(topic0 common.Hash) (string, bool) {
 		return name, true
 	}
 	return "", false
+}
+
+// displayCreateCallWithArgs displays a CREATE call with multiline constructor arguments
+func (td *TransactionDisplay) displayCreateCallWithArgs(node *forge.TraceNode, prefix string) {
+	// Get contract name
+	contractName := td.getContractName(node)
+
+	// Check if this is a deployment from transaction
+	deploymentIcon := ""
+	if _, exists := td.display.deployedContracts[node.Trace.Address]; exists {
+		deploymentIcon = "🚀 "
+	}
+
+	// Get constructor arguments
+	var decodedConstructor *abi.DecodedConstructor
+	decodedConstructor = td.getDecodedConstructor(node)
+
+	// Format the opening line
+	if contractName != "" {
+		if decodedConstructor != nil && len(decodedConstructor.Inputs) > 0 {
+			// Display with opening parenthesis
+			fmt.Printf("%s%s%snew %s(%s\n", prefix, deploymentIcon, ColorGreen, contractName, ColorReset)
+
+			// For constructor arguments, we need to maintain the tree structure
+			// The prefix ends with either "├─ " or "└─ " which we need to replace with proper spacing
+			basePrefix := prefix
+			if strings.HasSuffix(prefix, "├─ ") {
+				basePrefix = prefix[:len(prefix)-len("├─ ")] + "│  │  "
+			} else if strings.HasSuffix(prefix, "└─ ") {
+				basePrefix = prefix[:len(prefix)-len("└─ ")] + "   │  "
+			}
+
+			// Display each argument on its own line
+			for i, input := range decodedConstructor.Inputs {
+				isLast := (i == len(decodedConstructor.Inputs)-1)
+
+				// Format the argument value
+				valueStr := abi.FormatValue(input.Value, input.Type)
+
+				// Build the line with proper indentation
+				argLine := basePrefix + "  "
+				if input.Name != "" && !strings.HasPrefix(input.Name, "arg") {
+					argLine += fmt.Sprintf("%s%s:%s %s", ColorGray, input.Name, ColorReset, valueStr)
+				} else {
+					argLine += valueStr
+				}
+
+				// Add comma if not last
+				if !isLast {
+					argLine += ","
+				}
+
+				fmt.Printf("%s\n", argLine)
+			}
+
+			// Close parenthesis
+			fmt.Printf("%s%s)%s\n", basePrefix, ColorGreen, ColorReset)
+		} else {
+			// No constructor args
+			fmt.Printf("%s%s%snew %s()%s\n", prefix, deploymentIcon, ColorGreen, contractName, ColorReset)
+		}
+	} else {
+		// Fallback to showing bytecode size
+		fmt.Printf("%s%s%s%s(%d bytes)%s\n", prefix, deploymentIcon, ColorGreen, strings.ToLower(node.Trace.Kind), len(node.Trace.Data)/2-1, ColorReset)
+	}
+}
+
+// getContractName extracts the contract name for a CREATE node
+func (td *TransactionDisplay) getContractName(node *forge.TraceNode) string {
+	contractName := ""
+
+	// Check in the current transaction's deployments first
+	if td.currentTx != nil {
+		for _, dep := range td.currentTx.Deployments {
+			if dep.Address == node.Trace.Address {
+				contractName = dep.ContractName
+				break
+			}
+		}
+	}
+
+	// If not found, check in display's deployed contracts
+	if contractName == "" {
+		if name, exists := td.display.deployedContracts[node.Trace.Address]; exists {
+			// Extract just the contract name without proxy suffix
+			if idx := strings.Index(name, "["); idx > 0 {
+				contractName = name[:idx]
+			} else {
+				contractName = name
+			}
+		}
+	}
+
+	// Check if there's decoded info
+	if contractName == "" && node.Trace.Decoded != nil && node.Trace.Decoded.Label != "" {
+		contractName = node.Trace.Decoded.Label
+	}
+
+	return contractName
+}
+
+// getDecodedConstructor gets decoded constructor arguments for a CREATE node
+func (td *TransactionDisplay) getDecodedConstructor(node *forge.TraceNode) *abi.DecodedConstructor {
+	var decodedConstructor *abi.DecodedConstructor
+
+	// Try to decode from deployment record
+	if td.display.execution != nil {
+		for _, dep := range td.display.execution.Deployments {
+			if dep.Address == node.Trace.Address {
+				if len(dep.Deployment.ConstructorArgs) > 0 {
+					decoded, err := td.display.transactionDecoder.DecodeConstructor(
+						dep.Deployment.Artifact,
+						dep.Deployment.ConstructorArgs,
+					)
+					if err == nil && decoded != nil {
+						decodedConstructor = decoded
+					}
+				}
+				break
+			}
+		}
+	}
+
+	// If no decoded constructor, check if forge decoded it
+	if decodedConstructor == nil && node.Trace.Decoded != nil && node.Trace.Decoded.CallData != nil && len(node.Trace.Decoded.CallData.Args) > 0 {
+		// Create a decoded constructor from forge's decoded args
+		decodedConstructor = &abi.DecodedConstructor{
+			Inputs: make([]abi.DecodedInput, len(node.Trace.Decoded.CallData.Args)),
+		}
+		for i, arg := range node.Trace.Decoded.CallData.Args {
+			// Try to extract parameter name if available
+			paramName := fmt.Sprintf("arg%d", i)
+			decodedConstructor.Inputs[i] = abi.DecodedInput{
+				Name:  paramName,
+				Type:  "unknown",
+				Value: arg,
+			}
+		}
+	}
+
+	return decodedConstructor
 }

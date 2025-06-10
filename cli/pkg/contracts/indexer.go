@@ -390,9 +390,12 @@ func (i *Indexer) GetContractByArtifact(artifact string) *ContractInfo {
 			}
 		}
 	} else {
-		// Simple name - check if it's unique
-		if contracts := i.contractNames[artifact]; len(contracts) == 1 {
-			return contracts[0]
+		// TODO: BIG PROBLEM HERE WE NEED TO FIX THIS
+		contracts := i.contractNames[artifact]
+		for _, contract := range contracts {
+			if contract.Artifact != nil {
+				return contract
+			}
 		}
 	}
 
@@ -570,7 +573,7 @@ func ResetGlobalIndexer() {
 	indexerMutex = sync.Once{}
 }
 
-// GetContractByBytecodeHash returns a contract by its bytecode hash
+// GetContractByBytecodeHash returns a contract by its btecode hash
 func (i *Indexer) GetContractByBytecodeHash(hash string) *ContractInfo {
 	i.mu.RLock()
 	defer i.mu.RUnlock()

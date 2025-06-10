@@ -101,6 +101,7 @@ func (e *Executor) buildEnvironment(opts RunOptions) (map[string]string, error) 
 	env["NAMESPACE"] = opts.Namespace
 	env["NETWORK"] = e.network.Name
 	env["FOUNDRY_PROFILE"] = opts.Profile
+	// env["DRYRUN"] = strconv.FormatBool(opts.DryRun)
 
 	// Add library deployer if configured
 	if profileTrebConfig.LibraryDeployer != "" {

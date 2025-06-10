@@ -127,9 +127,16 @@ func (d *Display) registerDeployments(execution *parser.ScriptExecution) {
 			contractInfo := d.indexer.GetContractByArtifact(dep.Deployment.Artifact)
 			if contractInfo != nil && contractInfo.ArtifactPath != "" {
 				if abiJSON := d.loadABIFromPath(contractInfo.ArtifactPath); abiJSON != "" {
+					// Register by address for deployed contracts
 					if err := d.transactionDecoder.RegisterContract(dep.Address, dep.Deployment.Artifact, abiJSON); err != nil {
 						if d.verbose {
 							fmt.Printf("Warning: Failed to register ABI for %s: %v\n", dep.Deployment.Artifact, err)
+						}
+					}
+					// Also register by artifact name for constructor decoding
+					if err := d.transactionDecoder.RegisterContractByArtifact(dep.Deployment.Artifact, abiJSON); err != nil {
+						if d.verbose {
+							fmt.Printf("Warning: Failed to register ABI by artifact for %s: %v\n", dep.Deployment.Artifact, err)
 						}
 					}
 				}
