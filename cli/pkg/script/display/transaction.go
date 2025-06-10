@@ -16,11 +16,11 @@ import (
 
 // TransactionDisplay handles enhanced transaction display with event parsing
 type TransactionDisplay struct {
-	display           *Display
-	abiResolver       abi.ABIResolver
-	eventParser       *events.EventParser
-	parsedEvents      map[string]interface{} // Cache for parsed events by topic0
-	currentTx         *parser.Transaction    // Current transaction being displayed
+	display      *Display
+	abiResolver  abi.ABIResolver
+	eventParser  *events.EventParser
+	parsedEvents map[string]interface{} // Cache for parsed events by topic0
+	currentTx    *parser.Transaction    // Current transaction being displayed
 }
 
 // NewTransactionDisplay creates a new transaction display handler
@@ -41,7 +41,7 @@ func (td *TransactionDisplay) SetABIResolver(resolver abi.ABIResolver) {
 func (td *TransactionDisplay) DisplayTransactionWithEvents(tx *parser.Transaction) {
 	// Set current transaction for reference in nested calls
 	td.currentTx = tx
-	
+
 	// Display basic transaction info
 	td.displayTransactionHeader(tx)
 
@@ -57,7 +57,7 @@ func (td *TransactionDisplay) DisplayTransactionWithEvents(tx *parser.Transactio
 
 	// Display transaction footer with gas, block, etc.
 	td.displayTransactionFooter(tx)
-	
+
 	// Clear current transaction
 	td.currentTx = nil
 }
@@ -201,7 +201,7 @@ func (td *TransactionDisplay) displayLogInTree(log forge.LogEntry, address commo
 	prefix := td.buildTreePrefix(parentIsLast, isLast)
 
 	// Format the event
-	eventStr := td.formatLogEvent(log, address)
+	eventStr := td.formatLogEvent(log)
 
 	// Display the event
 	fmt.Printf("%s%s\n", prefix, eventStr)
@@ -237,13 +237,13 @@ func (td *TransactionDisplay) formatCall(node *forge.TraceNode) string {
 
 	// Try to decode the call
 	var callStr string
-	
+
 	// Special handling for CREATE/CREATE2
 	if node.Trace.Kind == "CREATE" || node.Trace.Kind == "CREATE2" {
 		// Try to get contract name and constructor info
 		contractName := ""
 		constructorArgs := ""
-		
+
 		// First check if we have the contract name from deployments
 		if node.Trace.Address != (common.Address{}) {
 			// Check in the current transaction's deployments first
@@ -255,7 +255,7 @@ func (td *TransactionDisplay) formatCall(node *forge.TraceNode) string {
 					}
 				}
 			}
-			
+
 			// If not found, check in display's deployed contracts
 			if contractName == "" {
 				if name, exists := td.display.deployedContracts[node.Trace.Address]; exists {
@@ -268,14 +268,14 @@ func (td *TransactionDisplay) formatCall(node *forge.TraceNode) string {
 				}
 			}
 		}
-		
+
 		// Check if there's decoded info (forge might decode CREATE ops)
 		if node.Trace.Decoded != nil {
 			// Use the label as contract name if we don't have one
 			if contractName == "" && node.Trace.Decoded.Label != "" {
 				contractName = node.Trace.Decoded.Label
 			}
-			
+
 			// Try to extract constructor args
 			if node.Trace.Decoded.CallData != nil && len(node.Trace.Decoded.CallData.Args) > 0 {
 				// Format constructor args properly
@@ -284,7 +284,7 @@ func (td *TransactionDisplay) formatCall(node *forge.TraceNode) string {
 					formattedValue := td.formatArgValue(arg)
 					argStrs = append(argStrs, formattedValue)
 				}
-				
+
 				argsJoined := strings.Join(argStrs, ", ")
 				if len(argsJoined) > 60 {
 					argsJoined = argsJoined[:57] + "..."
@@ -292,11 +292,11 @@ func (td *TransactionDisplay) formatCall(node *forge.TraceNode) string {
 				constructorArgs = fmt.Sprintf("(%s)", argsJoined)
 			}
 		}
-		
+
 		// TODO: If we still don't have constructor args but have the bytecode,
 		// we could try to decode them from the end of the bytecode (after the contract code).
 		// Constructor args are ABI-encoded and appended to the contract bytecode.
-		
+
 		// Format the creation call
 		if contractName != "" {
 			// Ensure we have parentheses even if no args
@@ -311,13 +311,13 @@ func (td *TransactionDisplay) formatCall(node *forge.TraceNode) string {
 	} else if node.Trace.Decoded != nil && node.Trace.Decoded.CallData != nil {
 		// Regular call with decoded info
 		signature := node.Trace.Decoded.CallData.Signature
-		
+
 		// Extract just the function name from signature (before the parenthesis)
 		funcNameOnly := signature
 		if parenIdx := strings.Index(signature, "("); parenIdx != -1 {
 			funcNameOnly = signature[:parenIdx]
 		}
-		
+
 		// Format with actual argument values
 		if len(node.Trace.Decoded.CallData.Args) > 0 {
 			// Format args with truncation
@@ -326,7 +326,7 @@ func (td *TransactionDisplay) formatCall(node *forge.TraceNode) string {
 				formattedValue := td.formatArgValue(arg)
 				argStrs = append(argStrs, formattedValue)
 			}
-			
+
 			argsJoined := strings.Join(argStrs, ", ")
 			if len(argsJoined) > 60 {
 				argsJoined = argsJoined[:57] + "..."
@@ -353,7 +353,7 @@ func (td *TransactionDisplay) formatCall(node *forge.TraceNode) string {
 		if _, exists := td.display.deployedContracts[node.Trace.Address]; exists {
 			deploymentIcon = "🚀 "
 		}
-		
+
 		formatted = fmt.Sprintf("%s%s%s%s", deploymentIcon, ColorGreen, callStr, ColorReset)
 		if node.Trace.Address != (common.Address{}) {
 			formatted += fmt.Sprintf(" → %s", node.Trace.Address.Hex())
@@ -393,7 +393,7 @@ func extractFunctionParts(callStr string) (funcName string, args string) {
 }
 
 // formatLogEvent formats a log event for display
-func (td *TransactionDisplay) formatLogEvent(log forge.LogEntry, address common.Address) string {
+func (td *TransactionDisplay) formatLogEvent(log forge.LogEntry) string {
 	var eventStr string
 
 	// Check if forge decoded it

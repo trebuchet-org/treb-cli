@@ -10,34 +10,35 @@ import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/abi"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/events"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/script/parser"
 )
 
 // Display handles the display of script execution results
 type Display struct {
-	transactionDecoder  *abi.TransactionDecoder
-	transactionDisplay  *TransactionDisplay
+	transactionDecoder *abi.TransactionDecoder
+	transactionDisplay *TransactionDisplay
 	indexer            *contracts.Indexer
 	deployedContracts  map[common.Address]string // Track contracts deployed in this execution
 	verbose            bool                      // Show extra detailed information
 	knownAddresses     map[common.Address]string // Track known addresses (deployers, safes, etc.)
+	execution          *parser.ScriptExecution
 }
 
 // NewDisplay creates a new display handler
-func NewDisplay(indexer *contracts.Indexer) *Display {
+func NewDisplay(indexer *contracts.Indexer, execution *parser.ScriptExecution) *Display {
 	display := &Display{
 		transactionDecoder: abi.NewTransactionDecoder(),
 		indexer:            indexer,
 		deployedContracts:  make(map[common.Address]string),
 		verbose:            false,
 		knownAddresses:     make(map[common.Address]string),
+		execution:          execution,
 	}
 
 	// Initialize with well-known addresses
 	display.initializeWellKnownAddresses()
-	
+
 	// Initialize transaction display
 	display.transactionDisplay = NewTransactionDisplay(display)
 
@@ -79,20 +80,15 @@ func (d *Display) SetRegistryResolver(registryManager *registry.Manager, chainID
 }
 
 // DisplayExecution displays the complete script execution
-func (d *Display) DisplayExecution(execution *parser.ScriptExecution) {
-	if execution == nil {
-		PrintWarningMessage("No execution data")
-		return
-	}
-
+func (d *Display) DisplayExecution() {
 	// Display logs first
-	d.DisplayLogs(execution.Logs)
+	d.DisplayLogs(d.execution.Logs)
 
 	// Register deployed contracts and proxy relationships
-	d.registerDeployments(execution)
+	d.registerDeployments(d.execution)
 
 	// Display transactions
-	d.displayTransactions(execution.Transactions)
+	d.displayTransactions(d.execution.Transactions)
 
 	// Display execution summary
 	d.printExecutionSummary()
@@ -168,104 +164,18 @@ func (d *Display) displayTransactions(transactions []*parser.Transaction) {
 	}
 }
 
-// displayOtherEvents displays events that aren't part of transactions
-func (d *Display) displayOtherEvents(allEvents []interface{}) {
-	hasOtherEvents := false
-
-	for _, event := range allEvents {
-		shouldDisplay := false
-
-		switch e := event.(type) {
-		case *events.UpgradedEvent:
-			if !hasOtherEvents {
-				fmt.Printf("\n%s🔧 Other Events:%s\n", ColorBold, ColorReset)
-				fmt.Printf("%s%s%s\n", ColorGray, strings.Repeat("─", 40), ColorReset)
-				hasOtherEvents = true
-			}
-			d.displayUpgradedEvent(e)
-			shouldDisplay = true
-		case *events.AdminChangedEvent:
-			if !hasOtherEvents {
-				fmt.Printf("\n%s🔧 Other Events:%s\n", ColorBold, ColorReset)
-				fmt.Printf("%s%s%s\n", ColorGray, strings.Repeat("─", 40), ColorReset)
-				hasOtherEvents = true
-			}
-			d.displayAdminChangedEvent(e)
-			shouldDisplay = true
-		case *events.BeaconUpgradedEvent:
-			if !hasOtherEvents {
-				fmt.Printf("\n%s🔧 Other Events:%s\n", ColorBold, ColorReset)
-				fmt.Printf("%s%s%s\n", ColorGray, strings.Repeat("─", 40), ColorReset)
-				hasOtherEvents = true
-			}
-			d.displayBeaconUpgradedEvent(e)
-			shouldDisplay = true
-		case *events.ProxyDeployedEvent:
-			if !hasOtherEvents {
-				fmt.Printf("\n%s🔧 Other Events:%s\n", ColorBold, ColorReset)
-				fmt.Printf("%s%s%s\n", ColorGray, strings.Repeat("─", 40), ColorReset)
-				hasOtherEvents = true
-			}
-			d.displayProxyDeployedEvent(e)
-			shouldDisplay = true
-		}
-
-		if shouldDisplay && d.verbose {
-			// Show raw event type in verbose mode
-			fmt.Printf("     Type: %T\n", event)
-		}
-	}
-}
-
-// Display methods for various event types
-func (d *Display) displayUpgradedEvent(event *events.UpgradedEvent) {
-	fmt.Printf("  %sProxy Upgraded%s | Proxy: %s%s%s → Impl: %s%s%s\n",
-		ColorYellow, ColorReset,
-		ColorBlue, event.ProxyAddress.Hex()[:10]+"...", ColorReset,
-		ColorGreen, event.ImplementationAddress.Hex()[:10]+"...", ColorReset)
-}
-
-func (d *Display) displayAdminChangedEvent(event *events.AdminChangedEvent) {
-	fmt.Printf("  %sAdmin Changed%s | Proxy: %s%s%s | New Admin: %s%s%s\n",
-		ColorYellow, ColorReset,
-		ColorBlue, event.ProxyAddress.Hex()[:10]+"...", ColorReset,
-		ColorPurple, event.NewAdmin.Hex()[:10]+"...", ColorReset)
-}
-
-func (d *Display) displayBeaconUpgradedEvent(event *events.BeaconUpgradedEvent) {
-	fmt.Printf("  %sBeacon Upgraded%s | Proxy: %s%s%s | Beacon: %s%s%s\n",
-		ColorYellow, ColorReset,
-		ColorBlue, event.ProxyAddress.Hex()[:10]+"...", ColorReset,
-		ColorPurple, event.Beacon.Hex()[:10]+"...", ColorReset)
-}
-
-func (d *Display) displayProxyDeployedEvent(event *events.ProxyDeployedEvent) {
-	fmt.Printf("  %sProxy Deployed%s | Type: %s | Proxy: %s%s%s → Impl: %s%s%s\n",
-		ColorGreen, ColorReset,
-		event.ProxyType,
-		ColorBlue, event.ProxyAddress.Hex()[:10]+"...", ColorReset,
-		ColorCyan, event.ImplementationAddress.Hex()[:10]+"...", ColorReset)
-
-	if event.AdminAddress != nil {
-		fmt.Printf("     Admin: %s%s%s\n", ColorPurple, event.AdminAddress.Hex()[:10]+"...", ColorReset)
-	}
-	if event.BeaconAddress != nil {
-		fmt.Printf("     Beacon: %s%s%s\n", ColorPurple, event.BeaconAddress.Hex()[:10]+"...", ColorReset)
-	}
-}
-
 // printExecutionSummary prints a summary of the execution
 func (d *Display) printExecutionSummary() {
 	if len(d.deployedContracts) > 0 {
 		fmt.Printf("\n%s📦 Deployment Summary:%s\n", ColorBold, ColorReset)
 		fmt.Printf("%s%s%s\n", ColorGray, strings.Repeat("─", 50), ColorReset)
-		
+
 		for address, artifact := range d.deployedContracts {
 			fmt.Printf("%s%s%s at %s%s%s\n",
 				ColorCyan, artifact, ColorReset,
 				ColorGreen, address.Hex(), ColorReset)
 		}
-		
+
 		fmt.Println() // Add newline after deployment summary
 	}
 }
@@ -330,75 +240,4 @@ func extractContractName(artifact string) string {
 
 	// If no separators, return as-is
 	return artifact
-}
-
-// formatTransactionSummary formats a transaction summary
-func (d *Display) formatTransactionSummary(tx *parser.Transaction) string {
-	to := d.reconcileAddress(tx.Transaction.To)
-	sender := d.reconcileAddress(tx.Sender)
-
-	// Try to decode the transaction
-	var methodStr string
-	decoded := d.transactionDecoder.DecodeTransaction(tx.Transaction.To, tx.Transaction.Data, tx.Transaction.Value, tx.ReturnData)
-	if decoded != nil && decoded.Method != "" {
-		methodStr = decoded.Method + "(...)"
-		if d.verbose && len(decoded.Inputs) > 0 {
-			// Show first few args in verbose mode
-			methodStr = decoded.Method + "("
-			for i, arg := range decoded.Inputs {
-				if i > 2 {
-					methodStr += "..."
-					break
-				}
-				if i > 0 {
-					methodStr += ", "
-				}
-				methodStr += fmt.Sprintf("%v", arg.Value)
-			}
-			methodStr += ")"
-		}
-	} else {
-		// Fallback to function selector
-		if len(tx.Transaction.Data) >= 4 {
-			methodStr = fmt.Sprintf("0x%x", tx.Transaction.Data[:4])
-		} else {
-			methodStr = "transfer"
-		}
-	}
-
-	return fmt.Sprintf("%s → %s::%s", sender, to, methodStr)
-}
-
-// formatTransactionDetails formats transaction details
-func (d *Display) formatTransactionDetails(tx *parser.Transaction) string {
-	var details []string
-
-	if tx.TxHash != nil {
-		details = append(details, fmt.Sprintf("     Tx: %s", tx.TxHash.Hex()))
-	}
-
-	if tx.SafeTxHash != nil {
-		details = append(details, fmt.Sprintf("     Safe Tx: %s", tx.SafeTxHash.Hex()))
-	}
-
-	if tx.BlockNumber != nil {
-		details = append(details, fmt.Sprintf("     Block: %d", *tx.BlockNumber))
-	}
-
-	if tx.GasUsed != nil {
-		details = append(details, fmt.Sprintf("     Gas: %d", *tx.GasUsed))
-	}
-
-	return strings.Join(details, "\n")
-}
-
-// getRegistryTransactionID generates a registry transaction ID
-func (d *Display) getRegistryTransactionID(tx *parser.Transaction) string {
-	if tx.TxHash != nil {
-		return fmt.Sprintf("tx-%s", tx.TxHash.Hex())
-	} else if tx.SafeTxHash != nil && tx.SafeBatchIdx != nil {
-		return fmt.Sprintf("safe-%s-%d", tx.SafeTxHash.Hex(), *tx.SafeBatchIdx)
-	} else {
-		return fmt.Sprintf("tx-internal-%x", tx.TransactionId)
-	}
 }

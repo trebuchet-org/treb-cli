@@ -273,7 +273,7 @@ Examples:
 		// Display the execution results
 		if execution != nil && (len(execution.Transactions) > 0 || len(execution.Events) > 0 || len(execution.Logs) > 0) {
 			// Create display handler
-			displayHandler := display.NewDisplay(indexer)
+			displayHandler := display.NewDisplay(indexer, execution)
 			displayHandler.SetVerbose(verbose)
 
 			// Load sender configs to improve address display
@@ -287,7 +287,7 @@ Examples:
 			}
 
 			// Display the execution
-			displayHandler.DisplayExecution(execution)
+			displayHandler.DisplayExecution()
 
 			// Update registry if not dry run
 			if !dryRun && execution != nil {
