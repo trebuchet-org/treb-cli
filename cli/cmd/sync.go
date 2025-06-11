@@ -55,11 +55,6 @@ func syncRegistry(cleanRegistry bool, debugSync bool) error {
 		fmt.Printf("Warning: Failed to sync Safe transactions: %v\n", err)
 	}
 
-	// Check pending transactions that might have been executed
-	if err := syncPendingTransactions(manager, debugSync); err != nil {
-		fmt.Printf("Warning: Failed to sync regular transactions: %v\n", err)
-	}
-
 	// Clean invalid entries if requested
 	if cleanRegistry {
 		fmt.Println("\nCleaning invalid entries...")
@@ -145,43 +140,19 @@ func syncPendingSafeTransactions(manager *registry.Manager, debug bool) error {
 				}
 
 				// Create transaction records for each operation in the batch
-				for i, txData := range safeTx.Transactions {
-					txID := fmt.Sprintf("tx-%s-%d", ethTxHash.Hex(), i)
-
+				for _, txID := range safeTx.TransactionIDs {
 					// Check if transaction already exists
-					if _, err := manager.GetTransaction(txID); err == nil {
-						// Transaction already recorded
+					tx, err := manager.GetTransaction(txID)
+					if err != nil && tx == nil {
+						fmt.Println("  Transaction ", txID, " missing from registry")
 						continue
 					}
 
-					// Create new transaction record
-					tx := &types.Transaction{
-						ID:      txID,
-						ChainID: safeTx.ChainID,
-						Hash:    ethTxHash.Hex(),
-						Status:  types.TransactionStatusExecuted,
-						Sender:  safeTx.SafeAddress,
-						SafeContext: &types.SafeContext{
-							SafeAddress:     safeTx.SafeAddress,
-							SafeTxHash:      safeTx.SafeTxHash,
-							BatchIndex:      i,
-							ProposerAddress: safeTx.ProposedBy,
-						},
-						Operations: []types.Operation{
-							{
-								Type:   "CALL",
-								Target: txData.To,
-								Method: "execute",
-								Result: map[string]interface{}{
-									"data":  txData.Data,
-									"value": txData.Value,
-								},
-							},
-						},
-						CreatedAt: time.Now(),
-					}
-
-					// Add transaction
+					tx.Hash = ethTxHash.Hex()
+					tx.Status = types.TransactionStatusExecuted
+					tx.Sender = safeTx.SafeAddress
+					tx.Nonce = safeTx.Nonce
+					tx.CreatedAt = *safeTx.ExecutedAt
 					if err := manager.AddTransaction(tx); err != nil {
 						fmt.Printf("    Warning: Failed to create transaction record: %v\n", err)
 					}
@@ -216,50 +187,6 @@ func syncPendingSafeTransactions(manager *registry.Manager, debug bool) error {
 					color.New(color.FgYellow).Println("PENDING (couldn't get confirmation details)")
 				}
 			}
-		}
-	}
-
-	return nil
-}
-
-// syncPendingTransactions checks regular pending transactions
-func syncPendingTransactions(manager *registry.Manager, debug bool) error {
-	// Get all transactions
-	allTxs := manager.GetAllTransactions()
-
-	// Filter pending ones
-	var pendingTxs []*types.Transaction
-	for _, tx := range allTxs {
-		if tx.Status == types.TransactionStatusQueued {
-			pendingTxs = append(pendingTxs, tx)
-		}
-	}
-
-	if len(pendingTxs) == 0 {
-		fmt.Println("\nNo pending regular transactions found")
-		return nil
-	}
-
-	fmt.Printf("\nFound %d pending regular transaction(s)\n", len(pendingTxs))
-
-	// Group by chain
-	pendingByChain := make(map[uint64][]*types.Transaction)
-	for _, tx := range pendingTxs {
-		pendingByChain[tx.ChainID] = append(pendingByChain[tx.ChainID], tx)
-	}
-
-	// Check each chain
-	for chainID, chainTxs := range pendingByChain {
-		fmt.Printf("\nChecking %d pending transaction(s) on chain %d...\n", len(chainTxs), chainID)
-
-		// TODO: Implement blockchain transaction status checking
-		// This would require:
-		// 1. Getting RPC client for the chain
-		// 2. Checking transaction receipt
-		// 3. Updating status based on receipt
-
-		for _, tx := range chainTxs {
-			fmt.Printf("  Transaction %s - checking not yet implemented\n", tx.Hash)
 		}
 	}
 

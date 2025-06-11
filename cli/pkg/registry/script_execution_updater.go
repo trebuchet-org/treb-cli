@@ -3,7 +3,6 @@ package registry
 import (
 	"fmt"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -12,15 +11,28 @@ import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
+type ScriptExecutionUpdater struct {
+	manager     *Manager
+	execution   *parser.ScriptExecution
+	namespace   string
+	networkName string
+	scriptPath  string
+}
+
+func (m *Manager) NewScriptExecutionUpdater(execution *parser.ScriptExecution, namespace string, networkName string, scriptPath string) *ScriptExecutionUpdater {
+	return &ScriptExecutionUpdater{
+		manager:     m,
+		execution:   execution,
+		namespace:   namespace,
+		networkName: networkName,
+		scriptPath:  scriptPath,
+	}
+}
+
 // UpdateFromScriptExecution updates the registry from a script execution
-func (m *Manager) UpdateFromScriptExecution(
-	execution *parser.ScriptExecution,
-	namespace string,
-	networkName string,
-	scriptPath string,
-) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+func (u *ScriptExecutionUpdater) Write() error {
+	u.manager.mu.Lock()
+	defer u.manager.mu.Unlock()
 
 	// Get the current timestamp for all operations
 	now := time.Now()
@@ -32,14 +44,14 @@ func (m *Manager) UpdateFromScriptExecution(
 	deploymentsByTxID := make(map[[32]byte][]string)
 
 	// First, process all deployments
-	for _, dep := range execution.Deployments {
-		deployment, err := m.createDeploymentFromRecord(dep, namespace, execution, scriptPath, commitHash, now)
+	for _, dep := range u.execution.Deployments {
+		deployment, err := u.createDeploymentFromRecord(dep, commitHash, now)
 		if err != nil {
 			return fmt.Errorf("failed to create deployment: %w", err)
 		}
 
 		// Add the deployment
-		if err := m.addDeploymentInternal(deployment); err != nil {
+		if err := u.manager.addDeploymentInternal(deployment); err != nil {
 			return fmt.Errorf("failed to add deployment %s: %w", deployment.ID, err)
 		}
 
@@ -48,8 +60,8 @@ func (m *Manager) UpdateFromScriptExecution(
 	}
 
 	// Process transactions
-	for _, tx := range execution.Transactions {
-		transaction := m.createTransactionFromExecution(tx, execution.ChainID, namespace, now)
+	for _, tx := range u.execution.Transactions {
+		transaction := u.createTransactionFromExecution(tx, u.execution.ChainID, u.namespace, now)
 
 		// Link deployments to transaction
 		if deploymentIDs, exists := deploymentsByTxID[tx.TransactionId]; exists {
@@ -57,63 +69,65 @@ func (m *Manager) UpdateFromScriptExecution(
 		}
 
 		// Add the transaction
-		if err := m.addTransactionInternal(transaction); err != nil {
+		if err := u.manager.addTransactionInternal(transaction); err != nil {
 			return fmt.Errorf("failed to add transaction %s: %w", transaction.ID, err)
 		}
 
 		// Update deployment transaction IDs
 		for _, depID := range transaction.Deployments {
-			if dep, exists := m.deployments[depID]; exists {
+			if dep, exists := u.manager.deployments[depID]; exists {
 				dep.TransactionID = transaction.ID
 			}
 		}
 	}
 
 	// Process Safe transactions
-	for _, safeTx := range execution.SafeTransactions {
-		safeTransaction := m.createSafeTransactionFromExecution(safeTx, execution.ChainID, now)
+	for _, safeTx := range u.execution.SafeTransactions {
+		safeTransaction := u.createSafeTransactionFromExecution(safeTx, u.execution.ChainID, now)
 
 		// Map transaction IDs to registry IDs
 		for _, txID := range safeTx.TransactionIDs {
-			if tx := execution.GetTransactionByID(txID); tx != nil {
-				registryTxID := m.getRegistryTransactionID(tx)
+			if tx := u.execution.GetTransactionByID(txID); tx != nil {
+				registryTxID := u.manager.getRegistryTransactionID(tx)
 				safeTransaction.TransactionIDs = append(safeTransaction.TransactionIDs, registryTxID)
 			}
 		}
 
 		// Add the Safe transaction
-		if existing, exists := m.safeTransactions[safeTransaction.SafeTxHash]; exists {
+		if existing, exists := u.manager.safeTransactions[safeTransaction.SafeTxHash]; exists {
 			// Update existing Safe transaction
 			// TODO: Merge confirmations and update status if needed
 			existing.TransactionIDs = safeTransaction.TransactionIDs
 			existing.Status = safeTransaction.Status
 		} else {
-			m.safeTransactions[safeTransaction.SafeTxHash] = safeTransaction
+			u.manager.safeTransactions[safeTransaction.SafeTxHash] = safeTransaction
 		}
 	}
 
 	// Save the updated registry
-	return m.save()
+	return u.manager.save()
 }
 
 // createDeploymentFromRecord creates a deployment from a deployment record
-func (m *Manager) createDeploymentFromRecord(
+func (u *ScriptExecutionUpdater) createDeploymentFromRecord(
 	record *parser.DeploymentRecord,
-	namespace string,
-	execution *parser.ScriptExecution,
-	scriptPath string,
 	commitHash string,
 	timestamp time.Time,
 ) (*types.Deployment, error) {
-	// Extract contract info from artifact
-	contractName, artifactPath := m.parseArtifact(record.Deployment.Artifact)
+	// Extract contract info from artifact and deployment record
+	contractName := record.Contract.Name
 
 	// Determine deployment type
 	deploymentType := types.SingletonDeployment
 
+	// Check if this is a library deployment from contract info
+	if record.Contract != nil && record.Contract.IsLibrary {
+		deploymentType = types.LibraryDeployment
+	}
+
 	// Check if this is a proxy based on proxy relationships
 	var proxyInfo *types.ProxyInfo
-	if proxyRel, isProxy := execution.GetProxyInfo(record.Address); isProxy {
+	if proxyRel, isProxy := u.execution.GetProxyInfo(record.Address); isProxy {
 		deploymentType = types.ProxyDeployment
 		proxyInfo = &types.ProxyInfo{
 			Type:           proxyRel.ProxyType,
@@ -125,16 +139,13 @@ func (m *Manager) createDeploymentFromRecord(
 		}
 	}
 
-	// TODO: Check if this is a library deployment
-	// This would require checking contract metadata or bytecode analysis
-
 	// Determine deployment method from create strategy
 	method := mapCreateStrategy(record.Deployment.CreateStrategy)
 
 	deployment := &types.Deployment{
-		ID:           formatDeploymentID(namespace, execution.ChainID, contractName, record.Deployment.Label),
-		Namespace:    namespace,
-		ChainID:      execution.ChainID,
+		ID:           formatDeploymentID(u.namespace, u.execution.ChainID, contractName, record.Deployment.Label),
+		Namespace:    u.namespace,
+		ChainID:      u.execution.ChainID,
 		ContractName: contractName,
 		Label:        record.Deployment.Label,
 		Address:      record.Address.Hex(),
@@ -150,17 +161,15 @@ func (m *Manager) createDeploymentFromRecord(
 		},
 		ProxyInfo: proxyInfo,
 		Artifact: types.ArtifactInfo{
-			Path:         artifactPath,
-			BytecodeHash: fmt.Sprintf("0x%x", record.Deployment.BytecodeHash),
-			ScriptPath:   extractScriptName(scriptPath),
-			GitCommit:    commitHash,
-			// TODO: Get compiler version from contract metadata
-			CompilerVersion: "unknown",
+			Path:            record.Contract.Path,
+			BytecodeHash:    fmt.Sprintf("0x%x", record.Deployment.BytecodeHash),
+			ScriptPath:      u.execution.Script.Path,
+			GitCommit:       commitHash,
+			CompilerVersion: u.manager.getCompilerVersion(record),
 		},
 		Verification: types.VerificationInfo{
 			Status: types.VerificationStatusUnverified,
 		},
-		Tags:      []string{},
 		CreatedAt: timestamp,
 		UpdatedAt: timestamp,
 	}
@@ -169,14 +178,14 @@ func (m *Manager) createDeploymentFromRecord(
 }
 
 // createTransactionFromExecution creates a transaction record from execution data
-func (m *Manager) createTransactionFromExecution(
+func (u *ScriptExecutionUpdater) createTransactionFromExecution(
 	tx *parser.Transaction,
 	chainID uint64,
 	namespace string,
 	timestamp time.Time,
 ) *types.Transaction {
 	transaction := &types.Transaction{
-		ID:          m.getRegistryTransactionID(tx),
+		ID:          u.manager.getRegistryTransactionID(tx),
 		ChainID:     chainID,
 		Status:      tx.Status,
 		Sender:      tx.Sender.Hex(),
@@ -195,16 +204,16 @@ func (m *Manager) createTransactionFromExecution(
 	}
 
 	// Add Safe context if this is a Safe transaction
-	if tx.SafeTxHash != nil && tx.SafeAddress != nil {
+	if tx.SafeTransaction != nil {
 		transaction.SafeContext = &types.SafeContext{
-			SafeAddress: tx.SafeAddress.Hex(),
-			SafeTxHash:  tx.SafeTxHash.Hex(),
+			SafeAddress: tx.SafeTransaction.Safe.Hex(),
+			SafeTxHash:  common.Hash(tx.SafeTransaction.SafeTxHash).Hex(),
 		}
 		if tx.SafeBatchIdx != nil {
 			transaction.SafeContext.BatchIndex = *tx.SafeBatchIdx
 		}
 		// TODO: Get proposer address from Safe transaction data
-		transaction.SafeContext.ProposerAddress = ""
+		transaction.SafeContext.ProposerAddress = tx.SafeTransaction.Proposer.Hex()
 	}
 
 	// TODO: Build operations from transaction data
@@ -214,7 +223,7 @@ func (m *Manager) createTransactionFromExecution(
 }
 
 // createSafeTransactionFromExecution creates a Safe transaction from execution data
-func (m *Manager) createSafeTransactionFromExecution(
+func (u *ScriptExecutionUpdater) createSafeTransactionFromExecution(
 	safeTx *parser.SafeTransaction,
 	chainID uint64,
 	timestamp time.Time,
@@ -245,35 +254,11 @@ func (m *Manager) createSafeTransactionFromExecution(
 func (m *Manager) getRegistryTransactionID(tx *parser.Transaction) string {
 	if tx.TxHash != nil {
 		return fmt.Sprintf("tx-%s", tx.TxHash.Hex())
-	} else if tx.SafeTxHash != nil && tx.SafeBatchIdx != nil {
-		return fmt.Sprintf("safe-%s-%d", tx.SafeTxHash.Hex(), *tx.SafeBatchIdx)
+	} else if tx.SafeTransaction != nil {
+		return fmt.Sprintf("safe-%s-%d", common.Hash(tx.SafeTransaction.SafeTxHash).Hex(), *tx.SafeBatchIdx)
 	} else {
 		return fmt.Sprintf("tx-internal-%x", tx.TransactionId)
 	}
-}
-
-// parseArtifact extracts contract name and path from artifact string
-func (m *Manager) parseArtifact(artifact string) (contractName string, artifactPath string) {
-	// Handle formats like:
-	// - "src/Counter.sol:Counter" -> ("Counter", "src/Counter.sol:Counter")
-	// - "Counter" -> ("Counter", "Counter")
-	// - "" -> ("Unknown", "Unknown")
-
-	if artifact == "" {
-		return "Unknown", "Unknown"
-	}
-
-	// Check if it's in the format "path:contractName"
-	if idx := strings.LastIndex(artifact, ":"); idx != -1 {
-		contractName = artifact[idx+1:]
-		artifactPath = artifact
-	} else {
-		// If no colon, assume the entire string is the contract name
-		contractName = artifact
-		artifactPath = artifact
-	}
-
-	return contractName, artifactPath
 }
 
 // mapCreateStrategy maps create strategy string to deployment method
@@ -289,21 +274,6 @@ func mapCreateStrategy(strategy string) types.DeploymentMethod {
 		// Default to CREATE2 if not specified
 		return types.DeploymentMethodCreate2
 	}
-}
-
-// extractScriptName extracts the script name from a script path
-func extractScriptName(scriptPath string) string {
-	// Get the base filename
-	filename := filepath.Base(scriptPath)
-
-	// Extract script name by removing .s.sol extension
-	if strings.HasSuffix(filename, ".s.sol") {
-		scriptName := strings.TrimSuffix(filename, ".s.sol")
-		// Return in format "filename:scriptName"
-		return fmt.Sprintf("%s:%s", filename, scriptName)
-	}
-
-	return filename
 }
 
 // formatDeploymentID creates a deployment ID from components
@@ -322,6 +292,20 @@ func getGitCommit() string {
 		return ""
 	}
 	return strings.TrimSpace(string(output))
+}
+
+// getCompilerVersion extracts the compiler version from deployment record
+func (m *Manager) getCompilerVersion(record *parser.DeploymentRecord) string {
+	// Try to get from contract info first
+	if record.Contract != nil && record.Contract.Artifact != nil {
+		// Extract compiler version from artifact metadata
+		if record.Contract.Artifact.Metadata.Compiler.Version != "" {
+			return record.Contract.Artifact.Metadata.Compiler.Version
+		}
+	}
+
+	// Fallback to unknown if not available
+	return "unknown"
 }
 
 // addDeploymentInternal adds a deployment without locking (assumes lock is held)

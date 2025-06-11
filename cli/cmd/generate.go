@@ -161,7 +161,7 @@ Examples:
 		if len(args) > 0 {
 			// Contract name provided - use resolver which handles full paths properly
 			contractName := args[0]
-			contractInfo, err = ctx.ResolveContract(contractName, types.DefaultContractsFilter())
+			contractInfo, err = ctx.ResolveContract(contractName, types.ProjectContractsFilter())
 			if err != nil {
 				return err
 			}

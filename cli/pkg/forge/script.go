@@ -43,6 +43,7 @@ func (f *Forge) Run(opts ScriptOptions) (*ScriptResult, error) {
 	defer ptyFile.Close()
 
 	result := &ScriptResult{
+		Script:  opts.Script,
 		Success: true, // Will be updated based on command exit
 	}
 
@@ -168,17 +169,12 @@ func (f *Forge) Run(opts ScriptOptions) (*ScriptResult, error) {
 		f.saveDebugOutput(result.RawOutput)
 	}
 
-	// Find broadcast file if broadcast was enabled and no dry run
-	if opts.Broadcast && !opts.DryRun && result.BroadcastPath == "" {
-		result.BroadcastPath = f.findBroadcastFile(opts.ScriptPath, opts.Network)
-	}
-
 	return result, nil
 }
 
 // buildArgs builds the forge script command arguments
 func (f *Forge) buildArgs(opts ScriptOptions) []string {
-	args := []string{"script", opts.ScriptPath, "--ffi"}
+	args := []string{"script", opts.Script.Path, "--ffi"}
 
 	// Add function signature if specified
 	if opts.FunctionName != "" {

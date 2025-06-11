@@ -21,8 +21,8 @@ contract DeployerUCProxy is TrebScript {
     using Deployer for Deployer.Deployment;
 
     /**
-     * @custom:env {string} label Label for the proxy and implementation
      * @custom:env {sender} deployer The sender which will deploy the contract
+     * @custom:env {string:optional} label Label for the proxy and implementation
      * @custom:env {deployment:optional} implementation Implementation to use for the proxy
      */
     function run() public broadcast {

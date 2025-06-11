@@ -21,7 +21,7 @@ contract UpgradeableCounter {
         _count = 0;
     }
 
-    function increment() external {
+    function increment() external onlyOwner {
         _count += 1;
         emit CountIncremented(_count);
     }

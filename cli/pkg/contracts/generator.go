@@ -194,16 +194,19 @@ contract Deploy{{.ContractName}} is TrebScript {
     using Deployer for Senders.Sender;
     using Deployer for Deployer.Deployment;
 
+	/**
+     * @custom:env {sender} deployer Account to deploy the contract
+     * @custom:env {string:optional} label for the contract
+	 */
     function run() public broadcast {
-        // Get the sender (can be overridden with --env deployer=<name>)
-        string memory deployerName = vm.envOr("deployer", string("default"));
-        Senders.Sender storage sender = sender(deployerName);
+		// Get the sender (can be overridden with --env deployer=<name>)
+        Senders.Sender storage sender = sender(vm.envString("deployer"));
         
         // Read label from environment (e.g., --env LABEL=v1)
-        string memory label = vm.envOr("LABEL", string(""));
+        string memory label = vm.envOr("label", string(""));
         
         // Deploy {{.ContractName}} using {{.Strategy}}
-        address deployed = sender.{{if eq .Strategy "CREATE3"}}create3{{else}}create2{{end}}("{{.ArtifactPath}}")
+        sender.{{if eq .Strategy "CREATE3"}}create3{{else}}create2{{end}}("{{.ArtifactPath}}")
             .setLabel(label)
             .deploy({{if .HasConstructor}}_getConstructorArgs(){{end}});
         

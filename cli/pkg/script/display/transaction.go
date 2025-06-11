@@ -579,8 +579,8 @@ func (td *TransactionDisplay) displayTransactionFooter(tx *parser.Transaction) {
 		details = append(details, fmt.Sprintf("Tx: %s", tx.TxHash.Hex()))
 	}
 
-	if tx.SafeTxHash != nil {
-		details = append(details, fmt.Sprintf("Safe Tx: %s", tx.SafeTxHash.Hex()))
+	if tx.SafeTransaction != nil {
+		details = append(details, fmt.Sprintf("Safe Tx: %s", common.Hash(tx.SafeTransaction.SafeTxHash).Hex()))
 	}
 
 	if tx.BlockNumber != nil {

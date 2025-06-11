@@ -26,6 +26,7 @@ type ScriptExecution struct {
 	BroadcastPath string
 	Network       string
 	ChainID       uint64
+	Script        *types.ContractInfo
 }
 
 // DeploymentRecord represents a contract deployment
@@ -34,6 +35,7 @@ type DeploymentRecord struct {
 	Deployment    *bindings.ITrebEventsDeploymentDetails
 	Address       common.Address
 	Deployer      common.Address
+	Contract      *types.ContractInfo
 }
 
 // SafeTransaction represents a Safe multisig transaction
@@ -55,16 +57,15 @@ type ProxyInfo struct {
 // Transaction represents a transaction with enriched data
 type Transaction struct {
 	bindings.SimulatedTransaction
-	Status       types.TransactionStatus
-	TxHash       *common.Hash
-	BlockNumber  *uint64
-	GasUsed      *uint64
-	SafeAddress  *common.Address
-	SafeTxHash   *common.Hash
-	SafeBatchIdx *int
-	Deployments  []DeploymentInfo
-	TraceData    *forge.TraceOutput
-	ReceiptData  *forge.Receipt
+	Status          types.TransactionStatus
+	TxHash          *common.Hash
+	BlockNumber     *uint64
+	GasUsed         *uint64
+	SafeTransaction *SafeTransaction
+	SafeBatchIdx    *int
+	Deployments     []DeploymentInfo
+	TraceData       *forge.TraceOutput
+	ReceiptData     *forge.Receipt
 }
 
 // DeploymentInfo contains deployment details for a transaction

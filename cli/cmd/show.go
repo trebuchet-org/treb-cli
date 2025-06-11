@@ -180,11 +180,8 @@ func displayDeployment(dep *types.Deployment, tx *types.Transaction, manager *re
 	fmt.Println("\nVerification Status:")
 	status := dep.Verification.Status
 	statusColor := color.FgRed
-	switch status {
-	case types.VerificationStatusVerified:
+	if status == types.VerificationStatusVerified {
 		statusColor = color.FgGreen
-	case types.VerificationStatusPending:
-		statusColor = color.FgYellow
 	}
 	fmt.Printf("  Status: %s\n", color.New(statusColor).Sprint(status))
 	if dep.Verification.EtherscanURL != "" {

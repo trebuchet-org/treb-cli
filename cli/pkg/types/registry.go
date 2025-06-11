@@ -39,7 +39,6 @@ type VerificationStatus string
 
 const (
 	VerificationStatusUnverified VerificationStatus = "UNVERIFIED"
-	VerificationStatusPending    VerificationStatus = "PENDING"
 	VerificationStatusVerified   VerificationStatus = "VERIFIED"
 	VerificationStatusFailed     VerificationStatus = "FAILED"
 	VerificationStatusPartial    VerificationStatus = "PARTIAL"

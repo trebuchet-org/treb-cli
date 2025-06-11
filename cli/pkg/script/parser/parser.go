@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/abi/bindings"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/broadcast"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/events"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/forge"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
@@ -19,16 +20,18 @@ type Parser struct {
 	transactions       map[[32]byte]*Transaction
 	transactionOrder   [][32]byte // Track order of transactions
 	proxyRelationships map[common.Address]*ProxyRelationship
+	contractsIndexer   *contracts.Indexer
 	mu                 sync.RWMutex
 }
 
 // NewParser creates a new parser
-func NewParser() *Parser {
+func NewParser(contractsIndexer *contracts.Indexer) *Parser {
 	return &Parser{
 		eventParser:        events.NewEventParser(),
 		transactions:       make(map[[32]byte]*Transaction),
 		transactionOrder:   make([][32]byte, 0),
 		proxyRelationships: make(map[common.Address]*ProxyRelationship),
+		contractsIndexer:   contractsIndexer,
 	}
 }
 
@@ -52,6 +55,7 @@ func (p *Parser) Parse(result *forge.ScriptResult, network string, chainID uint6
 		BroadcastPath:      result.BroadcastPath,
 		Network:            network,
 		ChainID:            chainID,
+		Script:             result.Script,
 	}
 
 	// Parse events if we have parsed output
@@ -72,12 +76,21 @@ func (p *Parser) Parse(result *forge.ScriptResult, network string, chainID uint6
 			case *bindings.TrebSafeTransactionQueued:
 				p.processSafeTransactionQueued(e, execution)
 			case *bindings.TrebContractDeployed:
-				execution.Deployments = append(execution.Deployments, &DeploymentRecord{
+				deploymentRecord := &DeploymentRecord{
 					TransactionID: e.TransactionId,
 					Deployment:    &e.Deployment,
 					Address:       e.Location,
 					Deployer:      e.Deployer,
-				})
+				}
+
+				// Look up contract info by artifact
+				if p.contractsIndexer != nil && e.Deployment.Artifact != "" {
+					if contractInfo := p.contractsIndexer.GetContractByArtifact(e.Deployment.Artifact); contractInfo != nil {
+						deploymentRecord.Contract = contractInfo
+					}
+				}
+
+				execution.Deployments = append(execution.Deployments, deploymentRecord)
 			}
 
 			// Process proxy events
@@ -151,9 +164,7 @@ func (p *Parser) processSafeTransactionQueued(event *bindings.TrebSafeTransactio
 	for idx, txID := range event.TransactionIds {
 		if tx, exists := p.transactions[txID]; exists {
 			tx.Status = types.TransactionStatusQueued
-			tx.SafeAddress = &event.Safe
-			safeTxHash := common.Hash(event.SafeTxHash)
-			tx.SafeTxHash = &safeTxHash
+			tx.SafeTransaction = safeTx
 			batchIdx := idx
 			tx.SafeBatchIdx = &batchIdx
 		}

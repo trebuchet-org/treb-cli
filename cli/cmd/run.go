@@ -72,7 +72,7 @@ Examples:
 			checkError(fmt.Errorf("failed to initialize contract indexer: %w", err))
 		}
 		resolver := resolvers.NewContractsResolver(indexer, !IsNonInteractive())
-		scriptContract, err := resolver.ResolveContract(scriptPath, types.DefaultContractsFilter())
+		scriptContract, err := resolver.ResolveContract(scriptPath, types.ScriptContractFilter())
 		if err != nil {
 			checkError(fmt.Errorf("failed to resolve contract: %w", err))
 		}
@@ -239,14 +239,14 @@ Examples:
 		display.PrintDeploymentBanner(filepath.Base(scriptContract.Path), network, profile, dryRun)
 
 		opts := executor.RunOptions{
-			ScriptPath: scriptContract.Path,
-			Network:    network,
-			Profile:    profile,
-			Namespace:  namespace,
-			EnvVars:    parsedEnvVars,
-			DryRun:     dryRun,
-			Debug:      debug || debugJSON,
-			DebugJSON:  debugJSON,
+			Script:    scriptContract,
+			Network:   network,
+			Profile:   profile,
+			Namespace: namespace,
+			EnvVars:   parsedEnvVars,
+			DryRun:    dryRun,
+			Debug:     debug || debugJSON,
+			DebugJSON: debugJSON,
 		}
 
 		result, err := scriptExecutor.Run(opts)
@@ -264,7 +264,7 @@ Examples:
 		}
 
 		// Parse the script result into a unified execution
-		scriptParser := parser.NewParser()
+		scriptParser := parser.NewParser(indexer)
 		execution, err := scriptParser.Parse(result, network, networkInfo.ChainID)
 		if err != nil {
 			display.PrintWarningMessage(fmt.Sprintf("Failed to parse script execution: %v", err))
@@ -292,9 +292,10 @@ Examples:
 			// Update registry if not dry run
 			if !dryRun && execution != nil {
 				manager, err := registry.NewManager(".")
+				updater := manager.NewScriptExecutionUpdater(execution, namespace, network, scriptPath)
 				if err != nil {
 					display.PrintErrorMessage(fmt.Sprintf("Failed to create registry manager: %v", err))
-				} else if err := manager.UpdateFromScriptExecution(execution, namespace, network, scriptPath); err != nil {
+				} else if err := updater.Write(); err != nil {
 					display.PrintErrorMessage(fmt.Sprintf("Failed to update registry: %v", err))
 				} else {
 					display.PrintSuccessMessage(fmt.Sprintf("Updated registry for %s network in namespace %s", network, namespace))

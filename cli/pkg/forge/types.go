@@ -5,11 +5,12 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
 // ScriptOptions contains options for running a script
 type ScriptOptions struct {
-	ScriptPath     string
+	Script         *types.ContractInfo
 	FunctionName   string            // Optional function to call
 	FunctionArgs   []string          // Arguments for the function
 	Network        string            // Network name from foundry.toml
@@ -26,6 +27,7 @@ type ScriptOptions struct {
 
 // ScriptResult contains the parsed result of running a script
 type ScriptResult struct {
+	Script        *types.ContractInfo
 	Success       bool
 	RawOutput     []byte
 	ParsedOutput  *ParsedOutput

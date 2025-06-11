@@ -105,7 +105,7 @@ func (vm *Manager) verifyOnEtherscanWithDebug(deployment *types.Deployment, netw
 	}
 
 	// Get contract path from artifact
-	contractPath := deployment.Artifact.Path
+	contractPath := fmt.Sprintf("%s:%s", deployment.Artifact.Path, deployment.ContractName)
 	// Build the forge verify-contract command
 	args := []string{
 		"verify-contract",
@@ -163,7 +163,7 @@ func (vm *Manager) verifyOnEtherscanWithDebug(deployment *types.Deployment, netw
 
 func (vm *Manager) verifyOnSourceifyWithDebug(deployment *types.Deployment, networkInfo *network.NetworkInfo, debug bool) error {
 	// Get contract path from artifact
-	contractPath := deployment.Artifact.Path
+	contractPath := fmt.Sprintf("%s:%s", deployment.Artifact.Path, deployment.ContractName)
 
 	// Build the forge verify-contract command for Sourcify
 	args := []string{
@@ -273,7 +273,7 @@ func (vm *Manager) buildSourceifyURL(networkInfo *network.NetworkInfo, address s
 // updateOverallStatus updates the overall verification status based on individual verifiers
 func (vm *Manager) updateOverallStatus(deployment *types.Deployment) {
 	if deployment.Verification.Verifiers == nil {
-		deployment.Verification.Status = types.VerificationStatusPending
+		deployment.Verification.Status = types.VerificationStatusUnverified
 		return
 	}
 
@@ -312,7 +312,7 @@ func (vm *Manager) updateOverallStatus(deployment *types.Deployment) {
 		}
 		deployment.Verification.Reason = strings.Join(reasons, "; ")
 	} else {
-		deployment.Verification.Status = types.VerificationStatusPending
+		deployment.Verification.Status = types.VerificationStatusUnverified
 	}
 }
 

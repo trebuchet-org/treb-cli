@@ -7,6 +7,7 @@ import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/forge"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
 // Executor handles script execution using the forge package
@@ -27,7 +28,7 @@ func NewExecutor(projectPath string, network *network.NetworkInfo) *Executor {
 
 // RunOptions contains options for running a script
 type RunOptions struct {
-	ScriptPath     string
+	Script         *types.ContractInfo
 	Network        string
 	Profile        string
 	Namespace      string            // Namespace to use (sets NAMESPACE env var)
@@ -42,7 +43,7 @@ type RunOptions struct {
 func (e *Executor) Run(opts RunOptions) (*forge.ScriptResult, error) {
 	// Convert to forge options
 	forgeOpts := forge.ScriptOptions{
-		ScriptPath:     opts.ScriptPath,
+		Script:         opts.Script,
 		Network:        opts.Network,
 		RpcUrl:         e.network.RpcUrl,
 		Profile:        opts.Profile,
@@ -114,9 +115,9 @@ func (e *Executor) buildEnvironment(opts RunOptions) (map[string]string, error) 
 
 // ExecuteRaw provides direct access to forge script execution
 // This is useful for commands that don't need event parsing
-func (e *Executor) ExecuteRaw(scriptPath string, functionSig string, args []string, dryRun bool) (*forge.ScriptResult, error) {
+func (e *Executor) ExecuteRaw(script *types.ContractInfo, functionSig string, args []string, dryRun bool) (*forge.ScriptResult, error) {
 	opts := forge.ScriptOptions{
-		ScriptPath:   scriptPath,
+		Script:       script,
 		FunctionName: functionSig,
 		FunctionArgs: args,
 		Network:      e.network.Name,
