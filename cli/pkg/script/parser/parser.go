@@ -84,12 +84,12 @@ func (p *Parser) Parse(result *forge.ScriptResult, network string, chainID uint6
 			p.processProxyEvent(event)
 		}
 
+		// Extract simulation traces BEFORE processing broadcast traces
+		p.extractSimulationTraces(result.ParsedOutput.ScriptOutput)
+
 		// Enrich with forge output data
 		if result.ParsedOutput != nil {
-			// Process trace outputs
-			// TODO: The current implementation assumes one trace per transaction, but forge 
-			// may output multiple traces (one per transaction). We need to improve the 
-			// correlation logic to properly match each trace to its corresponding transaction.
+			// Process trace outputs (for broadcast transactions)
 			for _, trace := range result.ParsedOutput.TraceOutputs {
 				p.processTraceOutput(&trace)
 			}
@@ -204,6 +204,39 @@ func (p *Parser) processProxyEvent(event interface{}) {
 	}
 }
 
+// nodeMatchesTransaction checks if a trace node matches a transaction
+func nodeMatchesTransaction(tx *Transaction, node *forge.TraceNode, prank *common.Address) bool {
+	// Only match CALL/CREATE/CREATE2 nodes
+	if node.Trace.Kind != "CALL" && node.Trace.Kind != "CREATE" && node.Trace.Kind != "CREATE2" {
+		return false
+	}
+
+	// Compare call data (handle 0x prefix)
+	txData := common.Bytes2Hex(tx.Transaction.Data)
+	traceData := strings.TrimPrefix(node.Trace.Data, "0x")
+
+	// Match sender
+	callerMatches := tx.Sender == node.Trace.Caller
+	prankMatches := prank != nil && tx.Sender == *prank
+
+	if !callerMatches && !prankMatches {
+		return false
+	}
+
+	// Match to address (for CALL only)
+	if node.Trace.Kind == "CALL" && tx.Transaction.To != node.Trace.Address {
+		return false
+	}
+
+	if txData != traceData {
+		return false
+	}
+
+	// TODO: Also match value if needed
+
+	return true
+}
+
 // processTraceOutput processes a trace output to enrich transactions
 func (p *Parser) processTraceOutput(trace *forge.TraceOutput) {
 	p.mu.Lock()
@@ -213,26 +246,169 @@ func (p *Parser) processTraceOutput(trace *forge.TraceOutput) {
 	if len(trace.Arena) == 0 {
 		return
 	}
-	
+
 	root := &trace.Arena[0]
-	if root.Trace.Kind == "CALL" || root.Trace.Kind == "CREATE" || root.Trace.Kind == "CREATE2" {
-		// Try to match with existing transactions
-		for _, tx := range p.transactions {
-			// Match by various criteria
-			toMatches := tx.Transaction.To == root.Trace.Address
-			fromMatches := tx.Sender == root.Trace.Caller
-			
-			// Compare data (handle 0x prefix)
-			txData := common.Bytes2Hex(tx.Transaction.Data)
-			traceData := strings.TrimPrefix(root.Trace.Data, "0x")
-			dataMatches := txData == traceData
-			
-			if toMatches && fromMatches && dataMatches {
-				tx.TraceData = trace
-				break
+
+	// Try to match with existing transactions
+	for _, tx := range p.transactions {
+		if nodeMatchesTransaction(tx, root, nil) {
+			tx.TraceData = trace
+			break
+		}
+	}
+}
+
+// extractSimulationTraces processes the full trace tree from ScriptOutput
+// and extracts individual transaction traces
+func (p *Parser) extractSimulationTraces(scriptOutput *forge.ScriptOutput) {
+	if scriptOutput == nil || len(scriptOutput.Traces) == 0 {
+		return
+	}
+
+	for _, traceWithLabel := range scriptOutput.Traces {
+		// Process each labeled trace
+		visitor := &traceVisitor{
+			parser: p,
+			label:  traceWithLabel.Label,
+		}
+		visitor.walkTraceTree(&traceWithLabel.Trace, 0)
+	}
+}
+
+// traceVisitor helps walk the trace tree
+type traceVisitor struct {
+	parser *Parser
+	label  string
+}
+
+// walkTraceTree recursively walks the trace tree
+func (v *traceVisitor) walkTraceTree(fullTrace *forge.TraceOutput, nodeIdx int) {
+	if nodeIdx >= len(fullTrace.Arena) {
+		return
+	}
+
+	node := &fullTrace.Arena[nodeIdx]
+
+	// Try to match this node with any transaction
+	v.parser.mu.Lock()
+	var matchedTx *Transaction
+	for _, tx := range v.parser.transactions {
+		// Skip if already has trace data
+		if tx.TraceData != nil {
+			continue
+		}
+
+		prank := v.getPrankedAddress(fullTrace, nodeIdx)
+
+		if nodeMatchesTransaction(tx, node, prank) {
+			matchedTx = tx
+			break
+		}
+	}
+	v.parser.mu.Unlock()
+
+	// If we found a match, extract the subtree
+	if matchedTx != nil {
+		subtree := v.extractSubtree(fullTrace, nodeIdx)
+
+		v.parser.mu.Lock()
+		matchedTx.TraceData = subtree
+		v.parser.mu.Unlock()
+	}
+
+	// Recursively process children
+	for _, childIdx := range node.Children {
+		v.walkTraceTree(fullTrace, childIdx)
+	}
+}
+
+func (v *traceVisitor) getPrankedAddress(fullTrace *forge.TraceOutput, nodeIdx int) *common.Address {
+	if nodeIdx == 0 {
+		return nil
+	}
+
+	node := fullTrace.Arena[nodeIdx]
+	prevNode := fullTrace.Arena[nodeIdx-1]
+
+	if prevNode.Parent == nil || node.Parent == nil || *prevNode.Parent != *node.Parent {
+		return nil
+	}
+
+	if prevNode.Trace.Kind != "CALL" {
+		return nil
+	}
+
+	if prevNode.Trace.Address != common.HexToAddress("0x7109709ECfa91a80626fF3989D68f67F5b1DD12D") {
+		return nil
+	}
+
+	if strings.HasPrefix(prevNode.Trace.Data, "0xca669fa7") { // vm.prank
+		prank := common.HexToAddress(strings.TrimPrefix(prevNode.Trace.Data, "0xca669fa7000000000000000000000000"))
+		return &prank
+	}
+
+	return nil
+}
+
+// extractSubtree creates a new TraceOutput containing only the subtree
+func (v *traceVisitor) extractSubtree(fullTrace *forge.TraceOutput, rootIdx int) *forge.TraceOutput {
+	// Map old indices to new indices
+	indexMap := make(map[int]int)
+	newArena := []forge.TraceNode{}
+
+	// BFS to collect all nodes in subtree
+	queue := []int{rootIdx}
+
+	for len(queue) > 0 {
+		oldIdx := queue[0]
+		queue = queue[1:]
+
+		if _, exists := indexMap[oldIdx]; exists {
+			continue
+		}
+
+		newIdx := len(newArena)
+		indexMap[oldIdx] = newIdx
+
+		// Copy node with updated indices
+		node := fullTrace.Arena[oldIdx]
+		newNode := node // Copy
+		newNode.Idx = newIdx
+
+		// Update parent reference
+		if node.Parent != nil {
+			if newParentIdx, exists := indexMap[*node.Parent]; exists {
+				newNode.Parent = &newParentIdx
+			} else {
+				// Parent not in subtree, this is the root
+				newNode.Parent = nil
+			}
+		} else {
+			newNode.Parent = nil
+		}
+
+		// Clear children, will be fixed in second pass
+		newNode.Children = []int{}
+
+		newArena = append(newArena, newNode)
+
+		// Add children to queue
+		queue = append(queue, node.Children...)
+	}
+
+	// Second pass: fix children references
+	for oldIdx, newIdx := range indexMap {
+		oldNode := &fullTrace.Arena[oldIdx]
+		newNode := &newArena[newIdx]
+
+		for _, oldChildIdx := range oldNode.Children {
+			if newChildIdx, exists := indexMap[oldChildIdx]; exists {
+				newNode.Children = append(newNode.Children, newChildIdx)
 			}
 		}
 	}
+
+	return &forge.TraceOutput{Arena: newArena}
 }
 
 // getTransactions returns all transactions in order
