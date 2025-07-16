@@ -50,7 +50,7 @@ func (f *Forge) Run(opts ScriptOptions) (*ScriptResult, error) {
 	// Debug mode: direct copy to stdout
 	if opts.Debug && !opts.JSON {
 		// Simple copy for debug mode
-		io.Copy(os.Stdout, ptyFile)
+		_, _ = io.Copy(os.Stdout, ptyFile)
 
 		// Wait for command to finish
 		if err := cmd.Wait(); err != nil {

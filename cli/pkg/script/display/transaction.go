@@ -433,10 +433,7 @@ func (td *TransactionDisplay) formatCall(node *forge.TraceNode) string {
 	// Add revert reason if failed
 	if !node.Trace.Success {
 		formatted += fmt.Sprintf(" %s[REVERTED]%s", ColorRed, ColorReset)
-		if node.Trace.Output != "" && node.Trace.Output != "0x" {
-			// Try to decode revert reason
-			// TODO: Implement revert reason decoding
-		}
+		// TODO: Implement revert reason decoding when output is present
 	}
 
 	return formatted
@@ -636,8 +633,7 @@ func (td *TransactionDisplay) displayCreateCallWithArgs(node *forge.TraceNode, p
 	}
 
 	// Get constructor arguments
-	var decodedConstructor *abi.DecodedConstructor
-	decodedConstructor = td.getDecodedConstructor(node)
+	var decodedConstructor = td.getDecodedConstructor(node)
 
 	// Format the opening line
 	if contractName != "" {

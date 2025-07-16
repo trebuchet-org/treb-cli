@@ -59,7 +59,7 @@ func NewTransactionDecoder() *TransactionDecoder {
 	decoder.artifactMap[MultiSendAddress] = "MultiSend"
 	decoder.artifactMap[ProxyFactoryAddress] = "SafeProxyFactory"
 
-	decoder.RegisterContract(CreateXAddress, "CreateX", bindings.CreateXMetaData.ABI)
+	_ = decoder.RegisterContract(CreateXAddress, "CreateX", bindings.CreateXMetaData.ABI)
 
 	return decoder
 }
@@ -452,11 +452,8 @@ func (td *TransactionDecoder) DecodeConstructor(artifact string, constructorArgs
 			if err == nil {
 				contractABI = &parsedABI
 				// Also register it for future use
-				if err := td.RegisterContractByArtifact(artifact, abiJSON); err != nil {
-					// Log error but continue
-				}
+				_ = td.RegisterContractByArtifact(artifact, abiJSON)
 			}
-		} else {
 		}
 	}
 

@@ -27,7 +27,6 @@ type ParameterResolver struct {
 	namespace       string
 	network         string
 	chainID         uint64
-	contractIndexer *contracts.Indexer
 	registryManager *registry.Manager
 }
 
