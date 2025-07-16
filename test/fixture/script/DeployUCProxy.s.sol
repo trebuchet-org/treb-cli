@@ -51,8 +51,7 @@ contract DeployerUCProxy is TrebScript {
             Transaction({
                 to: address(proxy),
                 data: abi.encodeWithSelector(UpgradeableCounter.increment.selector),
-                value: 0,
-                label: "increment counter"
+                value: 0
             })
         );
 
