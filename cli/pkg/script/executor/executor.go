@@ -7,6 +7,7 @@ import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/forge"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/script/senders"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
@@ -30,7 +31,6 @@ func NewExecutor(projectPath string, network *network.NetworkInfo) *Executor {
 type RunOptions struct {
 	Script         *types.ContractInfo
 	Network        string
-	Profile        string
 	Namespace      string            // Namespace to use (sets NAMESPACE env var)
 	EnvVars        map[string]string // Additional environment variables
 	DryRun         bool
@@ -41,32 +41,81 @@ type RunOptions struct {
 
 // Run executes a Foundry script and returns the raw forge result
 func (e *Executor) Run(opts RunOptions) (*forge.ScriptResult, error) {
-	// Convert to forge options
-	forgeOpts := forge.ScriptOptions{
-		Script:         opts.Script,
-		Network:        opts.Network,
-		RpcUrl:         e.network.RpcUrl,
-		Profile:        opts.Profile,
-		DryRun:         opts.DryRun,
-		Broadcast:      !opts.DryRun,
-		Debug:          opts.Debug,
-		JSON:           !opts.Debug || opts.DebugJSON,
-		AdditionalArgs: opts.AdditionalArgs,
+	senderConfigs, err := e.getSenderConfigs(opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get sender configs: %w", err)
 	}
 
-	// Build environment variables
-	env, err := e.buildEnvironment(opts)
+	env, err := e.buildEnvironment(opts, senderConfigs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build environment: %w", err)
 	}
-	forgeOpts.EnvVars = env
+
+	// Convert to forge options
+	forgeOpts := forge.ScriptOptions{
+		Script:          opts.Script,
+		Network:         opts.Network,
+		RpcUrl:          e.network.RpcUrl,
+		Profile:         opts.Namespace,
+		DryRun:          opts.DryRun,
+		Broadcast:       !opts.DryRun,
+		Debug:           opts.Debug,
+		JSON:            !opts.Debug || opts.DebugJSON,
+		AdditionalArgs:  opts.AdditionalArgs,
+		EnvVars:         env,
+		UseLedger:       senders.RequiresLedgerFlag(senderConfigs),
+		UseTrezor:       senders.RequiresTrezorFlag(senderConfigs),
+		DerivationPaths: senders.GetDerivationPaths(senderConfigs),
+	}
 
 	// Execute the script
 	return e.forge.Run(forgeOpts)
 }
 
+func (e *Executor) getSenderConfigs(opts RunOptions) (*config.SenderConfigs, error) {
+	trebConfig, err := config.LoadTrebConfig(e.projectPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load treb config: %w", err)
+	}
+
+	profileTrebConfig, err := trebConfig.GetProfileTrebConfig(opts.Namespace)
+	if err != nil {
+		return nil, fmt.Errorf("profile not found: %s", opts.Namespace)
+	}
+
+	allSenderConfigs, err := config.BuildSenderConfigs(profileTrebConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build sender configs: %w", err)
+	}
+
+	// Check if script has sender dependencies
+	var senderConfigs *config.SenderConfigs
+	if opts.Script.Artifact != nil {
+		senderDeps, err := senders.ParseSenderDependencies(opts.Script.Artifact)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse sender dependencies: %w", err)
+		}
+
+		if len(senderDeps) > 0 {
+			// Filter senders based on dependencies
+			senderConfigs, err = senders.FilterSenderConfigs(allSenderConfigs, senderDeps, profileTrebConfig.Senders)
+			if err != nil {
+				return nil, fmt.Errorf("failed to filter sender configs: %w", err)
+			}
+		} else {
+			// No dependencies, use all senders
+			senderConfigs = allSenderConfigs
+		}
+	} else {
+		// No artifact, use all senders
+		senderConfigs = allSenderConfigs
+	}
+
+	return senderConfigs, nil
+}
+
 // buildEnvironment builds environment variables for the script
-func (e *Executor) buildEnvironment(opts RunOptions) (map[string]string, error) {
+func (e *Executor) buildEnvironment(opts RunOptions, senderConfigs *config.SenderConfigs) (map[string]string, error) {
 	env := make(map[string]string)
 
 	// Copy additional env vars
@@ -81,15 +130,9 @@ func (e *Executor) buildEnvironment(opts RunOptions) (map[string]string, error) 
 	}
 
 	// Get profile treb configuration
-	profileTrebConfig, err := trebConfig.GetProfileTrebConfig(opts.Profile)
+	profileTrebConfig, err := trebConfig.GetProfileTrebConfig(opts.Namespace)
 	if err != nil {
-		return nil, fmt.Errorf("profile not found: %s", opts.Profile)
-	}
-
-	// Build sender configs
-	senderConfigs, err := config.BuildSenderConfigs(profileTrebConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build sender configs: %w", err)
+		return nil, fmt.Errorf("profile not found: %s", opts.Namespace)
 	}
 
 	// Encode sender configs
@@ -102,7 +145,7 @@ func (e *Executor) buildEnvironment(opts RunOptions) (map[string]string, error) 
 	env["SENDER_CONFIGS"] = encodedConfigs
 	env["NAMESPACE"] = opts.Namespace
 	env["NETWORK"] = e.network.Name
-	env["FOUNDRY_PROFILE"] = opts.Profile
+	env["FOUNDRY_PROFILE"] = opts.Namespace
 	env["DRYRUN"] = strconv.FormatBool(opts.DryRun)
 
 	// Add library deployer if configured

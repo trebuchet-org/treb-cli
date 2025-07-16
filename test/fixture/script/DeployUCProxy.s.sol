@@ -10,6 +10,7 @@ import {console} from "forge-std/console.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import {Transaction} from "treb-sol/internal/types.sol";
 
 /// @title DeployerUCProxy
 /// @notice This script deploys a proxy for an upgradeable counter contract
@@ -31,6 +32,9 @@ contract DeployerUCProxy is TrebScript {
         Senders.Sender storage deployer = sender(
             vm.envOr("deployer", string("deployer"))
         );
+        address myToken = lookup("MyToken:test");
+
+
 
         if (implementation == address(0)) {
             implementation = deployer
@@ -43,6 +47,15 @@ contract DeployerUCProxy is TrebScript {
             abi.encode(implementation, abi.encodeWithSelector(UpgradeableCounter.initialize.selector, deployer.account))
         );
 
-        UpgradeableCounter(deployer.harness(proxy)).increment();
+        deployer.execute(
+            Transaction({
+                to: address(proxy),
+                data: abi.encodeWithSelector(UpgradeableCounter.increment.selector),
+                value: 0,
+                label: "increment counter"
+            })
+        );
+
+        // UpgradeableCounter(deployer.harness(proxy)).increment();
     }
 }

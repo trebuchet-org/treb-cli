@@ -35,3 +35,16 @@ private_key = "${DEPLOYER_PRIVATE_KEY}"
 type = "safe"
 safe = "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
 signer = "local"
+
+[profile.default.treb.senders.safe2]
+type = "safe"
+safe = "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
+signer = "local"
+
+[profile.default.treb.senders.ledger]
+type = "ledger"
+address = "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
+derivation_path = "m/44'/60'/0'/0/0"
+
+
+

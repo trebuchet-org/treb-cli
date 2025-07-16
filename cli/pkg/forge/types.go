@@ -10,19 +10,22 @@ import (
 
 // ScriptOptions contains options for running a script
 type ScriptOptions struct {
-	Script         *types.ContractInfo
-	FunctionName   string            // Optional function to call
-	FunctionArgs   []string          // Arguments for the function
-	Network        string            // Network name from foundry.toml
-	RpcUrl         string            // Direct RPC URL (overrides network)
-	Profile        string            // Foundry profile
-	EnvVars        map[string]string // Environment variables
-	AdditionalArgs []string          // Additional forge arguments
-	DryRun         bool              // Simulate only
-	Broadcast      bool              // Broadcast transactions
-	VerifyContract bool              // Verify on etherscan
-	Debug          bool              // Enable debug output
-	JSON           bool              // Output JSON format
+	Script          *types.ContractInfo
+	FunctionName    string            // Optional function to call
+	FunctionArgs    []string          // Arguments for the function
+	Network         string            // Network name from foundry.toml
+	RpcUrl          string            // Direct RPC URL (overrides network)
+	Profile         string            // Foundry profile
+	EnvVars         map[string]string // Environment variables
+	AdditionalArgs  []string          // Additional forge arguments
+	DryRun          bool              // Simulate only
+	Broadcast       bool              // Broadcast transactions
+	VerifyContract  bool              // Verify on etherscan
+	Debug           bool              // Enable debug output
+	JSON            bool              // Output JSON format
+	UseLedger       bool              // Use ledger
+	UseTrezor       bool              // Use trezor
+	DerivationPaths []string          // Derivation paths for hardware wallets
 }
 
 // ScriptResult contains the parsed result of running a script

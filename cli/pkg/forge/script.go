@@ -199,6 +199,19 @@ func (f *Forge) buildArgs(opts ScriptOptions) []string {
 		}
 	}
 
+	// Ledger flag if required
+	if opts.UseLedger {
+		args = append(args, "--ledger")
+	}
+
+	if opts.UseTrezor {
+		args = append(args, "--trezor")
+	}
+
+	if len(opts.DerivationPaths) > 0 {
+		args = append(args, "--mnemonic-derivation-paths", strings.Join(opts.DerivationPaths, ","))
+	}
+
 	// JSON output
 	if opts.JSON {
 		args = append(args, "--json")
@@ -317,28 +330,6 @@ func (f *Forge) extractConsoleLogs(logs []string) []string {
 		}
 	}
 	return consoleLogs
-}
-
-// findBroadcastFile attempts to find the broadcast file for a script
-func (f *Forge) findBroadcastFile(scriptPath, network string) string {
-	// Extract script name from path
-	scriptName := filepath.Base(scriptPath)
-	scriptName = strings.TrimSuffix(scriptName, filepath.Ext(scriptName))
-
-	// Try to find the latest broadcast file
-	broadcastDir := filepath.Join(f.projectRoot, "broadcast", scriptName)
-	if network != "" {
-		// Network might be a chain ID or name, try to resolve it
-		// For now, just use it as is
-		broadcastDir = filepath.Join(broadcastDir, network)
-	}
-
-	latestPath := filepath.Join(broadcastDir, "run-latest.json")
-	if _, err := os.Stat(latestPath); err == nil {
-		return latestPath
-	}
-
-	return ""
 }
 
 // saveDebugOutput saves raw output for debugging

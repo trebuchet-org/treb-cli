@@ -79,7 +79,6 @@ Examples:
 
 		// Get flags
 		network, _ := cmd.Flags().GetString("network")
-		profile, _ := cmd.Flags().GetString("profile")
 		namespace, _ := cmd.Flags().GetString("namespace")
 		envVars, _ := cmd.Flags().GetStringSlice("env")
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
@@ -131,7 +130,7 @@ Examples:
 			checkError(fmt.Errorf("failed to load treb config: %w", err))
 		}
 
-		trebConfig, err := fullConfig.GetProfileTrebConfig(profile)
+		trebConfig, err := fullConfig.GetProfileTrebConfig(namespace)
 		if err != nil {
 			checkError(fmt.Errorf("failed to get profile config: %w", err))
 		}
@@ -236,12 +235,11 @@ Examples:
 			dryRun = true
 		}
 
-		display.PrintDeploymentBanner(filepath.Base(scriptContract.Path), network, profile, dryRun)
+		display.PrintDeploymentBanner(filepath.Base(scriptContract.Path), network, namespace, dryRun)
 
 		opts := executor.RunOptions{
 			Script:    scriptContract,
 			Network:   network,
-			Profile:   profile,
 			Namespace: namespace,
 			EnvVars:   parsedEnvVars,
 			DryRun:    dryRun,
@@ -317,10 +315,6 @@ func init() {
 	// Network flag
 	runCmd.Flags().StringP("network", "n", "", "Network to run on (e.g., mainnet, sepolia, local)")
 
-	// Profile flag
-	runCmd.Flags().StringP("profile", "p", "default", "Configuration profile to use")
-
-	// Namespace flag
 	runCmd.Flags().String("namespace", "", "Namespace to use (defaults to current context namespace)")
 
 	// Environment variables flag

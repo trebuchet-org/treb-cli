@@ -20,6 +20,7 @@ type SenderInitConfig struct {
 	SenderType   [8]byte // bytes8 magic constant
 	CanBroadcast bool
 	Config       []byte // ABI-encoded config data
+	BaseConfig   SenderConfig
 }
 
 // SenderConfigs represents the complete array of sender configurations
@@ -115,6 +116,7 @@ func buildSenderInitConfig(id string, sender SenderConfig, allSenders map[string
 			SenderType:   SENDER_TYPE_IN_MEMORY, // Use in-memory for private key senders
 			CanBroadcast: true,
 			Config:       configData,
+			BaseConfig:   sender,
 		}, nil
 
 	case "safe":
