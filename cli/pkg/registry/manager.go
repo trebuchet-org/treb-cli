@@ -298,13 +298,7 @@ func (m *Manager) updateSolidityRegistry(deployment *types.Deployment) {
 	}
 
 	// Use display name for registry key to support aliases
-	displayName := deployment.ContractDisplayName()
-	var key string
-	if deployment.Label != "" {
-		key = fmt.Sprintf("%s:%s", displayName, deployment.Label)
-	} else {
-		key = displayName
-	}
+	key := deployment.ContractDisplayName()
 	m.solidityRegistry[deployment.ChainID][deployment.Namespace][key] = deployment.Address
 }
 
