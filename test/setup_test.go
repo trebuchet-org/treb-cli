@@ -46,15 +46,8 @@ func setup() error {
 	// Build treb with dev tag for anvil management
 	wd, _ := os.Getwd()
 	projectRoot := filepath.Dir(wd)
-	trebBin = filepath.Join(projectRoot, "treb")
+	trebBin = filepath.Join(projectRoot, "bin", "treb")
 	fixtureDir = filepath.Join(wd, "fixture")
-
-	fmt.Println("🔨 Building treb binary with dev tools...")
-	cmd := exec.Command("go", "build", "-tags", "dev", "-o", "treb", "./cli")
-	cmd.Dir = projectRoot
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to build treb: %w", err)
-	}
 
 	// Change to fixture directory and build contracts
 	if err := os.Chdir(fixtureDir); err != nil {
@@ -67,7 +60,7 @@ func setup() error {
 	os.RemoveAll("broadcast")
 
 	fmt.Println("🔨 Building contracts...")
-	cmd = exec.Command("forge", "build")
+	cmd := exec.Command("forge", "build")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to build contracts: %w", err)
 	}
