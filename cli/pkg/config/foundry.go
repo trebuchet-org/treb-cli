@@ -13,12 +13,12 @@ import (
 
 // FoundryConfig represents the full foundry.toml configuration
 type FoundryConfig struct {
-	Profile      map[string]ProfileFoundryConfig `toml:"profile"`
-	RpcEndpoints map[string]string               `toml:"rpc_endpoints"`
+	Profile      map[string]ProfileConfig `toml:"profile"`
+	RpcEndpoints map[string]string        `toml:"rpc_endpoints"`
 }
 
 // ProfileFoundryConfig represents a profile's foundry configuration
-type ProfileFoundryConfig struct {
+type ProfileConfig struct {
 	Sender    SenderConfig `toml:"sender,omitempty"`
 	Libraries []string     `toml:"libraries,omitempty"`
 	// Other foundry settings
@@ -31,6 +31,16 @@ type ProfileFoundryConfig struct {
 	SolcVersion   string   `toml:"solc_version,omitempty"`
 	Optimizer     bool     `toml:"optimizer,omitempty"`
 	OptimizerRuns int      `toml:"optimizer_runs,omitempty"`
+}
+
+// SenderConfig represents a sender configuration
+type SenderConfig struct {
+	Type           string `toml:"type"`
+	Address        string `toml:"address,omitempty"`
+	PrivateKey     string `toml:"private_key,omitempty"`
+	Safe           string `toml:"safe,omitempty"`
+	Signer         string `toml:"signer,omitempty"`          // For Safe senders
+	DerivationPath string `toml:"derivation_path,omitempty"` // For Ledger senders
 }
 
 // FoundryManager handles foundry.toml file operations
@@ -68,7 +78,7 @@ func (fm *FoundryManager) Load() (*FoundryConfig, error) {
 
 	// Initialize profile map if needed
 	if config.Profile == nil {
-		config.Profile = make(map[string]ProfileFoundryConfig)
+		config.Profile = make(map[string]ProfileConfig)
 	}
 
 	return &config, nil
