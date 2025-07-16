@@ -130,7 +130,7 @@ func (op *OutputProcessor) ProcessOutput(reader io.Reader, entityChan chan<- Par
 
 	// Handle final stage cleanup
 	op.mu.Lock()
-	
+
 	// Check if we have a Broadcasting stage
 	hasBroadcastingStage := false
 	for i := range op.stages {
@@ -145,7 +145,7 @@ func (op *OutputProcessor) ProcessOutput(reader io.Reader, entityChan chan<- Par
 			}
 		}
 	}
-	
+
 	// If we never entered broadcasting stage (dry-run without gas estimate), add it as skipped
 	if !hasBroadcastingStage && op.currentStage == StageSimulating {
 		op.stages = append(op.stages, StageInfo{
@@ -156,7 +156,7 @@ func (op *OutputProcessor) ProcessOutput(reader io.Reader, entityChan chan<- Par
 			Skipped:   true,
 		})
 	}
-	
+
 	op.mu.Unlock()
 
 	// Send collected text output as final entity
