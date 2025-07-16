@@ -13,7 +13,11 @@ import (
 	netpkg "github.com/trebuchet-org/treb-cli/cli/pkg/network"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/resolvers"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/script"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/script/display"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/script/executor"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/script/parameters"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/script/parser"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
 var runCmd = &cobra.Command{
@@ -63,15 +67,18 @@ Examples:
 	Run: func(cmd *cobra.Command, args []string) {
 		scriptPath := args[0]
 
-		resolver := resolvers.NewContext(".", !IsNonInteractive())
-		scriptContract, err := resolver.ResolveContract(scriptPath, contracts.ScriptFilter())
+		indexer, err := contracts.GetGlobalIndexer(".")
+		if err != nil {
+			checkError(fmt.Errorf("failed to initialize contract indexer: %w", err))
+		}
+		resolver := resolvers.NewContractsResolver(indexer, !IsNonInteractive())
+		scriptContract, err := resolver.ResolveContract(scriptPath, types.ScriptContractFilter())
 		if err != nil {
 			checkError(fmt.Errorf("failed to resolve contract: %w", err))
 		}
 
 		// Get flags
 		network, _ := cmd.Flags().GetString("network")
-		profile, _ := cmd.Flags().GetString("profile")
 		namespace, _ := cmd.Flags().GetString("namespace")
 		envVars, _ := cmd.Flags().GetStringSlice("env")
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
@@ -123,14 +130,14 @@ Examples:
 			checkError(fmt.Errorf("failed to load treb config: %w", err))
 		}
 
-		trebConfig, err := fullConfig.GetProfileTrebConfig(profile)
+		trebConfig, err := fullConfig.GetProfileTrebConfig(namespace)
 		if err != nil {
 			checkError(fmt.Errorf("failed to get profile config: %w", err))
 		}
 
 		// Parse script parameters from natspec if artifact is available
 		if scriptContract.Artifact != nil {
-			paramParser := script.NewParameterParser()
+			paramParser := parameters.NewParameterParser()
 			params, err := paramParser.ParseFromArtifact(scriptContract.Artifact)
 			if err != nil {
 				checkError(fmt.Errorf("failed to parse script parameters: %w", err))
@@ -138,7 +145,7 @@ Examples:
 
 			if len(params) > 0 {
 				// Create parameter resolver
-				paramResolver, err := script.NewParameterResolver(".", trebConfig, namespace, network, networkInfo.ChainID, !IsNonInteractive())
+				paramResolver, err := parameters.NewParameterResolver(".", trebConfig, namespace, network, networkInfo.ChainID, !IsNonInteractive())
 				if err != nil {
 					checkError(fmt.Errorf("failed to create parameter resolver: %w", err))
 				}
@@ -158,7 +165,7 @@ Examples:
 				}
 
 				// Check for missing required parameters
-				var missingRequired []script.Parameter
+				var missingRequired []parameters.Parameter
 				for _, param := range params {
 					if !param.Optional && resolvedEnvVars[param.Name] == "" {
 						missingRequired = append(missingRequired, param)
@@ -195,7 +202,7 @@ Examples:
 						}
 						fmt.Println("\nMissing one or more required parameters.")
 
-						prompter := script.NewParameterPrompter(paramResolver)
+						prompter := parameters.NewParameterPrompter(paramResolver)
 						promptedVars, err := prompter.PromptForMissingParameters(params, resolvedEnvVars)
 						if err != nil {
 							checkError(fmt.Errorf("failed to prompt for parameters: %w", err))
@@ -219,42 +226,32 @@ Examples:
 		}
 
 		// Create script executor
-		executor := script.NewExecutor(".", networkInfo)
-
-		// Initialize indexer for contract identification
-		indexer, err := contracts.GetGlobalIndexer(".")
-		if err != nil {
-			fmt.Printf("Warning: Could not initialize contract indexer: %v\n", err)
-			indexer = nil
-		}
+		scriptExecutor := executor.NewExecutor(".", networkInfo)
 
 		// Run the script
-		script.PrintDeploymentBanner(fmt.Sprintf("Running script: %s", filepath.Base(scriptContract.Path)), network, profile)
 
 		// Debug mode always implies dry run to prevent Safe transaction creation
 		if debug || debugJSON {
 			dryRun = true
-			fmt.Println("Mode: Debug (dry run, no broadcast)")
-		} else if dryRun {
-			fmt.Println("Mode: Dry run (no broadcast)")
 		}
 
-		opts := script.RunOptions{
-			ScriptPath: scriptContract.Path,
-			Network:    network,
-			Profile:    profile,
-			Namespace:  namespace,
-			EnvVars:    parsedEnvVars,
-			DryRun:     dryRun,
-			Debug:      debug || debugJSON,
-			DebugJSON:  debugJSON,
+		display.PrintDeploymentBanner(filepath.Base(scriptContract.Path), network, namespace, dryRun)
+
+		opts := executor.RunOptions{
+			Script:    scriptContract,
+			Network:   network,
+			Namespace: namespace,
+			EnvVars:   parsedEnvVars,
+			DryRun:    dryRun,
+			Debug:     debug || debugJSON,
+			DebugJSON: debugJSON,
 		}
 
-		result, err := executor.Run(opts)
+		result, err := scriptExecutor.Run(opts)
 		checkError(err)
 
 		if !result.Success {
-			script.PrintErrorMessage("Script execution failed")
+			display.PrintErrorMessage("Script execution failed")
 			os.Exit(1)
 		}
 
@@ -264,73 +261,51 @@ Examples:
 			fmt.Printf("Raw output size: %d bytes\n", len(result.RawOutput))
 		}
 
-		// Report all parsed events using enhanced display
-		if len(result.AllEvents) > 0 || len(result.Logs) > 0 {
-			// Use enhanced display system for better formatting and phase tracking
-			enhancedDisplay := script.NewEnhancedEventDisplay(indexer)
-			enhancedDisplay.SetVerbose(verbose)
+		// Parse the script result into a unified execution
+		scriptParser := parser.NewParser(indexer)
+		execution, err := scriptParser.Parse(result, network, networkInfo.ChainID)
+		if err != nil {
+			display.PrintWarningMessage(fmt.Sprintf("Failed to parse script execution: %v", err))
+		}
+
+		// Display the execution results
+		if execution != nil && (len(execution.Transactions) > 0 || len(execution.Events) > 0 || len(execution.Logs) > 0) {
+			// Create display handler
+			displayHandler := display.NewDisplay(indexer, execution)
+			displayHandler.SetVerbose(verbose)
 
 			// Load sender configs to improve address display
-			if senderConfigs, err := script.BuildSenderConfigs(trebConfig); err == nil {
-				enhancedDisplay.SetSenderConfigs(senderConfigs)
+			if senderConfigs, err := config.BuildSenderConfigs(trebConfig); err == nil {
+				displayHandler.SetSenderConfigs(senderConfigs)
 			}
 
 			// Enable registry-based ABI resolution for better transaction decoding
 			if manager, err := registry.NewManager("."); err == nil {
-				enhancedDisplay.SetRegistryResolver(manager, networkInfo.ChainID)
+				displayHandler.SetRegistryResolver(manager, networkInfo.ChainID)
 			}
 
-			// Display logs first
-			enhancedDisplay.DisplayLogs(result.Logs)
-
-			// Then display events
-			enhancedDisplay.ProcessEvents(result.AllEvents)
+			// Display the execution
+			displayHandler.DisplayExecution()
 
 			// Update registry if not dry run
-			if !dryRun {
-				// Create script updater and build registry update
-				scriptUpdater := registry.NewScriptUpdater(indexer)
-				registryUpdate := scriptUpdater.BuildRegistryUpdate(
-					result.AllEvents,
-					namespace,
-					networkInfo.ChainID,
-					network,
-					scriptPath,
-				)
-
-				// Enrich with broadcast data if available
-				if result.BroadcastPath != "" {
-					enricher := registry.NewBroadcastEnricher()
-					if err := enricher.EnrichFromBroadcastFile(registryUpdate, result.BroadcastPath); err != nil {
-						script.PrintWarningMessage(fmt.Sprintf("Failed to enrich from broadcast: %v", err))
-					}
-				}
-
-				// Apply registry update
+			if !dryRun && execution != nil {
 				manager, err := registry.NewManager(".")
+				updater := manager.NewScriptExecutionUpdater(execution, namespace, network, scriptPath)
 				if err != nil {
-					script.PrintErrorMessage(fmt.Sprintf("Failed to create registry manager: %v", err))
-				} else if err := registryUpdate.Apply(manager); err != nil {
-					script.PrintErrorMessage(fmt.Sprintf("Failed to apply registry update: %v", err))
+					display.PrintErrorMessage(fmt.Sprintf("Failed to create registry manager: %v", err))
+				} else if err := updater.Write(); err != nil {
+					display.PrintErrorMessage(fmt.Sprintf("Failed to update registry: %v", err))
 				} else {
-					script.PrintSuccessMessage(fmt.Sprintf("Updated registry for %s network in namespace %s", network, namespace))
+					display.PrintSuccessMessage(fmt.Sprintf("Updated registry for %s network in namespace %s", network, namespace))
 				}
 			}
-
-			// Track and report proxy relationships
-			proxyTracker := script.NewProxyTracker()
-			proxyTracker.ProcessEvents(result.AllEvents)
-			proxyTracker.PrintProxyRelationships()
 		} else if !dryRun {
-			script.PrintWarningMessage("No events detected")
+			display.PrintWarningMessage("No events detected")
 		}
 
-		// Report broadcast file if found
-		if result.BroadcastPath != "" {
-			fmt.Printf("\nBroadcast file: %s\n", result.BroadcastPath)
-		}
+		// Broadcast file path is available in result.BroadcastPath if needed
 
-		script.PrintSuccessMessage("Script execution completed successfully")
+		display.PrintSuccessMessage("Script execution completed successfully")
 	},
 }
 
@@ -340,10 +315,6 @@ func init() {
 	// Network flag
 	runCmd.Flags().StringP("network", "n", "", "Network to run on (e.g., mainnet, sepolia, local)")
 
-	// Profile flag
-	runCmd.Flags().StringP("profile", "p", "default", "Configuration profile to use")
-
-	// Namespace flag
 	runCmd.Flags().String("namespace", "", "Namespace to use (defaults to current context namespace)")
 
 	// Environment variables flag

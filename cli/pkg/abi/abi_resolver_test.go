@@ -70,9 +70,9 @@ func TestRegistryABIResolver(t *testing.T) {
 	// Test resolving a known contract
 	t.Run("resolve known contract", func(t *testing.T) {
 		address := common.HexToAddress("0x1234567890123456789012345678901234567890")
-		contractName, abiJSON, isProxy, implAddr := resolver.ResolveABI(address)
+		contractName, abiJSON, isProxy, implAddr := resolver.ResolveByAddress(address)
 
-		assert.Equal(t, "Counter", contractName)
+		assert.Equal(t, "Counter:v1", contractName)
 		assert.Equal(t, mockABI, abiJSON)
 		assert.False(t, isProxy)
 		assert.Nil(t, implAddr)
@@ -81,7 +81,7 @@ func TestRegistryABIResolver(t *testing.T) {
 	// Test resolving unknown contract
 	t.Run("resolve unknown contract", func(t *testing.T) {
 		address := common.HexToAddress("0x0000000000000000000000000000000000000000")
-		contractName, abiJSON, isProxy, implAddr := resolver.ResolveABI(address)
+		contractName, abiJSON, isProxy, implAddr := resolver.ResolveByAddress(address)
 
 		assert.Empty(t, contractName)
 		assert.Empty(t, abiJSON)
@@ -131,14 +131,30 @@ func TestRegistryABIResolver(t *testing.T) {
 		manager.deployments["0x2234567890123456789012345678901234567890"] = proxyDeployment
 
 		address := common.HexToAddress("0x2234567890123456789012345678901234567890")
-		contractName, abiJSON, isProxy, implAddr := resolver.ResolveABI(address)
+		contractName, abiJSON, isProxy, implAddr := resolver.ResolveByAddress(address)
 
 		// Should return implementation ABI with proxy naming
-		assert.Equal(t, "ProxyCounter[Counter]", contractName)
+		assert.Equal(t, "ProxyCounter:v1", contractName)
 		assert.Equal(t, mockABI, abiJSON) // Should be implementation ABI, not proxy ABI
 		assert.True(t, isProxy)
 		assert.NotNil(t, implAddr)
 		assert.Equal(t, common.HexToAddress("0x1234567890123456789012345678901234567890"), *implAddr)
+	})
+
+	// Test resolving by artifact
+	t.Run("resolve by artifact", func(t *testing.T) {
+		contractName, abiJSON := resolver.ResolveByArtifact("src/Counter.sol:Counter")
+
+		assert.Equal(t, "Counter", contractName)
+		assert.Equal(t, mockABI, abiJSON)
+	})
+
+	// Test resolving unknown artifact
+	t.Run("resolve unknown artifact", func(t *testing.T) {
+		contractName, abiJSON := resolver.ResolveByArtifact("src/Unknown.sol:Unknown")
+
+		assert.Empty(t, contractName)
+		assert.Empty(t, abiJSON)
 	})
 }
 

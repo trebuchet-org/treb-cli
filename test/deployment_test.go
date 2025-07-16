@@ -26,9 +26,9 @@ func TestDeploymentFlow(t *testing.T) {
 	lines := strings.Split(output, "\n")
 	var deployedAddress string
 	for _, line := range lines {
-		// Look for "Deployed" lines with addresses
-		if strings.Contains(line, "Deployed") && strings.Contains(line, " at ") && strings.Contains(line, "0x") {
-			// Extract the address from the deployment event
+		// Look for contract addresses in deployment summary (format: "ContractName at 0x...")
+		if (strings.Contains(line, "Counter") || strings.Contains(line, "SampleToken")) && strings.Contains(line, " at ") && strings.Contains(line, "0x") {
+			// Extract the address from the line
 			if idx := strings.Index(line, "0x"); idx >= 0 {
 				// Find the end of the address (next ANSI escape or space)
 				endIdx := idx + 42
@@ -106,7 +106,7 @@ func TestShowAndList(t *testing.T) {
 	t.Run("show non-existent deployment", func(t *testing.T) {
 		output, err := runTrebDebug(t, "show", "NonExistentContract")
 		assert.Error(t, err)
-		assert.Contains(t, output, "deployment not found")
+		assert.Contains(t, output, "no deployments found matching")
 	})
 }
 

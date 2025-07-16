@@ -1,25 +1,28 @@
 package resolvers
 
+import "github.com/trebuchet-org/treb-cli/cli/pkg/types"
+
 // Context holds the resolver configuration and state
-type Context struct {
+type ContractsResolver struct {
+	lookup      types.ContractLookup
 	interactive bool
-	projectRoot string
 }
 
-// NewContext creates a new resolver context
-func NewContext(projectRoot string, interactive bool) *Context {
-	return &Context{
+type DeploymentsResolver struct {
+	lookup      types.DeploymentLookup
+	interactive bool
+}
+
+func NewContractsResolver(lookup types.ContractLookup, interactive bool) *ContractsResolver {
+	return &ContractsResolver{
+		lookup:      lookup,
 		interactive: interactive,
-		projectRoot: projectRoot,
 	}
 }
 
-// IsInteractive returns whether the context is in interactive mode
-func (c *Context) IsInteractive() bool {
-	return c.interactive
-}
-
-// ProjectRoot returns the project root directory
-func (c *Context) ProjectRoot() string {
-	return c.projectRoot
+func NewDeploymentsResolver(lookup types.DeploymentLookup, interactive bool) *DeploymentsResolver {
+	return &DeploymentsResolver{
+		lookup:      lookup,
+		interactive: interactive,
+	}
 }

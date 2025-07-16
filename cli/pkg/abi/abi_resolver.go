@@ -48,8 +48,8 @@ func (r *RegistryABIResolver) EnableDebug(debug bool) {
 	r.debug = debug
 }
 
-// ResolveABI attempts to find and load the ABI for a given address
-func (r *RegistryABIResolver) ResolveABI(address common.Address) (contractName string, abiJSON string, isProxy bool, implAddress *common.Address) {
+// ResolveByAddress attempts to find and load the ABI for a given address
+func (r *RegistryABIResolver) ResolveByAddress(address common.Address) (contractName string, abiJSON string, isProxy bool, implAddress *common.Address) {
 	if r.deploymentLookup == nil || r.contractLookup == nil {
 		return "", "", false, nil
 	}
@@ -202,4 +202,57 @@ func (r *RegistryABIResolver) loadABIFromArtifact(path string) string {
 	}
 
 	return string(artifact.ABI)
+}
+
+// ResolveByArtifact attempts to find and load the ABI for a given artifact name
+func (r *RegistryABIResolver) ResolveByArtifact(artifact string) (contractName string, abiJSON string) {
+	if r.contractLookup == nil {
+		return "", ""
+	}
+
+	if r.debug {
+		fmt.Printf("[ABIResolver] Looking up ABI for artifact %s\n", artifact)
+	}
+
+	// Get contract info from the indexer using the artifact path
+	contractInfo := r.contractLookup.GetContractByArtifact(artifact)
+	if contractInfo == nil {
+		if r.debug {
+			fmt.Printf("[ABIResolver] Contract info not found in indexer for %s\n", artifact)
+		}
+		return "", ""
+	}
+
+	artifactPath := contractInfo.GetArtifactPath()
+	if artifactPath == "" {
+		if r.debug {
+			fmt.Printf("[ABIResolver] No artifact path in contract info\n")
+		}
+		return "", ""
+	}
+
+	if r.debug {
+		fmt.Printf("[ABIResolver] Loading ABI from artifact file: %s\n", artifactPath)
+	}
+
+	// Load ABI from the artifact file
+	abiJSON = r.loadABIFromArtifact(artifactPath)
+	if abiJSON == "" {
+		if r.debug {
+			fmt.Printf("[ABIResolver] Failed to load ABI from artifact file\n")
+		}
+		return "", ""
+	}
+
+	// Extract contract name from artifact path (e.g., "src/Counter.sol:Counter" -> "Counter")
+	contractName = artifact
+	if idx := strings.LastIndex(artifact, ":"); idx != -1 {
+		contractName = artifact[idx+1:]
+	}
+
+	if r.debug {
+		fmt.Printf("[ABIResolver] Successfully loaded ABI for %s\n", contractName)
+	}
+
+	return contractName, abiJSON
 }

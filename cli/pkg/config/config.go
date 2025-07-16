@@ -37,7 +37,7 @@ func NewManager(projectRoot string) *Manager {
 func (m *Manager) Load() (*Config, error) {
 	// If file doesn't exist, return error
 	if _, err := os.Stat(m.configPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("no configuration file found at %s", m.configPath)
+		return DefaultConfig(), nil
 	}
 
 	data, err := os.ReadFile(m.configPath)

@@ -10,6 +10,7 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
@@ -45,6 +46,15 @@ var listCmd = &cobra.Command{
 		chainID, _ := cmd.Flags().GetUint64("chain")
 		contractName, _ := cmd.Flags().GetString("contract")
 
+		cfg, err := config.NewManager(".").Load()
+		if err != nil {
+			checkError(fmt.Errorf("failed to load config: %w", err))
+		}
+
+		if namespace == "" {
+			namespace = cfg.Namespace
+		}
+
 		// Create registry manager
 		manager, err := registry.NewManager(".")
 		if err != nil {
@@ -52,7 +62,7 @@ var listCmd = &cobra.Command{
 		}
 
 		// Get all deployments
-		allDeployments := manager.GetAllDeployments()
+		allDeployments := manager.GetAllDeploymentsHydrated()
 
 		// Filter deployments
 		var deployments []*types.Deployment
@@ -251,15 +261,17 @@ func buildDeploymentTable(deployments []*types.Deployment, manager *registry.Man
 		addressCell := addressStyle.Sprint(deployment.Address)
 
 		verifiedCell := ""
-		switch deployment.Verification.Status {
-		case types.VerificationStatusVerified:
-			verifiedCell = verifiedStyle.Sprint("✓ verified")
-		case types.VerificationStatusPending:
-			verifiedCell = pendingStyle.Sprint("⏳ not deployed")
-		case types.VerificationStatusFailed:
-			verifiedCell = notVerifiedStyle.Sprint("✗ failed")
-		default:
-			verifiedCell = notVerifiedStyle.Sprint("✗ not verified")
+		if deployment.Transaction.Status == types.TransactionStatusQueued {
+			verifiedCell = pendingStyle.Sprint("⏳ queued")
+		} else {
+			switch deployment.Verification.Status {
+			case types.VerificationStatusVerified:
+				verifiedCell = verifiedStyle.Sprint("✓ verified")
+			case types.VerificationStatusFailed:
+				verifiedCell = notVerifiedStyle.Sprint("✗ failed")
+			default:
+				verifiedCell = notVerifiedStyle.Sprint("✗ not verified")
+			}
 		}
 
 		timestampCell := timestampStyle.Sprint(deployment.CreatedAt.Format("2006-01-02 15:04:05"))

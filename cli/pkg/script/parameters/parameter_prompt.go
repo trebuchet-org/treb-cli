@@ -1,10 +1,9 @@
-package script
+package parameters
 
 import (
 	"fmt"
 
 	"github.com/manifoldco/promptui"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/interactive"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
@@ -212,7 +211,7 @@ func (p *ParameterPrompter) promptDeployment(message string) (string, error) {
 // promptArtifact prompts for an artifact selection
 func (p *ParameterPrompter) promptArtifact(message string) (string, error) {
 	// Get all contracts using the indexer
-	allContracts := p.resolver.contractIndexer.QueryContracts(contracts.AllFilter())
+	allContracts := p.resolver.lookup.contracts.QueryContracts(types.AllContractsFilter())
 	if len(allContracts) == 0 {
 		return "", fmt.Errorf("no contracts found")
 	}

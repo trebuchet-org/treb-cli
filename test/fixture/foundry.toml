@@ -13,12 +13,12 @@ mainnet = "https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_API_KEY}"
 polygon = "https://polygon-rpc.com"
 celo = "https://forno.celo.org"
 sepolia = "https://sepolia.infura.io/v3/${INFURA_API_KEY}"
-local = "http://localhost:8545"
+anvil = "http://localhost:8545"
 
 [etherscan]
-sepolia = { key = "${ETHERSCAN_MAIN_API_KEY}" }
-celo-alfajores = { key = "${CELOSCAN_API_KEY}", chain = 44787 }
-celo = { key = "${CELOSCAN_API_KEY}", chain = "celo" }
+sepolia = { key = "${ETHERSCAN_API_KEY}" }
+celo-alfajores = { key = "${ETHERSCAN_API_KEY}", chain = 44787 }
+celo = { key = "${ETHERSCAN_API_KEY}", chain = 42220 }
 
 [profile.default.treb]
 library_deployer =  "local"
@@ -34,4 +34,17 @@ private_key = "${DEPLOYER_PRIVATE_KEY}"
 [profile.default.treb.senders.safe]
 type = "safe"
 safe = "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
-signer = "anvil"
+signer = "local"
+
+[profile.default.treb.senders.safe2]
+type = "safe"
+safe = "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
+signer = "local"
+
+[profile.default.treb.senders.ledger]
+type = "ledger"
+address = "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
+derivation_path = "m/44'/60'/0'/0/0"
+
+
+

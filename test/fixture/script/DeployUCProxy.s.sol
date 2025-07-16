@@ -10,6 +10,7 @@ import {console} from "forge-std/console.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import {Transaction} from "treb-sol/internal/types.sol";
 
 /// @title DeployerUCProxy
 /// @notice This script deploys a proxy for an upgradeable counter contract
@@ -21,9 +22,10 @@ contract DeployerUCProxy is TrebScript {
     using Deployer for Deployer.Deployment;
 
     /**
-     * @custom:env {string} label Label for the proxy and implementation
      * @custom:env {sender} deployer The sender which will deploy the contract
+     * @custom:env {string:optional} label Label for the proxy and implementation
      * @custom:env {deployment:optional} implementation Implementation to use for the proxy
+     * @custom:senders anvil
      */
     function run() public broadcast {
         string memory label = vm.envOr("label", string(""));
@@ -31,6 +33,9 @@ contract DeployerUCProxy is TrebScript {
         Senders.Sender storage deployer = sender(
             vm.envOr("deployer", string("deployer"))
         );
+        address myToken = lookup("MyToken:test");
+
+
 
         if (implementation == address(0)) {
             implementation = deployer
@@ -40,9 +45,17 @@ contract DeployerUCProxy is TrebScript {
         }
 
         address proxy = deployer.create3("ERC1967Proxy").setLabel(label).deploy(
-            abi.encode(implementation, "")
+            abi.encode(implementation, abi.encodeWithSelector(UpgradeableCounter.initialize.selector, deployer.account))
         );
 
-        UpgradeableCounter(deployer.harness(proxy)).increment();
+        deployer.execute(
+            Transaction({
+                to: address(proxy),
+                data: abi.encodeWithSelector(UpgradeableCounter.increment.selector),
+                value: 0
+            })
+        );
+
+        // UpgradeableCounter(deployer.harness(proxy)).increment();
     }
 }

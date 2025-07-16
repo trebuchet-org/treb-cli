@@ -24,7 +24,7 @@ type TrebContext struct {
 func NewTrebContext(t *testing.T) *TrebContext {
 	return &TrebContext{
 		t:         t,
-		network:   "local",
+		network:   "anvil",
 		namespace: "default",
 		sender:    "anvil",
 	}
@@ -63,9 +63,6 @@ func (tc *TrebContext) treb(args ...string) (string, error) {
 		}
 		if tc.namespace != "" {
 			allArgs = append(allArgs, "--namespace", tc.namespace)
-		}
-		if tc.sender != "" {
-			allArgs = append(allArgs, "--sender", tc.sender)
 		}
 	}
 
@@ -173,7 +170,7 @@ func runTrebDebug(t *testing.T, args ...string) (string, error) {
 func runScript(t *testing.T, scriptPath string, envVars ...string) (string, error) {
 	t.Helper()
 
-	args := []string{"run", scriptPath}
+	args := []string{"run", scriptPath, "--network", "anvil"}
 
 	// Add environment variables
 	for _, envVar := range envVars {

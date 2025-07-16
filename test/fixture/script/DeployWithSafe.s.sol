@@ -14,6 +14,9 @@ contract DeployWithTrebScript is TrebScript {
     using Deployer for Deployer.Deployment;
     using Senders for Senders.Sender;
 
+    /**
+     * @custom:senders safe
+     */
     function run() public broadcast {
         // Get the sender
         Senders.Sender storage deployer = sender("safe");

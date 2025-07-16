@@ -11,6 +11,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/abi/bindings"
 )
 
 // Well-known contract addresses
@@ -23,11 +25,15 @@ var (
 	ProxyFactoryAddress = common.HexToAddress("0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67") // Gnosis Safe Proxy Factory
 )
 
-// ABIResolver is an interface for resolving ABIs for contract addresses
+// ABIResolver is an interface for resolving ABIs for contracts
 type ABIResolver interface {
-	// ResolveABI attempts to find and load the ABI for a given address
+	// ResolveByAddress attempts to find and load the ABI for a given address
 	// Returns the contract name and ABI JSON, or empty strings if not found
-	ResolveABI(address common.Address) (contractName string, abiJSON string, isProxy bool, implAddress *common.Address)
+	ResolveByAddress(address common.Address) (contractName string, abiJSON string, isProxy bool, implAddress *common.Address)
+
+	// ResolveByArtifact attempts to find and load the ABI for a given artifact name
+	// Returns the contract name and ABI JSON, or empty strings if not found
+	ResolveByArtifact(artifact string) (contractName string, abiJSON string)
 }
 
 // TransactionDecoder provides utilities for decoding transaction data using ABI
@@ -53,6 +59,8 @@ func NewTransactionDecoder() *TransactionDecoder {
 	decoder.artifactMap[MultiSendAddress] = "MultiSend"
 	decoder.artifactMap[ProxyFactoryAddress] = "SafeProxyFactory"
 
+	_ = decoder.RegisterContract(CreateXAddress, "CreateX", bindings.CreateXMetaData.ABI)
+
 	return decoder
 }
 
@@ -70,6 +78,25 @@ func (td *TransactionDecoder) RegisterContract(address common.Address, artifact 
 
 	td.contractABIs[address] = &contractABI
 	td.artifactMap[address] = artifact
+	return nil
+}
+
+// RegisterContractByArtifact registers a contract's ABI by artifact name only (no address)
+// This is useful for decoding constructor arguments before deployment
+func (td *TransactionDecoder) RegisterContractByArtifact(artifact string, abiJSON string) error {
+	contractABI, err := abi.JSON(strings.NewReader(abiJSON))
+	if err != nil {
+		return fmt.Errorf("failed to parse ABI for %s: %w", artifact, err)
+	}
+
+	// Use a special zero address for artifact-only registrations
+	artifactKey := common.HexToAddress("0x" + strings.Repeat("0", 39) + "1")
+	// Hash the artifact name to create a unique address
+	hash := crypto.Keccak256([]byte(artifact))
+	copy(artifactKey[:], hash[:20])
+
+	td.contractABIs[artifactKey] = &contractABI
+	td.artifactMap[artifactKey] = artifact
 	return nil
 }
 
@@ -137,7 +164,7 @@ func (td *TransactionDecoder) DecodeTransaction(to common.Address, data []byte, 
 
 	// If still not found, try the ABI resolver
 	if !exists && td.abiResolver != nil {
-		if contractName, abiJSON, isProxy, implAddr := td.abiResolver.ResolveABI(to); abiJSON != "" {
+		if contractName, abiJSON, isProxy, implAddr := td.abiResolver.ResolveByAddress(to); abiJSON != "" {
 			// Register the contract
 			if err := td.RegisterContract(to, contractName, abiJSON); err == nil {
 				contractABI = td.contractABIs[to]
@@ -167,7 +194,7 @@ func (td *TransactionDecoder) DecodeTransaction(to common.Address, data []byte, 
 		// Find matching method
 		for _, method := range contractABI.Methods {
 			if bytes.Equal(method.ID[:4], methodID) {
-				decoded.Method = method.Name
+				decoded.Method = method.RawName
 
 				// Decode inputs
 				if len(data) > 4 {
@@ -377,4 +404,126 @@ func (dt *DecodedTransaction) FormatCompactWithReconciler(sender common.Address,
 	}
 
 	return result
+}
+
+// DecodedConstructor represents decoded constructor arguments
+type DecodedConstructor struct {
+	Artifact string
+	Inputs   []DecodedInput
+	RawArgs  []byte
+}
+
+// DecodeConstructor decodes constructor arguments for a contract
+func (td *TransactionDecoder) DecodeConstructor(artifact string, constructorArgs []byte) (*DecodedConstructor, error) {
+	if len(constructorArgs) == 0 {
+		return &DecodedConstructor{
+			Artifact: artifact,
+			Inputs:   []DecodedInput{},
+			RawArgs:  constructorArgs,
+		}, nil
+	}
+
+	// Try to find the ABI for this artifact
+	var contractABI *abi.ABI
+	var contractName string
+
+	// Extract contract name from artifact path (e.g., "src/Counter.sol:Counter" -> "Counter")
+	if idx := strings.LastIndex(artifact, ":"); idx != -1 {
+		contractName = artifact[idx+1:]
+	} else {
+		contractName = artifact
+	}
+
+	// First check if we have it in our registered ABIs by artifact name
+	for addr, artifactName := range td.artifactMap {
+		if artifactName == artifact || artifactName == contractName {
+			if abi, exists := td.contractABIs[addr]; exists {
+				contractABI = abi
+				break
+			}
+		}
+	}
+
+	// If not found and we have an ABI resolver, try to resolve by artifact
+	if contractABI == nil && td.abiResolver != nil {
+		if _, abiJSON := td.abiResolver.ResolveByArtifact(artifact); abiJSON != "" {
+			// Parse and store the ABI
+			parsedABI, err := abi.JSON(strings.NewReader(abiJSON))
+			if err == nil {
+				contractABI = &parsedABI
+				// Also register it for future use
+				_ = td.RegisterContractByArtifact(artifact, abiJSON)
+			}
+		}
+	}
+
+	if contractABI == nil {
+		return &DecodedConstructor{
+			Artifact: artifact,
+			Inputs:   []DecodedInput{},
+			RawArgs:  constructorArgs,
+		}, fmt.Errorf("ABI not found for artifact %s", artifact)
+	}
+
+	// Get the constructor method
+	if contractABI.Constructor.Inputs == nil {
+		// No constructor defined, but args provided - this is unusual
+		return &DecodedConstructor{
+			Artifact: artifact,
+			Inputs:   []DecodedInput{},
+			RawArgs:  constructorArgs,
+		}, fmt.Errorf("no constructor found in ABI for %s", artifact)
+	}
+
+	// Decode the arguments
+	inputs, err := contractABI.Constructor.Inputs.Unpack(constructorArgs)
+	if err != nil {
+		return &DecodedConstructor{
+			Artifact: artifact,
+			Inputs:   []DecodedInput{},
+			RawArgs:  constructorArgs,
+		}, fmt.Errorf("failed to decode constructor args: %w", err)
+	}
+
+	// Convert to DecodedInput format
+	decodedInputs := make([]DecodedInput, 0, len(contractABI.Constructor.Inputs))
+	for i, input := range contractABI.Constructor.Inputs {
+		if i < len(inputs) {
+			decodedInputs = append(decodedInputs, DecodedInput{
+				Name:  input.Name,
+				Type:  input.Type.String(),
+				Value: inputs[i],
+			})
+		}
+	}
+
+	return &DecodedConstructor{
+		Artifact: artifact,
+		Inputs:   decodedInputs,
+		RawArgs:  constructorArgs,
+	}, nil
+}
+
+// FormatConstructorArgs formats decoded constructor arguments for display
+func (dc *DecodedConstructor) FormatCompact() string {
+	if len(dc.Inputs) == 0 {
+		return ""
+	}
+
+	argStrs := make([]string, 0, len(dc.Inputs))
+	for _, input := range dc.Inputs {
+		val := FormatValue(input.Value, input.Type)
+		// Shorten long values
+		if len(val) > 40 {
+			val = val[:37] + "..."
+		}
+		// Include parameter name if available
+		if input.Name != "" {
+			argStrs = append(argStrs, fmt.Sprintf("%s: %s", input.Name, val))
+		} else {
+			argStrs = append(argStrs, val)
+		}
+	}
+
+	return fmt.Sprintf("(%s)", strings.Join(argStrs, ", "))
 }

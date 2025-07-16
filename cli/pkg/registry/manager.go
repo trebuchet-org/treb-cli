@@ -163,7 +163,7 @@ func (m *Manager) rebuildLookups() {
 
 	// Rebuild pending Safe transactions
 	for hash, safeTx := range m.safeTransactions {
-		if safeTx.Status == types.TransactionStatusPending {
+		if safeTx.Status == types.TransactionStatusQueued {
 			m.lookups.Pending.SafeTxs = append(m.lookups.Pending.SafeTxs, hash)
 		}
 	}
@@ -325,7 +325,7 @@ func (m *Manager) AddSafeTransaction(safeTx *types.SafeTransaction) error {
 	m.safeTransactions[safeTx.SafeTxHash] = safeTx
 
 	// Update pending list if needed
-	if safeTx.Status == types.TransactionStatusPending {
+	if safeTx.Status == types.TransactionStatusQueued {
 		if !contains(m.lookups.Pending.SafeTxs, safeTx.SafeTxHash) {
 			m.lookups.Pending.SafeTxs = append(m.lookups.Pending.SafeTxs, safeTx.SafeTxHash)
 		}
@@ -490,7 +490,7 @@ func (m *Manager) UpdateSafeTransaction(safeTx *types.SafeTransaction) error {
 	m.safeTransactions[safeTx.SafeTxHash] = safeTx
 
 	// Update pending list if status changed
-	if safeTx.Status != types.TransactionStatusPending {
+	if safeTx.Status != types.TransactionStatusQueued {
 		// Remove from pending list
 		newPending := make([]string, 0)
 		for _, hash := range m.lookups.Pending.SafeTxs {

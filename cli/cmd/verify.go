@@ -1,10 +1,7 @@
 package cmd
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -153,8 +150,7 @@ func verifyAllContracts(cmd *cobra.Command, verificationManager *verification.Ma
 			contractsToVerify = append(contractsToVerify, deployment)
 		} else {
 			// Without --force, verify only pending, failed, partial, and unverified contracts
-			if status == types.VerificationStatusPending ||
-				status == types.VerificationStatusFailed ||
+			if status == types.VerificationStatusFailed ||
 				status == types.VerificationStatusPartial ||
 				status == types.VerificationStatusUnverified ||
 				status == "" {
@@ -216,7 +212,7 @@ func verifyAllContracts(cmd *cobra.Command, verificationManager *verification.Ma
 			statusIcon = "⚠️" // Retrying failed
 		case types.VerificationStatusPartial:
 			statusIcon = "🔁" // Retrying partial
-		case types.VerificationStatusPending:
+		case types.VerificationStatusUnverified:
 			statusIcon = "⏳" // First attempt
 		default:
 			statusIcon = "🆕" // New verification
@@ -374,30 +370,18 @@ func verifySpecificContract(cmd *cobra.Command, identifier string, verificationM
 	}
 
 	// Handle manual contract path override
-	var originalContractPath, originalSourceHash string
+	var originalContractPath string
 	var contractPathOverridden bool
 
 	if contractPathFlag != "" {
-		// Initialize metadata if needed
-		if deployment.Metadata == nil {
-			deployment.Metadata = &types.ContractMetadata{}
-		}
-
 		// Save original values
-		originalContractPath = deployment.Metadata.ContractPath
-		originalSourceHash = deployment.Metadata.SourceHash
+		originalContractPath = deployment.Artifact.Path
 		contractPathOverridden = true
 
 		// Override with manual contract path
-		deployment.Metadata.ContractPath = contractPathFlag
+		deployment.Artifact.Path = contractPathFlag
 
-		// Calculate new source hash for the manual contract path
-		if newSourceHash, err := calculateSourceHashFromPath(contractPathFlag); err == nil {
-			deployment.Metadata.SourceHash = newSourceHash
-			color.New(color.FgYellow).Printf("Using manual contract path: %s\n", contractPathFlag)
-		} else {
-			color.New(color.FgYellow).Printf("Warning: Could not calculate source hash for manual path: %v\n", err)
-		}
+		color.New(color.FgYellow).Printf("Using manual contract path: %s\n", contractPathFlag)
 	}
 
 	displayName := deployment.GetDisplayName()
@@ -422,8 +406,7 @@ func verifySpecificContract(cmd *cobra.Command, identifier string, verificationM
 	if err != nil {
 		// If verification failed and we overrode the contract path, restore original values
 		if contractPathOverridden {
-			deployment.Metadata.ContractPath = originalContractPath
-			deployment.Metadata.SourceHash = originalSourceHash
+			deployment.Artifact.Path = originalContractPath
 		}
 		color.New(color.FgRed).Printf("✗ Verification failed: %v\n", err)
 		return err
@@ -469,26 +452,6 @@ func showVerificationStatus(deployment *types.Deployment) {
 			color.New(color.FgYellow).Printf("  %s: ⏳ Pending\n", cases.Title(language.English).String(verifier))
 		}
 	}
-}
-
-// calculateSourceHashFromPath calculates the source hash for a given contract path
-func calculateSourceHashFromPath(contractPath string) (string, error) {
-	// Extract file path from contract path (format: ./path/to/Contract.sol:Contract)
-	parts := strings.Split(contractPath, ":")
-	if len(parts) != 2 {
-		return "", fmt.Errorf("invalid contract path format: %s", contractPath)
-	}
-
-	filePath := strings.TrimPrefix(parts[0], "./")
-
-	// Read and hash the file
-	content, err := os.ReadFile(filePath)
-	if err != nil {
-		return "", fmt.Errorf("failed to read contract file: %w", err)
-	}
-
-	hash := sha256.Sum256(content)
-	return hex.EncodeToString(hash[:]), nil
 }
 
 // createSpinner creates a new spinner with the given message
