@@ -25,6 +25,7 @@ contract DeployerUCProxy is TrebScript {
      * @custom:env {sender} deployer The sender which will deploy the contract
      * @custom:env {string:optional} label Label for the proxy and implementation
      * @custom:env {deployment:optional} implementation Implementation to use for the proxy
+     * @custom:senders anvil
      */
     function run() public broadcast {
         string memory label = vm.envOr("label", string(""));

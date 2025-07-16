@@ -13,6 +13,9 @@ contract DeployWithTrebScript is TrebScript {
     using Deployer for Senders.Sender;
     using Deployer for Deployer.Deployment;
 
+    /**
+     * @custom:senders anvil
+     */
     function run() public broadcast {
         // Get the sender (can be overridden with --env deployer=<name>)
         string memory deployerName = vm.envOr("deployer", string("anvil"));
