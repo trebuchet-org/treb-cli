@@ -57,7 +57,8 @@ func (c *CreateX) Instance(backend bind.ContractBackend, addr common.Address) *b
 }
 
 // PackComputeCreate2Address is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x890c283b.
+// the contract method with ID 0x890c283b.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function computeCreate2Address(bytes32 salt, bytes32 initCodeHash) view returns(address computedAddress)
 func (createX *CreateX) PackComputeCreate2Address(salt [32]byte, initCodeHash [32]byte) []byte {
@@ -66,6 +67,15 @@ func (createX *CreateX) PackComputeCreate2Address(salt [32]byte, initCodeHash [3
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackComputeCreate2Address is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x890c283b.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function computeCreate2Address(bytes32 salt, bytes32 initCodeHash) view returns(address computedAddress)
+func (createX *CreateX) TryPackComputeCreate2Address(salt [32]byte, initCodeHash [32]byte) ([]byte, error) {
+	return createX.abi.Pack("computeCreate2Address", salt, initCodeHash)
 }
 
 // UnpackComputeCreate2Address is the Go binding that unpacks the parameters returned
@@ -78,11 +88,12 @@ func (createX *CreateX) UnpackComputeCreate2Address(data []byte) (common.Address
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackComputeCreate2Address0 is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0xd323826a.
+// the contract method with ID 0xd323826a.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function computeCreate2Address(bytes32 salt, bytes32 initCodeHash, address deployer) pure returns(address computedAddress)
 func (createX *CreateX) PackComputeCreate2Address0(salt [32]byte, initCodeHash [32]byte, deployer common.Address) []byte {
@@ -91,6 +102,15 @@ func (createX *CreateX) PackComputeCreate2Address0(salt [32]byte, initCodeHash [
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackComputeCreate2Address0 is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0xd323826a.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function computeCreate2Address(bytes32 salt, bytes32 initCodeHash, address deployer) pure returns(address computedAddress)
+func (createX *CreateX) TryPackComputeCreate2Address0(salt [32]byte, initCodeHash [32]byte, deployer common.Address) ([]byte, error) {
+	return createX.abi.Pack("computeCreate2Address0", salt, initCodeHash, deployer)
 }
 
 // UnpackComputeCreate2Address0 is the Go binding that unpacks the parameters returned
@@ -103,11 +123,12 @@ func (createX *CreateX) UnpackComputeCreate2Address0(data []byte) (common.Addres
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackComputeCreate3Address is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x42d654fc.
+// the contract method with ID 0x42d654fc.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function computeCreate3Address(bytes32 salt, address deployer) pure returns(address computedAddress)
 func (createX *CreateX) PackComputeCreate3Address(salt [32]byte, deployer common.Address) []byte {
@@ -116,6 +137,15 @@ func (createX *CreateX) PackComputeCreate3Address(salt [32]byte, deployer common
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackComputeCreate3Address is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x42d654fc.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function computeCreate3Address(bytes32 salt, address deployer) pure returns(address computedAddress)
+func (createX *CreateX) TryPackComputeCreate3Address(salt [32]byte, deployer common.Address) ([]byte, error) {
+	return createX.abi.Pack("computeCreate3Address", salt, deployer)
 }
 
 // UnpackComputeCreate3Address is the Go binding that unpacks the parameters returned
@@ -128,11 +158,12 @@ func (createX *CreateX) UnpackComputeCreate3Address(data []byte) (common.Address
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackComputeCreate3Address0 is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x6cec2536.
+// the contract method with ID 0x6cec2536.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function computeCreate3Address(bytes32 salt) view returns(address computedAddress)
 func (createX *CreateX) PackComputeCreate3Address0(salt [32]byte) []byte {
@@ -141,6 +172,15 @@ func (createX *CreateX) PackComputeCreate3Address0(salt [32]byte) []byte {
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackComputeCreate3Address0 is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x6cec2536.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function computeCreate3Address(bytes32 salt) view returns(address computedAddress)
+func (createX *CreateX) TryPackComputeCreate3Address0(salt [32]byte) ([]byte, error) {
+	return createX.abi.Pack("computeCreate3Address0", salt)
 }
 
 // UnpackComputeCreate3Address0 is the Go binding that unpacks the parameters returned
@@ -153,11 +193,12 @@ func (createX *CreateX) UnpackComputeCreate3Address0(data []byte) (common.Addres
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackComputeCreateAddress is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x28ddd046.
+// the contract method with ID 0x28ddd046.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function computeCreateAddress(uint256 nonce) view returns(address computedAddress)
 func (createX *CreateX) PackComputeCreateAddress(nonce *big.Int) []byte {
@@ -166,6 +207,15 @@ func (createX *CreateX) PackComputeCreateAddress(nonce *big.Int) []byte {
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackComputeCreateAddress is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x28ddd046.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function computeCreateAddress(uint256 nonce) view returns(address computedAddress)
+func (createX *CreateX) TryPackComputeCreateAddress(nonce *big.Int) ([]byte, error) {
+	return createX.abi.Pack("computeCreateAddress", nonce)
 }
 
 // UnpackComputeCreateAddress is the Go binding that unpacks the parameters returned
@@ -178,11 +228,12 @@ func (createX *CreateX) UnpackComputeCreateAddress(data []byte) (common.Address,
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackComputeCreateAddress0 is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x74637a7a.
+// the contract method with ID 0x74637a7a.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function computeCreateAddress(address deployer, uint256 nonce) view returns(address computedAddress)
 func (createX *CreateX) PackComputeCreateAddress0(deployer common.Address, nonce *big.Int) []byte {
@@ -191,6 +242,15 @@ func (createX *CreateX) PackComputeCreateAddress0(deployer common.Address, nonce
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackComputeCreateAddress0 is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x74637a7a.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function computeCreateAddress(address deployer, uint256 nonce) view returns(address computedAddress)
+func (createX *CreateX) TryPackComputeCreateAddress0(deployer common.Address, nonce *big.Int) ([]byte, error) {
+	return createX.abi.Pack("computeCreateAddress0", deployer, nonce)
 }
 
 // UnpackComputeCreateAddress0 is the Go binding that unpacks the parameters returned
@@ -203,11 +263,12 @@ func (createX *CreateX) UnpackComputeCreateAddress0(data []byte) (common.Address
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackDeployCreate is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x27fe1822.
+// the contract method with ID 0x27fe1822.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function deployCreate(bytes initCode) payable returns(address newContract)
 func (createX *CreateX) PackDeployCreate(initCode []byte) []byte {
@@ -216,6 +277,15 @@ func (createX *CreateX) PackDeployCreate(initCode []byte) []byte {
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackDeployCreate is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x27fe1822.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function deployCreate(bytes initCode) payable returns(address newContract)
+func (createX *CreateX) TryPackDeployCreate(initCode []byte) ([]byte, error) {
+	return createX.abi.Pack("deployCreate", initCode)
 }
 
 // UnpackDeployCreate is the Go binding that unpacks the parameters returned
@@ -228,11 +298,12 @@ func (createX *CreateX) UnpackDeployCreate(data []byte) (common.Address, error) 
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackDeployCreate2 is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x26307668.
+// the contract method with ID 0x26307668.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function deployCreate2(bytes32 salt, bytes initCode) payable returns(address newContract)
 func (createX *CreateX) PackDeployCreate2(salt [32]byte, initCode []byte) []byte {
@@ -241,6 +312,15 @@ func (createX *CreateX) PackDeployCreate2(salt [32]byte, initCode []byte) []byte
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackDeployCreate2 is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x26307668.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function deployCreate2(bytes32 salt, bytes initCode) payable returns(address newContract)
+func (createX *CreateX) TryPackDeployCreate2(salt [32]byte, initCode []byte) ([]byte, error) {
+	return createX.abi.Pack("deployCreate2", salt, initCode)
 }
 
 // UnpackDeployCreate2 is the Go binding that unpacks the parameters returned
@@ -253,11 +333,12 @@ func (createX *CreateX) UnpackDeployCreate2(data []byte) (common.Address, error)
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackDeployCreate20 is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x26a32fc7.
+// the contract method with ID 0x26a32fc7.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function deployCreate2(bytes initCode) payable returns(address newContract)
 func (createX *CreateX) PackDeployCreate20(initCode []byte) []byte {
@@ -266,6 +347,15 @@ func (createX *CreateX) PackDeployCreate20(initCode []byte) []byte {
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackDeployCreate20 is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x26a32fc7.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function deployCreate2(bytes initCode) payable returns(address newContract)
+func (createX *CreateX) TryPackDeployCreate20(initCode []byte) ([]byte, error) {
+	return createX.abi.Pack("deployCreate20", initCode)
 }
 
 // UnpackDeployCreate20 is the Go binding that unpacks the parameters returned
@@ -278,11 +368,12 @@ func (createX *CreateX) UnpackDeployCreate20(data []byte) (common.Address, error
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackDeployCreate2AndInit is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0xa7db93f2.
+// the contract method with ID 0xa7db93f2.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function deployCreate2AndInit(bytes32 salt, bytes initCode, bytes data, (uint256,uint256) values, address refundAddress) payable returns(address newContract)
 func (createX *CreateX) PackDeployCreate2AndInit(salt [32]byte, initCode []byte, data []byte, values ICreateXValues, refundAddress common.Address) []byte {
@@ -291,6 +382,15 @@ func (createX *CreateX) PackDeployCreate2AndInit(salt [32]byte, initCode []byte,
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackDeployCreate2AndInit is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0xa7db93f2.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function deployCreate2AndInit(bytes32 salt, bytes initCode, bytes data, (uint256,uint256) values, address refundAddress) payable returns(address newContract)
+func (createX *CreateX) TryPackDeployCreate2AndInit(salt [32]byte, initCode []byte, data []byte, values ICreateXValues, refundAddress common.Address) ([]byte, error) {
+	return createX.abi.Pack("deployCreate2AndInit", salt, initCode, data, values, refundAddress)
 }
 
 // UnpackDeployCreate2AndInit is the Go binding that unpacks the parameters returned
@@ -303,11 +403,12 @@ func (createX *CreateX) UnpackDeployCreate2AndInit(data []byte) (common.Address,
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackDeployCreate2AndInit0 is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0xc3fe107b.
+// the contract method with ID 0xc3fe107b.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function deployCreate2AndInit(bytes initCode, bytes data, (uint256,uint256) values) payable returns(address newContract)
 func (createX *CreateX) PackDeployCreate2AndInit0(initCode []byte, data []byte, values ICreateXValues) []byte {
@@ -316,6 +417,15 @@ func (createX *CreateX) PackDeployCreate2AndInit0(initCode []byte, data []byte, 
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackDeployCreate2AndInit0 is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0xc3fe107b.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function deployCreate2AndInit(bytes initCode, bytes data, (uint256,uint256) values) payable returns(address newContract)
+func (createX *CreateX) TryPackDeployCreate2AndInit0(initCode []byte, data []byte, values ICreateXValues) ([]byte, error) {
+	return createX.abi.Pack("deployCreate2AndInit0", initCode, data, values)
 }
 
 // UnpackDeployCreate2AndInit0 is the Go binding that unpacks the parameters returned
@@ -328,11 +438,12 @@ func (createX *CreateX) UnpackDeployCreate2AndInit0(data []byte) (common.Address
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackDeployCreate2AndInit1 is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0xe437252a.
+// the contract method with ID 0xe437252a.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function deployCreate2AndInit(bytes initCode, bytes data, (uint256,uint256) values, address refundAddress) payable returns(address newContract)
 func (createX *CreateX) PackDeployCreate2AndInit1(initCode []byte, data []byte, values ICreateXValues, refundAddress common.Address) []byte {
@@ -341,6 +452,15 @@ func (createX *CreateX) PackDeployCreate2AndInit1(initCode []byte, data []byte, 
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackDeployCreate2AndInit1 is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0xe437252a.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function deployCreate2AndInit(bytes initCode, bytes data, (uint256,uint256) values, address refundAddress) payable returns(address newContract)
+func (createX *CreateX) TryPackDeployCreate2AndInit1(initCode []byte, data []byte, values ICreateXValues, refundAddress common.Address) ([]byte, error) {
+	return createX.abi.Pack("deployCreate2AndInit1", initCode, data, values, refundAddress)
 }
 
 // UnpackDeployCreate2AndInit1 is the Go binding that unpacks the parameters returned
@@ -353,11 +473,12 @@ func (createX *CreateX) UnpackDeployCreate2AndInit1(data []byte) (common.Address
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackDeployCreate2AndInit2 is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0xe96deee4.
+// the contract method with ID 0xe96deee4.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function deployCreate2AndInit(bytes32 salt, bytes initCode, bytes data, (uint256,uint256) values) payable returns(address newContract)
 func (createX *CreateX) PackDeployCreate2AndInit2(salt [32]byte, initCode []byte, data []byte, values ICreateXValues) []byte {
@@ -366,6 +487,15 @@ func (createX *CreateX) PackDeployCreate2AndInit2(salt [32]byte, initCode []byte
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackDeployCreate2AndInit2 is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0xe96deee4.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function deployCreate2AndInit(bytes32 salt, bytes initCode, bytes data, (uint256,uint256) values) payable returns(address newContract)
+func (createX *CreateX) TryPackDeployCreate2AndInit2(salt [32]byte, initCode []byte, data []byte, values ICreateXValues) ([]byte, error) {
+	return createX.abi.Pack("deployCreate2AndInit2", salt, initCode, data, values)
 }
 
 // UnpackDeployCreate2AndInit2 is the Go binding that unpacks the parameters returned
@@ -378,11 +508,12 @@ func (createX *CreateX) UnpackDeployCreate2AndInit2(data []byte) (common.Address
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackDeployCreate2Clone is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x2852527a.
+// the contract method with ID 0x2852527a.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function deployCreate2Clone(bytes32 salt, address implementation, bytes data) payable returns(address proxy)
 func (createX *CreateX) PackDeployCreate2Clone(salt [32]byte, implementation common.Address, data []byte) []byte {
@@ -391,6 +522,15 @@ func (createX *CreateX) PackDeployCreate2Clone(salt [32]byte, implementation com
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackDeployCreate2Clone is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x2852527a.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function deployCreate2Clone(bytes32 salt, address implementation, bytes data) payable returns(address proxy)
+func (createX *CreateX) TryPackDeployCreate2Clone(salt [32]byte, implementation common.Address, data []byte) ([]byte, error) {
+	return createX.abi.Pack("deployCreate2Clone", salt, implementation, data)
 }
 
 // UnpackDeployCreate2Clone is the Go binding that unpacks the parameters returned
@@ -403,11 +543,12 @@ func (createX *CreateX) UnpackDeployCreate2Clone(data []byte) (common.Address, e
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackDeployCreate2Clone0 is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x81503da1.
+// the contract method with ID 0x81503da1.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function deployCreate2Clone(address implementation, bytes data) payable returns(address proxy)
 func (createX *CreateX) PackDeployCreate2Clone0(implementation common.Address, data []byte) []byte {
@@ -416,6 +557,15 @@ func (createX *CreateX) PackDeployCreate2Clone0(implementation common.Address, d
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackDeployCreate2Clone0 is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x81503da1.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function deployCreate2Clone(address implementation, bytes data) payable returns(address proxy)
+func (createX *CreateX) TryPackDeployCreate2Clone0(implementation common.Address, data []byte) ([]byte, error) {
+	return createX.abi.Pack("deployCreate2Clone0", implementation, data)
 }
 
 // UnpackDeployCreate2Clone0 is the Go binding that unpacks the parameters returned
@@ -428,11 +578,12 @@ func (createX *CreateX) UnpackDeployCreate2Clone0(data []byte) (common.Address, 
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackDeployCreate3 is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x7f565360.
+// the contract method with ID 0x7f565360.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function deployCreate3(bytes initCode) payable returns(address newContract)
 func (createX *CreateX) PackDeployCreate3(initCode []byte) []byte {
@@ -441,6 +592,15 @@ func (createX *CreateX) PackDeployCreate3(initCode []byte) []byte {
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackDeployCreate3 is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x7f565360.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function deployCreate3(bytes initCode) payable returns(address newContract)
+func (createX *CreateX) TryPackDeployCreate3(initCode []byte) ([]byte, error) {
+	return createX.abi.Pack("deployCreate3", initCode)
 }
 
 // UnpackDeployCreate3 is the Go binding that unpacks the parameters returned
@@ -453,11 +613,12 @@ func (createX *CreateX) UnpackDeployCreate3(data []byte) (common.Address, error)
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackDeployCreate30 is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x9c36a286.
+// the contract method with ID 0x9c36a286.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function deployCreate3(bytes32 salt, bytes initCode) payable returns(address newContract)
 func (createX *CreateX) PackDeployCreate30(salt [32]byte, initCode []byte) []byte {
@@ -466,6 +627,15 @@ func (createX *CreateX) PackDeployCreate30(salt [32]byte, initCode []byte) []byt
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackDeployCreate30 is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x9c36a286.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function deployCreate3(bytes32 salt, bytes initCode) payable returns(address newContract)
+func (createX *CreateX) TryPackDeployCreate30(salt [32]byte, initCode []byte) ([]byte, error) {
+	return createX.abi.Pack("deployCreate30", salt, initCode)
 }
 
 // UnpackDeployCreate30 is the Go binding that unpacks the parameters returned
@@ -478,11 +648,12 @@ func (createX *CreateX) UnpackDeployCreate30(data []byte) (common.Address, error
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackDeployCreate3AndInit is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x00d84acb.
+// the contract method with ID 0x00d84acb.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function deployCreate3AndInit(bytes32 salt, bytes initCode, bytes data, (uint256,uint256) values) payable returns(address newContract)
 func (createX *CreateX) PackDeployCreate3AndInit(salt [32]byte, initCode []byte, data []byte, values ICreateXValues) []byte {
@@ -491,6 +662,15 @@ func (createX *CreateX) PackDeployCreate3AndInit(salt [32]byte, initCode []byte,
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackDeployCreate3AndInit is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x00d84acb.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function deployCreate3AndInit(bytes32 salt, bytes initCode, bytes data, (uint256,uint256) values) payable returns(address newContract)
+func (createX *CreateX) TryPackDeployCreate3AndInit(salt [32]byte, initCode []byte, data []byte, values ICreateXValues) ([]byte, error) {
+	return createX.abi.Pack("deployCreate3AndInit", salt, initCode, data, values)
 }
 
 // UnpackDeployCreate3AndInit is the Go binding that unpacks the parameters returned
@@ -503,11 +683,12 @@ func (createX *CreateX) UnpackDeployCreate3AndInit(data []byte) (common.Address,
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackDeployCreate3AndInit0 is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x2f990e3f.
+// the contract method with ID 0x2f990e3f.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function deployCreate3AndInit(bytes initCode, bytes data, (uint256,uint256) values) payable returns(address newContract)
 func (createX *CreateX) PackDeployCreate3AndInit0(initCode []byte, data []byte, values ICreateXValues) []byte {
@@ -516,6 +697,15 @@ func (createX *CreateX) PackDeployCreate3AndInit0(initCode []byte, data []byte, 
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackDeployCreate3AndInit0 is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x2f990e3f.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function deployCreate3AndInit(bytes initCode, bytes data, (uint256,uint256) values) payable returns(address newContract)
+func (createX *CreateX) TryPackDeployCreate3AndInit0(initCode []byte, data []byte, values ICreateXValues) ([]byte, error) {
+	return createX.abi.Pack("deployCreate3AndInit0", initCode, data, values)
 }
 
 // UnpackDeployCreate3AndInit0 is the Go binding that unpacks the parameters returned
@@ -528,11 +718,12 @@ func (createX *CreateX) UnpackDeployCreate3AndInit0(data []byte) (common.Address
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackDeployCreate3AndInit1 is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0xddda0acb.
+// the contract method with ID 0xddda0acb.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function deployCreate3AndInit(bytes32 salt, bytes initCode, bytes data, (uint256,uint256) values, address refundAddress) payable returns(address newContract)
 func (createX *CreateX) PackDeployCreate3AndInit1(salt [32]byte, initCode []byte, data []byte, values ICreateXValues, refundAddress common.Address) []byte {
@@ -541,6 +732,15 @@ func (createX *CreateX) PackDeployCreate3AndInit1(salt [32]byte, initCode []byte
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackDeployCreate3AndInit1 is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0xddda0acb.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function deployCreate3AndInit(bytes32 salt, bytes initCode, bytes data, (uint256,uint256) values, address refundAddress) payable returns(address newContract)
+func (createX *CreateX) TryPackDeployCreate3AndInit1(salt [32]byte, initCode []byte, data []byte, values ICreateXValues, refundAddress common.Address) ([]byte, error) {
+	return createX.abi.Pack("deployCreate3AndInit1", salt, initCode, data, values, refundAddress)
 }
 
 // UnpackDeployCreate3AndInit1 is the Go binding that unpacks the parameters returned
@@ -553,11 +753,12 @@ func (createX *CreateX) UnpackDeployCreate3AndInit1(data []byte) (common.Address
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackDeployCreate3AndInit2 is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0xf5745aba.
+// the contract method with ID 0xf5745aba.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function deployCreate3AndInit(bytes initCode, bytes data, (uint256,uint256) values, address refundAddress) payable returns(address newContract)
 func (createX *CreateX) PackDeployCreate3AndInit2(initCode []byte, data []byte, values ICreateXValues, refundAddress common.Address) []byte {
@@ -566,6 +767,15 @@ func (createX *CreateX) PackDeployCreate3AndInit2(initCode []byte, data []byte, 
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackDeployCreate3AndInit2 is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0xf5745aba.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function deployCreate3AndInit(bytes initCode, bytes data, (uint256,uint256) values, address refundAddress) payable returns(address newContract)
+func (createX *CreateX) TryPackDeployCreate3AndInit2(initCode []byte, data []byte, values ICreateXValues, refundAddress common.Address) ([]byte, error) {
+	return createX.abi.Pack("deployCreate3AndInit2", initCode, data, values, refundAddress)
 }
 
 // UnpackDeployCreate3AndInit2 is the Go binding that unpacks the parameters returned
@@ -578,11 +788,12 @@ func (createX *CreateX) UnpackDeployCreate3AndInit2(data []byte) (common.Address
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackDeployCreateAndInit is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x31a7c8c8.
+// the contract method with ID 0x31a7c8c8.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function deployCreateAndInit(bytes initCode, bytes data, (uint256,uint256) values) payable returns(address newContract)
 func (createX *CreateX) PackDeployCreateAndInit(initCode []byte, data []byte, values ICreateXValues) []byte {
@@ -591,6 +802,15 @@ func (createX *CreateX) PackDeployCreateAndInit(initCode []byte, data []byte, va
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackDeployCreateAndInit is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x31a7c8c8.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function deployCreateAndInit(bytes initCode, bytes data, (uint256,uint256) values) payable returns(address newContract)
+func (createX *CreateX) TryPackDeployCreateAndInit(initCode []byte, data []byte, values ICreateXValues) ([]byte, error) {
+	return createX.abi.Pack("deployCreateAndInit", initCode, data, values)
 }
 
 // UnpackDeployCreateAndInit is the Go binding that unpacks the parameters returned
@@ -603,11 +823,12 @@ func (createX *CreateX) UnpackDeployCreateAndInit(data []byte) (common.Address, 
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackDeployCreateAndInit0 is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0x98e81077.
+// the contract method with ID 0x98e81077.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function deployCreateAndInit(bytes initCode, bytes data, (uint256,uint256) values, address refundAddress) payable returns(address newContract)
 func (createX *CreateX) PackDeployCreateAndInit0(initCode []byte, data []byte, values ICreateXValues, refundAddress common.Address) []byte {
@@ -616,6 +837,15 @@ func (createX *CreateX) PackDeployCreateAndInit0(initCode []byte, data []byte, v
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackDeployCreateAndInit0 is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0x98e81077.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function deployCreateAndInit(bytes initCode, bytes data, (uint256,uint256) values, address refundAddress) payable returns(address newContract)
+func (createX *CreateX) TryPackDeployCreateAndInit0(initCode []byte, data []byte, values ICreateXValues, refundAddress common.Address) ([]byte, error) {
+	return createX.abi.Pack("deployCreateAndInit0", initCode, data, values, refundAddress)
 }
 
 // UnpackDeployCreateAndInit0 is the Go binding that unpacks the parameters returned
@@ -628,11 +858,12 @@ func (createX *CreateX) UnpackDeployCreateAndInit0(data []byte) (common.Address,
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // PackDeployCreateClone is the Go binding used to pack the parameters required for calling
-// the contract method with ID 0xf9664498.
+// the contract method with ID 0xf9664498.  This method will panic if any
+// invalid/nil inputs are passed.
 //
 // Solidity: function deployCreateClone(address implementation, bytes data) payable returns(address proxy)
 func (createX *CreateX) PackDeployCreateClone(implementation common.Address, data []byte) []byte {
@@ -641,6 +872,15 @@ func (createX *CreateX) PackDeployCreateClone(implementation common.Address, dat
 		panic(err)
 	}
 	return enc
+}
+
+// TryPackDeployCreateClone is the Go binding used to pack the parameters required for calling
+// the contract method with ID 0xf9664498.  This method will return an error
+// if any inputs are invalid/nil.
+//
+// Solidity: function deployCreateClone(address implementation, bytes data) payable returns(address proxy)
+func (createX *CreateX) TryPackDeployCreateClone(implementation common.Address, data []byte) ([]byte, error) {
+	return createX.abi.Pack("deployCreateClone", implementation, data)
 }
 
 // UnpackDeployCreateClone is the Go binding that unpacks the parameters returned
@@ -653,7 +893,7 @@ func (createX *CreateX) UnpackDeployCreateClone(data []byte) (common.Address, er
 		return *new(common.Address), err
 	}
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-	return out0, err
+	return out0, nil
 }
 
 // CreateXContractCreation represents a ContractCreation event raised by the CreateX contract.
