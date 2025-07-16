@@ -46,7 +46,7 @@ func setup() error {
 	// Build treb with dev tag for anvil management
 	wd, _ := os.Getwd()
 	projectRoot := filepath.Dir(wd)
-	trebBin = filepath.Join(projectRoot, "treb")
+	trebBin = filepath.Join(projectRoot, "bin", "treb")
 	fixtureDir = filepath.Join(wd, "fixture")
 
 	// Change to fixture directory and build contracts
