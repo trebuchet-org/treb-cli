@@ -16,24 +16,26 @@ import (
 
 // Display handles the display of script execution results
 type Display struct {
-	transactionDecoder *abi.TransactionDecoder
-	transactionDisplay *TransactionDisplay
-	indexer            *contracts.Indexer
-	deployedContracts  map[common.Address]string // Track contracts deployed in this execution
-	verbose            bool                      // Show extra detailed information
-	knownAddresses     map[common.Address]string // Track known addresses (deployers, safes, etc.)
-	execution          *parser.ScriptExecution
+	transactionDecoder   *abi.TransactionDecoder
+	transactionDisplay   *TransactionDisplay
+	indexer              *contracts.Indexer
+	deployedContracts    map[common.Address]string                // Track contracts deployed in this execution
+	deploymentCollisions map[common.Address]*parser.CollisionInfo // Track deployment collisions
+	verbose              bool                                     // Show extra detailed information
+	knownAddresses       map[common.Address]string                // Track known addresses (deployers, safes, etc.)
+	execution            *parser.ScriptExecution
 }
 
 // NewDisplay creates a new display handler
 func NewDisplay(indexer *contracts.Indexer, execution *parser.ScriptExecution) *Display {
 	display := &Display{
-		transactionDecoder: abi.NewTransactionDecoder(),
-		indexer:            indexer,
-		deployedContracts:  make(map[common.Address]string),
-		verbose:            false,
-		knownAddresses:     make(map[common.Address]string),
-		execution:          execution,
+		transactionDecoder:   abi.NewTransactionDecoder(),
+		indexer:              indexer,
+		deployedContracts:    make(map[common.Address]string),
+		deploymentCollisions: make(map[common.Address]*parser.CollisionInfo),
+		verbose:              false,
+		knownAddresses:       make(map[common.Address]string),
+		execution:            execution,
 	}
 
 	// Initialize with well-known addresses
@@ -156,16 +158,22 @@ func (d *Display) registerDeployments(execution *parser.ScriptExecution) {
 			d.deployedContracts[proxy] = fmt.Sprintf("%s[%s]", proxyName, implName)
 		}
 	}
+
+	// Register deployment collisions
+	for addr, collision := range execution.Collisions {
+		d.deploymentCollisions[addr] = collision
+	}
 }
 
 // displayTransactions displays the unified transaction list
 func (d *Display) displayTransactions(transactions []*parser.Transaction) {
-	if len(transactions) == 0 {
-		return
-	}
-
 	fmt.Printf("%s🔄 Transactions:%s\n", ColorBold, ColorReset)
 	fmt.Printf("%s%s%s\n", ColorGray, strings.Repeat("─", 50), ColorReset)
+
+	if len(transactions) == 0 {
+		fmt.Printf("%sNo transactions executed (dry run or all deployments skipped)%s\n\n", ColorGray, ColorReset)
+		return
+	}
 
 	for _, tx := range transactions {
 		// Use enhanced transaction display
@@ -175,11 +183,41 @@ func (d *Display) displayTransactions(transactions []*parser.Transaction) {
 
 // printExecutionSummary prints a summary of the execution
 func (d *Display) printExecutionSummary() {
+	// Show deployment collisions first as warnings
+	if len(d.deploymentCollisions) > 0 {
+		fmt.Printf("\n%s⚠️ Deployment Collisions Detected:%s\n", ColorYellow, ColorReset)
+		fmt.Printf("%s%s%s\n", ColorGray, strings.Repeat("─", 50), ColorReset)
+
+		for address, collision := range d.deploymentCollisions {
+			contractName := extractContractName(collision.Artifact)
+			fmt.Printf("%s%s%s already deployed at %s%s%s\n",
+				ColorCyan, contractName, ColorReset,
+				ColorYellow, address.Hex(), ColorReset)
+
+			// Show details if verbose
+			if d.verbose && collision.Label != "" {
+				fmt.Printf("    Label: %s\n", collision.Label)
+			}
+			if d.verbose && collision.Entropy != "" {
+				fmt.Printf("    Entropy: %s\n", collision.Entropy)
+			}
+		}
+
+		fmt.Printf("%sNote: These contracts were already deployed and deployment was skipped.%s\n\n",
+			ColorGray, ColorReset)
+	}
+
 	if len(d.deployedContracts) > 0 {
 		fmt.Printf("\n%s📦 Deployment Summary:%s\n", ColorBold, ColorReset)
 		fmt.Printf("%s%s%s\n", ColorGray, strings.Repeat("─", 50), ColorReset)
 
 		for address, artifact := range d.deployedContracts {
+			// Check if this was a collision (skipped deployment)
+			if _, isCollision := d.deploymentCollisions[address]; isCollision {
+				// Skip collisions from deployment summary as they're shown above
+				continue
+			}
+
 			fmt.Printf("%s%s%s at %s%s%s\n",
 				ColorCyan, artifact, ColorReset,
 				ColorGreen, address.Hex(), ColorReset)

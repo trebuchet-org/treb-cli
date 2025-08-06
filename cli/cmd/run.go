@@ -308,13 +308,20 @@ Examples:
 			// Update registry if not dry run
 			if !dryRun && execution != nil {
 				manager, err := registry.NewManager(".")
-				updater := manager.NewScriptExecutionUpdater(execution, namespace, network, scriptPath)
 				if err != nil {
 					display.PrintErrorMessage(fmt.Sprintf("Failed to create registry manager: %v", err))
-				} else if err := updater.Write(); err != nil {
-					display.PrintErrorMessage(fmt.Sprintf("Failed to update registry: %v", err))
 				} else {
-					display.PrintSuccessMessage(fmt.Sprintf("Updated registry for %s network in namespace %s", network, namespace))
+					updater := manager.NewScriptExecutionUpdater(execution, namespace, network, scriptPath)
+					if updater.HasChanges() {
+						if err := updater.Write(); err != nil {
+							display.PrintErrorMessage(fmt.Sprintf("Failed to update registry: %v", err))
+						} else {
+							display.PrintSuccessMessage(fmt.Sprintf("Updated registry for %s network in namespace %s", network, namespace))
+						}
+					} else {
+						fmt.Printf("%s- No registry changes recorded for %s network in namespace %s%s\n",
+							display.ColorYellow, network, namespace, display.ColorReset)
+					}
 				}
 			}
 		} else if !dryRun {

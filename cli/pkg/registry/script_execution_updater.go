@@ -19,6 +19,11 @@ type ScriptExecutionUpdater struct {
 	scriptPath  string
 }
 
+// HasChanges returns true if the execution would add any new deployments to the registry
+func (u *ScriptExecutionUpdater) HasChanges() bool {
+	return len(u.execution.Deployments) > 0
+}
+
 func (m *Manager) NewScriptExecutionUpdater(execution *parser.ScriptExecution, namespace string, networkName string, scriptPath string) *ScriptExecutionUpdater {
 	return &ScriptExecutionUpdater{
 		manager:     m,
