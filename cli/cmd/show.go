@@ -105,14 +105,14 @@ func displayDeployment(dep *types.Deployment, tx *types.Transaction, manager *re
 	fmt.Printf("  Address: %s\n", dep.Address)
 	fmt.Printf("  Type: %s\n", dep.Type)
 	fmt.Printf("  Namespace: %s\n", dep.Namespace)
-	
+
 	// Try to get network name for chain ID
 	networkName := fmt.Sprintf("%d", dep.ChainID)
 	if name, err := netpkg.GetNetworkByChainID(".", dep.ChainID); err == nil {
 		networkName = fmt.Sprintf("%s (chain ID: %d)", name, dep.ChainID)
 	}
 	fmt.Printf("  Network: %s\n", networkName)
-	
+
 	if dep.Label != "" {
 		fmt.Printf("  Label: %s\n", color.New(color.FgMagenta).Sprint(dep.Label))
 	}

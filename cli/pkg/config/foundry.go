@@ -13,9 +13,9 @@ import (
 
 // FoundryConfig represents the full foundry.toml configuration
 type FoundryConfig struct {
-	Profile      map[string]ProfileConfig      `toml:"profile"`
-	RpcEndpoints map[string]string             `toml:"rpc_endpoints"`
-	Etherscan    map[string]EtherscanConfig    `toml:"etherscan,omitempty"`
+	Profile      map[string]ProfileConfig   `toml:"profile"`
+	RpcEndpoints map[string]string          `toml:"rpc_endpoints"`
+	Etherscan    map[string]EtherscanConfig `toml:"etherscan,omitempty"`
 }
 
 // EtherscanConfig represents Etherscan configuration for a network

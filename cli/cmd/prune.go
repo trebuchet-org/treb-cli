@@ -34,10 +34,10 @@ func init() {
 	if err := pruneCmd.MarkFlagRequired("network"); err != nil {
 		panic(fmt.Sprintf("failed to mark flag as required: %v", err))
 	}
-	
+
 	// Set command group
 	pruneCmd.GroupID = "management"
-	
+
 	// Register command
 	rootCmd.AddCommand(pruneCmd)
 }
@@ -108,9 +108,9 @@ func runPrune(cmd *cobra.Command, args []string) error {
 	if len(itemsToPrune.SafeTransactions) > 0 {
 		fmt.Printf("Safe Transactions (%d):\n", len(itemsToPrune.SafeTransactions))
 		for _, safeTx := range itemsToPrune.SafeTransactions {
-			fmt.Printf("  - %s on Safe %s [%s] (reason: %s)\n", 
-				safeTx.SafeTxHash, 
-				safeTx.SafeAddress[0:10]+"...", 
+			fmt.Printf("  - %s on Safe %s [%s] (reason: %s)\n",
+				safeTx.SafeTxHash,
+				safeTx.SafeAddress[0:10]+"...",
 				safeTx.Status,
 				safeTx.Reason)
 		}
@@ -125,7 +125,7 @@ func runPrune(cmd *cobra.Command, args []string) error {
 		fmt.Println("❌ Prune cancelled.")
 		return nil
 	}
-	
+
 	if strings.ToLower(strings.TrimSpace(response)) != "y" {
 		fmt.Println("❌ Prune cancelled.")
 		return nil

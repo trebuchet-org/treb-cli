@@ -19,7 +19,7 @@ This command shows all available networks and attempts to fetch their chain IDs.
 func init() {
 	// Set command group
 	networksCmd.GroupID = "management"
-	
+
 	// Register command
 	rootCmd.AddCommand(networksCmd)
 }

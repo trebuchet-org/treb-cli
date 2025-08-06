@@ -306,7 +306,7 @@ func (m *Manager) updateSolidityRegistry(deployment *types.Deployment) {
 func (m *Manager) rebuildSolidityRegistry() {
 	// Clear existing registry
 	m.solidityRegistry = make(types.SolidityRegistry)
-	
+
 	// Rebuild from all deployments
 	for _, deployment := range m.deployments {
 		m.updateSolidityRegistry(deployment)

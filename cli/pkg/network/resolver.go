@@ -122,13 +122,13 @@ func (r *Resolver) GetExplorerURL(networkName string) (string, error) {
 			return r.expandEnvVars(etherscan.URL), nil
 		}
 	}
-	
+
 	// Fallback to common defaults for well-known networks
 	info, err := r.ResolveNetwork(networkName)
 	if err != nil {
 		return "", fmt.Errorf("network not found: %s", networkName)
 	}
-	
+
 	// Return default explorers for common chains
 	switch info.ChainID {
 	case 1:
@@ -185,7 +185,7 @@ func (r *Resolver) ResolveNetwork(networkName string) (*NetworkInfo, error) {
 	if os.Getenv("TREB_DEBUG_NETWORK") != "" {
 		fmt.Fprintf(os.Stderr, "[NETWORK] Expanded RPC URL: %s\n", expandedURL)
 	}
-	
+
 	// Check if environment variable expansion failed (variable not set)
 	if strings.Contains(expandedURL, "${") || (strings.Contains(rpcURL, "$") && expandedURL == rpcURL) {
 		// Only warn if it looks like a variable that didn't expand
@@ -199,7 +199,7 @@ func (r *Resolver) ResolveNetwork(networkName string) (*NetworkInfo, error) {
 			fmt.Fprintf(os.Stderr, "⚠️  Warning: Environment variable '%s' not set for network '%s'\n", missingVar, networkName)
 		}
 	}
-	
+
 	rpcURL = expandedURL
 
 	// Check cache first
@@ -283,7 +283,7 @@ func (r *Resolver) GetPreferredNetwork(chainID uint64) (string, error) {
 
 	// Prefer common network names
 	preferredOrder := []string{"mainnet", "ethereum", "sepolia", "goerli", "arbitrum", "optimism", "polygon", "base"}
-	
+
 	for _, preferred := range preferredOrder {
 		for _, network := range networks {
 			if network == preferred {
@@ -322,7 +322,7 @@ func (r *Resolver) expandEnvVars(value string) string {
 			}
 		}
 	}
-	
+
 	return strings.Join(parts, " ")
 }
 
@@ -447,19 +447,18 @@ func (r *Resolver) loadCache() {
 		}
 	} else {
 		if os.Getenv("TREB_DEBUG_NETWORK") != "" {
-			fmt.Fprintf(os.Stderr, "[NETWORK] loadCache: successfully loaded cache with %d networks, %d RPCs\n", 
+			fmt.Fprintf(os.Stderr, "[NETWORK] loadCache: successfully loaded cache with %d networks, %d RPCs\n",
 				len(r.cache.Networks), len(r.cache.RPCs))
 		}
 	}
 }
-
 
 // saveCacheInternal saves the cache without acquiring locks (must be called with lock held)
 func (r *Resolver) saveCacheInternal() error {
 	if os.Getenv("TREB_DEBUG_NETWORK") != "" {
 		fmt.Fprintf(os.Stderr, "[NETWORK] saveCacheInternal: marshaling cache\n")
 	}
-	
+
 	data, err := json.MarshalIndent(r.cache, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal cache: %w", err)
@@ -470,7 +469,7 @@ func (r *Resolver) saveCacheInternal() error {
 	}
 
 	err = os.WriteFile(r.cachePath, data, 0644)
-	
+
 	if os.Getenv("TREB_DEBUG_NETWORK") != "" {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "[NETWORK] saveCacheInternal: write failed: %v\n", err)
@@ -478,7 +477,7 @@ func (r *Resolver) saveCacheInternal() error {
 			fmt.Fprintf(os.Stderr, "[NETWORK] saveCacheInternal: write successful\n")
 		}
 	}
-	
+
 	return err
 }
 
@@ -552,7 +551,7 @@ func (r *Resolver) InvalidateCache(networkName string) {
 		// Clear specific network
 		if chainID, exists := r.cache.Networks[networkName]; exists {
 			delete(r.cache.Networks, networkName)
-			
+
 			// Remove from chain names
 			if names, exists := r.cache.ChainNames[chainID]; exists {
 				newNames := []string{}

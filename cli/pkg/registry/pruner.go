@@ -162,7 +162,7 @@ func (p *Pruner) CollectItemsToPrune(includePending bool) (*ItemsToPrune, error)
 func (p *Pruner) shouldPruneDeployment(deployment *types.Deployment) (string, bool) {
 	// Check if contract exists at address
 	address := common.HexToAddress(deployment.Address)
-	
+
 	ctx, cancel := context.WithTimeout(p.ctx, 5*time.Second)
 	defer cancel()
 
@@ -204,7 +204,7 @@ func (p *Pruner) shouldPruneTransaction(tx *types.Transaction) (string, bool) {
 
 	// Check if transaction exists on-chain
 	txHash := common.HexToHash(tx.Hash)
-	
+
 	ctx, cancel := context.WithTimeout(p.ctx, 5*time.Second)
 	defer cancel()
 
@@ -220,7 +220,7 @@ func (p *Pruner) shouldPruneTransaction(tx *types.Transaction) (string, bool) {
 	// Transaction exists, check if it matches our records
 	if receipt.BlockNumber != nil && tx.BlockNumber > 0 {
 		if receipt.BlockNumber.Uint64() != tx.BlockNumber {
-			return fmt.Sprintf("block number mismatch: expected %d, got %d", 
+			return fmt.Sprintf("block number mismatch: expected %d, got %d",
 				tx.BlockNumber, receipt.BlockNumber.Uint64()), true
 		}
 	}
@@ -232,7 +232,7 @@ func (p *Pruner) shouldPruneTransaction(tx *types.Transaction) (string, bool) {
 func (p *Pruner) shouldPruneSafeTransaction(safeTx *types.SafeTransaction) (string, bool) {
 	// First check if the Safe contract exists
 	safeAddress := common.HexToAddress(safeTx.SafeAddress)
-	
+
 	ctx, cancel := context.WithTimeout(p.ctx, 5*time.Second)
 	defer cancel()
 
@@ -277,7 +277,7 @@ func (p *Pruner) ExecutePrune(items *ItemsToPrune) error {
 	// Remove transactions
 	for _, item := range items.Transactions {
 		delete(p.manager.transactions, item.ID)
-		
+
 		// Also remove from safe transaction references if needed
 		for _, safeTx := range p.manager.safeTransactions {
 			for i, txID := range safeTx.TransactionIDs {

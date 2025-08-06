@@ -176,7 +176,7 @@ func (p *Parser) processSafeTransactionQueued(event *bindings.TrebSafeTransactio
 
 // processSafeTransactionExecuted processes a SafeTransactionExecuted event
 func (p *Parser) processSafeTransactionExecuted(event *bindings.TrebSafeTransactionExecuted, execution *ScriptExecution) {
-	// Create Safe transaction record  
+	// Create Safe transaction record
 	safeTx := &SafeTransaction{
 		SafeTxHash:     event.SafeTxHash,
 		Safe:           event.Safe,
@@ -546,7 +546,7 @@ func (p *Parser) enrichFromBroadcast(execution *ScriptExecution, broadcastPath s
 
 		// This is an execTransaction call to a Safe
 		safeAddress := common.HexToAddress(broadcastTx.Transaction.To)
-		
+
 		// Find SafeTransactionExecuted events for this Safe
 		safeTxs, exists := executedSafeTxBySafe[safeAddress]
 		if !exists || len(safeTxs) == 0 {

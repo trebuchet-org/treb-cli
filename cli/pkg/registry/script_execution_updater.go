@@ -236,7 +236,7 @@ func (u *ScriptExecutionUpdater) createSafeTransactionFromExecution(
 	if safeTx.Executed {
 		status = types.TransactionStatusExecuted
 	}
-	
+
 	safeTransaction := &types.SafeTransaction{
 		SafeTxHash:     common.Hash(safeTx.SafeTxHash).Hex(),
 		SafeAddress:    safeTx.Safe.Hex(),
@@ -334,7 +334,7 @@ func (m *Manager) addDeploymentInternal(deployment *types.Deployment) error {
 
 	// Update indexes
 	m.updateIndexesForDeployment(deployment)
-	
+
 	// Update solidity registry
 	m.updateSolidityRegistry(deployment)
 

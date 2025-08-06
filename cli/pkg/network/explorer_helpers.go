@@ -27,7 +27,7 @@ func (r *Resolver) GetExplorerAPIKey(networkName string) string {
 			return r.expandEnvVars(etherscan.Key)
 		}
 	}
-	
+
 	// Fallback to common environment variable names
 	// This maintains backward compatibility with existing setups
 	switch networkName {

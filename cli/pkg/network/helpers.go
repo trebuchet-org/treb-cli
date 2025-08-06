@@ -44,6 +44,6 @@ func ValidateNetwork(projectRoot string, networkName string) error {
 	}
 
 	// Provide helpful error message with available networks
-	return fmt.Errorf("network '%s' not found in foundry.toml. Available networks: %s", 
+	return fmt.Errorf("network '%s' not found in foundry.toml. Available networks: %s",
 		networkName, strings.Join(networks, ", "))
 }

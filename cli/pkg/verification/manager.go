@@ -120,7 +120,7 @@ func (vm *Manager) verifyOnEtherscanWithDebug(deployment *types.Deployment, netw
 
 	// Check if custom Etherscan configuration exists
 	explorerURL, apiKey, hasCustomConfig := vm.networkResolver.GetEtherscanConfig(networkInfo.Name)
-	
+
 	// Add verifier URL if custom explorer is configured
 	if hasCustomConfig && explorerURL != "" {
 		args = append(args, "--verifier-url", explorerURL)
@@ -128,7 +128,7 @@ func (vm *Manager) verifyOnEtherscanWithDebug(deployment *types.Deployment, netw
 			fmt.Printf("Using custom verifier URL: %s\n", explorerURL)
 		}
 	}
-	
+
 	// Add API key if available (from custom config or fallback)
 	if apiKey == "" && !hasCustomConfig {
 		// Fallback to default API key resolution
@@ -316,4 +316,3 @@ func (vm *Manager) updateOverallStatus(deployment *types.Deployment) {
 		deployment.Verification.Status = types.VerificationStatusUnverified
 	}
 }
-

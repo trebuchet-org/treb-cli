@@ -269,7 +269,7 @@ func buildDeploymentTable(deployments []*types.Deployment, manager *registry.Man
 		default:
 			// Only show individual verifier statuses for executed deployments
 			verifierStatuses := []string{}
-			
+
 			// Check Etherscan status
 			etherscanStatus := "?"
 			if deployment.Verification.Verifiers != nil {
@@ -287,7 +287,7 @@ func buildDeploymentTable(deployments []*types.Deployment, manager *registry.Man
 				}
 			}
 			verifierStatuses = append(verifierStatuses, fmt.Sprintf("Ⓔ %s", etherscanStatus))
-			
+
 			// Check Sourcify status
 			sourcifyStatus := "?"
 			if deployment.Verification.Verifiers != nil {
@@ -305,7 +305,7 @@ func buildDeploymentTable(deployments []*types.Deployment, manager *registry.Man
 				}
 			}
 			verifierStatuses = append(verifierStatuses, fmt.Sprintf("Ⓢ %s", sourcifyStatus))
-			
+
 			verifiedCell = strings.Join(verifierStatuses, " ")
 		}
 
