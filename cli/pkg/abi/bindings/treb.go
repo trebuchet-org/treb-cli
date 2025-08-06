@@ -54,7 +54,7 @@ type Transaction struct {
 
 // TrebMetaData contains all meta data concerning the Treb contract.
 var TrebMetaData = bind.MetaData{
-	ABI: "[{\"type\":\"event\",\"name\":\"ContractDeployed\",\"inputs\":[{\"name\":\"deployer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"location\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"transactionId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"deployment\",\"type\":\"tuple\",\"indexed\":false,\"internalType\":\"structITrebEvents.DeploymentDetails\",\"components\":[{\"name\":\"artifact\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"label\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"entropy\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"salt\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"bytecodeHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"initCodeHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"constructorArgs\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"createStrategy\",\"type\":\"string\",\"internalType\":\"string\"}]}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"SafeTransactionQueued\",\"inputs\":[{\"name\":\"safeTxHash\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"safe\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"proposer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"transactionIds\",\"type\":\"bytes32[]\",\"indexed\":false,\"internalType\":\"bytes32[]\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TransactionSimulated\",\"inputs\":[{\"name\":\"simulatedTx\",\"type\":\"tuple\",\"indexed\":false,\"internalType\":\"structSimulatedTransaction\",\"components\":[{\"name\":\"transactionId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"senderId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"sender\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"returnData\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"transaction\",\"type\":\"tuple\",\"internalType\":\"structTransaction\",\"components\":[{\"name\":\"to\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"value\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}]}],\"anonymous\":false}]",
+	ABI: "[{\"type\":\"event\",\"name\":\"ContractDeployed\",\"inputs\":[{\"name\":\"deployer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"location\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"transactionId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"deployment\",\"type\":\"tuple\",\"indexed\":false,\"internalType\":\"structITrebEvents.DeploymentDetails\",\"components\":[{\"name\":\"artifact\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"label\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"entropy\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"salt\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"bytecodeHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"initCodeHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"constructorArgs\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"createStrategy\",\"type\":\"string\",\"internalType\":\"string\"}]}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"SafeTransactionExecuted\",\"inputs\":[{\"name\":\"safeTxHash\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"safe\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"executor\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"transactionIds\",\"type\":\"bytes32[]\",\"indexed\":false,\"internalType\":\"bytes32[]\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"SafeTransactionQueued\",\"inputs\":[{\"name\":\"safeTxHash\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"safe\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"proposer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"transactionIds\",\"type\":\"bytes32[]\",\"indexed\":false,\"internalType\":\"bytes32[]\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TransactionSimulated\",\"inputs\":[{\"name\":\"simulatedTx\",\"type\":\"tuple\",\"indexed\":false,\"internalType\":\"structSimulatedTransaction\",\"components\":[{\"name\":\"transactionId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"senderId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"sender\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"returnData\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"transaction\",\"type\":\"tuple\",\"internalType\":\"structTransaction\",\"components\":[{\"name\":\"to\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"value\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}]}],\"anonymous\":false}]",
 	ID:  "Treb",
 }
 
@@ -104,6 +104,50 @@ func (treb *Treb) UnpackContractDeployedEvent(log *types.Log) (*TrebContractDepl
 		return nil, errors.New("event signature mismatch")
 	}
 	out := new(TrebContractDeployed)
+	if len(log.Data) > 0 {
+		if err := treb.abi.UnpackIntoInterface(out, event, log.Data); err != nil {
+			return nil, err
+		}
+	}
+	var indexed abi.Arguments
+	for _, arg := range treb.abi.Events[event].Inputs {
+		if arg.Indexed {
+			indexed = append(indexed, arg)
+		}
+	}
+	if err := abi.ParseTopics(out, indexed, log.Topics[1:]); err != nil {
+		return nil, err
+	}
+	out.Raw = log
+	return out, nil
+}
+
+// TrebSafeTransactionExecuted represents a SafeTransactionExecuted event raised by the Treb contract.
+type TrebSafeTransactionExecuted struct {
+	SafeTxHash     [32]byte
+	Safe           common.Address
+	Executor       common.Address
+	TransactionIds [][32]byte
+	Raw            *types.Log // Blockchain specific contextual infos
+}
+
+const TrebSafeTransactionExecutedEventName = "SafeTransactionExecuted"
+
+// ContractEventName returns the user-defined event name.
+func (TrebSafeTransactionExecuted) ContractEventName() string {
+	return TrebSafeTransactionExecutedEventName
+}
+
+// UnpackSafeTransactionExecutedEvent is the Go binding that unpacks the event data emitted
+// by contract.
+//
+// Solidity: event SafeTransactionExecuted(bytes32 indexed safeTxHash, address indexed safe, address indexed executor, bytes32[] transactionIds)
+func (treb *Treb) UnpackSafeTransactionExecutedEvent(log *types.Log) (*TrebSafeTransactionExecuted, error) {
+	event := "SafeTransactionExecuted"
+	if log.Topics[0] != treb.abi.Events[event].ID {
+		return nil, errors.New("event signature mismatch")
+	}
+	out := new(TrebSafeTransactionExecuted)
 	if len(log.Data) > 0 {
 		if err := treb.abi.UnpackIntoInterface(out, event, log.Data); err != nil {
 			return nil, err

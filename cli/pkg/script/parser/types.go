@@ -44,6 +44,7 @@ type SafeTransaction struct {
 	Safe           common.Address
 	Proposer       common.Address
 	TransactionIDs [][32]byte
+	Executed       bool // Whether the Safe transaction was executed directly (threshold=1)
 }
 
 // ProxyInfo contains proxy relationship information

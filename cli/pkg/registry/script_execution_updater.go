@@ -228,11 +228,17 @@ func (u *ScriptExecutionUpdater) createSafeTransactionFromExecution(
 	chainID uint64,
 	timestamp time.Time,
 ) *types.SafeTransaction {
+	// Determine status based on whether the Safe transaction was executed directly
+	status := types.TransactionStatusQueued
+	if safeTx.Executed {
+		status = types.TransactionStatusExecuted
+	}
+	
 	safeTransaction := &types.SafeTransaction{
 		SafeTxHash:     common.Hash(safeTx.SafeTxHash).Hex(),
 		SafeAddress:    safeTx.Safe.Hex(),
 		ChainID:        chainID,
-		Status:         types.TransactionStatusQueued,
+		Status:         status,
 		ProposedBy:     safeTx.Proposer.Hex(),
 		ProposedAt:     timestamp,
 		Transactions:   []types.SafeTxData{},
@@ -320,6 +326,9 @@ func (m *Manager) addDeploymentInternal(deployment *types.Deployment) error {
 
 	// Update indexes
 	m.updateIndexesForDeployment(deployment)
+	
+	// Update solidity registry
+	m.updateSolidityRegistry(deployment)
 
 	return nil
 }

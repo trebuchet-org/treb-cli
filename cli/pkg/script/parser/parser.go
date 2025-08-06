@@ -75,6 +75,8 @@ func (p *Parser) Parse(result *forge.ScriptResult, network string, chainID uint6
 				p.processTransactionSimulated(e)
 			case *bindings.TrebSafeTransactionQueued:
 				p.processSafeTransactionQueued(e, execution)
+			case *bindings.TrebSafeTransactionExecuted:
+				p.processSafeTransactionExecuted(e, execution)
 			case *bindings.TrebContractDeployed:
 				deploymentRecord := &DeploymentRecord{
 					TransactionID: e.TransactionId,
@@ -164,6 +166,32 @@ func (p *Parser) processSafeTransactionQueued(event *bindings.TrebSafeTransactio
 	for idx, txID := range event.TransactionIds {
 		if tx, exists := p.transactions[txID]; exists {
 			tx.Status = types.TransactionStatusQueued
+			tx.SafeTransaction = safeTx
+			batchIdx := idx
+			tx.SafeBatchIdx = &batchIdx
+		}
+	}
+}
+
+// processSafeTransactionExecuted processes a SafeTransactionExecuted event
+func (p *Parser) processSafeTransactionExecuted(event *bindings.TrebSafeTransactionExecuted, execution *ScriptExecution) {
+	// Create Safe transaction record  
+	safeTx := &SafeTransaction{
+		SafeTxHash:     event.SafeTxHash,
+		Safe:           event.Safe,
+		Proposer:       event.Executor, // Use executor as proposer for executed transactions
+		TransactionIDs: event.TransactionIds,
+		Executed:       true, // Mark as executed
+	}
+	execution.SafeTransactions = append(execution.SafeTransactions, safeTx)
+
+	// Update all referenced transactions to EXECUTED status
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	for idx, txID := range event.TransactionIds {
+		if tx, exists := p.transactions[txID]; exists {
+			tx.Status = types.TransactionStatusExecuted
 			tx.SafeTransaction = safeTx
 			batchIdx := idx
 			tx.SafeBatchIdx = &batchIdx

@@ -9,6 +9,7 @@ import (
 
 type ContractDeployed = bindings.TrebContractDeployed
 type SafeTransactionQueued = bindings.TrebSafeTransactionQueued
+type SafeTransactionExecuted = bindings.TrebSafeTransactionExecuted
 type TransactionSimulated = bindings.TrebTransactionSimulated
 
 // EventType represents the type of event
