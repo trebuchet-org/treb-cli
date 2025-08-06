@@ -16,14 +16,14 @@ import (
 
 // Display handles the display of script execution results
 type Display struct {
-	transactionDecoder     *abi.TransactionDecoder
-	transactionDisplay     *TransactionDisplay
-	indexer                *contracts.Indexer
-	deployedContracts      map[common.Address]string                     // Track contracts deployed in this execution
-	deploymentCollisions   map[common.Address]*parser.CollisionInfo      // Track deployment collisions
-	verbose                bool                                           // Show extra detailed information
-	knownAddresses         map[common.Address]string                     // Track known addresses (deployers, safes, etc.)
-	execution              *parser.ScriptExecution
+	transactionDecoder   *abi.TransactionDecoder
+	transactionDisplay   *TransactionDisplay
+	indexer              *contracts.Indexer
+	deployedContracts    map[common.Address]string                // Track contracts deployed in this execution
+	deploymentCollisions map[common.Address]*parser.CollisionInfo // Track deployment collisions
+	verbose              bool                                     // Show extra detailed information
+	knownAddresses       map[common.Address]string                // Track known addresses (deployers, safes, etc.)
+	execution            *parser.ScriptExecution
 }
 
 // NewDisplay creates a new display handler
@@ -185,13 +185,13 @@ func (d *Display) printExecutionSummary() {
 	if len(d.deploymentCollisions) > 0 {
 		fmt.Printf("\n%s⚠️ Deployment Collisions Detected:%s\n", ColorYellow, ColorReset)
 		fmt.Printf("%s%s%s\n", ColorGray, strings.Repeat("─", 50), ColorReset)
-		
+
 		for address, collision := range d.deploymentCollisions {
 			contractName := extractContractName(collision.Artifact)
 			fmt.Printf("%s%s%s already deployed at %s%s%s\n",
 				ColorCyan, contractName, ColorReset,
 				ColorYellow, address.Hex(), ColorReset)
-			
+
 			// Show details if verbose
 			if d.verbose && collision.Label != "" {
 				fmt.Printf("    Label: %s\n", collision.Label)
@@ -200,8 +200,8 @@ func (d *Display) printExecutionSummary() {
 				fmt.Printf("    Entropy: %s\n", collision.Entropy)
 			}
 		}
-		
-		fmt.Printf("%sNote: These contracts were already deployed and deployment was skipped.%s\n\n", 
+
+		fmt.Printf("%sNote: These contracts were already deployed and deployment was skipped.%s\n\n",
 			ColorGray, ColorReset)
 	}
 
@@ -215,7 +215,7 @@ func (d *Display) printExecutionSummary() {
 				// Skip collisions from deployment summary as they're shown above
 				continue
 			}
-			
+
 			fmt.Printf("%s%s%s at %s%s%s\n",
 				ColorCyan, artifact, ColorReset,
 				ColorGreen, address.Hex(), ColorReset)

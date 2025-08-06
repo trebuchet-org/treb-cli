@@ -304,7 +304,7 @@ Examples:
 							display.PrintSuccessMessage(fmt.Sprintf("Updated registry for %s network in namespace %s", network, namespace))
 						}
 					} else {
-						fmt.Printf("%s- No registry changes recorded for %s network in namespace %s%s\n", 
+						fmt.Printf("%s- No registry changes recorded for %s network in namespace %s%s\n",
 							display.ColorYellow, network, namespace, display.ColorReset)
 					}
 				}
