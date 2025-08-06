@@ -78,6 +78,9 @@ func (ep *EventParser) ParseEvent(rawLog forge.EventLog) (interface{}, error) {
 		{"SafeTransactionQueued", func(log *types.Log) (interface{}, error) {
 			return ep.trebContract.UnpackSafeTransactionQueuedEvent(log)
 		}},
+		{"SafeTransactionExecuted", func(log *types.Log) (interface{}, error) {
+			return ep.trebContract.UnpackSafeTransactionExecutedEvent(log)
+		}},
 		{"TransactionSimulated", func(log *types.Log) (interface{}, error) {
 			return ep.trebContract.UnpackTransactionSimulatedEvent(log)
 		}},

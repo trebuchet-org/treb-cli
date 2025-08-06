@@ -52,7 +52,10 @@ Examples:
 		// Resolve network to get chain ID if needed
 		var chainID uint64
 		if network != "" {
-			netResolver := netpkg.NewResolver(".")
+			netResolver, err := netpkg.NewResolver(".")
+			if err != nil {
+				checkError(fmt.Errorf("failed to create network resolver: %w", err))
+			}
 			networkInfo, err := netResolver.ResolveNetwork(network)
 			if err != nil {
 				checkError(fmt.Errorf("failed to resolve network: %w", err))
@@ -102,7 +105,14 @@ func displayDeployment(dep *types.Deployment, tx *types.Transaction, manager *re
 	fmt.Printf("  Address: %s\n", dep.Address)
 	fmt.Printf("  Type: %s\n", dep.Type)
 	fmt.Printf("  Namespace: %s\n", dep.Namespace)
-	fmt.Printf("  Chain ID: %d\n", dep.ChainID)
+
+	// Try to get network name for chain ID
+	networkName := fmt.Sprintf("%d", dep.ChainID)
+	if name, err := netpkg.GetNetworkByChainID(".", dep.ChainID); err == nil {
+		networkName = fmt.Sprintf("%s (chain ID: %d)", name, dep.ChainID)
+	}
+	fmt.Printf("  Network: %s\n", networkName)
+
 	if dep.Label != "" {
 		fmt.Printf("  Label: %s\n", color.New(color.FgMagenta).Sprint(dep.Label))
 	}

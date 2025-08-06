@@ -13,8 +13,16 @@ import (
 
 // FoundryConfig represents the full foundry.toml configuration
 type FoundryConfig struct {
-	Profile      map[string]ProfileConfig `toml:"profile"`
-	RpcEndpoints map[string]string        `toml:"rpc_endpoints"`
+	Profile      map[string]ProfileConfig   `toml:"profile"`
+	RpcEndpoints map[string]string          `toml:"rpc_endpoints"`
+	Etherscan    map[string]EtherscanConfig `toml:"etherscan,omitempty"`
+}
+
+// EtherscanConfig represents Etherscan configuration for a network
+// This matches Foundry's expected structure
+type EtherscanConfig struct {
+	Key string `toml:"key,omitempty"` // API key for verification
+	URL string `toml:"url,omitempty"` // API URL (for custom explorers)
 }
 
 // ProfileFoundryConfig represents a profile's foundry configuration
@@ -59,19 +67,33 @@ func NewFoundryManager(projectRoot string) *FoundryManager {
 
 // Load reads the foundry configuration
 func (fm *FoundryManager) Load() (*FoundryConfig, error) {
+	if os.Getenv("TREB_DEBUG_NETWORK") != "" {
+		fmt.Fprintf(os.Stderr, "[NETWORK] Loading foundry.toml from: %s\n", fm.configPath)
+	}
+
 	// Check if foundry.toml exists
 	if _, err := os.Stat(fm.configPath); os.IsNotExist(err) {
 		return nil, fmt.Errorf("foundry.toml not found at %s", fm.configPath)
 	}
 
 	// Read the file content
+	if os.Getenv("TREB_DEBUG_NETWORK") != "" {
+		fmt.Fprintf(os.Stderr, "[NETWORK] Reading foundry.toml file\n")
+	}
 	data, err := os.ReadFile(fm.configPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read foundry.toml: %w", err)
 	}
 
+	if os.Getenv("TREB_DEBUG_NETWORK") != "" {
+		fmt.Fprintf(os.Stderr, "[NETWORK] Read %d bytes from foundry.toml\n", len(data))
+	}
+
 	// Parse TOML
 	var config FoundryConfig
+	if os.Getenv("TREB_DEBUG_NETWORK") != "" {
+		fmt.Fprintf(os.Stderr, "[NETWORK] Parsing foundry.toml\n")
+	}
 	if err := toml.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse foundry.toml: %w", err)
 	}
@@ -79,6 +101,10 @@ func (fm *FoundryManager) Load() (*FoundryConfig, error) {
 	// Initialize profile map if needed
 	if config.Profile == nil {
 		config.Profile = make(map[string]ProfileConfig)
+	}
+
+	if os.Getenv("TREB_DEBUG_NETWORK") != "" {
+		fmt.Fprintf(os.Stderr, "[NETWORK] Loaded foundry.toml with %d RPC endpoints\n", len(config.RpcEndpoints))
 	}
 
 	return &config, nil

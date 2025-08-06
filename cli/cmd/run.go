@@ -118,7 +118,10 @@ Examples:
 		}
 
 		// Resolve network info to get chain ID from RPC
-		networkResolver := netpkg.NewResolver(".")
+		networkResolver, err := netpkg.NewResolver(".")
+		if err != nil {
+			checkError(fmt.Errorf("failed to create network resolver: %w", err))
+		}
 		networkInfo, err := networkResolver.ResolveNetwork(network)
 		if err != nil {
 			checkError(fmt.Errorf("failed to resolve network: %w", err))

@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -75,6 +76,8 @@ func (p *Parser) Parse(result *forge.ScriptResult, network string, chainID uint6
 				p.processTransactionSimulated(e)
 			case *bindings.TrebSafeTransactionQueued:
 				p.processSafeTransactionQueued(e, execution)
+			case *bindings.TrebSafeTransactionExecuted:
+				p.processSafeTransactionExecuted(e, execution)
 			case *bindings.TrebContractDeployed:
 				deploymentRecord := &DeploymentRecord{
 					TransactionID: e.TransactionId,
@@ -164,6 +167,32 @@ func (p *Parser) processSafeTransactionQueued(event *bindings.TrebSafeTransactio
 	for idx, txID := range event.TransactionIds {
 		if tx, exists := p.transactions[txID]; exists {
 			tx.Status = types.TransactionStatusQueued
+			tx.SafeTransaction = safeTx
+			batchIdx := idx
+			tx.SafeBatchIdx = &batchIdx
+		}
+	}
+}
+
+// processSafeTransactionExecuted processes a SafeTransactionExecuted event
+func (p *Parser) processSafeTransactionExecuted(event *bindings.TrebSafeTransactionExecuted, execution *ScriptExecution) {
+	// Create Safe transaction record
+	safeTx := &SafeTransaction{
+		SafeTxHash:     event.SafeTxHash,
+		Safe:           event.Safe,
+		Proposer:       event.Executor, // Use executor as proposer for executed transactions
+		TransactionIDs: event.TransactionIds,
+		Executed:       true, // Mark as executed
+	}
+	execution.SafeTransactions = append(execution.SafeTransactions, safeTx)
+
+	// Update all referenced transactions to EXECUTED status
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	for idx, txID := range event.TransactionIds {
+		if tx, exists := p.transactions[txID]; exists {
+			tx.Status = types.TransactionStatusExecuted
 			tx.SafeTransaction = safeTx
 			batchIdx := idx
 			tx.SafeBatchIdx = &batchIdx
@@ -447,8 +476,7 @@ func (p *Parser) enrichFromBroadcast(execution *ScriptExecution, broadcastPath s
 		return fmt.Errorf("failed to parse broadcast file: %w", err)
 	}
 
-	// Match transactions with broadcast data
-	// This is simplified - in practice we'd need more sophisticated matching
+	// First, match regular transactions with broadcast data
 	for _, tx := range broadcastData.Transactions {
 		// Find matching transaction by various criteria
 		for _, execTx := range execution.Transactions {
@@ -470,17 +498,107 @@ func (p *Parser) enrichFromBroadcast(execution *ScriptExecution, broadcastPath s
 					execTx.Status = types.TransactionStatusExecuted
 					txHash := common.HexToHash(tx.Hash)
 					execTx.TxHash = &txHash
-					for _, receipt := range execution.ParsedOutput.Receipts {
-						if receipt.TxHash == tx.Hash {
-							execTx.GasUsed = &receipt.GasUsed
-							execTx.BlockNumber = &receipt.BlockNumber
-							break
+					// Try ParsedOutput receipts first
+					if execution.ParsedOutput != nil {
+						for _, receipt := range execution.ParsedOutput.Receipts {
+							if receipt.TxHash == tx.Hash {
+								execTx.GasUsed = &receipt.GasUsed
+								execTx.BlockNumber = &receipt.BlockNumber
+								break
+							}
+						}
+					}
+					// Fallback to broadcast receipts
+					if execTx.BlockNumber == nil {
+						for _, receipt := range broadcastData.Receipts {
+							if receipt.TransactionHash == tx.Hash {
+								blockNum, _ := strconv.ParseUint(strings.TrimPrefix(receipt.BlockNumber, "0x"), 16, 64)
+								execTx.BlockNumber = &blockNum
+								gasUsed, _ := strconv.ParseUint(strings.TrimPrefix(receipt.GasUsed, "0x"), 16, 64)
+								execTx.GasUsed = &gasUsed
+								break
+							}
 						}
 					}
 				}
 				// Additional enrichment could go here
 				break
 			}
+		}
+	}
+
+	// Second, match Safe execTransaction calls with SafeTransactionExecuted events
+	// Group SafeTransactionExecuted events by Safe address
+	executedSafeTxBySafe := make(map[common.Address][]*SafeTransaction)
+	for _, safeTx := range execution.SafeTransactions {
+		if safeTx.Executed {
+			executedSafeTxBySafe[safeTx.Safe] = append(executedSafeTxBySafe[safeTx.Safe], safeTx)
+		}
+	}
+
+	// Find broadcast transactions that are execTransaction calls
+	for _, broadcastTx := range broadcastData.Transactions {
+		// Check if this is an execTransaction call
+		txData := common.FromHex(broadcastTx.Transaction.Data)
+		if len(txData) < 4 || !strings.EqualFold(common.Bytes2Hex(txData[:4]), "6a761202") {
+			continue
+		}
+
+		// This is an execTransaction call to a Safe
+		safeAddress := common.HexToAddress(broadcastTx.Transaction.To)
+
+		// Find SafeTransactionExecuted events for this Safe
+		safeTxs, exists := executedSafeTxBySafe[safeAddress]
+		if !exists || len(safeTxs) == 0 {
+			continue
+		}
+
+		// Match by order - the first unmatched SafeTransactionExecuted event
+		// for this Safe should correspond to this broadcast transaction
+		for _, safeTx := range safeTxs {
+			// Skip if already has execution hash
+			if safeTx.ExecutionTxHash != nil {
+				continue
+			}
+
+			// This SafeTransactionExecuted event matches this broadcast transaction
+			txHash := common.HexToHash(broadcastTx.Hash)
+			safeTx.ExecutionTxHash = &txHash
+
+			// Also find receipt for block number and gas used
+			var blockNum *uint64
+			var gasUsed *uint64
+			for _, receipt := range broadcastData.Receipts {
+				if receipt.TransactionHash == broadcastTx.Hash {
+					bn, _ := strconv.ParseUint(strings.TrimPrefix(receipt.BlockNumber, "0x"), 16, 64)
+					blockNum = &bn
+					gu, _ := strconv.ParseUint(strings.TrimPrefix(receipt.GasUsed, "0x"), 16, 64)
+					gasUsed = &gu
+					safeTx.ExecutionBlockNumber = blockNum
+					break
+				}
+			}
+
+			// Update all transactions that are part of this Safe transaction
+			for _, txID := range safeTx.TransactionIDs {
+				for _, execTx := range execution.Transactions {
+					if execTx.TransactionId == txID {
+						// Update the transaction with execution details
+						execTx.Status = types.TransactionStatusExecuted
+						execTx.TxHash = &txHash
+						if blockNum != nil {
+							execTx.BlockNumber = blockNum
+						}
+						if gasUsed != nil {
+							execTx.GasUsed = gasUsed
+						}
+						break
+					}
+				}
+			}
+
+			// Only match one SafeTransactionExecuted per broadcast transaction
+			break
 		}
 	}
 

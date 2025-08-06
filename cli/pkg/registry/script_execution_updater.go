@@ -99,6 +99,9 @@ func (u *ScriptExecutionUpdater) Write() error {
 			// TODO: Merge confirmations and update status if needed
 			existing.TransactionIDs = safeTransaction.TransactionIDs
 			existing.Status = safeTransaction.Status
+			if safeTx.ExecutionTxHash != nil {
+				existing.ExecutionTxHash = safeTx.ExecutionTxHash.Hex()
+			}
 		} else {
 			u.manager.safeTransactions[safeTransaction.SafeTxHash] = safeTransaction
 		}
@@ -228,11 +231,17 @@ func (u *ScriptExecutionUpdater) createSafeTransactionFromExecution(
 	chainID uint64,
 	timestamp time.Time,
 ) *types.SafeTransaction {
+	// Determine status based on whether the Safe transaction was executed directly
+	status := types.TransactionStatusQueued
+	if safeTx.Executed {
+		status = types.TransactionStatusExecuted
+	}
+
 	safeTransaction := &types.SafeTransaction{
 		SafeTxHash:     common.Hash(safeTx.SafeTxHash).Hex(),
 		SafeAddress:    safeTx.Safe.Hex(),
 		ChainID:        chainID,
-		Status:         types.TransactionStatusQueued,
+		Status:         status,
 		ProposedBy:     safeTx.Proposer.Hex(),
 		ProposedAt:     timestamp,
 		Transactions:   []types.SafeTxData{},
@@ -240,6 +249,11 @@ func (u *ScriptExecutionUpdater) createSafeTransactionFromExecution(
 		Confirmations:  []types.Confirmation{},
 		// TODO: Get nonce from Safe contract or transaction data
 		Nonce: 0,
+	}
+
+	// Set execution hash if available
+	if safeTx.ExecutionTxHash != nil {
+		safeTransaction.ExecutionTxHash = safeTx.ExecutionTxHash.Hex()
 	}
 
 	// TODO: Build SafeTxData from transaction details
@@ -320,6 +334,9 @@ func (m *Manager) addDeploymentInternal(deployment *types.Deployment) error {
 
 	// Update indexes
 	m.updateIndexesForDeployment(deployment)
+
+	// Update solidity registry
+	m.updateSolidityRegistry(deployment)
 
 	return nil
 }

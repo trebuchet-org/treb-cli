@@ -65,7 +65,10 @@ func runVerify(cmd *cobra.Command, args []string) error {
 	}
 
 	// Initialize network resolver
-	networkResolver := network.NewResolver(".")
+	networkResolver, err := network.NewResolver(".")
+	if err != nil {
+		checkError(fmt.Errorf("failed to create network resolver: %w", err))
+	}
 
 	// Initialize verification manager (for v2)
 	verificationManager := verification.NewManager(manager, networkResolver)

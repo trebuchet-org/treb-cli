@@ -40,10 +40,13 @@ type DeploymentRecord struct {
 
 // SafeTransaction represents a Safe multisig transaction
 type SafeTransaction struct {
-	SafeTxHash     [32]byte
-	Safe           common.Address
-	Proposer       common.Address
-	TransactionIDs [][32]byte
+	SafeTxHash           [32]byte
+	Safe                 common.Address
+	Proposer             common.Address
+	TransactionIDs       [][32]byte
+	Executed             bool         // Whether the Safe transaction was executed directly (threshold=1)
+	ExecutionTxHash      *common.Hash // The transaction hash that executed this Safe transaction
+	ExecutionBlockNumber *uint64      // The block number where this Safe transaction was executed
 }
 
 // ProxyInfo contains proxy relationship information
