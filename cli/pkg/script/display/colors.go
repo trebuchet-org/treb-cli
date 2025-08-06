@@ -2,6 +2,7 @@ package display
 
 import (
 	"fmt"
+	"strings"
 )
 
 // Color constants for consistent formatting
@@ -36,4 +37,14 @@ func PrintWarningMessage(message string) {
 // PrintInfoMessage prints an info message in blue
 func PrintInfoMessage(message string) {
 	fmt.Printf("%sℹ %s%s\n", ColorBlue, message, ColorReset)
+}
+
+// PrintBanner prints a banner message with decoration
+func PrintBanner(message string) {
+	fmt.Printf("\n%s%s%s\n", ColorBold, message, ColorReset)
+}
+
+// StringRepeat repeats a string n times
+func StringRepeat(str string, count int) string {
+	return strings.Repeat(str, count)
 }
