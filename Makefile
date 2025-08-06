@@ -4,7 +4,8 @@
 VERSION ?= $(shell git describe --tags --always --dirty)
 COMMIT ?= $(shell git rev-parse HEAD)
 DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
-LDFLAGS = -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)
+TREB_SOL_COMMIT ?= $(shell cd treb-sol 2>/dev/null && git rev-parse HEAD || echo "unknown")
+LDFLAGS = -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE) -X github.com/trebuchet-org/treb-cli/cli/pkg/version.TrebSolCommit=$(TREB_SOL_COMMIT)
 
 # Build the CLI binary
 build: bindings
@@ -99,7 +100,7 @@ watch: build
 	done
 
 # Release build targets
-RELEASE_LDFLAGS = -s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)
+RELEASE_LDFLAGS = -s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE) -X github.com/trebuchet-org/treb-cli/cli/pkg/version.TrebSolCommit=$(TREB_SOL_COMMIT)
 
 # Build all platform binaries for release
 release-build: release-clean

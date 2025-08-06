@@ -17,6 +17,7 @@ import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/script/executor"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/script/parameters"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/script/parser"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/submodule"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
 
@@ -66,6 +67,20 @@ Examples:
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		scriptPath := args[0]
+
+		// Check and update treb-sol if needed (unless disabled)
+		skipTrebSolUpdate, _ := cmd.Flags().GetBool("skip-treb-sol-update")
+		if !skipTrebSolUpdate {
+			trebSolManager := submodule.NewTrebSolManager(".")
+			if trebSolManager.IsTrebSolInstalled() {
+				// Check for updates in a non-blocking way
+				if err := trebSolManager.CheckAndUpdate(false); err != nil {
+					// This should not happen as CheckAndUpdate handles errors gracefully
+					// but if it does, we just continue with the existing version
+					_, _ = fmt.Fprintf(os.Stderr, "Warning: Failed to check treb-sol updates: %v\n", err)
+				}
+			}
+		}
 
 		indexer, err := contracts.GetGlobalIndexer(".")
 		if err != nil {
@@ -330,4 +345,7 @@ func init() {
 	runCmd.Flags().Bool("debug", false, "Enable debug mode (shows forge output and saves to file)")
 	runCmd.Flags().Bool("debug-json", false, "Enable JSON debug mode (shows raw JSON output)")
 	runCmd.Flags().BoolP("verbose", "v", false, "Show extra detailed information for events and transactions")
+
+	// Submodule management flags
+	runCmd.Flags().Bool("skip-treb-sol-update", false, "Skip automatic treb-sol update check")
 }
