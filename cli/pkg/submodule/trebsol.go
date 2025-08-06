@@ -11,7 +11,6 @@ import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/version"
 )
 
-
 // TrebSolManager manages the treb-sol submodule version checking and updating
 type TrebSolManager struct {
 	projectRoot string
@@ -120,7 +119,7 @@ func (m *TrebSolManager) CheckAndUpdate(silent bool) error {
 	needsUpdate, current, expected, err := m.NeedsUpdate()
 	if err != nil {
 		if !silent {
-			fmt.Fprintf(os.Stderr, "Warning: Could not check treb-sol version: %v\n", err)
+			_, _ = fmt.Fprintf(os.Stderr, "Warning: Could not check treb-sol version: %v\n", err)
 		}
 		return nil // Don't fail the command
 	}
@@ -133,7 +132,7 @@ func (m *TrebSolManager) CheckAndUpdate(silent bool) error {
 	exists, err := m.CheckIfCommitExists(expected)
 	if err != nil {
 		if !silent {
-			fmt.Fprintf(os.Stderr, "Warning: Could not check if commit exists: %v\n", err)
+			_, _ = fmt.Fprintf(os.Stderr, "Warning: Could not check if commit exists: %v\n", err)
 		}
 		return nil
 	}
@@ -141,8 +140,8 @@ func (m *TrebSolManager) CheckAndUpdate(silent bool) error {
 	if exists {
 		// Commit exists locally but is different - just print a warning
 		if !silent {
-			fmt.Fprintf(os.Stderr, "Warning: treb-sol is at commit %s but treb expects %s\n", current[:7], expected[:7])
-			fmt.Fprintf(os.Stderr, "Continuing with current version...\n")
+			_, _ = fmt.Fprintf(os.Stderr, "Warning: treb-sol is at commit %s but treb expects %s\n", current[:7], expected[:7])
+			_, _ = fmt.Fprintf(os.Stderr, "Continuing with current version...\n")
 		}
 		return nil
 	}
@@ -154,8 +153,8 @@ func (m *TrebSolManager) CheckAndUpdate(silent bool) error {
 	
 	if err := m.Update(expected); err != nil {
 		if !silent {
-			fmt.Fprintf(os.Stderr, "Warning: Failed to update treb-sol to expected version: %v\n", err)
-			fmt.Fprintf(os.Stderr, "You may need to manually update treb-sol\n")
+			_, _ = fmt.Fprintf(os.Stderr, "Warning: Failed to update treb-sol to expected version: %v\n", err)
+			_, _ = fmt.Fprintf(os.Stderr, "You may need to manually update treb-sol\n")
 		}
 		return nil // Don't fail the command
 	}

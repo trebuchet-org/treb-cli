@@ -77,7 +77,7 @@ Examples:
 				if err := trebSolManager.CheckAndUpdate(false); err != nil {
 					// This should not happen as CheckAndUpdate handles errors gracefully
 					// but if it does, we just continue with the existing version
-					fmt.Fprintf(os.Stderr, "Warning: Failed to check treb-sol updates: %v\n", err)
+					_, _ = fmt.Fprintf(os.Stderr, "Warning: Failed to check treb-sol updates: %v\n", err)
 				}
 			}
 		}
