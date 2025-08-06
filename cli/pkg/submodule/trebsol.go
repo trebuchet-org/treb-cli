@@ -31,8 +31,7 @@ func NewTrebSolManager(projectRoot string) *TrebSolManager {
 
 // GetCurrentCommit returns the current commit hash of the treb-sol submodule
 func (m *TrebSolManager) GetCurrentCommit() (string, error) {
-	trebSolPath := m.getTrebSolPath()
-	cmd := exec.Command("git", "submodule", "status", trebSolPath)
+	cmd := exec.Command("git", "submodule", "status", "lib/treb-sol")
 	cmd.Dir = m.projectRoot
 	
 	output, err := cmd.Output()
@@ -40,11 +39,10 @@ func (m *TrebSolManager) GetCurrentCommit() (string, error) {
 		return "", fmt.Errorf("failed to get submodule status: %w", err)
 	}
 	
-	// Parse output: " 38d8164935b41d697db47c99b70c0c45a78ede67 treb-sol (remotes/origin/ignore-collisions)"
-	// or             " 38d8164935b41d697db47c99b70c0c45a78ede67 lib/treb-sol (remotes/origin/ignore-collisions)"
+	// Parse output: " 38d8164935b41d697db47c99b70c0c45a78ede67 lib/treb-sol (remotes/origin/ignore-collisions)"
 	lines := strings.Split(string(output), "\n")
 	for _, line := range lines {
-		if strings.Contains(line, trebSolPath) {
+		if strings.Contains(line, "lib/treb-sol") {
 			parts := strings.Fields(line)
 			if len(parts) >= 2 {
 				// Remove leading + or - if present
@@ -55,7 +53,7 @@ func (m *TrebSolManager) GetCurrentCommit() (string, error) {
 		}
 	}
 	
-	return "", fmt.Errorf("could not find %s in submodule status", trebSolPath)
+	return "", fmt.Errorf("could not find lib/treb-sol in submodule status")
 }
 
 // GetLatestCommit fetches the latest commit hash from the treb-sol repository
@@ -116,10 +114,8 @@ func (m *TrebSolManager) IsUpdateAvailable() (bool, string, string, error) {
 
 // Update updates the treb-sol submodule to the latest version
 func (m *TrebSolManager) Update() error {
-	trebSolPath := m.getTrebSolPath()
-	
 	// First, fetch the latest changes
-	cmd := exec.Command("git", "submodule", "update", "--init", "--remote", trebSolPath)
+	cmd := exec.Command("git", "submodule", "update", "--init", "--remote", "lib/treb-sol")
 	cmd.Dir = m.projectRoot
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -167,20 +163,8 @@ func (m *TrebSolManager) CheckAndUpdate(silent bool) error {
 
 // IsTrebSolInstalled checks if treb-sol is properly installed as a submodule
 func (m *TrebSolManager) IsTrebSolInstalled() bool {
-	// Check in treb-cli repo location (for treb development)
-	trebSolPath := filepath.Join(m.projectRoot, "treb-sol")
-	if m.isValidSubmodule(trebSolPath) {
-		return true
-	}
-	
-	// Check in user project location (lib/treb-sol)
-	libTrebSolPath := filepath.Join(m.projectRoot, "lib", "treb-sol")
-	return m.isValidSubmodule(libTrebSolPath)
-}
-
-// isValidSubmodule checks if a path is a valid git submodule
-func (m *TrebSolManager) isValidSubmodule(path string) bool {
-	info, err := os.Stat(path)
+	trebSolPath := filepath.Join(m.projectRoot, "lib", "treb-sol")
+	info, err := os.Stat(trebSolPath)
 	if err != nil {
 		return false
 	}
@@ -190,19 +174,7 @@ func (m *TrebSolManager) isValidSubmodule(path string) bool {
 		return false
 	}
 	
-	gitPath := filepath.Join(path, ".git")
+	gitPath := filepath.Join(trebSolPath, ".git")
 	_, err = os.Stat(gitPath)
 	return err == nil
-}
-
-// getTrebSolPath returns the path to treb-sol submodule
-func (m *TrebSolManager) getTrebSolPath() string {
-	// Check in treb-cli repo location first
-	trebSolPath := filepath.Join(m.projectRoot, "treb-sol")
-	if m.isValidSubmodule(trebSolPath) {
-		return "treb-sol"
-	}
-	
-	// Fall back to user project location
-	return "lib/treb-sol"
 }

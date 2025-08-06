@@ -12,7 +12,9 @@ func TestTrebSolManager(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() {
+		_ = os.RemoveAll(tempDir)
+	}()
 
 	manager := NewTrebSolManager(tempDir)
 
@@ -40,11 +42,4 @@ func TestTrebSolManager(t *testing.T) {
 		}
 	})
 
-	t.Run("GetTrebSolPath", func(t *testing.T) {
-		// Should return lib/treb-sol by default
-		path := manager.getTrebSolPath()
-		if path != "lib/treb-sol" {
-			t.Errorf("Expected getTrebSolPath to return 'lib/treb-sol', got '%s'", path)
-		}
-	})
 }
