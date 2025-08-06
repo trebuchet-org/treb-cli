@@ -453,16 +453,6 @@ func (r *Resolver) loadCache() {
 	}
 }
 
-// saveCache saves the chain ID cache to disk (acquires lock)
-func (r *Resolver) saveCache() error {
-	if os.Getenv("TREB_DEBUG_NETWORK") != "" {
-		fmt.Fprintf(os.Stderr, "[NETWORK] saveCache: acquiring read lock\n")
-	}
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	
-	return r.saveCacheInternal()
-}
 
 // saveCacheInternal saves the cache without acquiring locks (must be called with lock held)
 func (r *Resolver) saveCacheInternal() error {

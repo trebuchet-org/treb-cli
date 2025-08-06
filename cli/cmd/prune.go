@@ -31,7 +31,9 @@ are preserved. Use --include-pending to also prune these items.`,
 func init() {
 	pruneCmd.Flags().BoolVar(&includePending, "include-pending", false, "Also prune pending items (queued safe txs, simulated txs)")
 	pruneCmd.Flags().StringVar(&pruneNetwork, "network", "", "Network to verify against (required)")
-	pruneCmd.MarkFlagRequired("network")
+	if err := pruneCmd.MarkFlagRequired("network"); err != nil {
+		panic(fmt.Sprintf("failed to mark flag as required: %v", err))
+	}
 	
 	// Set command group
 	pruneCmd.GroupID = "management"
@@ -118,7 +120,11 @@ func runPrune(cmd *cobra.Command, args []string) error {
 	// Confirmation prompt
 	fmt.Print("⚠️  Are you sure you want to prune these items? This cannot be undone. [y/N]: ")
 	var response string
-	fmt.Scanln(&response)
+	if _, err := fmt.Scanln(&response); err != nil {
+		// Treat error as "no" response
+		fmt.Println("❌ Prune cancelled.")
+		return nil
+	}
 	
 	if strings.ToLower(strings.TrimSpace(response)) != "y" {
 		fmt.Println("❌ Prune cancelled.")

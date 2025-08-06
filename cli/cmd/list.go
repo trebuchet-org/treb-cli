@@ -261,11 +261,12 @@ func buildDeploymentTable(deployments []*types.Deployment, manager *registry.Man
 		addressCell := addressStyle.Sprint(deployment.Address)
 
 		verifiedCell := ""
-		if deployment.Transaction.Status == types.TransactionStatusQueued {
+		switch deployment.Transaction.Status {
+		case types.TransactionStatusQueued:
 			verifiedCell = pendingStyle.Sprint("⏳ queued")
-		} else if deployment.Transaction.Status == types.TransactionStatusSimulated {
+		case types.TransactionStatusSimulated:
 			verifiedCell = pendingStyle.Sprint("⏳ simulated")
-		} else {
+		default:
 			// Only show individual verifier statuses for executed deployments
 			verifierStatuses := []string{}
 			
