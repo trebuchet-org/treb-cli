@@ -1,10 +1,10 @@
 group: Example Protocol
 components:
   Token:
-    script: DeployMyToken
+    script: script/deploy/tokens/DeployMyToken.s.sol:DeployMyToken
     env:
-      TOKEN_NAME: "ExampleToken"
-      TOKEN_SYMBOL: "EXT"
+      name: "ExampleToken"
+      symbol: "EXT"
       
   Counter:
     script: CounterScript
