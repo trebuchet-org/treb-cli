@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -475,8 +476,7 @@ func (p *Parser) enrichFromBroadcast(execution *ScriptExecution, broadcastPath s
 		return fmt.Errorf("failed to parse broadcast file: %w", err)
 	}
 
-	// Match transactions with broadcast data
-	// This is simplified - in practice we'd need more sophisticated matching
+	// First, match regular transactions with broadcast data
 	for _, tx := range broadcastData.Transactions {
 		// Find matching transaction by various criteria
 		for _, execTx := range execution.Transactions {
@@ -509,6 +509,58 @@ func (p *Parser) enrichFromBroadcast(execution *ScriptExecution, broadcastPath s
 				// Additional enrichment could go here
 				break
 			}
+		}
+	}
+
+	// Second, match Safe execTransaction calls with SafeTransactionExecuted events
+	// Group SafeTransactionExecuted events by Safe address
+	executedSafeTxBySafe := make(map[common.Address][]*SafeTransaction)
+	for _, safeTx := range execution.SafeTransactions {
+		if safeTx.Executed {
+			executedSafeTxBySafe[safeTx.Safe] = append(executedSafeTxBySafe[safeTx.Safe], safeTx)
+		}
+	}
+
+	// Find broadcast transactions that are execTransaction calls
+	for _, broadcastTx := range broadcastData.Transactions {
+		// Check if this is an execTransaction call
+		txData := common.FromHex(broadcastTx.Transaction.Data)
+		if len(txData) < 4 || !strings.EqualFold(common.Bytes2Hex(txData[:4]), "6a761202") {
+			continue
+		}
+
+		// This is an execTransaction call to a Safe
+		safeAddress := common.HexToAddress(broadcastTx.Transaction.To)
+		
+		// Find SafeTransactionExecuted events for this Safe
+		safeTxs, exists := executedSafeTxBySafe[safeAddress]
+		if !exists || len(safeTxs) == 0 {
+			continue
+		}
+
+		// Match by order - the first unmatched SafeTransactionExecuted event
+		// for this Safe should correspond to this broadcast transaction
+		for _, safeTx := range safeTxs {
+			// Skip if already has execution hash
+			if safeTx.ExecutionTxHash != nil {
+				continue
+			}
+
+			// This SafeTransactionExecuted event matches this broadcast transaction
+			txHash := common.HexToHash(broadcastTx.Hash)
+			safeTx.ExecutionTxHash = &txHash
+
+			// Also find receipt for block number
+			for _, receipt := range broadcastData.Receipts {
+				if receipt.TransactionHash == broadcastTx.Hash {
+					blockNum, _ := strconv.ParseUint(strings.TrimPrefix(receipt.BlockNumber, "0x"), 16, 64)
+					safeTx.ExecutionBlockNumber = &blockNum
+					break
+				}
+			}
+
+			// Only match one SafeTransactionExecuted per broadcast transaction
+			break
 		}
 	}
 

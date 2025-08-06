@@ -99,6 +99,9 @@ func (u *ScriptExecutionUpdater) Write() error {
 			// TODO: Merge confirmations and update status if needed
 			existing.TransactionIDs = safeTransaction.TransactionIDs
 			existing.Status = safeTransaction.Status
+			if safeTx.ExecutionTxHash != nil {
+				existing.ExecutionTxHash = safeTx.ExecutionTxHash.Hex()
+			}
 		} else {
 			u.manager.safeTransactions[safeTransaction.SafeTxHash] = safeTransaction
 		}
@@ -246,6 +249,11 @@ func (u *ScriptExecutionUpdater) createSafeTransactionFromExecution(
 		Confirmations:  []types.Confirmation{},
 		// TODO: Get nonce from Safe contract or transaction data
 		Nonce: 0,
+	}
+
+	// Set execution hash if available
+	if safeTx.ExecutionTxHash != nil {
+		safeTransaction.ExecutionTxHash = safeTx.ExecutionTxHash.Hex()
 	}
 
 	// TODO: Build SafeTxData from transaction details
