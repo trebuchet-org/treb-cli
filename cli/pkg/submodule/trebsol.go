@@ -27,12 +27,12 @@ func NewTrebSolManager(projectRoot string) *TrebSolManager {
 func (m *TrebSolManager) GetCurrentCommit() (string, error) {
 	cmd := exec.Command("git", "submodule", "status", "lib/treb-sol")
 	cmd.Dir = m.projectRoot
-	
+
 	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("failed to get submodule status: %w", err)
 	}
-	
+
 	// Parse output: " 38d8164935b41d697db47c99b70c0c45a78ede67 lib/treb-sol (remotes/origin/ignore-collisions)"
 	lines := strings.Split(string(output), "\n")
 	for _, line := range lines {
@@ -46,7 +46,7 @@ func (m *TrebSolManager) GetCurrentCommit() (string, error) {
 			}
 		}
 	}
-	
+
 	return "", fmt.Errorf("could not find lib/treb-sol in submodule status")
 }
 
@@ -59,7 +59,7 @@ func (m *TrebSolManager) GetExpectedCommit() string {
 func (m *TrebSolManager) CheckIfCommitExists(commit string) (bool, error) {
 	cmd := exec.Command("git", "-C", "lib/treb-sol", "cat-file", "-e", commit)
 	cmd.Dir = m.projectRoot
-	
+
 	err := cmd.Run()
 	if err != nil {
 		// Exit code 1 means the object doesn't exist
@@ -69,7 +69,7 @@ func (m *TrebSolManager) CheckIfCommitExists(commit string) (bool, error) {
 		}
 		return false, fmt.Errorf("failed to check if commit exists: %w", err)
 	}
-	
+
 	return true, nil
 }
 
@@ -81,14 +81,14 @@ func (m *TrebSolManager) CheckoutCommit(commit string) error {
 	if err := fetchCmd.Run(); err != nil {
 		return fmt.Errorf("failed to fetch: %w", err)
 	}
-	
+
 	// Then checkout the specific commit
 	checkoutCmd := exec.Command("git", "-C", "lib/treb-sol", "checkout", commit)
 	checkoutCmd.Dir = m.projectRoot
 	if err := checkoutCmd.Run(); err != nil {
 		return fmt.Errorf("failed to checkout commit %s: %w", commit, err)
 	}
-	
+
 	return nil
 }
 
@@ -98,14 +98,14 @@ func (m *TrebSolManager) NeedsUpdate() (bool, string, string, error) {
 	if err != nil {
 		return false, "", "", fmt.Errorf("failed to get current commit: %w", err)
 	}
-	
+
 	expected := m.GetExpectedCommit()
-	
+
 	// If expected is "unknown", skip the check
 	if expected == "unknown" {
 		return false, current, expected, nil
 	}
-	
+
 	return current != expected, current, expected, nil
 }
 
@@ -123,11 +123,11 @@ func (m *TrebSolManager) CheckAndUpdate(silent bool) error {
 		}
 		return nil // Don't fail the command
 	}
-	
+
 	if !needsUpdate {
 		return nil
 	}
-	
+
 	// Check if the expected commit exists locally
 	exists, err := m.CheckIfCommitExists(expected)
 	if err != nil {
@@ -136,7 +136,7 @@ func (m *TrebSolManager) CheckAndUpdate(silent bool) error {
 		}
 		return nil
 	}
-	
+
 	if exists {
 		// Commit exists locally but is different - just print a warning
 		if !silent {
@@ -145,12 +145,12 @@ func (m *TrebSolManager) CheckAndUpdate(silent bool) error {
 		}
 		return nil
 	}
-	
+
 	// Commit doesn't exist locally - need to update
 	if !silent {
 		fmt.Printf("Updating treb-sol from %s to %s...\n", current[:7], expected[:7])
 	}
-	
+
 	if err := m.Update(expected); err != nil {
 		if !silent {
 			_, _ = fmt.Fprintf(os.Stderr, "Warning: Failed to update treb-sol to expected version: %v\n", err)
@@ -158,11 +158,11 @@ func (m *TrebSolManager) CheckAndUpdate(silent bool) error {
 		}
 		return nil // Don't fail the command
 	}
-	
+
 	if !silent {
 		fmt.Println("Successfully updated treb-sol to expected version")
 	}
-	
+
 	return nil
 }
 
@@ -173,12 +173,12 @@ func (m *TrebSolManager) IsTrebSolInstalled() bool {
 	if err != nil {
 		return false
 	}
-	
+
 	// Check if it's a directory and has .git file/folder (submodule indicator)
 	if !info.IsDir() {
 		return false
 	}
-	
+
 	gitPath := filepath.Join(trebSolPath, ".git")
 	_, err = os.Stat(gitPath)
 	return err == nil

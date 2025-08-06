@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	
+
 	"github.com/trebuchet-org/treb-cli/cli/pkg/version"
 )
 
@@ -32,7 +32,7 @@ func TestTrebSolManager(t *testing.T) {
 		if err := os.MkdirAll(trebSolPath, 0755); err != nil {
 			t.Fatalf("Failed to create treb-sol dir: %v", err)
 		}
-		
+
 		// Create .git file (submodule indicator)
 		gitPath := filepath.Join(trebSolPath, ".git")
 		if err := os.WriteFile(gitPath, []byte("gitdir: ../../.git/modules/lib/treb-sol"), 0644); err != nil {
