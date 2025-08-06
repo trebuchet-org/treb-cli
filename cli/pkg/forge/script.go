@@ -102,8 +102,8 @@ func (f *Forge) Run(opts ScriptOptions) (*ScriptResult, error) {
 		case "ScriptOutput":
 			if output, ok := entity.Data.(ScriptOutput); ok {
 				parsedOutput.ScriptOutput = &output
-				// Extract console logs
-				parsedOutput.ConsoleLogs = append(parsedOutput.ConsoleLogs, f.extractConsoleLogs(output.Logs)...)
+				// Console logs are already in output.Logs
+				parsedOutput.ConsoleLogs = append(parsedOutput.ConsoleLogs, output.Logs...)
 			}
 		case "GasEstimate":
 			if gas, ok := entity.Data.(GasEstimate); ok {
@@ -155,6 +155,12 @@ func (f *Forge) Run(opts ScriptOptions) (*ScriptResult, error) {
 	// Set results
 	result.RawOutput = outputBuffer.Bytes()
 	result.ParsedOutput = parsedOutput
+
+	// Extract console logs from text output if not already in ConsoleLogs
+	if parsedOutput.TextOutput != "" {
+		additionalLogs := f.extractConsoleLogsFromText(parsedOutput.TextOutput)
+		parsedOutput.ConsoleLogs = append(parsedOutput.ConsoleLogs, additionalLogs...)
+	}
 
 	// Print text output if script failed or in debug/verbose mode
 	if parsedOutput.TextOutput != "" && (result.Error != nil || opts.Debug) {
@@ -329,6 +335,31 @@ func (f *Forge) extractConsoleLogs(logs []string) []string {
 			consoleLogs = append(consoleLogs, log)
 		}
 	}
+	return consoleLogs
+}
+
+// extractConsoleLogsFromText extracts console.log messages from text output
+func (f *Forge) extractConsoleLogsFromText(textOutput string) []string {
+	var consoleLogs []string
+	lines := strings.Split(textOutput, "\n")
+
+	for _, line := range lines {
+		// Look for common patterns in forge output for console logs
+		if strings.Contains(line, "Logs:") {
+			// Extract the actual log message
+			parts := strings.SplitN(line, "Logs:", 2)
+			if len(parts) == 2 {
+				logMsg := strings.TrimSpace(parts[1])
+				if logMsg != "" {
+					consoleLogs = append(consoleLogs, logMsg)
+				}
+			}
+		} else if strings.Contains(line, "console.log") {
+			// Some versions might show console.log differently
+			consoleLogs = append(consoleLogs, strings.TrimSpace(line))
+		}
+	}
+
 	return consoleLogs
 }
 
