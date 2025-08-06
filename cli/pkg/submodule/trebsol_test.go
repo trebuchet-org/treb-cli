@@ -77,7 +77,7 @@ func TestTrebSolManager(t *testing.T) {
 	t.Run("WithSubmodulePath", func(t *testing.T) {
 		customPath := "custom/path/treb-sol"
 		customManager := NewTrebSolManager(tempDir).WithSubmodulePath(customPath)
-		
+
 		if customManager.submodulePath != customPath {
 			t.Errorf("Expected submodulePath to be %s, got %s", customPath, customManager.submodulePath)
 		}
@@ -90,7 +90,7 @@ func TestTrebSolManager(t *testing.T) {
 			projectRoot:   tempDir,
 			submodulePath: DefaultSubmodulePath,
 		}
-		
+
 		// Since we don't have a real git repo, this will error
 		// but we're testing the behavior when expected is "unknown"
 		expected := mockManager.GetExpectedCommit()
@@ -105,4 +105,3 @@ func TestTrebSolManager(t *testing.T) {
 		}
 	})
 }
-

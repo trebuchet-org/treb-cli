@@ -205,4 +205,3 @@ func (m *TrebSolManager) IsTrebSolInstalled() bool {
 	_, err = os.Stat(gitPath)
 	return err == nil
 }
-
