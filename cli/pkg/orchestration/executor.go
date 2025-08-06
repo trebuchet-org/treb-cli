@@ -11,13 +11,13 @@ import (
 
 // ExecutorConfig contains configuration for the orchestration executor
 type ExecutorConfig struct {
-	Network     string
-	Namespace   string
-	Profile     string
-	DryRun      bool
-	Debug       bool
-	DebugJSON   bool
-	Verbose     bool
+	Network        string
+	Namespace      string
+	Profile        string
+	DryRun         bool
+	Debug          bool
+	DebugJSON      bool
+	Verbose        bool
 	NonInteractive bool
 }
 
@@ -67,7 +67,7 @@ func (e *Executor) displayExecutionPlan(plan *ExecutionPlan) {
 
 	for i, step := range plan.Components {
 		// Show step number and component name
-		fmt.Printf("%s%d.%s %s%s%s", 
+		fmt.Printf("%s%d.%s %s%s%s",
 			display.ColorGray, i+1, display.ColorReset,
 			display.ColorCyan, step.Name, display.ColorReset)
 
@@ -93,7 +93,7 @@ func (e *Executor) displayExecutionPlan(plan *ExecutionPlan) {
 // executeStep executes a single step in the orchestration
 func (e *Executor) executeStep(stepNum, totalSteps int, step *ExecutionStep) error {
 	// Display step header
-	fmt.Printf("%s[%d/%d] Executing %s%s\n", 
+	fmt.Printf("%s[%d/%d] Executing %s%s\n",
 		display.ColorBold, stepNum, totalSteps, step.Name, display.ColorReset)
 	fmt.Printf("%s%s%s\n", display.ColorGray, display.StringRepeat("─", 70), display.ColorReset)
 

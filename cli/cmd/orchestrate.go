@@ -53,7 +53,7 @@ This will execute: Broker → Tokens → Reserve → SortedOracles`,
 
 		// Get flags
 		network, _ := cmd.Flags().GetString("network")
-		namespace, _ := cmd.Flags().GetString("namespace") 
+		namespace, _ := cmd.Flags().GetString("namespace")
 		profile, _ := cmd.Flags().GetString("profile")
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 		debug, _ := cmd.Flags().GetBool("debug")

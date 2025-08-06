@@ -110,11 +110,11 @@ func TestOrchestrationConfig_Validate(t *testing.T) {
 
 func TestDependencyGraph_TopologicalSort(t *testing.T) {
 	tests := []struct {
-		name           string
-		config         *OrchestrationConfig
-		expectedOrder  []string
-		expectError    bool
-		errorContains  string
+		name          string
+		config        *OrchestrationConfig
+		expectedOrder []string
+		expectError   bool
+		errorContains string
 	}{
 		{
 			name: "simple linear dependency",
@@ -147,8 +147,8 @@ func TestDependencyGraph_TopologicalSort(t *testing.T) {
 			config: &OrchestrationConfig{
 				Group: "Test Protocol",
 				Components: map[string]*ComponentConfig{
-					"Broker": {Script: "DeployBroker"},
-					"Tokens": {Script: "DeployTokens", Deps: []string{"Broker"}},
+					"Broker":  {Script: "DeployBroker"},
+					"Tokens":  {Script: "DeployTokens", Deps: []string{"Broker"}},
 					"Reserve": {Script: "DeployReserve", Deps: []string{"Tokens"}},
 					"Oracles": {Script: "DeployOracles", Deps: []string{"Reserve"}},
 				},

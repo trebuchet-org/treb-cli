@@ -54,9 +54,9 @@ type RunResult struct {
 
 // ScriptRunner handles the execution of Foundry scripts
 type ScriptRunner struct {
-	workDir    string
-	indexer    *contracts.Indexer
-	resolver   *resolvers.ContractsResolver
+	workDir     string
+	indexer     *contracts.Indexer
+	resolver    *resolvers.ContractsResolver
 	interactive bool
 }
 

@@ -7,8 +7,8 @@ import (
 
 // OrchestrationConfig represents the top-level configuration for orchestrated deployments
 type OrchestrationConfig struct {
-	Group      string                       `yaml:"group"`
-	Components map[string]*ComponentConfig  `yaml:"components"`
+	Group      string                      `yaml:"group"`
+	Components map[string]*ComponentConfig `yaml:"components"`
 }
 
 // ComponentConfig represents a single component in the orchestration
@@ -26,9 +26,9 @@ type ExecutionPlan struct {
 
 // ExecutionStep represents a single step in the execution plan
 type ExecutionStep struct {
-	Name      string
-	Script    string
-	Env       map[string]string
+	Name         string
+	Script       string
+	Env          map[string]string
 	Dependencies []string // For reference/debugging
 }
 
@@ -53,7 +53,7 @@ func NewDependencyGraph(config *OrchestrationConfig) *DependencyGraph {
 				// We'll handle this error during validation
 				continue
 			}
-			
+
 			// Add edge from dependency to this component
 			graph.edges[dep] = append(graph.edges[dep], name)
 		}
@@ -93,7 +93,7 @@ func (g *DependencyGraph) TopologicalSort() ([]*ExecutionStep, error) {
 	sort.Strings(queue)
 
 	var result []*ExecutionStep
-	
+
 	for len(queue) > 0 {
 		// Remove first element from queue
 		current := queue[0]
@@ -112,7 +112,7 @@ func (g *DependencyGraph) TopologicalSort() ([]*ExecutionStep, error) {
 		// Process all dependents of current node
 		dependents := g.edges[current]
 		sort.Strings(dependents) // For deterministic output
-		
+
 		for _, dependent := range dependents {
 			inDegree[dependent]--
 			if inDegree[dependent] == 0 {
@@ -158,7 +158,7 @@ func (config *OrchestrationConfig) Validate() error {
 			if dep == name {
 				return fmt.Errorf("component '%s' cannot depend on itself", name)
 			}
-			
+
 			if _, exists := config.Components[dep]; !exists {
 				return fmt.Errorf("component '%s' depends on non-existent component '%s'", name, dep)
 			}

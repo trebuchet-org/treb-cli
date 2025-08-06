@@ -41,7 +41,7 @@ func (p *Parser) ParseFile(filePath string) (*OrchestrationConfig, error) {
 // Parse parses an orchestration configuration from YAML data
 func (p *Parser) Parse(data []byte) (*OrchestrationConfig, error) {
 	var config OrchestrationConfig
-	
+
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
 	}
