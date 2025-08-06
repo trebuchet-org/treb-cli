@@ -145,7 +145,7 @@ func (r *ScriptRunner) Run(config *RunConfig) (*RunResult, error) {
 		}
 
 		if len(params) > 0 {
-			resolvedEnvVars, err := r.resolveParameters(params, config.EnvVars, trebConfig, config, int64(networkInfo.ChainID))
+			resolvedEnvVars, err := r.resolveParameters(params, config.EnvVars, trebConfig, config, networkInfo.ChainID)
 			if err != nil {
 				return nil, err
 			}
@@ -236,9 +236,9 @@ func (r *ScriptRunner) Run(config *RunConfig) (*RunResult, error) {
 }
 
 // resolveParameters resolves script parameters, prompting for missing values if interactive
-func (r *ScriptRunner) resolveParameters(params []parameters.Parameter, envVars map[string]string, trebConfig *configpkg.TrebConfig, runConfig *RunConfig, chainID int64) (map[string]string, error) {
+func (r *ScriptRunner) resolveParameters(params []parameters.Parameter, envVars map[string]string, trebConfig *configpkg.TrebConfig, runConfig *RunConfig, chainID uint64) (map[string]string, error) {
 	// Create parameter resolver
-	paramResolver, err := parameters.NewParameterResolver(runConfig.WorkDir, trebConfig, runConfig.Namespace, runConfig.Network, uint64(chainID), r.interactive && !runConfig.NonInteractive)
+	paramResolver, err := parameters.NewParameterResolver(runConfig.WorkDir, trebConfig, runConfig.Namespace, runConfig.Network, chainID, r.interactive && !runConfig.NonInteractive)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create parameter resolver: %w", err)
 	}
