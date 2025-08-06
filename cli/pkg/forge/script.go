@@ -342,7 +342,7 @@ func (f *Forge) extractConsoleLogs(logs []string) []string {
 func (f *Forge) extractConsoleLogsFromText(textOutput string) []string {
 	var consoleLogs []string
 	lines := strings.Split(textOutput, "\n")
-	
+
 	for _, line := range lines {
 		// Look for common patterns in forge output for console logs
 		if strings.Contains(line, "Logs:") {
@@ -359,7 +359,7 @@ func (f *Forge) extractConsoleLogsFromText(textOutput string) []string {
 			consoleLogs = append(consoleLogs, strings.TrimSpace(line))
 		}
 	}
-	
+
 	return consoleLogs
 }
 
