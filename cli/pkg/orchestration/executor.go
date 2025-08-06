@@ -9,6 +9,7 @@ import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/resolvers"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/script/display"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/script/executor"
@@ -229,6 +230,26 @@ func (e *Executor) executeStep(stepNum, totalSteps int, step *ExecutionStep) err
 	displayHandler.SetVerbose(e.config.Verbose)
 	
 	displayHandler.DisplayExecution()
+
+	// Update registry if not dry run (same logic as run command)
+	if !e.config.DryRun && execution != nil {
+		manager, err := registry.NewManager(".")
+		if err != nil {
+			display.PrintErrorMessage(fmt.Sprintf("Failed to create registry manager: %v", err))
+		} else {
+			updater := manager.NewScriptExecutionUpdater(execution, e.config.Namespace, e.config.Network, step.Script)
+			if updater.HasChanges() {
+				if err := updater.Write(); err != nil {
+					display.PrintErrorMessage(fmt.Sprintf("Failed to update registry: %v", err))
+				} else {
+					display.PrintSuccessMessage(fmt.Sprintf("Updated registry for %s network in namespace %s", e.config.Network, e.config.Namespace))
+				}
+			} else {
+				fmt.Printf("%s- No registry changes recorded for %s network in namespace %s%s\n",
+					display.ColorYellow, e.config.Network, e.config.Namespace, display.ColorReset)
+			}
+		}
+	}
 
 	// Small delay between steps for readability
 	if stepNum < totalSteps {

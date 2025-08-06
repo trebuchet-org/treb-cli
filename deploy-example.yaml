@@ -1,21 +1,6 @@
-group: Example Protocol
+group: Simple Test Protocol
 components:
-  Token:
-    script: script/deploy/tokens/DeployMyToken.s.sol:DeployMyToken
-    env:
-      name: "ExampleToken"
-      symbol: "EXT"
-      
   Counter:
     script: CounterScript
-    deps: 
-      - Token
     env:
-      LABEL: "v2"
-      
-  Proxy:
-    script: DeployUCProxy
-    deps: 
-      - Counter
-    env:
-      IMPLEMENTATION: "Counter"
+      TEST_VAR: "test"
