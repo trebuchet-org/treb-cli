@@ -3,19 +3,10 @@ package orchestration
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
-	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/resolvers"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/script/display"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/script/executor"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/script/parameters"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/script/parser"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/script/runner"
 )
 
 // ExecutorConfig contains configuration for the orchestration executor
@@ -32,26 +23,21 @@ type ExecutorConfig struct {
 
 // Executor handles the execution of orchestrated deployments
 type Executor struct {
-	config    *ExecutorConfig
-	indexer   *contracts.Indexer
-	resolver  *resolvers.ContractsResolver
+	config       *ExecutorConfig
+	scriptRunner *runner.ScriptRunner
 }
 
 // NewExecutor creates a new orchestration executor
 func NewExecutor(config *ExecutorConfig) (*Executor, error) {
-	// Initialize contract indexer
-	indexer, err := contracts.GetGlobalIndexer(".")
+	// Create script runner with non-interactive mode for orchestration
+	scriptRunner, err := runner.NewScriptRunner(".", false)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize contract indexer: %w", err)
+		return nil, fmt.Errorf("failed to create script runner: %w", err)
 	}
 
-	// Create contracts resolver
-	resolver := resolvers.NewContractsResolver(indexer, !config.NonInteractive)
-
 	return &Executor{
-		config:   config,
-		indexer:  indexer,
-		resolver: resolver,
+		config:       config,
+		scriptRunner: scriptRunner,
 	}, nil
 }
 
@@ -111,33 +97,13 @@ func (e *Executor) executeStep(stepNum, totalSteps int, step *ExecutionStep) err
 		display.ColorBold, stepNum, totalSteps, step.Name, display.ColorReset)
 	fmt.Printf("%s%s%s\n", display.ColorGray, display.StringRepeat("─", 70), display.ColorReset)
 
-	// Resolve the script contract using the same logic as the run command
-	scriptContract, err := e.resolver.ResolveContract(step.Script, types.ScriptContractFilter())
-	if err != nil {
-		return fmt.Errorf("failed to resolve script contract '%s': %w", step.Script, err)
-	}
-
-	// Resolve network
-	networkResolver, err := network.NewResolver(".")
-	if err != nil {
-		return fmt.Errorf("failed to create network resolver: %w", err)
-	}
-	networkInfo, err := networkResolver.ResolveNetwork(e.config.Network)
-	if err != nil {
-		return fmt.Errorf("failed to resolve network: %w", err)
-	}
-
 	// Set up environment variables
 	originalEnv := make(map[string]string)
-	envVars := make(map[string]string)
-	
-	// Copy step environment variables
 	for key, value := range step.Env {
 		if original := os.Getenv(key); original != "" {
 			originalEnv[key] = original
 		}
 		os.Setenv(key, value)
-		envVars[key] = value
 	}
 
 	// Restore original environment variables after execution
@@ -151,104 +117,28 @@ func (e *Executor) executeStep(stepNum, totalSteps int, step *ExecutionStep) err
 		}
 	}()
 
-	// Load treb config for parameter resolution
-	fullConfig, err := config.LoadTrebConfig(".")
-	if err != nil {
-		return fmt.Errorf("failed to load treb config: %w", err)
+	// Create run configuration
+	runConfig := &runner.RunConfig{
+		ScriptPath:     step.Script,
+		Network:        e.config.Network,
+		Namespace:      e.config.Namespace,
+		EnvVars:        step.Env,
+		DryRun:         e.config.DryRun,
+		Debug:          e.config.Debug,
+		DebugJSON:      e.config.DebugJSON,
+		Verbose:        e.config.Verbose,
+		NonInteractive: true, // Orchestration is always non-interactive
+		WorkDir:        ".",
 	}
 
-	trebConfig, err := fullConfig.GetProfileTrebConfig(e.config.Namespace)
-	if err != nil {
-		return fmt.Errorf("failed to get profile config: %w", err)
-	}
-
-	// Parse and resolve script parameters if needed
-	if scriptContract.Artifact != nil {
-		paramParser := parameters.NewParameterParser()
-		params, err := paramParser.ParseFromArtifact(scriptContract.Artifact)
-		if err != nil {
-			return fmt.Errorf("failed to parse script parameters: %w", err)
-		}
-
-		if len(params) > 0 {
-			// Create parameter resolver
-			paramResolver, err := parameters.NewParameterResolver(".", trebConfig, e.config.Namespace, e.config.Network, networkInfo.ChainID, !e.config.NonInteractive)
-			if err != nil {
-				return fmt.Errorf("failed to create parameter resolver: %w", err)
-			}
-
-			// Resolve all parameters
-			resolvedEnvVars, err := paramResolver.ResolveAll(params, envVars)
-			if err != nil && e.config.NonInteractive {
-				return fmt.Errorf("parameter resolution failed: %w", err)
-			}
-
-			// Update environment variables with resolved parameters
-			if resolvedEnvVars != nil {
-				for key, value := range resolvedEnvVars {
-					envVars[key] = value
-				}
-			}
-		}
-	}
-
-	// Display deployment banner for this step
-	display.PrintDeploymentBanner(filepath.Base(scriptContract.Path), e.config.Network, e.config.Namespace, e.config.DryRun)
-
-	// Create script executor
-	scriptExecutor := executor.NewExecutor(".", networkInfo)
-
-	// Execute the script
-	opts := executor.RunOptions{
-		Script:    scriptContract,
-		Network:   e.config.Network,
-		Namespace: e.config.Namespace,
-		EnvVars:   envVars,
-		DryRun:    e.config.DryRun,
-		Debug:     e.config.Debug,
-		DebugJSON: e.config.DebugJSON,
-	}
-
-	result, err := scriptExecutor.Run(opts)
+	// Run the script using the shared runner
+	result, err := e.scriptRunner.Run(runConfig)
 	if err != nil {
 		return fmt.Errorf("script execution failed: %w", err)
 	}
 
 	if !result.Success {
 		return fmt.Errorf("script execution was not successful")
-	}
-
-	// Parse the execution results
-	scriptParser := parser.NewParser(e.indexer)
-	execution, err := scriptParser.Parse(result, e.config.Network, networkInfo.ChainID)
-	if err != nil {
-		return fmt.Errorf("failed to parse script result: %w", err)
-	}
-
-	// Display the execution results
-	displayHandler := display.NewDisplay(e.indexer, execution)
-	displayHandler.SetVerbose(e.config.Verbose)
-	
-	displayHandler.DisplayExecution()
-
-	// Update registry if not dry run (same logic as run command)
-	if !e.config.DryRun && execution != nil {
-		manager, err := registry.NewManager(".")
-		if err != nil {
-			display.PrintErrorMessage(fmt.Sprintf("Failed to create registry manager: %v", err))
-		} else {
-			updater := manager.NewScriptExecutionUpdater(execution, e.config.Namespace, e.config.Network, step.Script)
-			if updater.HasChanges() {
-				if err := updater.Write(); err != nil {
-					display.PrintErrorMessage(fmt.Sprintf("Failed to update registry: %v", err))
-				} else {
-					display.PrintSuccessMessage(fmt.Sprintf("Updated registry for %s network in namespace %s", e.config.Network, e.config.Namespace))
-				}
-			} else {
-				fmt.Printf("%s- No registry changes recorded for %s network in namespace %s%s\n",
-					display.ColorYellow, e.config.Network, e.config.Namespace, display.ColorReset)
-			}
-		}
 	}
 
 	// Small delay between steps for readability

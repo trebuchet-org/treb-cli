@@ -1,0 +1,6 @@
+group: Test Orchestration
+components:
+  Counter:
+    script: CounterScript
+    env:
+      TEST_VAR: "test123"

@@ -127,9 +127,8 @@ func init() {
 	rootCmd.AddCommand(orchestrateCmd)
 
 	// Network and namespace flags
-	orchestrateCmd.Flags().String("network", "local", "Network to deploy to (local, sepolia, mainnet, etc.)")
-	orchestrateCmd.Flags().String("namespace", "default", "Deployment namespace (default, staging, production)")
-	orchestrateCmd.Flags().String("profile", "", "Foundry profile to use for deployment")
+	orchestrateCmd.Flags().StringP("network", "n", "", "Network to deploy to (local, sepolia, mainnet, etc.)")
+	orchestrateCmd.Flags().String("namespace", "", "Deployment namespace (default, staging, production) [also sets foundry profile]")
 
 	// Execution flags
 	orchestrateCmd.Flags().Bool("dry-run", false, "Perform a dry run without broadcasting transactions")
