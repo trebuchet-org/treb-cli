@@ -1,0 +1,28 @@
+group: Mento Protocol
+components:
+  Broker:
+    script: DeployBroker
+    env:
+      BROKER_FEE: "1000"
+      
+  Tokens:
+    script: DeployTokens
+    deps: 
+      - Broker
+    env:
+      TOKEN_COUNT: "3"
+      
+  Reserve:
+    script: DeployReserve
+    deps: 
+      - Tokens
+    env:
+      INITIAL_BALANCE: "1000000"
+      RESERVE_RATIO: "0.8"
+      
+  SortedOracles:
+    script: DeploySortedOracles
+    deps:
+      - Reserve
+    env:
+      ORACLE_TIMEOUT: "3600"
