@@ -106,7 +106,7 @@ func (d *Display) DisplayLogs(logs []string) {
 	for _, log := range logs {
 		fmt.Printf("  %s\n", log)
 	}
-	
+
 	fmt.Println() // Add newline after logs for consistent spacing
 }
 
