@@ -1,6 +1,7 @@
 package submodule
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -63,7 +64,8 @@ func (m *TrebSolManager) CheckIfCommitExists(commit string) (bool, error) {
 	err := cmd.Run()
 	if err != nil {
 		// Exit code 1 means the object doesn't exist
-		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
 			return false, nil
 		}
 		return false, fmt.Errorf("failed to check if commit exists: %w", err)
