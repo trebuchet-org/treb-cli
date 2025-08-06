@@ -498,11 +498,26 @@ func (p *Parser) enrichFromBroadcast(execution *ScriptExecution, broadcastPath s
 					execTx.Status = types.TransactionStatusExecuted
 					txHash := common.HexToHash(tx.Hash)
 					execTx.TxHash = &txHash
-					for _, receipt := range execution.ParsedOutput.Receipts {
-						if receipt.TxHash == tx.Hash {
-							execTx.GasUsed = &receipt.GasUsed
-							execTx.BlockNumber = &receipt.BlockNumber
-							break
+					// Try ParsedOutput receipts first
+					if execution.ParsedOutput != nil {
+						for _, receipt := range execution.ParsedOutput.Receipts {
+							if receipt.TxHash == tx.Hash {
+								execTx.GasUsed = &receipt.GasUsed
+								execTx.BlockNumber = &receipt.BlockNumber
+								break
+							}
+						}
+					}
+					// Fallback to broadcast receipts
+					if execTx.BlockNumber == nil {
+						for _, receipt := range broadcastData.Receipts {
+							if receipt.TransactionHash == tx.Hash {
+								blockNum, _ := strconv.ParseUint(strings.TrimPrefix(receipt.BlockNumber, "0x"), 16, 64)
+								execTx.BlockNumber = &blockNum
+								gasUsed, _ := strconv.ParseUint(strings.TrimPrefix(receipt.GasUsed, "0x"), 16, 64)
+								execTx.GasUsed = &gasUsed
+								break
+							}
 						}
 					}
 				}
@@ -550,12 +565,35 @@ func (p *Parser) enrichFromBroadcast(execution *ScriptExecution, broadcastPath s
 			txHash := common.HexToHash(broadcastTx.Hash)
 			safeTx.ExecutionTxHash = &txHash
 
-			// Also find receipt for block number
+			// Also find receipt for block number and gas used
+			var blockNum *uint64
+			var gasUsed *uint64
 			for _, receipt := range broadcastData.Receipts {
 				if receipt.TransactionHash == broadcastTx.Hash {
-					blockNum, _ := strconv.ParseUint(strings.TrimPrefix(receipt.BlockNumber, "0x"), 16, 64)
-					safeTx.ExecutionBlockNumber = &blockNum
+					bn, _ := strconv.ParseUint(strings.TrimPrefix(receipt.BlockNumber, "0x"), 16, 64)
+					blockNum = &bn
+					gu, _ := strconv.ParseUint(strings.TrimPrefix(receipt.GasUsed, "0x"), 16, 64)
+					gasUsed = &gu
+					safeTx.ExecutionBlockNumber = blockNum
 					break
+				}
+			}
+
+			// Update all transactions that are part of this Safe transaction
+			for _, txID := range safeTx.TransactionIDs {
+				for _, execTx := range execution.Transactions {
+					if execTx.TransactionId == txID {
+						// Update the transaction with execution details
+						execTx.Status = types.TransactionStatusExecuted
+						execTx.TxHash = &txHash
+						if blockNum != nil {
+							execTx.BlockNumber = blockNum
+						}
+						if gasUsed != nil {
+							execTx.GasUsed = gasUsed
+						}
+						break
+					}
 				}
 			}
 
