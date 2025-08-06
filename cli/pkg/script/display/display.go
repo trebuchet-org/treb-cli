@@ -81,9 +81,6 @@ func (d *Display) SetRegistryResolver(registryManager *registry.Manager, chainID
 
 // DisplayExecution displays the complete script execution
 func (d *Display) DisplayExecution() {
-	// Display logs first
-	d.DisplayLogs(d.execution.Logs)
-
 	// Register deployed contracts and proxy relationships
 	d.registerDeployments(d.execution)
 
@@ -92,6 +89,9 @@ func (d *Display) DisplayExecution() {
 
 	// Display execution summary
 	d.printExecutionSummary()
+
+	// Display logs last so they appear after the execution
+	d.DisplayLogs(d.execution.Logs)
 }
 
 // DisplayLogs displays console.log output from the script
@@ -106,6 +106,8 @@ func (d *Display) DisplayLogs(logs []string) {
 	for _, log := range logs {
 		fmt.Printf("  %s\n", log)
 	}
+	
+	fmt.Println() // Add newline after logs for consistent spacing
 }
 
 // registerDeployments registers deployed contracts and proxy relationships
