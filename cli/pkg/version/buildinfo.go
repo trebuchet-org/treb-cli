@@ -5,3 +5,4 @@ var (
 	// TrebSolCommit is the expected treb-sol commit hash at build time
 	TrebSolCommit = "unknown"
 )
+
