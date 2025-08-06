@@ -1,28 +1,21 @@
-group: Mento Protocol
+group: Example Protocol
 components:
-  Broker:
-    script: DeployBroker
+  Token:
+    script: DeployMyToken
     env:
-      BROKER_FEE: "1000"
+      TOKEN_NAME: "ExampleToken"
+      TOKEN_SYMBOL: "EXT"
       
-  Tokens:
-    script: DeployTokens
+  Counter:
+    script: CounterScript
     deps: 
-      - Broker
+      - Token
     env:
-      TOKEN_COUNT: "3"
+      LABEL: "v2"
       
-  Reserve:
-    script: DeployReserve
+  Proxy:
+    script: DeployUCProxy
     deps: 
-      - Tokens
+      - Counter
     env:
-      INITIAL_BALANCE: "1000000"
-      RESERVE_RATIO: "0.8"
-      
-  SortedOracles:
-    script: DeploySortedOracles
-    deps:
-      - Reserve
-    env:
-      ORACLE_TIMEOUT: "3600"
+      IMPLEMENTATION: "Counter"

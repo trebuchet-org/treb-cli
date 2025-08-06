@@ -110,15 +110,10 @@ func (e *Executor) executeStep(stepNum, totalSteps int, step *ExecutionStep) err
 		display.ColorBold, stepNum, totalSteps, step.Name, display.ColorReset)
 	fmt.Printf("%s%s%s\n", display.ColorGray, display.StringRepeat("─", 70), display.ColorReset)
 
-	// Resolve the script contract
-	scriptPath := step.Script
-	if !filepath.IsAbs(scriptPath) && !filepath.HasPrefix(scriptPath, "script/") {
-		scriptPath = filepath.Join("script", scriptPath+".s.sol")
-	}
-
-	scriptContract, err := e.resolver.ResolveContract(scriptPath, types.ScriptContractFilter())
+	// Resolve the script contract using the same logic as the run command
+	scriptContract, err := e.resolver.ResolveContract(step.Script, types.ScriptContractFilter())
 	if err != nil {
-		return fmt.Errorf("failed to resolve script contract: %w", err)
+		return fmt.Errorf("failed to resolve script contract '%s': %w", step.Script, err)
 	}
 
 	// Resolve network

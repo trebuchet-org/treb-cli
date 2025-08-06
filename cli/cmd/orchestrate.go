@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/orchestration"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/script/display"
 )
@@ -59,6 +60,27 @@ This will execute: Broker → Tokens → Reserve → SortedOracles`,
 		debugJSON, _ := cmd.Flags().GetBool("debug-json")
 		verbose, _ := cmd.Flags().GetBool("verbose")
 
+		// Default network and namespace resolution (same as run command)
+		if network == "" {
+			network = os.Getenv("DEPLOYMENT_NETWORK")
+			if network == "" {
+				network = "local"
+			}
+		}
+
+		// Default namespace from context if not provided
+		if namespace == "" {
+			// Try to load from context
+			configManager := config.NewManager(".")
+			if cfg, err := configManager.Load(); err == nil {
+				namespace = cfg.Namespace
+			}
+			// Ensure we have a default namespace if still empty
+			if namespace == "" {
+				namespace = "default"
+			}
+		}
+
 		// Parse orchestration file
 		parser := orchestration.NewParser()
 		config, err := parser.ParseFile(orchestrationFile)
@@ -75,6 +97,7 @@ This will execute: Broker → Tokens → Reserve → SortedOracles`,
 		}
 
 		// Create executor configuration
+		// Orchestration should always be non-interactive to avoid hanging on ambiguous script names
 		executorConfig := &orchestration.ExecutorConfig{
 			Network:        network,
 			Namespace:      namespace,
@@ -83,7 +106,7 @@ This will execute: Broker → Tokens → Reserve → SortedOracles`,
 			Debug:          debug,
 			DebugJSON:      debugJSON,
 			Verbose:        verbose,
-			NonInteractive: IsNonInteractive(),
+			NonInteractive: true,
 		}
 
 		// Create and run executor
