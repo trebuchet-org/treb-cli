@@ -75,6 +75,9 @@ func (ep *EventParser) ParseEvent(rawLog forge.EventLog) (interface{}, error) {
 		{"ContractDeployed", func(log *types.Log) (interface{}, error) {
 			return ep.trebContract.UnpackContractDeployedEvent(log)
 		}},
+		{"DeploymentCollision", func(log *types.Log) (interface{}, error) {
+			return ep.trebContract.UnpackDeploymentCollisionEvent(log)
+		}},
 		{"SafeTransactionQueued", func(log *types.Log) (interface{}, error) {
 			return ep.trebContract.UnpackSafeTransactionQueuedEvent(log)
 		}},
@@ -196,4 +199,17 @@ func ExtractDeploymentEvents(allEvents []interface{}) []*bindings.TrebContractDe
 	}
 
 	return deploymentEvents
+}
+
+// ExtractCollisionEvents filters deployment collision events from all events
+func ExtractCollisionEvents(allEvents []interface{}) []*bindings.TrebDeploymentCollision {
+	var collisionEvents []*bindings.TrebDeploymentCollision
+
+	for _, event := range allEvents {
+		if collisionEvent, ok := event.(*bindings.TrebDeploymentCollision); ok {
+			collisionEvents = append(collisionEvents, collisionEvent)
+		}
+	}
+
+	return collisionEvents
 }

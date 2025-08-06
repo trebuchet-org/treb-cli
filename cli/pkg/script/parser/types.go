@@ -14,6 +14,7 @@ type ScriptExecution struct {
 	SafeTransactions   []*SafeTransaction                    // Safe transaction batches
 	Deployments        []*DeploymentRecord                   // Contract deployments
 	ProxyRelationships map[common.Address]*ProxyRelationship // Proxy relationships
+	Collisions         map[common.Address]*CollisionInfo     // Deployment collisions (contracts already deployed)
 
 	// Raw data
 	Events       []interface{}       // All parsed events
@@ -36,6 +37,16 @@ type DeploymentRecord struct {
 	Address       common.Address
 	Deployer      common.Address
 	Contract      *types.ContractInfo
+}
+
+// CollisionInfo represents a deployment collision (contract already exists)
+type CollisionInfo struct {
+	ExistingContract common.Address
+	Artifact         string
+	Label            string
+	Entropy          string
+	Salt             [32]byte
+	CreateStrategy   string
 }
 
 // SafeTransaction represents a Safe multisig transaction

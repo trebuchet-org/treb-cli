@@ -48,6 +48,7 @@ func (p *Parser) Parse(result *forge.ScriptResult, network string, chainID uint6
 		SafeTransactions:   []*SafeTransaction{},
 		Deployments:        []*DeploymentRecord{},
 		ProxyRelationships: make(map[common.Address]*ProxyRelationship),
+		Collisions:         make(map[common.Address]*CollisionInfo),
 		Events:             []interface{}{},
 		Logs:               []string{},
 		TextOutput:         string(result.RawOutput),
@@ -94,6 +95,17 @@ func (p *Parser) Parse(result *forge.ScriptResult, network string, chainID uint6
 				}
 
 				execution.Deployments = append(execution.Deployments, deploymentRecord)
+			case *bindings.TrebDeploymentCollision:
+				// Record collision information
+				collision := &CollisionInfo{
+					ExistingContract: e.ExistingContract,
+					Artifact:         e.DeploymentDetails.Artifact,
+					Label:            e.DeploymentDetails.Label,
+					Entropy:          e.DeploymentDetails.Entropy,
+					Salt:             e.DeploymentDetails.Salt,
+					CreateStrategy:   e.DeploymentDetails.CreateStrategy,
+				}
+				execution.Collisions[e.ExistingContract] = collision
 			}
 
 			// Process proxy events
