@@ -2,7 +2,6 @@ package orchestration
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/trebuchet-org/treb-cli/cli/pkg/script/display"
@@ -96,26 +95,6 @@ func (e *Executor) executeStep(stepNum, totalSteps int, step *ExecutionStep) err
 	fmt.Printf("%s[%d/%d] Executing %s%s\n",
 		display.ColorBold, stepNum, totalSteps, step.Name, display.ColorReset)
 	fmt.Printf("%s%s%s\n", display.ColorGray, display.StringRepeat("─", 70), display.ColorReset)
-
-	// Set up environment variables
-	originalEnv := make(map[string]string)
-	for key, value := range step.Env {
-		if original := os.Getenv(key); original != "" {
-			originalEnv[key] = original
-		}
-		os.Setenv(key, value)
-	}
-
-	// Restore original environment variables after execution
-	defer func() {
-		for key := range step.Env {
-			if original, exists := originalEnv[key]; exists {
-				os.Setenv(key, original)
-			} else {
-				os.Unsetenv(key)
-			}
-		}
-	}()
 
 	// Create run configuration
 	runConfig := &runner.RunConfig{
