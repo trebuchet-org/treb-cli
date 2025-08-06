@@ -29,8 +29,11 @@ func (vm *Manager) VerifyDeployment(deployment *types.Deployment) error {
 
 // VerifyDeploymentWithDebug verifies a deployment with optional debug output
 func (vm *Manager) VerifyDeploymentWithDebug(deployment *types.Deployment, debug bool) error {
-	// Get network name from chain ID for resolver
-	networkName := getNetworkName(deployment.ChainID)
+	// Get network name from chain ID using the resolver
+	networkName, err := vm.networkResolver.GetPreferredNetwork(deployment.ChainID)
+	if err != nil {
+		return fmt.Errorf("failed to get network name for chain %d: %w", deployment.ChainID, err)
+	}
 
 	// Get network info
 	networkInfo, err := vm.networkResolver.ResolveNetwork(networkName)
@@ -113,6 +116,34 @@ func (vm *Manager) verifyOnEtherscanWithDebug(deployment *types.Deployment, netw
 		contractPath,
 		"--chain-id", fmt.Sprintf("%d", networkInfo.ChainID),
 		"--watch",
+	}
+
+	// Check if custom Etherscan configuration exists
+	explorerURL, apiKey, hasCustomConfig := vm.networkResolver.GetEtherscanConfig(networkInfo.Name)
+	
+	// Add verifier URL if custom explorer is configured
+	if hasCustomConfig && explorerURL != "" {
+		args = append(args, "--verifier-url", explorerURL)
+		if debug {
+			fmt.Printf("Using custom verifier URL: %s\n", explorerURL)
+		}
+	}
+	
+	// Add API key if available (from custom config or fallback)
+	if apiKey == "" && !hasCustomConfig {
+		// Fallback to default API key resolution
+		apiKey = vm.networkResolver.GetExplorerAPIKey(networkInfo.Name)
+	}
+	if apiKey != "" {
+		args = append(args, "--etherscan-api-key", apiKey)
+		if debug {
+			// Show first few characters of API key for debugging
+			keyPreview := apiKey
+			if len(apiKey) > 10 {
+				keyPreview = apiKey[:10] + "..."
+			}
+			fmt.Printf("Using API key: %s\n", keyPreview)
+		}
 	}
 
 	// Add compiler version if available
@@ -225,44 +256,14 @@ func (vm *Manager) verifyOnSourceifyWithDebug(deployment *types.Deployment, netw
 
 // buildEtherscanURL builds the Etherscan URL for a contract
 func (vm *Manager) buildEtherscanURL(networkInfo *network.NetworkInfo, address string) string {
-	var baseURL string
-
-	// Map common chain IDs to their explorer URLs
-	switch networkInfo.ChainID {
-	case 1:
-		baseURL = "https://etherscan.io"
-	case 5:
-		baseURL = "https://goerli.etherscan.io"
-	case 11155111:
-		baseURL = "https://sepolia.etherscan.io"
-	case 10:
-		baseURL = "https://optimistic.etherscan.io"
-	case 137:
-		baseURL = "https://polygonscan.com"
-	case 8453:
-		baseURL = "https://basescan.org"
-	case 42161:
-		baseURL = "https://arbiscan.io"
-	case 43114:
-		baseURL = "https://snowtrace.io"
-	case 56:
-		baseURL = "https://bscscan.com"
-	case 250:
-		baseURL = "https://ftmscan.com"
-	case 1101:
-		baseURL = "https://zkevm.polygonscan.com"
-	case 324:
-		baseURL = "https://explorer.zksync.io"
-	case 42220:
-		baseURL = "https://celoscan.io"
-	case 44787:
-		baseURL = "https://alfajores.celoscan.io"
-	default:
-		// For unknown chains, return empty
+	// Get explorer URL from resolver
+	explorerURL, err := vm.networkResolver.GetExplorerURL(networkInfo.Name)
+	if err != nil {
+		// No explorer configured for this network
 		return ""
 	}
 
-	return fmt.Sprintf("%s/address/%s#code", baseURL, address)
+	return fmt.Sprintf("%s/address/%s#code", explorerURL, address)
 }
 
 // buildSourceifyURL builds the Sourcify URL for a contract
@@ -316,41 +317,3 @@ func (vm *Manager) updateOverallStatus(deployment *types.Deployment) {
 	}
 }
 
-// getNetworkName returns a network name for a given chain ID
-func getNetworkName(chainID uint64) string {
-	// Map common chain IDs to network names
-	switch chainID {
-	case 1:
-		return "mainnet"
-	case 5:
-		return "goerli"
-	case 11155111:
-		return "sepolia"
-	case 10:
-		return "optimism"
-	case 137:
-		return "polygon"
-	case 8453:
-		return "base"
-	case 42161:
-		return "arbitrum"
-	case 43114:
-		return "avalanche"
-	case 56:
-		return "bsc"
-	case 250:
-		return "fantom"
-	case 1101:
-		return "polygon-zkevm"
-	case 324:
-		return "zksync"
-	case 42220:
-		return "celo"
-	case 44787:
-		return "celo-alfajores"
-	case 31337:
-		return "local"
-	default:
-		return fmt.Sprintf("chain-%d", chainID)
-	}
-}

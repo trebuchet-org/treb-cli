@@ -263,15 +263,49 @@ func buildDeploymentTable(deployments []*types.Deployment, manager *registry.Man
 		verifiedCell := ""
 		if deployment.Transaction.Status == types.TransactionStatusQueued {
 			verifiedCell = pendingStyle.Sprint("⏳ queued")
+		} else if deployment.Transaction.Status == types.TransactionStatusSimulated {
+			verifiedCell = pendingStyle.Sprint("⏳ simulated")
 		} else {
-			switch deployment.Verification.Status {
-			case types.VerificationStatusVerified:
-				verifiedCell = verifiedStyle.Sprint("✓ verified")
-			case types.VerificationStatusFailed:
-				verifiedCell = notVerifiedStyle.Sprint("✗ failed")
-			default:
-				verifiedCell = notVerifiedStyle.Sprint("✗ not verified")
+			// Only show individual verifier statuses for executed deployments
+			verifierStatuses := []string{}
+			
+			// Check Etherscan status
+			etherscanStatus := "?"
+			if deployment.Verification.Verifiers != nil {
+				if etherscan, exists := deployment.Verification.Verifiers["etherscan"]; exists {
+					switch etherscan.Status {
+					case "verified":
+						etherscanStatus = verifiedStyle.Sprint("✓")
+					case "failed":
+						etherscanStatus = notVerifiedStyle.Sprint("✗")
+					case "pending":
+						etherscanStatus = pendingStyle.Sprint("⏳")
+					default:
+						etherscanStatus = "?"
+					}
+				}
 			}
+			verifierStatuses = append(verifierStatuses, fmt.Sprintf("Ⓔ %s", etherscanStatus))
+			
+			// Check Sourcify status
+			sourcifyStatus := "?"
+			if deployment.Verification.Verifiers != nil {
+				if sourcify, exists := deployment.Verification.Verifiers["sourcify"]; exists {
+					switch sourcify.Status {
+					case "verified":
+						sourcifyStatus = verifiedStyle.Sprint("✓")
+					case "failed":
+						sourcifyStatus = notVerifiedStyle.Sprint("✗")
+					case "pending":
+						sourcifyStatus = pendingStyle.Sprint("⏳")
+					default:
+						sourcifyStatus = "?"
+					}
+				}
+			}
+			verifierStatuses = append(verifierStatuses, fmt.Sprintf("Ⓢ %s", sourcifyStatus))
+			
+			verifiedCell = strings.Join(verifierStatuses, " ")
 		}
 
 		timestampCell := timestampStyle.Sprint(deployment.CreatedAt.Format("2006-01-02 15:04:05"))

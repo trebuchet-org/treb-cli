@@ -302,6 +302,17 @@ func (m *Manager) updateSolidityRegistry(deployment *types.Deployment) {
 	m.solidityRegistry[deployment.ChainID][deployment.Namespace][key] = deployment.Address
 }
 
+// rebuildSolidityRegistry rebuilds the entire Solidity registry from current deployments
+func (m *Manager) rebuildSolidityRegistry() {
+	// Clear existing registry
+	m.solidityRegistry = make(types.SolidityRegistry)
+	
+	// Rebuild from all deployments
+	for _, deployment := range m.deployments {
+		m.updateSolidityRegistry(deployment)
+	}
+}
+
 // AddTransaction adds a new transaction record
 func (m *Manager) AddTransaction(tx *types.Transaction) error {
 	m.mu.Lock()
