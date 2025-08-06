@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -117,7 +118,7 @@ components:
 					return
 				}
 				if tt.errorMsg != "" {
-					if err.Error() != tt.errorMsg && !containsString(err.Error(), tt.errorMsg) {
+					if !strings.Contains(err.Error(), tt.errorMsg) {
 						t.Errorf("expected error containing '%s' but got '%s'", tt.errorMsg, err.Error())
 					}
 				}
@@ -226,16 +227,5 @@ components:
 }
 
 func containsString(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr ||
-		(len(s) > len(substr) && (s[:len(substr)] == substr || s[len(s)-len(substr):] == substr ||
-			findSubstring(s, substr))))
-}
-
-func findSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
+	return strings.Contains(s, substr)
 }
