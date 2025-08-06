@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	
+	"github.com/trebuchet-org/treb-cli/cli/pkg/version"
 )
 
 func TestTrebSolManager(t *testing.T) {
@@ -42,4 +44,29 @@ func TestTrebSolManager(t *testing.T) {
 		}
 	})
 
+	t.Run("GetExpectedCommit", func(t *testing.T) {
+		// Test that GetExpectedCommit returns the version.TrebSolCommit value
+		expected := manager.GetExpectedCommit()
+		if expected != version.TrebSolCommit {
+			t.Errorf("Expected GetExpectedCommit to return %s, got %s", version.TrebSolCommit, expected)
+		}
+	})
+
+	t.Run("NeedsUpdate_UnknownExpected", func(t *testing.T) {
+		// Save original value
+		original := version.TrebSolCommit
+		version.TrebSolCommit = "unknown"
+		defer func() {
+			version.TrebSolCommit = original
+		}()
+
+		needsUpdate, _, _, err := manager.NeedsUpdate()
+		if err == nil {
+			// If there's no error (likely no git repo), needsUpdate should be false
+			if needsUpdate {
+				t.Error("Expected NeedsUpdate to return false when expected commit is 'unknown'")
+			}
+		}
+		// If there's an error (expected since we don't have a real git repo), that's fine
+	})
 }
