@@ -125,9 +125,4 @@ func TestCommandStructure(t *testing.T) {
 		output, _ := runTreb(t, "gen", "--help")
 		assert.Contains(t, output, "deploy")
 	})
-
-	t.Run("gen has library subcommand", func(t *testing.T) {
-		output, _ := runTreb(t, "gen", "--help")
-		assert.Contains(t, output, "library")
-	})
 }

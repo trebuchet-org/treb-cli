@@ -85,7 +85,7 @@ func parseBytecodeMissingError(output string, indexer *contracts.Indexer) []Miss
 
 		// Extract required libraries from link references
 		requiredLibs := extractRequiredLibraries(contract.Artifact)
-		
+
 		missingLibs = append(missingLibs, MissingLibrary{
 			ContractPath:      contractPath,
 			ContractName:      contractName,
@@ -132,18 +132,18 @@ func extractRequiredLibraries(artifact *types.Artifact) []string {
 func handleMissingLibraries(missingLibs []MissingLibrary) {
 	PrintErrorMessage("Script execution failed: Missing library bytecode")
 	fmt.Println()
-	
+
 	fmt.Println("The following contracts are missing library dependencies:")
-	
+
 	for _, lib := range missingLibs {
 		fmt.Printf("\n  • %s%s%s\n", ColorYellow, lib.FullRef, ColorReset)
-		
+
 		if len(lib.RequiredLibraries) > 0 {
 			fmt.Printf("    Required libraries:\n")
 			for _, reqLib := range lib.RequiredLibraries {
 				fmt.Printf("      - %s%s%s\n", ColorBlue, reqLib, ColorReset)
 			}
-			
+
 			fmt.Printf("\n    To deploy the required libraries:\n")
 			for _, reqLib := range lib.RequiredLibraries {
 				fmt.Printf("      1. Generate script: %streb gen library %s%s\n", ColorCyan, reqLib, ColorReset)
@@ -153,7 +153,7 @@ func handleMissingLibraries(missingLibs []MissingLibrary) {
 			fmt.Printf("    %s(Unable to determine required libraries - check contract's link references)%s\n", ColorGray, ColorReset)
 		}
 	}
-	
+
 	fmt.Println()
 	fmt.Println("Libraries must be deployed before contracts that depend on them.")
 }

@@ -286,7 +286,7 @@ func buildDeploymentTable(deployments []*types.Deployment, manager *registry.Man
 					}
 				}
 			}
-			verifierStatuses = append(verifierStatuses, fmt.Sprintf("Ⓔ %s", etherscanStatus))
+			verifierStatuses = append(verifierStatuses, fmt.Sprintf("🅔 %s", etherscanStatus))
 
 			// Check Sourcify status
 			sourcifyStatus := "?"
@@ -304,7 +304,7 @@ func buildDeploymentTable(deployments []*types.Deployment, manager *registry.Man
 					}
 				}
 			}
-			verifierStatuses = append(verifierStatuses, fmt.Sprintf("Ⓢ %s", sourcifyStatus))
+			verifierStatuses = append(verifierStatuses, fmt.Sprintf("🅢 %s", sourcifyStatus))
 
 			verifiedCell = strings.Join(verifierStatuses, " ")
 		}
