@@ -181,3 +181,7 @@ lint-fix:
 	@echo "🔧 Fixing linting issues..."
 	@golangci-lint run --fix
 	@echo "✅ Linting issues fixed (where possible)"
+
+fmt:
+	@gofmt -s -w ./cli/
+	@gofmt -s -w ./test/
