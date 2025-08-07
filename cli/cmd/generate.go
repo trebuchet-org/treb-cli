@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/abi"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/interactive"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/resolvers"
@@ -130,6 +131,14 @@ Examples:
 			fmt.Printf("Warning: Overwriting existing script at %s\n", scriptPath)
 		}
 
+		// Parse ABI for constructor/initializer information
+		abiParser := abi.NewParser(".")
+		contractABI, err := abiParser.ParseContractABI(contractInfo.Name)
+		if err != nil {
+			// If ABI parsing fails, assume no constructor for safety
+			contractABI = &abi.ContractABI{HasConstructor: false}
+		}
+
 		// Generate appropriate script
 		var content string
 		if isLibrary {
@@ -158,10 +167,16 @@ Examples:
 			// Build proxy artifact path
 			proxyArtifactPath := fmt.Sprintf("%s:%s", proxyInfo.Path, proxyInfo.Name)
 
-			content = generateProxyScript(contractName, artifactPath, proxyInfo.Name, proxyInfo.Path, proxyArtifactPath, strategy)
+			// Check for initializer method
+			var initMethod *abi.Method
+			if contractABI != nil {
+				initMethod = abiParser.FindInitializeMethod(contractABI)
+			}
+
+			content = generateProxyScript(contractName, artifactPath, proxyInfo.Name, proxyInfo.Path, proxyArtifactPath, strategy, initMethod, abiParser)
 		} else {
 			// Regular contract deployment
-			content = generateContractScript(contractName, artifactPath, strategy)
+			content = generateContractScript(contractName, artifactPath, strategy, contractABI, abiParser)
 		}
 
 		// Write script file
@@ -183,8 +198,6 @@ Examples:
 		return nil
 	},
 }
-
-
 
 func init() {
 	// Add flags to genDeployCmd
@@ -211,7 +224,6 @@ func extractContractName(artifactPath string) string {
 	// Otherwise, assume it's just the contract name
 	return artifactPath
 }
-
 
 // generateLibraryScript creates a library deployment script
 func generateLibraryScript(libraryName string, artifactPath string) string {
@@ -243,13 +255,33 @@ contract Deploy%s is TrebScript {
 }
 
 // generateContractScript creates a contract deployment script
-func generateContractScript(contractName string, artifactPath string, strategy contracts.DeployStrategy) string {
+func generateContractScript(contractName string, artifactPath string, strategy contracts.DeployStrategy, contractABI *abi.ContractABI, abiParser *abi.Parser) string {
 	strategyMethod := "create3"
 	if strategy == contracts.StrategyCreate2 {
 		strategyMethod = "create2"
 	}
 
-	return fmt.Sprintf(`// SPDX-License-Identifier: MIT
+	// Generate constructor args if needed
+	constructorVars := ""
+	constructorEncode := ""
+	hasConstructor := false
+	if contractABI != nil && contractABI.HasConstructor && len(contractABI.Constructor.Inputs) > 0 {
+		hasConstructor = true
+		constructorVars, constructorEncode = abiParser.GenerateConstructorArgs(contractABI)
+	}
+
+	// Build the deploy call
+	deployCall := fmt.Sprintf(`deployer.%s("%s")
+            .setLabel(vm.envOr("LABEL", string("")))
+            .deploy`, strategyMethod, artifactPath)
+
+	if hasConstructor {
+		deployCall += "(_getConstructorArgs());"
+	} else {
+		deployCall += "();"
+	}
+
+	script := fmt.Sprintf(`// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import {TrebScript} from "treb-sol/src/TrebScript.sol";
@@ -271,27 +303,36 @@ contract Deploy%s is TrebScript {
         );
 
         // Deploy %s
-        deployer.%s("%s")
-            .setLabel(vm.envOr("LABEL", string("")))
-            .deploy(_getConstructorArgs());
-    }
+        %s
+    }`, contractName, contractName, deployCall)
 
+	// Add constructor args function if needed
+	if hasConstructor {
+		script += fmt.Sprintf(`
+
+    /// @notice Get constructor arguments
     function _getConstructorArgs() internal pure returns (bytes memory) {
-        // TODO: Update constructor arguments as needed
-        return "";
-    }
+        // TODO: Update these constructor arguments
+%s
+        %s
+    }`, constructorVars, constructorEncode)
+	}
+
+	script += `
 }
-`, contractName, contractName, strategyMethod, artifactPath)
+`
+
+	return script
 }
 
 // generateProxyScript creates a proxy deployment script
-func generateProxyScript(implName string, implArtifact string, proxyName string, proxyPath string, proxyArtifact string, strategy contracts.DeployStrategy) string {
+func generateProxyScript(implName string, implArtifact string, proxyName string, proxyPath string, proxyArtifact string, strategy contracts.DeployStrategy, initMethod *abi.Method, abiParser *abi.Parser) string {
 	strategyMethod := "create3"
 	if strategy == contracts.StrategyCreate2 {
 		strategyMethod = "create2"
 	}
 
-	return fmt.Sprintf(`// SPDX-License-Identifier: MIT
+	template := `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import {TrebScript} from "treb-sol/src/TrebScript.sol";
@@ -340,11 +381,26 @@ contract Deploy%sProxy is TrebScript {
         return abi.encode(implementation, initData);
     }
 
-    function _getInitializerData() internal pure returns (bytes memory) {
-        // TODO: Update with initializer parameters
-        // Example: return abi.encodeWithSignature("initialize(address)", owner);
-        return "";
+    function _getInitializerData() internal pure returns (bytes memory) {%s
     }
 }
-`, proxyName, proxyPath, implName, strategyMethod, implArtifact, strategyMethod, proxyArtifact, implName)
+`
+
+	// Generate initializer content
+	initializerContent := ""
+	if initMethod != nil && len(initMethod.Inputs) > 0 {
+		// Generate initializer variables and encode call
+		initVars, initEncode := abiParser.GenerateInitializerArgs(initMethod)
+		initializerContent = fmt.Sprintf(`
+        // TODO: Update these initializer arguments
+%s
+        %s`, initVars, initEncode)
+	} else {
+		initializerContent = `
+        // TODO: Update with initializer parameters
+        // Example: return abi.encodeWithSignature("initialize(address)", owner);
+        return "";`
+	}
+
+	return fmt.Sprintf(template, proxyName, proxyPath, implName, strategyMethod, implArtifact, strategyMethod, proxyArtifact, implName, initializerContent)
 }
