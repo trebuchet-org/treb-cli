@@ -160,7 +160,7 @@ func (r *ScriptRunner) Run(config *RunConfig) (*RunResult, error) {
 	}
 
 	// Display deployment banner
-	display.PrintDeploymentBanner(filepath.Base(scriptContract.Path), config.Network, config.Namespace, config.DryRun)
+	display.PrintDeploymentBanner(filepath.Base(scriptContract.Path), config.Network, config.Namespace, config.DryRun, config.EnvVars)
 
 	// Create script executor
 	scriptExecutor := executor.NewExecutor(config.WorkDir, networkInfo)
@@ -188,6 +188,7 @@ func (r *ScriptRunner) Run(config *RunConfig) (*RunResult, error) {
 	}
 
 	if !result.Success {
+		display.HandleScriptError(result, r.indexer)
 		return &RunResult{Success: false}, nil
 	}
 

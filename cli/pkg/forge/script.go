@@ -218,6 +218,11 @@ func (f *Forge) buildArgs(opts ScriptOptions) []string {
 		args = append(args, "--mnemonic-derivation-paths", strings.Join(opts.DerivationPaths, ","))
 	}
 
+	// Libraries for linking
+	for _, lib := range opts.Libraries {
+		args = append(args, "--libraries", lib)
+	}
+
 	// JSON output
 	if opts.JSON {
 		args = append(args, "--json")

@@ -118,7 +118,6 @@ Examples:
 		}
 
 		if !result.Success {
-			display.PrintErrorMessage("Script execution failed")
 			os.Exit(1)
 		}
 
@@ -141,7 +140,7 @@ func init() {
 	runCmd.Flags().String("namespace", "", "Namespace to use (defaults to current context namespace) [also sets foundry profile]")
 
 	// Environment variables flag
-	runCmd.Flags().StringSlice("env", []string{}, "Set environment variables for the script (format: KEY=VALUE, can be used multiple times)")
+	runCmd.Flags().StringSliceP("env", "e", []string{}, "Set environment variables for the script (format: KEY=VALUE, can be used multiple times)")
 
 	// Dry run flag
 	runCmd.Flags().Bool("dry-run", false, "Perform a dry run without broadcasting transactions")

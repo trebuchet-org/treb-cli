@@ -20,9 +20,6 @@ sepolia = { key = "${ETHERSCAN_API_KEY}" }
 celo-alfajores = { key = "${ETHERSCAN_API_KEY}", chain = 44787 }
 celo = { key = "${ETHERSCAN_API_KEY}", chain = 42220 }
 
-[profile.default.treb]
-library_deployer =  "local"
-
 [profile.default.treb.senders.anvil]
 type = "private_key" # avil user 0
 private_key = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
@@ -45,6 +42,7 @@ signer = "local"
 type = "ledger"
 address = "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
 derivation_path = "m/44'/60'/0'/0/0"
+
 
 
 

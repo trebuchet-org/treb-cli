@@ -123,7 +123,21 @@ func (u *ScriptExecutionUpdater) createDeploymentFromRecord(
 	timestamp time.Time,
 ) (*types.Deployment, error) {
 	// Extract contract info from artifact and deployment record
-	contractName := record.Contract.Name
+	var contractName string
+	if record.Contract != nil {
+		contractName = record.Contract.Name
+	} else if record.Deployment != nil && record.Deployment.Artifact != "" {
+		// Fallback: try to extract contract name from artifact path
+		// Format is usually "path/to/Contract.sol:ContractName"
+		parts := strings.Split(record.Deployment.Artifact, ":")
+		if len(parts) == 2 {
+			contractName = parts[1]
+		} else {
+			return nil, fmt.Errorf("deployment record has nil Contract field and cannot extract name from artifact: %s", record.Deployment.Artifact)
+		}
+	} else {
+		return nil, fmt.Errorf("deployment record has nil Contract field and no artifact information for address %s", record.Address)
+	}
 
 	// Determine deployment type
 	deploymentType := types.SingletonDeployment

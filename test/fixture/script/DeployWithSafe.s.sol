@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {TrebScript} from "treb-sol/TrebScript.sol";
-import {Senders} from "treb-sol/internal/sender/Senders.sol";
-import {Deployer} from "treb-sol/internal/sender/Deployer.sol";
+import {TrebScript} from "treb-sol/src/TrebScript.sol";
+import {Senders} from "treb-sol/src/internal/sender/Senders.sol";
+import {Deployer} from "treb-sol/src/internal/sender/Deployer.sol";
 
 import {Counter} from "../src/Counter.sol";
 import {SampleToken} from "../src/SampleToken.sol";

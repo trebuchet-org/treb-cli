@@ -379,23 +379,27 @@ func (i *Indexer) GetContractByArtifact(artifact string) *ContractInfo {
 		return contract
 	}
 
+	var contractPath string
+	var contractName string
 	// If artifact contains ":", try to find by path:name format
 	if strings.Contains(artifact, ":") {
 		parts := strings.Split(artifact, ":")
 		if len(parts) == 2 {
-			// Try with exact path:name
-			key := fmt.Sprintf("%s:%s", parts[0], parts[1])
-			if contract, exists := i.contracts[key]; exists {
-				return contract
-			}
+			contractPath = parts[0]
+			contractName = parts[1]
+		} else {
+			return nil
 		}
 	} else {
-		// TODO: BIG PROBLEM HERE WE NEED TO FIX THIS
-		contracts := i.contractNames[artifact]
-		for _, contract := range contracts {
-			if contract.Artifact != nil {
-				return contract
-			}
+		contractPath = ""
+		contractName = artifact
+	}
+
+	// TODO: BIG PROBLEM HERE WE NEED TO FIX THIS
+	contracts := i.contractNames[contractName]
+	for _, contract := range contracts {
+		if contract.Artifact != nil && (contractPath == "" || strings.Contains(contract.Path, contractPath)) {
+			return contract
 		}
 	}
 
