@@ -269,7 +269,7 @@ Examples:
 		checkError(err)
 
 		if !result.Success {
-			display.PrintErrorMessage("Script execution failed")
+			display.HandleScriptError(result, indexer)
 			os.Exit(1)
 		}
 

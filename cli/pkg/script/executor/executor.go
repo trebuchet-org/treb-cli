@@ -7,6 +7,7 @@ import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/forge"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/network"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/script/senders"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 )
@@ -51,6 +52,14 @@ func (e *Executor) Run(opts RunOptions) (*forge.ScriptResult, error) {
 		return nil, fmt.Errorf("failed to build environment: %w", err)
 	}
 
+	// Query deployed libraries from registry
+	libraries, err := e.getDeployedLibraries(opts.Namespace)
+	if err != nil {
+		// Log warning but continue - libraries are optional
+		fmt.Printf("Warning: Failed to load deployed libraries: %v\n", err)
+		libraries = []string{}
+	}
+
 	// Convert to forge options
 	forgeOpts := forge.ScriptOptions{
 		Script:          opts.Script,
@@ -66,6 +75,7 @@ func (e *Executor) Run(opts RunOptions) (*forge.ScriptResult, error) {
 		UseLedger:       senders.RequiresLedgerFlag(senderConfigs),
 		UseTrezor:       senders.RequiresTrezorFlag(senderConfigs),
 		DerivationPaths: senders.GetDerivationPaths(senderConfigs),
+		Libraries:       libraries,
 	}
 
 	// Execute the script
@@ -171,4 +181,35 @@ func (e *Executor) ExecuteRaw(script *types.ContractInfo, functionSig string, ar
 	}
 
 	return e.forge.Run(opts)
+}
+
+// getDeployedLibraries queries the registry for deployed libraries in the given network/namespace
+func (e *Executor) getDeployedLibraries(namespace string) ([]string, error) {
+	manager, err := registry.NewManager(e.projectPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create registry manager: %w", err)
+	}
+
+	// Get all deployments for the namespace
+	deployments, err := manager.GetDeploymentsByNamespace(namespace, e.network.ChainID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load deployments: %w", err)
+	}
+
+	var libraries []string
+
+	// Filter for library deployments
+	for _, deployment := range deployments {
+		// Check if this is a library deployment
+		if deployment.Type == types.LibraryDeployment {
+			// Format: "file:lib:address"
+			// Extract the artifact path to get the file:lib part
+			if deployment.Artifact.Path != "" {
+				libRef := fmt.Sprintf("%s:%s:%s", deployment.Artifact.Path, deployment.ContractName, deployment.Address)
+				libraries = append(libraries, libRef)
+			}
+		}
+	}
+
+	return libraries, nil
 }

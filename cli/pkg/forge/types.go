@@ -26,6 +26,7 @@ type ScriptOptions struct {
 	UseLedger       bool              // Use ledger
 	UseTrezor       bool              // Use trezor
 	DerivationPaths []string          // Derivation paths for hardware wallets
+	Libraries       []string          // Library addresses for linking (format: "file:lib:address")
 }
 
 // ScriptResult contains the parsed result of running a script
