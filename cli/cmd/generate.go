@@ -209,22 +209,6 @@ func init() {
 	genCmd.AddCommand(genDeployCmd)
 }
 
-// extractContractName extracts the contract/library name from an artifact path
-// e.g., "src/libs/MathUtils.sol:MathUtils" -> "MathUtils"
-// e.g., "MathUtils" -> "MathUtils"
-func extractContractName(artifactPath string) string {
-	// If it contains ":", split and take the second part
-	if strings.Contains(artifactPath, ":") {
-		parts := strings.Split(artifactPath, ":")
-		if len(parts) == 2 {
-			return parts[1]
-		}
-		return ""
-	}
-	// Otherwise, assume it's just the contract name
-	return artifactPath
-}
-
 // generateLibraryScript creates a library deployment script
 func generateLibraryScript(libraryName string, artifactPath string) string {
 	return fmt.Sprintf(`// SPDX-License-Identifier: MIT

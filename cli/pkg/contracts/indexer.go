@@ -379,8 +379,8 @@ func (i *Indexer) GetContractByArtifact(artifact string) *ContractInfo {
 		return contract
 	}
 
-	var contractPath = ""
-	var contractName = ""
+	var contractPath string
+	var contractName string
 	// If artifact contains ":", try to find by path:name format
 	if strings.Contains(artifact, ":") {
 		parts := strings.Split(artifact, ":")

@@ -50,6 +50,11 @@ make watch
 
 # Install Foundry if not present
 make install-forge
+
+# IMPORTANT: Always run before committing
+make fmt      # Format code
+make lint     # Check for linting issues
+make test     # Run all tests
 ```
 
 ### Foundry Library (treb-sol)
