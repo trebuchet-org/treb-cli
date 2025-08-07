@@ -146,7 +146,7 @@ func handleMissingLibraries(missingLibs []MissingLibrary) {
 
 			fmt.Printf("\n    To deploy the required libraries:\n")
 			for _, reqLib := range lib.RequiredLibraries {
-				fmt.Printf("      1. Generate script: %streb gen library %s%s\n", ColorCyan, reqLib, ColorReset)
+				fmt.Printf("      1. Generate script: %streb gen deploy %s%s\n", ColorCyan, reqLib, ColorReset)
 			}
 			fmt.Printf("      2. Deploy: %streb run <library-deploy-script>%s\n", ColorCyan, ColorReset)
 		} else {

@@ -387,10 +387,6 @@ func (i *Indexer) GetContractByArtifact(artifact string) *ContractInfo {
 		if len(parts) == 2 {
 			contractPath = parts[0]
 			contractName = parts[1]
-			// Try with exact path:name
-			if contract, exists := i.contracts[artifact]; exists {
-				return contract
-			}
 		} else {
 			return nil
 		}
