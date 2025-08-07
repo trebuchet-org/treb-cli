@@ -1,0 +1,6 @@
+group: Simple Test Protocol
+components:
+  Counter:
+    script: CounterScript
+    env:
+      TEST_VAR: "test"

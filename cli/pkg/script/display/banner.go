@@ -6,7 +6,7 @@ import (
 )
 
 // PrintDeploymentBanner prints a banner for deployment operations
-func PrintDeploymentBanner(scriptName, network, namespace string, dryRun bool, envVars []string) {
+func PrintDeploymentBanner(scriptName, network, namespace string, dryRun bool, envVars map[string]string) {
 	fmt.Println()
 	fmt.Printf("%s🚀 Running Deployment Script%s\n", ColorBold, ColorReset)
 	fmt.Printf("%s%s%s\n", ColorGray, strings.Repeat("─", 50), ColorReset)
@@ -23,16 +23,13 @@ func PrintDeploymentBanner(scriptName, network, namespace string, dryRun bool, e
 	// Display environment variables if any
 	if len(envVars) > 0 {
 		fmt.Printf("  Env Vars:  ")
-		for i, env := range envVars {
+		var i = 0
+		for key, value := range envVars {
 			if i > 0 {
 				fmt.Printf("             ")
 			}
-			parts := strings.SplitN(env, "=", 2)
-			if len(parts) == 2 {
-				fmt.Printf("%s%s%s=%s%s%s\n", ColorYellow, parts[0], ColorReset, ColorGreen, parts[1], ColorReset)
-			} else {
-				fmt.Printf("%s%s%s\n", ColorGray, env, ColorReset)
-			}
+			fmt.Printf("%s%s%s=%s%s%s\n", ColorYellow, key, ColorReset, ColorGreen, value, ColorReset)
+			i++
 		}
 	}
 

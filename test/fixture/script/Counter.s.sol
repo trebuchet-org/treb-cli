@@ -9,6 +9,9 @@ contract CounterScript is Script {
 
     function setUp() public {}
 
+    /**
+     * @custom:senders anvil,local
+     */
     function run() public {
         vm.startBroadcast();
 
