@@ -253,7 +253,7 @@ Examples:
 			dryRun = true
 		}
 
-		display.PrintDeploymentBanner(filepath.Base(scriptContract.Path), network, namespace, dryRun)
+		display.PrintDeploymentBanner(filepath.Base(scriptContract.Path), network, namespace, dryRun, envVars)
 
 		opts := executor.RunOptions{
 			Script:    scriptContract,
@@ -343,7 +343,7 @@ func init() {
 	runCmd.Flags().String("namespace", "", "Namespace to use (defaults to current context namespace)")
 
 	// Environment variables flag
-	runCmd.Flags().StringSlice("env", []string{}, "Set environment variables for the script (format: KEY=VALUE, can be used multiple times)")
+	runCmd.Flags().StringSliceP("env", "e", []string{}, "Set environment variables for the script (format: KEY=VALUE, can be used multiple times)")
 
 	// Dry run flag
 	runCmd.Flags().Bool("dry-run", false, "Perform a dry run without broadcasting transactions")

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
@@ -15,131 +16,55 @@ import (
 // genCmd represents the gen command
 var genCmd = &cobra.Command{
 	Use:   "gen",
-	Short: "Generate example deployment scripts",
-	Long: `Generate example deployment scripts that work with treb's new architecture.
+	Short: "Generate deployment scripts",
+	Long: `Generate deployment scripts for contracts and libraries.
 
-This command creates template scripts that demonstrate how to use treb-sol's
-base contracts for deployments. The generated scripts are starting points
-that you can customize for your specific deployment needs.`,
-}
-
-var genExampleCmd = &cobra.Command{
-	Use:   "example [name]",
-	Short: "Generate an example deployment script",
-	Long: `Generate an example deployment script that demonstrates best practices.
-
-Examples:
-  treb gen example                    # Generate Deploy.s.sol
-  treb gen example MyDeploy          # Generate MyDeploy.s.sol
-  treb gen example deploy/Token      # Generate script/deploy/Token.s.sol`,
-	Args: cobra.MaximumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		scriptName := "Deploy"
-		if len(args) > 0 {
-			scriptName = args[0]
-		}
-
-		// Determine script path
-		scriptPath := filepath.Join("script", scriptName+".s.sol")
-
-		// Ensure script directory exists
-		scriptDir := filepath.Dir(scriptPath)
-		if err := os.MkdirAll(scriptDir, 0755); err != nil {
-			return fmt.Errorf("failed to create script directory: %w", err)
-		}
-
-		// Check if script already exists
-		if _, err := os.Stat(scriptPath); err == nil {
-			return fmt.Errorf("script already exists: %s", scriptPath)
-		}
-
-		// Generate example script
-		content := generateExampleScript(filepath.Base(scriptName))
-
-		// Write script file
-		if err := os.WriteFile(scriptPath, []byte(content), 0644); err != nil {
-			return fmt.Errorf("failed to write script: %w", err)
-		}
-
-		fmt.Printf("✅ Generated example script: %s\n\n", scriptPath)
-		fmt.Println("This script demonstrates:")
-		fmt.Println("  • Using treb-sol's Script base contract")
-		fmt.Println("  • Accessing configured senders")
-		fmt.Println("  • Deploying contracts with CREATE2/CREATE3")
-		fmt.Println("  • Looking up existing deployments from registry")
-		fmt.Println("  • Emitting deployment events for automatic tracking")
-		fmt.Println("\nCustomize the script for your specific needs, then run with:")
-		fmt.Printf("  treb run %s --network <network>\n", scriptPath)
-
-		return nil
-	},
-}
-
-var genLibraryCmd = &cobra.Command{
-	Use:   "library [name]",
-	Short: "Generate a library deployment script",
-	Long: `Generate a deployment script specifically for Solidity libraries.
-
-Examples:
-  treb gen library                    # Generate DeployLibrary.s.sol
-  treb gen library StringUtils       # Generate DeployStringUtils.s.sol`,
-	Args: cobra.MaximumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		libraryName := "Library"
-		if len(args) > 0 {
-			libraryName = args[0]
-		}
-
-		// Script path
-		scriptPath := filepath.Join("script", "deploy", fmt.Sprintf("Deploy%s.s.sol", libraryName))
-
-		// Ensure script directory exists
-		scriptDir := filepath.Dir(scriptPath)
-		if err := os.MkdirAll(scriptDir, 0755); err != nil {
-			return fmt.Errorf("failed to create script directory: %w", err)
-		}
-
-		// Check if script already exists
-		if _, err := os.Stat(scriptPath); err == nil {
-			return fmt.Errorf("script already exists: %s", scriptPath)
-		}
-
-		// Generate library script
-		content := generateLibraryScript(libraryName)
-
-		// Write script file
-		if err := os.WriteFile(scriptPath, []byte(content), 0644); err != nil {
-			return fmt.Errorf("failed to write script: %w", err)
-		}
-
-		fmt.Printf("✅ Generated library deployment script: %s\n\n", scriptPath)
-		fmt.Println("To deploy the library:")
-		fmt.Printf("  1. Update the script with your library's artifact path\n")
-		fmt.Printf("  2. Run: treb run %s --network <network>\n", scriptPath)
-
-		return nil
-	},
+This command creates template scripts using treb-sol's base contracts.
+The generated scripts handle both direct deployments and proxy patterns.`,
 }
 
 var genDeployCmd = &cobra.Command{
-	Use:   "deploy [contract]",
-	Short: "Generate a deployment script for a specific contract",
-	Long: `Generate a deployment script for a specific contract using the new treb-sol structure.
+	Use:   "deploy <artifact>",
+	Short: "Generate a deployment script for a contract or library",
+	Long: `Generate a deployment script for a contract or library.
 
-The generated script will:
-  • Use the artifact name (just contract name if unique, full path:name if duplicates exist)
-  • Support the LABEL environment variable for deployment labeling
-  • Include constructor argument handling if the contract has a constructor
-  • Use CREATE3 by default (can be changed with --strategy flag)
+This command automatically detects whether the artifact is a library or contract
+and generates the appropriate deployment script.
+
+For contracts, you can optionally generate a proxy deployment pattern by using
+the --proxy flag. If --proxy is specified without a value, an interactive
+proxy selection will be shown.
 
 Examples:
-  treb gen deploy                     # Interactive contract selection
-  treb gen deploy Counter             # Generate DeployCounter.s.sol
-  treb gen deploy Counter --strategy CREATE2  # Use CREATE2 instead of CREATE3`,
+  # Library deployment
+  treb gen deploy MathUtils
+  treb gen deploy src/libs/StringUtils.sol:StringUtils
+  
+  # Contract deployment
+  treb gen deploy Counter
+  treb gen deploy src/Token.sol:Token
+  
+  # Proxy deployment (interactive proxy selection)
+  treb gen deploy Counter --proxy
+  
+  # Proxy deployment with specific proxy
+  treb gen deploy Counter --proxy --proxy-contract TransparentUpgradeableProxy
+  treb gen deploy MyToken --proxy --proxy-contract src/proxies/CustomProxy.sol:CustomProxy
+  
+  # Custom script path
+  treb gen deploy Counter --script-path script/deploy/CustomDeploy.s.sol`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Parse strategy flag
+		artifactPath := args[0]
+
+		// Parse flags
+		useProxy, _ := cmd.Flags().GetBool("proxy")
+		proxyContract, _ := cmd.Flags().GetString("proxy-contract")
+		customPath, _ := cmd.Flags().GetString("script-path")
 		strategyStr, _ := cmd.Flags().GetString("strategy")
-		strategy := contracts.StrategyCreate3 // Default
+
+		// Default strategy
+		strategy := contracts.StrategyCreate3
 		if strategyStr != "" {
 			var err error
 			strategy, err = contracts.ValidateStrategy(strategyStr)
@@ -148,7 +73,7 @@ Examples:
 			}
 		}
 
-		// Create resolver context
+		// Initialize contract indexer
 		isInteractive := !rootCmd.PersistentFlags().Changed("non-interactive")
 		indexer, err := contracts.GetGlobalIndexer(".")
 		if err != nil {
@@ -156,129 +81,270 @@ Examples:
 		}
 		ctx := resolvers.NewContractsResolver(indexer, isInteractive)
 
-		var contractInfo *contracts.ContractInfo
-
-		if len(args) > 0 {
-			// Contract name provided - use resolver which handles full paths properly
-			contractName := args[0]
-			contractInfo, err = ctx.ResolveContract(contractName, types.ProjectContractsFilter())
-			if err != nil {
-				return err
-			}
-		} else {
-			// No contract specified, show interactive picker
-			indexer, err := contracts.GetGlobalIndexer(".")
-			if err != nil {
-				return fmt.Errorf("failed to initialize contract indexer: %w", err)
-			}
-
-			deployableContracts := indexer.GetDeployableContracts()
-			if len(deployableContracts) == 0 {
-				return fmt.Errorf("no deployable contracts found in project")
-			}
-
-			contractInfo, err = interactive.SelectContract(deployableContracts, "Select a contract to deploy:")
-			if err != nil {
-				return err
-			}
-		}
-
-		// Generate the deployment script
-		generator := contracts.NewGenerator(".")
-		if err := generator.GenerateDeployScript(contractInfo, strategy); err != nil {
+		// Resolve the main artifact
+		contractInfo, err := ctx.ResolveContract(artifactPath, types.AllContractsFilter())
+		if err != nil {
 			return err
 		}
 
+		// Check if it's a library
+		isLibrary := contractInfo.IsLibrary
+
+		// Validate proxy usage
+		if isLibrary && useProxy {
+			return fmt.Errorf("libraries cannot be deployed with proxies")
+		}
+
+		// Use the resolved contract name for script naming
+		contractName := contractInfo.Name
+
+		// Build full artifact path if not already specified
+		if !strings.Contains(artifactPath, ":") {
+			artifactPath = fmt.Sprintf("%s:%s", contractInfo.Path, contractInfo.Name)
+		}
+
+		// Determine script path
+		var scriptPath string
+		if customPath != "" {
+			scriptPath = customPath
+		} else {
+			if useProxy {
+				scriptPath = filepath.Join("script", "deploy", fmt.Sprintf("Deploy%sProxy.s.sol", contractName))
+			} else {
+				scriptPath = filepath.Join("script", "deploy", fmt.Sprintf("Deploy%s.s.sol", contractName))
+			}
+		}
+
+		// Ensure script directory exists
+		scriptDir := filepath.Dir(scriptPath)
+		if err := os.MkdirAll(scriptDir, 0755); err != nil {
+			return fmt.Errorf("failed to create script directory: %w", err)
+		}
+
+		// Check if script already exists
+		if _, err := os.Stat(scriptPath); err == nil {
+			if customPath == "" {
+				return fmt.Errorf("script already exists: %s\nUse --script-path flag to specify a different location", scriptPath)
+			}
+			// With custom path, we allow overwriting
+			fmt.Printf("Warning: Overwriting existing script at %s\n", scriptPath)
+		}
+
+		// Generate appropriate script
+		var content string
+		if isLibrary {
+			content = generateLibraryScript(contractName, artifactPath)
+		} else if useProxy {
+			// Handle proxy deployment
+			var proxyInfo *contracts.ContractInfo
+			if proxyContract != "" {
+				// Specific proxy provided
+				proxyInfo, err = ctx.ResolveContract(proxyContract, types.AllContractsFilter())
+				if err != nil {
+					return fmt.Errorf("failed to resolve proxy contract: %w", err)
+				}
+			} else {
+				// Interactive proxy selection
+				proxies := indexer.GetProxyContracts()
+				if len(proxies) == 0 {
+					return fmt.Errorf("no proxy contracts found in project")
+				}
+				proxyInfo, err = interactive.SelectContract(proxies, "Select a proxy contract:")
+				if err != nil {
+					return err
+				}
+			}
+
+			// Build proxy artifact path
+			proxyArtifactPath := fmt.Sprintf("%s:%s", proxyInfo.Path, proxyInfo.Name)
+
+			content = generateProxyScript(contractName, artifactPath, proxyInfo.Name, proxyInfo.Path, proxyArtifactPath, strategy)
+		} else {
+			// Regular contract deployment
+			content = generateContractScript(contractName, artifactPath, strategy)
+		}
+
+		// Write script file
+		if err := os.WriteFile(scriptPath, []byte(content), 0644); err != nil {
+			return fmt.Errorf("failed to write script: %w", err)
+		}
+
 		// Print success message
-		scriptPath := generator.GetDeployScriptPath(contractInfo)
 		fmt.Printf("\n✅ Generated deployment script: %s\n", scriptPath)
+		if isLibrary {
+			fmt.Println("\nThis library will be deployed with CREATE2 for deterministic addresses.")
+		} else if useProxy {
+			fmt.Println("\nThis script will deploy both the implementation and proxy contracts.")
+			fmt.Println("Make sure to update the initializer parameters if needed.")
+		}
 		fmt.Println("\nTo deploy, run:")
-		fmt.Printf("  treb run %s --network <network> --env LABEL=<version>\n", scriptPath)
-		fmt.Println("\nThe script will:")
-		fmt.Println("  • Deploy using the configured sender")
-		fmt.Println("  • Use the LABEL environment variable for versioning")
-		fmt.Println("  • Emit events for automatic registry tracking")
+		fmt.Printf("  treb run %s --network <network>\n", scriptPath)
 
 		return nil
 	},
 }
 
-func init() {
-	// Add strategy flag to genDeployCmd
-	genDeployCmd.Flags().String("strategy", "", "Deployment strategy: CREATE2 or CREATE3 (default: CREATE3)")
 
-	genCmd.AddCommand(genExampleCmd)
-	genCmd.AddCommand(genLibraryCmd)
+
+func init() {
+	// Add flags to genDeployCmd
+	genDeployCmd.Flags().Bool("proxy", false, "Generate proxy deployment script")
+	genDeployCmd.Flags().String("proxy-contract", "", "Specific proxy contract to use (optional)")
+	genDeployCmd.Flags().String("strategy", "", "Deployment strategy: CREATE2 or CREATE3 (default: CREATE3)")
+	genDeployCmd.Flags().String("script-path", "", "Custom path for the generated script")
+
 	genCmd.AddCommand(genDeployCmd)
 }
 
-// generateExampleScript creates an example deployment script
-func generateExampleScript(name string) string {
-	return fmt.Sprintf(`// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
-
-import {Script} from "treb-sol/src/Script.sol";
-
-contract %s is Script {
-    function run() public {
-        // Get the default sender (configured via treb profile)
-        Sender deployer = sender("default");
-        
-        // Example: Deploy a simple contract
-        address myContract = deployer.deployCreate3("MyContract.sol:MyContract");
-        
-        // Example: Deploy with constructor arguments
-        bytes memory args = abi.encode(1000, "Hello");
-        address tokenContract = deployer.deployCreate3("Token.sol:Token", args);
-        
-        // Example: Deploy with specific salt for deterministic address
-        bytes32 salt = keccak256("my-unique-salt");
-        address deterministicContract = deployer.deployCreate3(
-            salt,
-            getCode("DeterministicContract.sol:DeterministicContract"),
-            ""
-        );
-        
-        // Example: Look up existing deployment from registry
-        address existingContract = getDeployment("ExistingContract");
-        
-        // Example: Deploy proxy pattern
-        address implementation = deployer.deployCreate3("MyImplementation.sol:MyImplementation");
-        bytes memory proxyArgs = abi.encode(implementation, "");
-        address proxy = deployer.deployCreate3("ERC1967Proxy.sol:ERC1967Proxy", proxyArgs);
-        
-        // All deployments are automatically tracked via events
-        // The treb CLI will parse these events and update the registry
-    }
-    
-    // Helper function to get bytecode
-    function getCode(string memory what) internal returns (bytes memory) {
-        return vm.getCode(what);
-    }
+// extractContractName extracts the contract/library name from an artifact path
+// e.g., "src/libs/MathUtils.sol:MathUtils" -> "MathUtils"
+// e.g., "MathUtils" -> "MathUtils"
+func extractContractName(artifactPath string) string {
+	// If it contains ":", split and take the second part
+	if strings.Contains(artifactPath, ":") {
+		parts := strings.Split(artifactPath, ":")
+		if len(parts) == 2 {
+			return parts[1]
+		}
+		return ""
+	}
+	// Otherwise, assume it's just the contract name
+	return artifactPath
 }
-`, name)
-}
+
 
 // generateLibraryScript creates a library deployment script
-func generateLibraryScript(libraryName string) string {
+func generateLibraryScript(libraryName string, artifactPath string) string {
 	return fmt.Sprintf(`// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {LibraryDeployment} from "treb-sol/src/LibraryDeployment.sol";
+import {TrebScript} from "treb-sol/src/TrebScript.sol";
+import {Senders} from "treb-sol/src/internal/sender/Senders.sol";
+import {Deployer} from "treb-sol/src/internal/sender/Deployer.sol";
 
-contract Deploy%s is LibraryDeployment {
-    // LibraryDeployment automatically:
-    // 1. Reads LIBRARY_ARTIFACT_PATH from environment
-    // 2. Deploys the library using CREATE2
-    // 3. Emits deployment events for registry tracking
-    
-    // You can override the deployment logic if needed:
-    /*
-    function run() public override {
-        // Custom deployment logic
-        super.run(); // Call parent to maintain event emissions
+contract Deploy%s is TrebScript {
+    using Senders for Senders.Sender;
+    using Deployer for Senders.Sender;
+    using Deployer for Deployer.Deployment;
+
+    /**
+     * @custom:env {sender:optional} deployer
+     * @custom:senders anvil
+     */
+    function run() public broadcast {
+        Senders.Sender storage deployer = sender(
+            vm.envOr("deployer", string("anvil"))
+        );
+
+        deployer.create2("%s").deploy();
     }
-    */
 }
-`, libraryName)
+`, libraryName, artifactPath)
+}
+
+// generateContractScript creates a contract deployment script
+func generateContractScript(contractName string, artifactPath string, strategy contracts.DeployStrategy) string {
+	strategyMethod := "create3"
+	if strategy == contracts.StrategyCreate2 {
+		strategyMethod = "create2"
+	}
+
+	return fmt.Sprintf(`// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import {TrebScript} from "treb-sol/src/TrebScript.sol";
+import {Senders} from "treb-sol/src/internal/sender/Senders.sol";
+import {Deployer} from "treb-sol/src/internal/sender/Deployer.sol";
+
+contract Deploy%s is TrebScript {
+    using Senders for Senders.Sender;
+    using Deployer for Senders.Sender;
+    using Deployer for Deployer.Deployment;
+
+    /**
+     * @custom:env {sender:optional} deployer
+     * @custom:senders anvil
+     */
+    function run() public broadcast {
+        Senders.Sender storage deployer = sender(
+            vm.envOr("deployer", string("anvil"))
+        );
+
+        // Deploy %s
+        deployer.%s("%s")
+            .setLabel(vm.envOr("LABEL", string("")))
+            .deploy(_getConstructorArgs());
+    }
+
+    function _getConstructorArgs() internal pure returns (bytes memory) {
+        // TODO: Update constructor arguments as needed
+        return "";
+    }
+}
+`, contractName, contractName, strategyMethod, artifactPath)
+}
+
+// generateProxyScript creates a proxy deployment script
+func generateProxyScript(implName string, implArtifact string, proxyName string, proxyPath string, proxyArtifact string, strategy contracts.DeployStrategy) string {
+	strategyMethod := "create3"
+	if strategy == contracts.StrategyCreate2 {
+		strategyMethod = "create2"
+	}
+
+	return fmt.Sprintf(`// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import {TrebScript} from "treb-sol/src/TrebScript.sol";
+import {Senders} from "treb-sol/src/internal/sender/Senders.sol";
+import {Deployer} from "treb-sol/src/internal/sender/Deployer.sol";
+import {%s} from "%s";
+
+contract Deploy%sProxy is TrebScript {
+    using Senders for Senders.Sender;
+    using Deployer for Senders.Sender;
+    using Deployer for Deployer.Deployment;
+
+    /**
+     * @custom:env {sender:optional} deployer
+     * @custom:env {string:optional} implementationLabel
+     * @custom:env {string:optional} proxyLabel
+     * @custom:senders anvil
+     */
+    function run() public broadcast {
+        Senders.Sender storage deployer = sender(
+            vm.envOr("deployer", string("anvil"))
+        );
+
+        // Deploy implementation
+        address implementation = deployer
+            .%s("%s")
+            .setLabel(vm.envOr("implementationLabel", string("")))
+            .deploy();
+
+        // Deploy proxy
+        deployer
+            .%s("%s")
+            .setLabel(vm.envOr("proxyLabel", string("%s")))
+            .deploy(_getProxyConstructorArgs(implementation));
+    }
+
+    function _getProxyConstructorArgs(address implementation) internal pure returns (bytes memory) {
+        // TODO: Update based on proxy type
+        // For TransparentUpgradeableProxy:
+        // return abi.encode(implementation, proxyAdmin, initData);
+        
+        // For UUPS/ERC1967 proxy:
+        // return abi.encode(implementation, initData);
+        
+        bytes memory initData = _getInitializerData();
+        return abi.encode(implementation, initData);
+    }
+
+    function _getInitializerData() internal pure returns (bytes memory) {
+        // TODO: Update with initializer parameters
+        // Example: return abi.encodeWithSignature("initialize(address)", owner);
+        return "";
+    }
+}
+`, proxyName, proxyPath, implName, strategyMethod, implArtifact, strategyMethod, proxyArtifact, implName)
 }
