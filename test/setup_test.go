@@ -47,7 +47,7 @@ func setup() error {
 	wd, _ := os.Getwd()
 	projectRoot := filepath.Dir(wd)
 	trebBin = filepath.Join(projectRoot, "bin", "treb")
-	fixtureDir = filepath.Join(wd, "fixture")
+	fixtureDir = filepath.Join(wd, "testdata/project")
 
 	// Change to fixture directory and build contracts
 	if err := os.Chdir(fixtureDir); err != nil {
@@ -72,6 +72,15 @@ func setup() error {
 	}
 
 	fmt.Println("✅ Anvil node with CreateX ready")
+	
+	// Create initial snapshot for deterministic test isolation
+	fmt.Println("📸 Creating base snapshot...")
+	output, err := exec.Command("cast", "rpc", "evm_snapshot", "--rpc-url", "http://localhost:8545").CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to create base snapshot: %w\nOutput: %s", err, output)
+	}
+	fmt.Println("✅ Base snapshot created")
+	
 	return nil
 }
 

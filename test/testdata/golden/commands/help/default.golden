@@ -1,0 +1,33 @@
+Trebuchet (treb) orchestrates Foundry script execution for deterministic 
+smart contract deployments using CreateX factory contracts.
+
+Usage:
+  treb [command]
+
+Main Commands
+  gen         Generate deployment scripts
+  init        Initialize treb in a Foundry project
+  list        List deployments from registry
+  run         Run a Foundry script with treb infrastructure
+  show        Show detailed deployment information from registry
+  verify      Verify contracts on block explorers
+
+Management Commands
+  config      Manage treb local config
+  networks    List available networks from foundry.toml
+  prune       Prune registry entries that no longer exist on-chain
+  sync        Sync registry with on-chain state
+  tag         Manage deployment tags
+
+Additional Commands:
+  completion  Generate the autocompletion script for the specified shell
+  dev         Development utilities
+  help        Help about any command
+  orchestrate Execute orchestrated deployments from a YAML configuration
+  version     Show treb version
+
+Flags:
+  -h, --help              help for treb
+      --non-interactive   Disable interactive prompts
+
+Use "treb [command] --help" for more information about a command.

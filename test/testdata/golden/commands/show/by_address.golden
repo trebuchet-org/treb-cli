@@ -1,0 +1,36 @@
+Deployment: production/31337/Counter
+================================================================================
+
+Basic Information:
+  Contract: Counter
+  Address: 0x<ADDRESS>
+  Type: SINGLETON
+  Namespace: production
+  Network: anvil (chain ID: 31337)
+
+Deployment Strategy:
+  Method: CREATE3
+  Factory: 0x<ADDRESS>
+  Salt: 0x<ADDRESS>00d535a44479bfecd16a9d09
+  Entropy: production/src/Counter.sol:Counter
+  Init Code Hash: 0x<ADDRESS>4da3daa5f22f428059b00ca6
+
+Artifact Information:
+  Path: src/Counter.sol
+  Compiler: 0.8.30+commit.73712a01
+  Bytecode Hash: 0x<ADDRESS>4da3daa5f22f428059b00ca6
+  Script: script/deploy/DeployCounter.s.sol
+  Git Commit: 5bea9a7d4b614c9a6b93ff300e5328b07ab08206
+
+Verification Status:
+  Status: UNVERIFIED
+
+Transaction Information:
+  Hash: 0x<ADDRESS>8e72fa738b69e8207a3bce36
+  Status: EXECUTED
+  Sender: 0x<ADDRESS>
+  Block: 2
+
+Timestamps:
+  Created: <TIMESTAMP>
+  Updated: <TIMESTAMP>

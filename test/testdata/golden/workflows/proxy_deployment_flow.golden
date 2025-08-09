@@ -1,0 +1,47 @@
+=== Step 1: Deploy implementation ===
+
+🚀 Running Deployment Script
+──────────────────────────────────────────────────
+  Script:    DeployUpgradeableCounter.s.sol
+  Network:   anvil
+  Namespace: default
+  Mode:      LIVE
+──────────────────────────────────────────────────
+
+🔄 Transactions:
+──────────────────────────────────────────────────
+
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ create2(16 bytes)
+│  └─ [return] 0x<ADDRESS>
+├─ Create3ProxyContractCreation(newContract: 0xE38B...336F, salt: 0x16077564...)
+├─ 0xE38BB57A...::0x60806040...
+│  └─ 🚀 new UpgradeableCounter()
+│     └─ [return] 0x<ADDRESS>
+└─ ContractCreation(newContract: UpgradeableCounter: [0xD63F2d...)
+└─ Tx: 0x<ADDRESS>25afdbdf14f99e037be41bf8 | Block: 3 | Gas: 488602
+
+📦 Deployment Summary:
+──────────────────────────────────────────────────
+UpgradeableCounter at 0x<ADDRESS>
+
+
+📝 Script Logs:
+────────────────────────────────────────
+  Registry: failed to load registry from .treb/registry.json
+
+✓ Updated registry for anvil network in namespace default
+✓ Script execution completed successfully
+Warning: Could not check treb-sol version: failed to get current commit: failed to get submodule status: exit status 1
+
+
+=== Step 2: Generate proxy script ===
+Proxy generation not yet implemented
+
+
+=== Step 3: Deploy proxy ===
+Proxy deployment skipped - script generation not implemented
+
+
+=== Step 4: Show proxy details ===
+Proxy details skipped - no proxy deployed

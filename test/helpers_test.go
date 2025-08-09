@@ -56,18 +56,31 @@ func (tc *TrebContext) treb(args ...string) (string, error) {
 	allArgs := []string{"--non-interactive"}
 
 	// Only add deployment context flags for commands that support them
-	if len(args) > 0 && tc.supportsDeploymentFlags(args[0]) {
-		// Add context flags if they're set
-		if tc.network != "" {
+	if len(args) > 0 {
+		cmd := args[0]
+		
+		// Add network flag for commands that support it
+		if tc.network != "" && tc.supportsNetworkFlag(cmd) {
 			allArgs = append(allArgs, "--network", tc.network)
 		}
-		if tc.namespace != "" {
+		
+		// Add namespace flag for commands that support it
+		if tc.namespace != "" && tc.supportsNamespaceFlag(cmd) {
 			allArgs = append(allArgs, "--namespace", tc.namespace)
 		}
 	}
 
 	// Add the command arguments
 	allArgs = append(allArgs, args...)
+
+	// Check if debug mode is enabled
+	debugMode := os.Getenv("TREB_TEST_DEBUG") != ""
+
+	if debugMode {
+		tc.t.Logf("=== TREB COMMAND DEBUG ===")
+		tc.t.Logf("Command: %s %s", trebBin, strings.Join(allArgs, " "))
+		tc.t.Logf("Directory: %s", fixtureDir)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -82,6 +95,15 @@ func (tc *TrebContext) treb(args ...string) (string, error) {
 	err := cmd.Run()
 	output := stdout.String() + stderr.String()
 
+	if debugMode {
+		tc.t.Logf("Exit Code: %v", err)
+		tc.t.Logf("=== STDOUT ===")
+		tc.t.Logf("%s", stdout.String())
+		tc.t.Logf("=== STDERR ===")
+		tc.t.Logf("%s", stderr.String())
+		tc.t.Logf("=== END DEBUG ===")
+	}
+
 	if ctx.Err() == context.DeadlineExceeded {
 		return output, fmt.Errorf("command timed out after 30 seconds")
 	}
@@ -89,10 +111,21 @@ func (tc *TrebContext) treb(args ...string) (string, error) {
 	return output, err
 }
 
-// supportsDeploymentFlags returns true if the command supports network/namespace/sender flags
-func (tc *TrebContext) supportsDeploymentFlags(command string) bool {
-	deploymentCommands := []string{"run", "show", "verify", "list"}
-	for _, cmd := range deploymentCommands {
+// supportsNetworkFlag returns true if the command supports --network flag
+func (tc *TrebContext) supportsNetworkFlag(command string) bool {
+	networkCommands := []string{"run", "show", "orchestrate"}
+	for _, cmd := range networkCommands {
+		if command == cmd {
+			return true
+		}
+	}
+	return false
+}
+
+// supportsNamespaceFlag returns true if the command supports --namespace flag  
+func (tc *TrebContext) supportsNamespaceFlag(command string) bool {
+	namespaceCommands := []string{"run", "show", "verify", "list", "tag", "prune"}
+	for _, cmd := range namespaceCommands {
 		if command == cmd {
 			return true
 		}
@@ -108,6 +141,15 @@ func runTreb(t *testing.T, args ...string) (string, error) {
 	// Automatically add --non-interactive flag
 	allArgs := append([]string{"--non-interactive"}, args...)
 
+	// Check if debug mode is enabled
+	debugMode := os.Getenv("TREB_TEST_DEBUG") != ""
+
+	if debugMode {
+		t.Logf("=== TREB COMMAND DEBUG (runTreb) ===")
+		t.Logf("Command: %s %s", trebBin, strings.Join(allArgs, " "))
+		t.Logf("Directory: %s", fixtureDir)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -120,6 +162,15 @@ func runTreb(t *testing.T, args ...string) (string, error) {
 
 	err := cmd.Run()
 	output := stdout.String() + stderr.String()
+
+	if debugMode {
+		t.Logf("Exit Code: %v", err)
+		t.Logf("=== STDOUT ===")
+		t.Logf("%s", stdout.String())
+		t.Logf("=== STDERR ===")
+		t.Logf("%s", stderr.String())
+		t.Logf("=== END DEBUG ===")
+	}
 
 	if ctx.Err() == context.DeadlineExceeded {
 		return output, fmt.Errorf("command timed out after 30 seconds")

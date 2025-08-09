@@ -35,7 +35,7 @@ test:
 # Setup integration test dependencies
 setup-integration-test:
 	@echo "🔧 Setting up integration test dependencies..."
-	@cd test/fixture && \
+	@cd test/testdata/project && \
 	if [ ! -d "lib/forge-std" ]; then \
 		echo "Installing forge-std..."; \
 		forge install foundry-rs/forge-std --no-git; \
@@ -50,7 +50,7 @@ setup-integration-test:
 	fi && \
 	if [ ! -L "lib/treb-sol" ]; then \
 		echo "Creating treb-sol symlink..."; \
-		ln -sf ../../../treb-sol lib/treb-sol; \
+		ln -sf ../../../../treb-sol lib/treb-sol; \
 	fi
 	@echo "✅ Integration test dependencies ready"
 
@@ -65,6 +65,28 @@ integration-test-coverage: build setup-integration-test
 	@cd test && go test -v -timeout=10m -coverprofile=coverage.out
 	@cd test && go tool cover -html=coverage.out -o coverage.html
 	@echo "✅ Coverage report generated: test/coverage.html"
+
+# Run integration tests with golden file updates
+update-golden: build setup-integration-test
+	@echo "🔄 Updating golden files..."
+	@cd test && UPDATE_GOLDEN=true go test -v -timeout=10m -run "Golden"
+	@echo "✅ Golden files updated"
+
+# Run golden file tests only
+golden-test: build setup-integration-test
+	@echo "📸 Running golden file tests..."
+	@cd test && go test -v -timeout=10m -run "Golden"
+
+# Generate initial golden files for all commands
+generate-golden: build setup-integration-test
+	@echo "🏗️ Generating initial golden files..."
+	@cd test && UPDATE_GOLDEN=true go test -v -timeout=10m -run "Golden"
+	@echo "✅ Initial golden files generated in test/testdata/golden/"
+
+# Show golden file diff
+golden-diff:
+	@echo "📊 Showing golden file differences..."
+	@git diff --no-index test/testdata/golden/ || true
 
 # Clean build artifacts
 clean:

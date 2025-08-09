@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -111,6 +112,8 @@ func (r *Resolver) GetNetworks() []string {
 	for network := range r.foundryConfig.RpcEndpoints {
 		networks = append(networks, network)
 	}
+	// Sort networks for deterministic output
+	sort.Strings(networks)
 	return networks
 }
 
