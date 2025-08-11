@@ -57,7 +57,22 @@ func TestListCommandGolden(t *testing.T) {
 		IsolatedTest(t, tt.name, func(t *testing.T, ctx *TrebContext) {
 			if tt.setup != nil {
 				tt.setup(t, ctx)
+				
+				// Check registry right after setup
+				if _, err := os.Stat(filepath.Join(fixtureDir, ".treb", "registry.json")); err == nil {
+					t.Logf("Registry exists after setup")
+				} else {
+					t.Logf("Registry missing after setup: %v", err)
+				}
 			}
+			
+			// Check registry right before test command
+			if _, err := os.Stat(filepath.Join(fixtureDir, ".treb", "registry.json")); err == nil {
+				t.Logf("Registry exists before test command")
+			} else {
+				t.Logf("Registry missing before test command: %v", err)
+			}
+			
 			ctx.trebGolden(tt.goldenFile, tt.args...)
 		})
 	}
@@ -103,5 +118,17 @@ func setupTestDeployments(t *testing.T, ctx *TrebContext) {
 	listOut0, _ := ctx.treb("list")
 	listOut1, _ := ctx2.treb("list")
 	t.Logf("Deployments after setup:\n%s\n%s", listOut0, listOut1)
+	
+	// Also check registry files
+	if registryBytes, err := os.ReadFile(filepath.Join(fixtureDir, ".treb", "registry.json")); err == nil {
+		t.Logf("Registry file content: %s", string(registryBytes))
+	} else {
+		t.Logf("Registry file error: %v", err)
+	}
+	if deploymentsBytes, err := os.ReadFile(filepath.Join(fixtureDir, ".treb", "deployments.json")); err == nil {
+		t.Logf("Deployments file size: %d bytes", len(deploymentsBytes))
+	} else {
+		t.Logf("Deployments file error: %v", err)
+	}
 }
 

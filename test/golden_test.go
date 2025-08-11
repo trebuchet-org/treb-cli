@@ -120,6 +120,17 @@ func (n VersionNormalizer) Normalize(output string) string {
 	return output
 }
 
+// GitCommitNormalizer handles git commit hashes in deployment output
+type GitCommitNormalizer struct{}
+
+func (n GitCommitNormalizer) Normalize(output string) string {
+	// Git Commit: 6a2e70eb854f6aaeaccfd4de3b81556cd372a124
+	output = regexp.MustCompile(`Git Commit:\s*[a-f0-9]{40}`).ReplaceAllString(output, "Git Commit: <GIT_COMMIT>")
+	// Also handle short hashes
+	output = regexp.MustCompile(`Git Commit:\s*[a-f0-9]{7,39}`).ReplaceAllString(output, "Git Commit: <GIT_COMMIT>")
+	return output
+}
+
 // compareGolden compares output with golden file
 func compareGolden(t *testing.T, output string, config GoldenConfig) {
 	t.Helper()
@@ -187,6 +198,7 @@ func (tc *TrebContext) trebGolden(goldenPath string, args ...string) {
 			ColorNormalizer{},
 			TimestampNormalizer{},
 			VersionNormalizer{},
+			GitCommitNormalizer{},
 			// AddressNormalizer{},
 			// HashNormalizer{},
 			// PathNormalizer{},
@@ -209,6 +221,7 @@ func (tc *TrebContext) trebGoldenWithError(goldenPath string, args ...string) {
 			ColorNormalizer{},
 			TimestampNormalizer{},
 			VersionNormalizer{},
+			GitCommitNormalizer{},
 			// AddressNormalizer{},
 			// HashNormalizer{},
 			// PathNormalizer{},

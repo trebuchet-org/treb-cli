@@ -57,6 +57,7 @@ func TestShowCommandGolden(t *testing.T) {
 	for _, tt := range tests {
 		test := tt // capture range variable
 		IsolatedTest(t, test.name, func(t *testing.T, ctx *TrebContext) {
+			// Run setup WITHIN the test execution to ensure registry persistence
 			if test.setup != nil {
 				test.setup(t, ctx)
 			}
