@@ -48,3 +48,4 @@ func TestVersionGolden(t *testing.T) {
 		})
 	}
 }
+

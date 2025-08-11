@@ -38,6 +38,7 @@ func TestDeploymentWorkflowGolden(t *testing.T) {
 				Normalizers: []Normalizer{
 					ColorNormalizer{},
 					TimestampNormalizer{},
+					HashNormalizer{},
 				},
 			})
 		})

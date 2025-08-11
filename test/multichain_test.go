@@ -9,31 +9,33 @@ import (
 // TestMultichainDeployment deploys the same contract to two local anvil instances
 // and verifies that the addresses are deterministic and identical across chains.
 func TestMultichainDeployment(t *testing.T) {
-	ctx0 := NewTrebContext(t).WithNetwork("anvil0")
-	ctx1 := NewTrebContext(t).WithNetwork("anvil1")
+	IsolatedTest(t, "multichain_deployment", func(t *testing.T, ctx *TrebContext) {
+		ctx0 := ctx.WithNetwork("anvil-31337")
+		ctx1 := ctx.WithNetwork("anvil-31338")
 
-	// Generate deployment script once
-	if out, err := ctx0.treb("gen", "deploy", "src/Counter.sol:Counter"); err != nil {
-		t.Fatalf("failed to generate deploy script: %v\nOutput:\n%s", err, out)
-	}
+		// Generate deployment script once
+		if out, err := ctx0.treb("gen", "deploy", "src/Counter.sol:Counter"); err != nil {
+			t.Fatalf("failed to generate deploy script: %v\nOutput:\n%s", err, out)
+		}
 
-	// Deploy to anvil0
-	if out, err := ctx0.treb("run", "script/deploy/DeployCounter.s.sol"); err != nil {
-		t.Fatalf("failed to deploy to anvil0: %v\nOutput:\n%s", err, out)
-	}
+		// Deploy to anvil0
+		if out, err := ctx0.treb("run", "script/deploy/DeployCounter.s.sol"); err != nil {
+			t.Fatalf("failed to deploy to anvil0: %v\nOutput:\n%s", err, out)
+		}
 
-	// Deploy to anvil1
-	if out, err := ctx1.treb("run", "script/deploy/DeployCounter.s.sol"); err != nil {
-		t.Fatalf("failed to deploy to anvil1: %v\nOutput:\n%s", err, out)
-	}
+		// Deploy to anvil1
+		if out, err := ctx1.treb("run", "script/deploy/DeployCounter.s.sol"); err != nil {
+			t.Fatalf("failed to deploy to anvil1: %v\nOutput:\n%s", err, out)
+		}
 
-	// Extract addresses via show command and compare
-	addr0 := mustExtractAddress(t, ctx0)
-	addr1 := mustExtractAddress(t, ctx1)
+		// Extract addresses via show command and compare
+		addr0 := mustExtractAddress(t, ctx0)
+		addr1 := mustExtractAddress(t, ctx1)
 
-	if !strings.EqualFold(addr0, addr1) {
-		t.Fatalf("expected same address across networks, got %s (anvil0) vs %s (anvil1)", addr0, addr1)
-	}
+		if !strings.EqualFold(addr0, addr1) {
+			t.Fatalf("expected same address across networks, got %s (anvil-31337) vs %s (anvil-31338)", addr0, addr1)
+		}
+	})
 }
 
 func mustExtractAddress(t *testing.T, ctx *TrebContext) string {

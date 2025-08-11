@@ -11,6 +11,7 @@ out/
 test/testdata/project/lib
 test/testdata/project/script/deploy/
 test/testdata/project/.treb
+test/testdata/golden/**/*.actual
 
 # Go
 *.exe

@@ -2,20 +2,26 @@
 🚀 Running Deployment Script
 ──────────────────────────────────────────────────
   Script:    DeployCounter.s.sol
-  Network:   anvil0
+  Network:   anvil-31337
   Namespace: default
   Mode:      DRY RUN
 ──────────────────────────────────────────────────
 
 🔄 Transactions:
 ──────────────────────────────────────────────────
-No transactions executed (dry run or all deployments skipped)
 
+simulated anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ create2(16 bytes)
+│  └─ [return] 0xDaFaC68f7D2133e3CE0229fAddcd2b1C96D8Eb83
+├─ UnknownEvent(0x2feea65d)
+├─ 0xDaFaC68f...::0x60806040...
+│  └─ 🚀 new Counter()
+│     └─ [return] 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
+└─ UnknownEvent(0x4db17dd5)
 
-⚠️ Deployment Collisions Detected:
+📦 Deployment Summary:
 ──────────────────────────────────────────────────
-Counter already deployed at 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
-Note: These contracts were already deployed and deployment was skipped.
+Counter at 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
 
 
 📝 Script Logs:

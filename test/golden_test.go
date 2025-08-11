@@ -53,7 +53,9 @@ func (n AddressNormalizer) Normalize(output string) string {
 type HashNormalizer struct{}
 
 func (n HashNormalizer) Normalize(output string) string {
-	return regexp.MustCompile(`0x[a-fA-F0-9]{64}`).ReplaceAllString(output, "0x<HASH>")
+	output = regexp.MustCompile(`Tx: 0x[a-fA-F0-9]{64}`).ReplaceAllString(output, "Tx: 0x<HASH>")
+	output = regexp.MustCompile(`Hash: 0x[a-fA-F0-9]{64}`).ReplaceAllString(output, "Hash: 0x<HASH>")
+	return output
 }
 
 // BlockNumberNormalizer replaces block numbers
@@ -199,8 +201,8 @@ func (tc *TrebContext) trebGolden(goldenPath string, args ...string) {
 			TimestampNormalizer{},
 			VersionNormalizer{},
 			GitCommitNormalizer{},
+			HashNormalizer{},
 			// AddressNormalizer{},
-			// HashNormalizer{},
 			// PathNormalizer{},
 			// BlockNumberNormalizer{},
 			// GasNormalizer{},
@@ -222,6 +224,7 @@ func (tc *TrebContext) trebGoldenWithError(goldenPath string, args ...string) {
 			TimestampNormalizer{},
 			VersionNormalizer{},
 			GitCommitNormalizer{},
+			HashNormalizer{},
 			// AddressNormalizer{},
 			// HashNormalizer{},
 			// PathNormalizer{},

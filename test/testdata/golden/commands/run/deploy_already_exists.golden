@@ -2,7 +2,7 @@
 🚀 Running Deployment Script
 ──────────────────────────────────────────────────
   Script:    DeployCounter.s.sol
-  Network:   anvil0
+  Network:   anvil-31337
   Namespace: default
   Mode:      LIVE
 ──────────────────────────────────────────────────
@@ -17,11 +17,6 @@ No transactions executed (dry run or all deployments skipped)
 Counter already deployed at 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
 Note: These contracts were already deployed and deployment was skipped.
 
-
-📝 Script Logs:
-────────────────────────────────────────
-  Registry: failed to load registry from .treb/registry.json
-
-- No registry changes recorded for anvil0 network in namespace default
+- No registry changes recorded for anvil-31337 network in namespace default
 ✓ Script execution completed successfully
 Warning: Could not check treb-sol version: failed to get current commit: failed to get submodule status: exit status 1

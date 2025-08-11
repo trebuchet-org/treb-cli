@@ -78,8 +78,9 @@ func TestBasicCommands(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			output, err := runTreb(t, tt.args...)
+		tt := tt // capture loop variable
+		IsolatedTest(t, tt.name, func(t *testing.T, ctx *TrebContext) {
+			output, err := ctx.treb(tt.args...)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -96,15 +97,17 @@ func TestBasicCommands(t *testing.T) {
 
 // Test non-interactive mode
 func TestNonInteractiveMode(t *testing.T) {
-	// Test that ambiguous contract names fail in non-interactive mode
-	output, err := runTreb(t, "gen", "deploy", "Counter", "--strategy", "CREATE3", "--non-interactive")
-	assert.Error(t, err)
-	assert.Contains(t, output, "multiple contracts found matching")
+	IsolatedTest(t, "non_interactive_mode", func(t *testing.T, ctx *TrebContext) {
+		// Test that ambiguous contract names fail in non-interactive mode
+		output, err := ctx.treb("gen", "deploy", "Counter", "--strategy", "CREATE3")
+		assert.Error(t, err)
+		assert.Contains(t, output, "multiple contracts found matching")
 
-	// Test that help shows non-interactive flag
-	output, err = runTreb(t, "--help")
-	assert.NoError(t, err)
-	assert.Contains(t, output, "non-interactive")
+		// Test that help shows non-interactive flag
+		output, err = ctx.treb("--help")
+		assert.NoError(t, err)
+		assert.Contains(t, output, "non-interactive")
+	})
 }
 
 // Test command structure
@@ -112,17 +115,18 @@ func TestCommandStructure(t *testing.T) {
 	commands := []string{"run", "gen", "show", "verify", "list", "init", "version", "sync", "tag"}
 
 	for _, cmd := range commands {
-		t.Run(fmt.Sprintf("%s command exists", cmd), func(t *testing.T) {
+		cmd := cmd // capture loop variable
+		IsolatedTest(t, fmt.Sprintf("%s_command_exists", cmd), func(t *testing.T, ctx *TrebContext) {
 			// Some commands may error without args, but --help should work
 			// or they should at least be recognized commands
-			output, _ := runTreb(t, cmd, "--help")
+			output, _ := ctx.treb(cmd, "--help")
 			assert.NotContains(t, output, "unknown command")
 		})
 	}
 
 	// Test gen subcommands
-	t.Run("gen has deploy subcommand", func(t *testing.T) {
-		output, _ := runTreb(t, "gen", "--help")
+	IsolatedTest(t, "gen_has_deploy_subcommand", func(t *testing.T, ctx *TrebContext) {
+		output, _ := ctx.treb("gen", "--help")
 		assert.Contains(t, output, "deploy")
 	})
 }

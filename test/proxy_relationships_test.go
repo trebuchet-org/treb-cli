@@ -17,58 +17,56 @@ func TestProxyDeploymentRelationships(t *testing.T) {
 	}
 
 	t.Run("deploy_proxy_using_script", func(t *testing.T) {
-		// Clean slate
-		cleanupGeneratedFiles(t)
+		IsolatedTest(t, "deploy_proxy_using_script", func(t *testing.T, ctx *TrebContext) {
+			// Deploy using the DeployUCProxy script which deploys an upgradeable proxy
+			output, err := ctx.treb("run", "script/DeployUCProxy.s.sol", "--env", "deployer=anvil", "--env", "label=proxy-test")
+			require.NoError(t, err)
 
-		// Deploy using the DeployUCProxy script which deploys an upgradeable proxy
-		output, err := runScriptDebug(t, "script/DeployUCProxy.s.sol", "deployer=anvil", "label=proxy-test")
-		require.NoError(t, err)
+			// Should have deployed contracts
+			assert.Contains(t, output, "Deployment Summary:")
+			assert.Contains(t, output, "UpgradeableCounter")
+			assert.Contains(t, output, "ERC1967Proxy[UpgradeableCounter]")
 
-		// Should have deployed contracts
-		assert.Contains(t, output, "Deployment Summary:")
-		assert.Contains(t, output, "UpgradeableCounter")
-		assert.Contains(t, output, "ERC1967Proxy[UpgradeableCounter]")
+			// The output should show the proxy deployment with its implementation
+			// Look for either the proxy pattern in deployment summary or transaction details
+			assert.Contains(t, output, "ERC1967Proxy")
 
-		// The output should show the proxy deployment with its implementation
-		// Look for either the proxy pattern in deployment summary or transaction details
-		assert.Contains(t, output, "ERC1967Proxy")
+			// Verify list shows the deployments
+			listOutput, err := ctx.treb("list")
+			require.NoError(t, err)
 
-		// Verify list shows the deployments
-		listOutput, err := runTrebDebug(t, "list")
-		require.NoError(t, err)
-
-		// Should show deployments
-		assert.Contains(t, listOutput, "31337")                    // Chain ID
-		assert.Contains(t, strings.ToLower(listOutput), "default") // Namespace (might be uppercase)
+			// Should show deployments
+			assert.Contains(t, listOutput, "31337")                    // Chain ID
+			assert.Contains(t, strings.ToLower(listOutput), "default") // Namespace (might be uppercase)
+		})
 	})
 
 	t.Run("list_shows_deployments", func(t *testing.T) {
-		// Deploy something first
-		cleanupGeneratedFiles(t)
+		IsolatedTest(t, "list_shows_deployments", func(t *testing.T, ctx *TrebContext) {
+			_, err := ctx.treb("run", "script/DeployWithTreb.s.sol", "--env", "deployer=anvil", "--env", "COUNTER_LABEL=list-show-test", "--env", "TOKEN_LABEL=list-show-test")
+			require.NoError(t, err)
 
-		_, err := runScriptDebug(t, "script/DeployWithTreb.s.sol", "deployer=anvil", "COUNTER_LABEL=list-show-test", "TOKEN_LABEL=list-show-test")
-		require.NoError(t, err)
+			// Run list command
+			output, err := ctx.treb("list")
+			require.NoError(t, err)
 
-		// Run list command
-		output, err := runTrebDebug(t, "list")
-		require.NoError(t, err)
+			outputStr := string(output)
+			t.Logf("List output:\n%s", outputStr)
 
-		outputStr := string(output)
-		t.Logf("List output:\n%s", outputStr)
+			// Verify we see deployments
+			assert.Contains(t, outputStr, "31337")
+			assert.Contains(t, strings.ToLower(outputStr), "default")
 
-		// Verify we see deployments
-		assert.Contains(t, outputStr, "31337")
-		assert.Contains(t, strings.ToLower(outputStr), "default")
+			// Test list with chain filter
+			output, err = ctx.treb("list", "--chain", "31337")
+			require.NoError(t, err)
+			assert.Contains(t, string(output), "31337")
 
-		// Test list with chain filter
-		output, err = runTrebDebug(t, "list", "--chain", "31337")
-		require.NoError(t, err)
-		assert.Contains(t, string(output), "31337")
-
-		// Test list with namespace filter
-		output, err = runTrebDebug(t, "list", "--namespace", "default")
-		require.NoError(t, err)
-		assert.Contains(t, strings.ToLower(string(output)), "default")
+			// Test list with namespace filter
+			output, err = ctx.treb("list", "--namespace", "default")
+			require.NoError(t, err)
+			assert.Contains(t, strings.ToLower(string(output)), "default")
+		})
 	})
 }
 

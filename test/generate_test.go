@@ -11,11 +11,6 @@ import (
 
 // Test contract generation
 func TestGenerateCommands(t *testing.T) {
-	// Cleanup before each test
-	t.Run("setup", func(t *testing.T) {
-		cleanupGeneratedFiles(t)
-	})
-
 	tests := []struct {
 		name        string
 		args        []string
@@ -38,7 +33,7 @@ func TestGenerateCommands(t *testing.T) {
 		},
 		{
 			name:        "ambiguous contract name",
-			args:        []string{"gen", "deploy", "Counter", "--strategy", "CREATE3", "--non-interactive"},
+			args:        []string{"gen", "deploy", "Counter", "--strategy", "CREATE3"},
 			wantErr:     true,
 			errContains: "multiple contracts found matching",
 		},
@@ -63,11 +58,9 @@ func TestGenerateCommands(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Clean before each test
-			cleanupGeneratedFiles(t)
-
-			output, err := runTreb(t, tt.args...)
+		tt := tt // capture loop variable
+		IsolatedTest(t, tt.name, func(t *testing.T, ctx *TrebContext) {
+			output, err := ctx.treb(tt.args...)
 
 			if tt.wantErr {
 				require.Error(t, err, "Command should have failed")

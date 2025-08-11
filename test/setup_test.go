@@ -8,13 +8,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/trebuchet-org/treb-cli/cli/pkg/dev"
 )
 
 // Global test variables
 var (
-	trebBin    string
-	fixtureDir string
+	trebBin            string
+	fixtureDir         string
+	globalAnvilManager *AnvilManager
 )
 
 // TestMain handles setup/teardown for all tests
@@ -65,37 +65,23 @@ func setup() error {
 		return fmt.Errorf("failed to build contracts: %w", err)
 	}
 
-    // Restart two anvil nodes with CreateX for multichain tests
-    fmt.Println("🔗 Restarting anvil nodes with CreateX factory...")
-    if err := dev.RestartAnvilInstance("anvil0", "8545", "31337"); err != nil {
-        return fmt.Errorf("failed to restart anvil0: %w", err)
-    }
-    if err := dev.RestartAnvilInstance("anvil1", "9545", "31338"); err != nil {
-        return fmt.Errorf("failed to restart anvil1: %w", err)
-    }
+	// Create anvil manager and start nodes
+	t := &testing.T{} // Dummy testing.T for setup
+	globalAnvilManager = NewAnvilManager(t)
 
-    fmt.Println("✅ Anvil nodes with CreateX ready")
-    
-    // Create initial snapshots for deterministic test isolation
-    fmt.Println("📸 Creating base snapshots...")
-    if output, err := exec.Command("cast", "rpc", "evm_snapshot", "--rpc-url", "http://localhost:8545").CombinedOutput(); err != nil {
-        return fmt.Errorf("failed to create base snapshot on anvil0: %w\nOutput: %s", err, output)
-    }
-    if output, err := exec.Command("cast", "rpc", "evm_snapshot", "--rpc-url", "http://localhost:9545").CombinedOutput(); err != nil {
-        return fmt.Errorf("failed to create base snapshot on anvil1: %w\nOutput: %s", err, output)
-    }
-    fmt.Println("✅ Base snapshots created")
-	
+	fmt.Println("🔗 Starting anvil nodes with CreateX factory...")
+	if err := globalAnvilManager.StartAll(); err != nil {
+		return fmt.Errorf("failed to start anvil nodes: %w", err)
+	}
+	fmt.Println("✅ Anvil nodes with CreateX ready")
+
 	return nil
 }
 
 func teardown() {
 	fmt.Println("🧹 Cleaning up...")
-    // Stop anvils using our management tool
-    if err := dev.StopAnvilInstance("anvil0", "8545"); err != nil {
-        fmt.Printf("Warning: failed to stop anvil0: %v\n", err)
-    }
-    if err := dev.StopAnvilInstance("anvil1", "9545"); err != nil {
-        fmt.Printf("Warning: failed to stop anvil1: %v\n", err)
-    }
+	// Stop all anvil nodes
+	if globalAnvilManager != nil {
+		globalAnvilManager.StopAll()
+	}
 }

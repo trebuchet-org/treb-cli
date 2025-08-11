@@ -1,72 +1,72 @@
 package dev
 
 import (
-    "bytes"
-    "encoding/json"
-    "fmt"
-    "io"
-    "net/http"
-    "os"
-    "os/exec"
-    "path/filepath"
-    "strconv"
-    "strings"
-    "syscall"
-    "time"
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"syscall"
+	"time"
 
-    "github.com/fatih/color"
+	"github.com/fatih/color"
 )
 
 const (
-    // Backward-compatible defaults
-    AnvilPidFile   = "/tmp/treb-anvil-pid"
-    AnvilLogFile   = "/tmp/treb-anvil.log"
-    AnvilPort      = "8545"
-    CreateXAddress = "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed"
+	// Backward-compatible defaults
+	AnvilPidFile   = "/tmp/treb-anvil-pid"
+	AnvilLogFile   = "/tmp/treb-anvil.log"
+	AnvilPort      = "8545"
+	CreateXAddress = "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed"
 )
 
 // AnvilInstance represents a named local anvil instance
 type AnvilInstance struct {
-    Name    string
-    Port    string
-    ChainID string
-    PidFile string
-    LogFile string
+	Name    string
+	Port    string
+	ChainID string
+	PidFile string
+	LogFile string
 }
 
 // NewAnvilInstance creates a new instance descriptor with sensible defaults
 func NewAnvilInstance(name, port string) *AnvilInstance {
-    if strings.TrimSpace(name) == "" {
-        name = "anvil"
-    }
-    if strings.TrimSpace(port) == "" {
-        port = AnvilPort
-    }
-    // Keep old single-instance files for the default name to remain backward compatible
-    var pidPath string
-    var logPath string
-    if name == "anvil" && port == AnvilPort {
-        pidPath = AnvilPidFile
-        logPath = AnvilLogFile
-    } else {
-        // Use per-instance files under /tmp with the instance name
-        base := "/tmp"
-        pidPath = filepath.Join(base, fmt.Sprintf("treb-%s.pid", name))
-        logPath = filepath.Join(base, fmt.Sprintf("treb-%s.log", name))
-    }
-    return &AnvilInstance{
-        Name:    name,
-        Port:    port,
-        PidFile: pidPath,
-        LogFile: logPath,
-    }
+	if strings.TrimSpace(name) == "" {
+		name = "anvil"
+	}
+	if strings.TrimSpace(port) == "" {
+		port = AnvilPort
+	}
+	// Keep old single-instance files for the default name to remain backward compatible
+	var pidPath string
+	var logPath string
+	if name == "anvil" && port == AnvilPort {
+		pidPath = AnvilPidFile
+		logPath = AnvilLogFile
+	} else {
+		// Use per-instance files under /tmp with the instance name
+		base := "/tmp"
+		pidPath = filepath.Join(base, fmt.Sprintf("treb-%s.pid", name))
+		logPath = filepath.Join(base, fmt.Sprintf("treb-%s.log", name))
+	}
+	return &AnvilInstance{
+		Name:    name,
+		Port:    port,
+		PidFile: pidPath,
+		LogFile: logPath,
+	}
 }
 
 // WithChainID returns a copy of the instance with the provided chain ID set
 func (a *AnvilInstance) WithChainID(chainID string) *AnvilInstance {
-    a2 := *a
-    a2.ChainID = strings.TrimSpace(chainID)
-    return &a2
+	a2 := *a
+	a2.ChainID = strings.TrimSpace(chainID)
+	return &a2
 }
 
 // RPCRequest represents a JSON-RPC request
@@ -96,51 +96,51 @@ func StartAnvil() error { return StartAnvilInstance("anvil", AnvilPort, "") }
 
 // StartAnvilInstance starts a named anvil instance on the given port with CreateX deployed
 func StartAnvilInstance(name, port, chainID string) error {
-    inst := NewAnvilInstance(name, port).WithChainID(chainID)
-    if inst.isRunning() {
-        return fmt.Errorf("anvil '%s' is already running (PID file exists at %s)", inst.Name, inst.PidFile)
-    }
+	inst := NewAnvilInstance(name, port).WithChainID(chainID)
+	if inst.isRunning() {
+		return fmt.Errorf("anvil '%s' is already running (PID file exists at %s)", inst.Name, inst.PidFile)
+	}
 
-    color.New(color.FgCyan, color.Bold).Printf("🔨 Starting local anvil node '%s' on port %s...\n", inst.Name, inst.Port)
+	color.New(color.FgCyan, color.Bold).Printf("🔨 Starting local anvil node '%s' on port %s...\n", inst.Name, inst.Port)
 
-    args := []string{"--port", inst.Port, "--host", "0.0.0.0"}
-    if inst.ChainID != "" {
-        args = append(args, "--chain-id", inst.ChainID)
-    }
-    cmd := exec.Command("anvil", args...)
+	args := []string{"--port", inst.Port, "--host", "0.0.0.0"}
+	if inst.ChainID != "" {
+		args = append(args, "--chain-id", inst.ChainID)
+	}
+	cmd := exec.Command("anvil", args...)
 
-    logFile, err := os.Create(inst.LogFile)
-    if err != nil {
-        return fmt.Errorf("failed to create log file: %w", err)
-    }
-    defer logFile.Close()
+	logFile, err := os.Create(inst.LogFile)
+	if err != nil {
+		return fmt.Errorf("failed to create log file: %w", err)
+	}
+	defer logFile.Close()
 
-    cmd.Stdout = logFile
-    cmd.Stderr = logFile
+	cmd.Stdout = logFile
+	cmd.Stderr = logFile
 
-    if err := cmd.Start(); err != nil {
-        return fmt.Errorf("failed to start anvil: %w", err)
-    }
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start anvil: %w", err)
+	}
 
-    if err := inst.writePidFile(cmd.Process.Pid); err != nil {
-        _ = cmd.Process.Kill()
-        return fmt.Errorf("failed to write PID file: %w", err)
-    }
+	if err := inst.writePidFile(cmd.Process.Pid); err != nil {
+		_ = cmd.Process.Kill()
+		return fmt.Errorf("failed to write PID file: %w", err)
+	}
 
-    color.New(color.FgGreen).Printf("✅ Anvil '%s' started with PID %d\n", inst.Name, cmd.Process.Pid)
-    color.New(color.FgYellow).Printf("📋 Logs: %s\n", inst.LogFile)
-    color.New(color.FgBlue).Printf("🌐 RPC URL: http://localhost:%s\n", inst.Port)
+	color.New(color.FgGreen).Printf("✅ Anvil '%s' started with PID %d\n", inst.Name, cmd.Process.Pid)
+	color.New(color.FgYellow).Printf("📋 Logs: %s\n", inst.LogFile)
+	color.New(color.FgBlue).Printf("🌐 RPC URL: http://localhost:%s\n", inst.Port)
 
-    time.Sleep(2 * time.Second)
+	time.Sleep(200 * time.Millisecond)
 
-    if err := inst.deployCreateX(); err != nil {
-        color.New(color.FgRed).Printf("⚠️  Warning: Failed to deploy CreateX: %v\n", err)
-        color.New(color.FgYellow).Println("Deployments may fail without CreateX factory")
-    } else {
-        color.New(color.FgGreen).Printf("✅ CreateX factory deployed at %s\n", CreateXAddress)
-    }
+	if err := inst.deployCreateX(); err != nil {
+		color.New(color.FgRed).Printf("⚠️  Warning: Failed to deploy CreateX: %v\n", err)
+		color.New(color.FgYellow).Println("Deployments may fail without CreateX factory")
+	} else {
+		color.New(color.FgGreen).Printf("✅ CreateX factory deployed at %s\n", CreateXAddress)
+	}
 
-    return nil
+	return nil
 }
 
 // StopAnvil stops the default anvil instance
@@ -148,36 +148,36 @@ func StopAnvil() error { return StopAnvilInstance("anvil", AnvilPort) }
 
 // StopAnvilInstance stops a named anvil instance
 func StopAnvilInstance(name, port string) error {
-    inst := NewAnvilInstance(name, port)
-    if !inst.isRunning() {
-        color.New(color.FgYellow).Printf("Anvil '%s' is not running\n", inst.Name)
-        return nil
-    }
+	inst := NewAnvilInstance(name, port)
+	if !inst.isRunning() {
+		color.New(color.FgYellow).Printf("Anvil '%s' is not running\n", inst.Name)
+		return nil
+	}
 
-    pid, err := inst.readPidFile()
-    if err != nil {
-        return fmt.Errorf("failed to read PID file: %w", err)
-    }
+	pid, err := inst.readPidFile()
+	if err != nil {
+		return fmt.Errorf("failed to read PID file: %w", err)
+	}
 
-    color.New(color.FgCyan, color.Bold).Printf("🛑 Stopping anvil '%s' (PID %d)...\n", inst.Name, pid)
+	color.New(color.FgCyan, color.Bold).Printf("🛑 Stopping anvil '%s' (PID %d)...\n", inst.Name, pid)
 
-    process, err := os.FindProcess(pid)
-    if err != nil {
-        return fmt.Errorf("failed to find process: %w", err)
-    }
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		return fmt.Errorf("failed to find process: %w", err)
+	}
 
-    if err := process.Signal(syscall.SIGTERM); err != nil {
-        if err := process.Kill(); err != nil {
-            return fmt.Errorf("failed to kill process: %w", err)
-        }
-    }
+	if err := process.Signal(syscall.SIGTERM); err != nil {
+		if err := process.Kill(); err != nil {
+			return fmt.Errorf("failed to kill process: %w", err)
+		}
+	}
 
-    if err := os.Remove(inst.PidFile); err != nil && !os.IsNotExist(err) {
-        return fmt.Errorf("failed to remove PID file: %w", err)
-    }
+	if err := os.Remove(inst.PidFile); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to remove PID file: %w", err)
+	}
 
-    color.New(color.FgGreen).Println("✅ Anvil stopped")
-    return nil
+	color.New(color.FgGreen).Println("✅ Anvil stopped")
+	return nil
 }
 
 // RestartAnvil restarts the default anvil instance
@@ -185,16 +185,16 @@ func RestartAnvil() error { return RestartAnvilInstance("anvil", AnvilPort, "") 
 
 // RestartAnvilInstance restarts a named anvil instance
 func RestartAnvilInstance(name, port, chainID string) error {
-    inst := NewAnvilInstance(name, port).WithChainID(chainID)
-    color.New(color.FgCyan, color.Bold).Printf("🔄 Restarting anvil '%s'...\n", inst.Name)
+	inst := NewAnvilInstance(name, port).WithChainID(chainID)
+	color.New(color.FgCyan, color.Bold).Printf("🔄 Restarting anvil '%s'...\n", inst.Name)
 
-    if inst.isRunning() {
-        if err := StopAnvilInstance(inst.Name, inst.Port); err != nil {
-            return fmt.Errorf("failed to stop anvil: %w", err)
-        }
-        time.Sleep(1 * time.Second)
-    }
-    return StartAnvilInstance(inst.Name, inst.Port, inst.ChainID)
+	if inst.isRunning() {
+		if err := StopAnvilInstance(inst.Name, inst.Port); err != nil {
+			return fmt.Errorf("failed to stop anvil: %w", err)
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	return StartAnvilInstance(inst.Name, inst.Port, inst.ChainID)
 }
 
 // ShowAnvilLogs shows the default anvil logs
@@ -202,19 +202,19 @@ func ShowAnvilLogs() error { return ShowAnvilLogsInstance("anvil", AnvilPort) }
 
 // ShowAnvilLogsInstance shows logs for a named instance
 func ShowAnvilLogsInstance(name, port string) error {
-    inst := NewAnvilInstance(name, port)
-    if !inst.isRunning() {
-        color.New(color.FgYellow).Printf("Anvil '%s' is not running\n", inst.Name)
-    }
-    if _, err := os.Stat(inst.LogFile); os.IsNotExist(err) {
-        return fmt.Errorf("log file does not exist: %s", inst.LogFile)
-    }
-    cmd := exec.Command("tail", "-f", inst.LogFile)
-    cmd.Stdout = os.Stdout
-    cmd.Stderr = os.Stderr
-    color.New(color.FgCyan, color.Bold).Printf("📋 Showing anvil '%s' logs (Ctrl+C to exit):\n", inst.Name)
-    color.New(color.FgHiBlack).Printf("Log file: %s\n\n", inst.LogFile)
-    return cmd.Run()
+	inst := NewAnvilInstance(name, port)
+	if !inst.isRunning() {
+		color.New(color.FgYellow).Printf("Anvil '%s' is not running\n", inst.Name)
+	}
+	if _, err := os.Stat(inst.LogFile); os.IsNotExist(err) {
+		return fmt.Errorf("log file does not exist: %s", inst.LogFile)
+	}
+	cmd := exec.Command("tail", "-f", inst.LogFile)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	color.New(color.FgCyan, color.Bold).Printf("📋 Showing anvil '%s' logs (Ctrl+C to exit):\n", inst.Name)
+	color.New(color.FgHiBlack).Printf("Log file: %s\n\n", inst.LogFile)
+	return cmd.Run()
 }
 
 // ShowAnvilStatus shows the status of the default anvil instance
@@ -222,67 +222,67 @@ func ShowAnvilStatus() error { return ShowAnvilStatusInstance("anvil", AnvilPort
 
 // ShowAnvilStatusInstance shows the status of a named anvil instance
 func ShowAnvilStatusInstance(name, port string) error {
-    inst := NewAnvilInstance(name, port)
-    running := inst.isRunning()
+	inst := NewAnvilInstance(name, port)
+	running := inst.isRunning()
 
-    color.New(color.FgCyan, color.Bold).Printf("📊 Anvil Status ('%s'):\n", inst.Name)
+	color.New(color.FgCyan, color.Bold).Printf("📊 Anvil Status ('%s'):\n", inst.Name)
 
-    if running {
-        pid, _ := inst.readPidFile()
-        color.New(color.FgGreen).Printf("Status: 🟢 Running (PID %d)\n", pid)
-        color.New(color.FgBlue).Printf("RPC URL: http://localhost:%s\n", inst.Port)
-        color.New(color.FgYellow).Printf("Log file: %s\n", inst.LogFile)
+	if running {
+		pid, _ := inst.readPidFile()
+		color.New(color.FgGreen).Printf("Status: 🟢 Running (PID %d)\n", pid)
+		color.New(color.FgBlue).Printf("RPC URL: http://localhost:%s\n", inst.Port)
+		color.New(color.FgYellow).Printf("Log file: %s\n", inst.LogFile)
 
-        if err := inst.checkRPCHealth(); err != nil {
-            color.New(color.FgRed).Printf("RPC Health: ❌ Not responding (%v)\n", err)
-        } else {
-            color.New(color.FgGreen).Println("RPC Health: ✅ Responding")
-        }
+		if err := inst.checkRPCHealth(); err != nil {
+			color.New(color.FgRed).Printf("RPC Health: ❌ Not responding (%v)\n", err)
+		} else {
+			color.New(color.FgGreen).Println("RPC Health: ✅ Responding")
+		}
 
-        if err := inst.checkCreateXDeployment(); err != nil {
-            color.New(color.FgRed).Printf("CreateX Status: ❌ Not deployed (%v)\n", err)
-        } else {
-            color.New(color.FgGreen).Printf("CreateX Status: ✅ Deployed at %s\n", CreateXAddress)
-        }
-    } else {
-        color.New(color.FgRed).Println("Status: 🔴 Not running")
-        color.New(color.FgHiBlack).Printf("PID file: %s\n", inst.PidFile)
-        color.New(color.FgHiBlack).Printf("Log file: %s\n", inst.LogFile)
-    }
+		if err := inst.checkCreateXDeployment(); err != nil {
+			color.New(color.FgRed).Printf("CreateX Status: ❌ Not deployed (%v)\n", err)
+		} else {
+			color.New(color.FgGreen).Printf("CreateX Status: ✅ Deployed at %s\n", CreateXAddress)
+		}
+	} else {
+		color.New(color.FgRed).Println("Status: 🔴 Not running")
+		color.New(color.FgHiBlack).Printf("PID file: %s\n", inst.PidFile)
+		color.New(color.FgHiBlack).Printf("Log file: %s\n", inst.LogFile)
+	}
 
-    return nil
+	return nil
 }
 
 // isRunning checks if this instance is running by checking its PID file
 func (a *AnvilInstance) isRunning() bool {
-    pid, err := a.readPidFile()
-    if err != nil {
-        return false
-    }
-    process, err := os.FindProcess(pid)
-    if err != nil {
-        return false
-    }
-    err = process.Signal(syscall.Signal(0))
-    return err == nil
+	pid, err := a.readPidFile()
+	if err != nil {
+		return false
+	}
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		return false
+	}
+	err = process.Signal(syscall.Signal(0))
+	return err == nil
 }
 
 // readPidFile reads the PID from the instance PID file
 func (a *AnvilInstance) readPidFile() (int, error) {
-    data, err := os.ReadFile(a.PidFile)
-    if err != nil {
-        return 0, err
-    }
-    pid, err := strconv.Atoi(strings.TrimSpace(string(data)))
-    if err != nil {
-        return 0, fmt.Errorf("invalid PID in file: %s", string(data))
-    }
-    return pid, nil
+	data, err := os.ReadFile(a.PidFile)
+	if err != nil {
+		return 0, err
+	}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(data)))
+	if err != nil {
+		return 0, fmt.Errorf("invalid PID in file: %s", string(data))
+	}
+	return pid, nil
 }
 
 // writePidFile writes the PID to the instance PID file
 func (a *AnvilInstance) writePidFile(pid int) error {
-    return os.WriteFile(a.PidFile, []byte(strconv.Itoa(pid)), 0644)
+	return os.WriteFile(a.PidFile, []byte(strconv.Itoa(pid)), 0644)
 }
 
 // fetchCreateXBytecode fetches the CreateX bytecode from mainnet
@@ -359,7 +359,7 @@ func (a *AnvilInstance) deployCreateX() error {
 		ID:      1,
 	}
 
-    if err := a.makeRPCCall(req); err != nil {
+	if err := a.makeRPCCall(req); err != nil {
 		return fmt.Errorf("failed to deploy CreateX: %w", err)
 	}
 
@@ -375,7 +375,7 @@ func (a *AnvilInstance) checkRPCHealth() error {
 		ID:      1,
 	}
 
-    return a.makeRPCCall(req)
+	return a.makeRPCCall(req)
 }
 
 // checkCreateXDeployment checks if CreateX is deployed
@@ -388,7 +388,7 @@ func (a *AnvilInstance) checkCreateXDeployment() error {
 	}
 
 	var resp RPCResponse
-    if err := a.makeRPCCallWithResponse(req, &resp); err != nil {
+	if err := a.makeRPCCallWithResponse(req, &resp); err != nil {
 		return err
 	}
 
@@ -411,7 +411,7 @@ func (a *AnvilInstance) checkCreateXDeployment() error {
 // makeRPCCall makes an RPC call without caring about the response
 func (a *AnvilInstance) makeRPCCall(req RPCRequest) error {
 	var resp RPCResponse
-    return a.makeRPCCallWithResponse(req, &resp)
+	return a.makeRPCCallWithResponse(req, &resp)
 }
 
 // makeRPCCallWithResponse makes an RPC call and parses the response
@@ -421,7 +421,7 @@ func (a *AnvilInstance) makeRPCCallWithResponse(req RPCRequest, resp *RPCRespons
 		return fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-    httpResp, err := http.Post(fmt.Sprintf("http://localhost:%s", a.Port), "application/json", bytes.NewBuffer(jsonData))
+	httpResp, err := http.Post(fmt.Sprintf("http://localhost:%s", a.Port), "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("failed to make HTTP request: %w", err)
 	}
