@@ -65,29 +65,37 @@ func setup() error {
 		return fmt.Errorf("failed to build contracts: %w", err)
 	}
 
-	// Restart anvil with CreateX using our management tool (ensures clean state)
-	fmt.Println("🔗 Restarting anvil node with CreateX factory...")
-	if err := dev.RestartAnvil(); err != nil {
-		return fmt.Errorf("failed to restart anvil: %w", err)
-	}
+    // Restart two anvil nodes with CreateX for multichain tests
+    fmt.Println("🔗 Restarting anvil nodes with CreateX factory...")
+    if err := dev.RestartAnvilInstance("anvil0", "8545", "31337"); err != nil {
+        return fmt.Errorf("failed to restart anvil0: %w", err)
+    }
+    if err := dev.RestartAnvilInstance("anvil1", "9545", "31338"); err != nil {
+        return fmt.Errorf("failed to restart anvil1: %w", err)
+    }
 
-	fmt.Println("✅ Anvil node with CreateX ready")
-	
-	// Create initial snapshot for deterministic test isolation
-	fmt.Println("📸 Creating base snapshot...")
-	output, err := exec.Command("cast", "rpc", "evm_snapshot", "--rpc-url", "http://localhost:8545").CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to create base snapshot: %w\nOutput: %s", err, output)
-	}
-	fmt.Println("✅ Base snapshot created")
+    fmt.Println("✅ Anvil nodes with CreateX ready")
+    
+    // Create initial snapshots for deterministic test isolation
+    fmt.Println("📸 Creating base snapshots...")
+    if output, err := exec.Command("cast", "rpc", "evm_snapshot", "--rpc-url", "http://localhost:8545").CombinedOutput(); err != nil {
+        return fmt.Errorf("failed to create base snapshot on anvil0: %w\nOutput: %s", err, output)
+    }
+    if output, err := exec.Command("cast", "rpc", "evm_snapshot", "--rpc-url", "http://localhost:9545").CombinedOutput(); err != nil {
+        return fmt.Errorf("failed to create base snapshot on anvil1: %w\nOutput: %s", err, output)
+    }
+    fmt.Println("✅ Base snapshots created")
 	
 	return nil
 }
 
 func teardown() {
 	fmt.Println("🧹 Cleaning up...")
-	// Stop anvil using our management tool
-	if err := dev.StopAnvil(); err != nil {
-		fmt.Printf("Warning: failed to stop anvil: %v\n", err)
-	}
+    // Stop anvils using our management tool
+    if err := dev.StopAnvilInstance("anvil0", "8545"); err != nil {
+        fmt.Printf("Warning: failed to stop anvil0: %v\n", err)
+    }
+    if err := dev.StopAnvilInstance("anvil1", "9545"); err != nil {
+        fmt.Printf("Warning: failed to stop anvil1: %v\n", err)
+    }
 }

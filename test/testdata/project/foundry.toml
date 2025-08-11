@@ -12,8 +12,8 @@ celo-alfajores = "https://alfajores-forno.celo-testnet.org"
 mainnet = "https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_API_KEY}"
 polygon = "https://polygon-rpc.com"
 celo = "https://forno.celo.org"
-sepolia = "https://sepolia.infura.io/v3/${INFURA_API_KEY}"
-anvil = "http://localhost:8545"
+anvil0 = "http://localhost:8545"
+anvil1 = "http://localhost:9545"
 
 [etherscan]
 sepolia = { key = "${ETHERSCAN_API_KEY}" }

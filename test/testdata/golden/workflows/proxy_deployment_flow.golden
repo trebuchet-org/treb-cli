@@ -3,7 +3,7 @@
 🚀 Running Deployment Script
 ──────────────────────────────────────────────────
   Script:    DeployUpgradeableCounter.s.sol
-  Network:   anvil
+  Network:   anvil0
   Namespace: default
   Mode:      LIVE
 ──────────────────────────────────────────────────
@@ -13,24 +13,24 @@
 
 executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
 ├─ create2(16 bytes)
-│  └─ [return] 0x<ADDRESS>
+│  └─ [return] 0xE38BB57A6D1Fb990963c7cAA4E21aa5E255f336F
 ├─ Create3ProxyContractCreation(newContract: 0xE38B...336F, salt: 0x16077564...)
 ├─ 0xE38BB57A...::0x60806040...
 │  └─ 🚀 new UpgradeableCounter()
-│     └─ [return] 0x<ADDRESS>
+│     └─ [return] 0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903
 └─ ContractCreation(newContract: UpgradeableCounter: [0xD63F2d...)
-└─ Tx: 0x<ADDRESS>25afdbdf14f99e037be41bf8 | Block: 3 | Gas: 488602
+└─ Tx: 0x34190bf8462a42656e7804db3f82008cbb10091325afdbdf14f99e037be41bf8 | Block: 3 | Gas: 488602
 
 📦 Deployment Summary:
 ──────────────────────────────────────────────────
-UpgradeableCounter at 0x<ADDRESS>
+UpgradeableCounter at 0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903
 
 
 📝 Script Logs:
 ────────────────────────────────────────
   Registry: failed to load registry from .treb/registry.json
 
-✓ Updated registry for anvil network in namespace default
+✓ Updated registry for anvil0 network in namespace default
 ✓ Script execution completed successfully
 Warning: Could not check treb-sol version: failed to get current commit: failed to get submodule status: exit status 1
 

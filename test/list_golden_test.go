@@ -87,7 +87,7 @@ func setupTestDeployments(t *testing.T, ctx *TrebContext) {
 	}
 	t.Logf("Deployed Counter in default namespace")
 
-	// Deploy another with different namespace  
+	// Deploy another with different namespace
 	ctx2 := ctx.WithNamespace("production")
 	t.Logf("Deploying Counter in production namespace")
 	output, err = ctx2.treb("run", "script/deploy/DeployCounter.s.sol", "--env", "label=prod")
@@ -98,8 +98,10 @@ func setupTestDeployments(t *testing.T, ctx *TrebContext) {
 		t.Fatalf("Expected deployment output to contain deployment information, got:\n%s", output)
 	}
 	t.Logf("Deployed Counter in production namespace")
-	
+
 	// List to verify deployments
-	listOut, _ := ctx.treb("list")
-	t.Logf("Deployments after setup:\n%s", listOut)
+	listOut0, _ := ctx.treb("list")
+	listOut1, _ := ctx2.treb("list")
+	t.Logf("Deployments after setup:\n%s\n%s", listOut0, listOut1)
 }
+

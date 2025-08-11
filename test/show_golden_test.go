@@ -1,8 +1,8 @@
 package integration_test
 
 import (
-	"testing"
 	"strings"
+	"testing"
 )
 
 func TestShowCommandGolden(t *testing.T) {
@@ -60,7 +60,7 @@ func TestShowCommandGolden(t *testing.T) {
 			if test.setup != nil {
 				test.setup(t, ctx)
 			}
-			
+
 			// For by_address test, we need to get the actual address first
 			if test.name == "show_by_address" {
 				// Get the actual address from list output
@@ -68,7 +68,7 @@ func TestShowCommandGolden(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Failed to list contracts: %v\nOutput:\n%s", err, output)
 				}
-				
+
 				// Extract first address from output
 				lines := strings.Split(output, "\n")
 				var address string
@@ -77,17 +77,17 @@ func TestShowCommandGolden(t *testing.T) {
 						// Extract address (40 hex chars after 0x)
 						idx := strings.Index(line, "0x")
 						if idx >= 0 && len(line) >= idx+42 {
-							address = line[idx:idx+42]
+							address = line[idx : idx+42]
 							break
 						}
 					}
 				}
-				
+
 				if address != "" {
 					test.args[1] = address
 				}
 			}
-			
+
 			if test.expectErr {
 				ctx.trebGoldenWithError(test.goldenFile, test.args...)
 			} else {
@@ -95,17 +95,4 @@ func TestShowCommandGolden(t *testing.T) {
 			}
 		})
 	}
-}
-
-// hasExistingDeployments checks if there are deployments in the registry
-func hasExistingDeployments(t *testing.T) bool {
-	t.Helper()
-	
-	ctx := NewTrebContext(t)
-	output, err := ctx.treb("list")
-	if err != nil {
-		return false
-	}
-	
-	return !strings.Contains(output, "No deployments found")
 }

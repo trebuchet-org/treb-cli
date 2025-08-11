@@ -38,11 +38,6 @@ func TestDeploymentWorkflowGolden(t *testing.T) {
 				Normalizers: []Normalizer{
 					ColorNormalizer{},
 					TimestampNormalizer{},
-					AddressNormalizer{},
-					HashNormalizer{},
-					PathNormalizer{},
-					BlockNumberNormalizer{},
-					GasNormalizer{},
 				},
 			})
 		})
@@ -142,37 +137,30 @@ func proxyDeploymentWorkflow(t *testing.T, ctx *TrebContext) string {
 // multiNamespaceWorkflow demonstrates working with multiple namespaces
 func multiNamespaceWorkflow(t *testing.T, ctx *TrebContext) string {
 	var output bytes.Buffer
+	ctxProd := NewTrebContext(t).WithNamespace("production")
 
 	// Deploy to default namespace
 	output.WriteString("=== Deploy to default namespace ===\n")
-	ctx1 := NewTrebContext(t).WithNamespace("default")
-	genOut, genErr := ctx1.treb("gen", "deploy", "src/Counter.sol:Counter")
-	if genErr != nil {
-		t.Fatalf("Failed to generate deployment script: %v\nOutput:\n%s", genErr, genOut)
+	out, err := ctx.treb("gen", "deploy", "src/Counter.sol:Counter")
+	if err != nil {
+		t.Fatalf("Failed to generate deployment script: %v\nOutput:\n%s", err, out)
 	}
-	out, err := ctx1.treb("run", "script/deploy/DeployCounter.s.sol", "--env", "label=default")
+	output.WriteString(out)
+	output.WriteString("\n\n")
+
+	out, err = ctx.treb("run", "script/deploy/DeployCounter.s.sol")
 	if err != nil {
 		t.Fatalf("Failed to deploy to default namespace: %v\nOutput:\n%s", err, out)
 	}
+
 	output.WriteString(out)
 	output.WriteString("\n\n")
 
 	// Deploy to default namespace with different label
-	output.WriteString("=== Deploy to default namespace with staging label ===\n")
-	ctx2 := NewTrebContext(t).WithNamespace("default")
-	out, err = ctx2.treb("run", "script/deploy/DeployCounter.s.sol", "--env", "label=staging")
+	output.WriteString("=== Deploy to production namespace ===\n")
+	out, err = ctxProd.treb("run", "script/deploy/DeployCounter.s.sol")
 	if err != nil {
 		t.Fatalf("Failed to deploy with staging label: %v\nOutput:\n%s", err, out)
-	}
-	output.WriteString(out)
-	output.WriteString("\n\n")
-
-	// Deploy to default namespace with another label
-	output.WriteString("=== Deploy to default namespace with production label ===\n")
-	ctx3 := NewTrebContext(t).WithNamespace("default")
-	out, err = ctx3.treb("run", "script/deploy/DeployCounter.s.sol", "--env", "label=production")
-	if err != nil {
-		t.Fatalf("Failed to deploy with production label: %v\nOutput:\n%s", err, out)
 	}
 	output.WriteString(out)
 	output.WriteString("\n\n")
@@ -184,7 +172,13 @@ func multiNamespaceWorkflow(t *testing.T, ctx *TrebContext) string {
 		t.Fatalf("Failed to list deployments: %v\nOutput:\n%s", err, out)
 	}
 	output.WriteString(out)
+	output.WriteString("\n\n")
+
+	out, err = ctxProd.treb("list")
+	if err != nil {
+		t.Fatalf("Failed to list deployments: %v\nOutput:\n%s", err, out)
+	}
+	output.WriteString(out)
 
 	return output.String()
 }
-

@@ -1,35 +1,35 @@
-Deployment: production/31337/Counter
+Deployment: default/31337/Counter
 ================================================================================
 
 Basic Information:
   Contract: Counter
-  Address: 0x<ADDRESS>
+  Address: 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
   Type: SINGLETON
-  Namespace: production
-  Network: anvil (chain ID: 31337)
+  Namespace: default
+  Network: anvil0 (chain ID: 31337)
 
 Deployment Strategy:
   Method: CREATE3
-  Factory: 0x<ADDRESS>
-  Salt: 0x<ADDRESS>00d535a44479bfecd16a9d09
-  Entropy: production/src/Counter.sol:Counter
-  Init Code Hash: 0x<ADDRESS>4da3daa5f22f428059b00ca6
+  Factory: 0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed
+  Salt: 0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600bc0af06a84bc65cc2a2b7f
+  Entropy: default/src/Counter.sol:Counter
+  Init Code Hash: 0x08a5436bd777e2be2f71818290bca133b07337ca4da3daa5f22f428059b00ca6
 
 Artifact Information:
   Path: src/Counter.sol
   Compiler: 0.8.30+commit.73712a01
-  Bytecode Hash: 0x<ADDRESS>4da3daa5f22f428059b00ca6
+  Bytecode Hash: 0x08a5436bd777e2be2f71818290bca133b07337ca4da3daa5f22f428059b00ca6
   Script: script/deploy/DeployCounter.s.sol
-  Git Commit: 5bea9a7d4b614c9a6b93ff300e5328b07ab08206
+  Git Commit: 6a2e70eb854f6aaeaccfd4de3b81556cd372a124
 
 Verification Status:
   Status: UNVERIFIED
 
 Transaction Information:
-  Hash: 0x<ADDRESS>8e72fa738b69e8207a3bce36
+  Hash: 0x4930d067dac0dbb3c374706d363e5b86f4c287ecc2521e6655f698a018445532
   Status: EXECUTED
-  Sender: 0x<ADDRESS>
-  Block: 2
+  Sender: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+  Block: 1
 
 Timestamps:
   Created: <TIMESTAMP>

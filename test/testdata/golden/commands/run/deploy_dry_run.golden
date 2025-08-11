@@ -2,7 +2,7 @@
 🚀 Running Deployment Script
 ──────────────────────────────────────────────────
   Script:    DeployCounter.s.sol
-  Network:   anvil
+  Network:   anvil0
   Namespace: default
   Mode:      DRY RUN
 ──────────────────────────────────────────────────
@@ -14,7 +14,7 @@ No transactions executed (dry run or all deployments skipped)
 
 ⚠️ Deployment Collisions Detected:
 ──────────────────────────────────────────────────
-Counter already deployed at 0x<ADDRESS>
+Counter already deployed at 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
 Note: These contracts were already deployed and deployment was skipped.
 
 

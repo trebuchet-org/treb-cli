@@ -17,35 +17,35 @@ type TrebContext struct {
 	t         *testing.T
 	network   string
 	namespace string
-	sender    string
 }
 
 // NewTrebContext creates a new TrebContext with default settings
 func NewTrebContext(t *testing.T) *TrebContext {
 	return &TrebContext{
 		t:         t,
-		network:   "anvil",
+        network:   "anvil0",
 		namespace: "default",
-		sender:    "anvil",
 	}
 }
 
 // WithNetwork sets the network for this context
 func (tc *TrebContext) WithNetwork(network string) *TrebContext {
-	tc.network = network
-	return tc
+	// Create a new context to avoid modifying the original
+	return &TrebContext{
+		t:         tc.t,
+		network:   network,
+		namespace: tc.namespace,
+	}
 }
 
 // WithNamespace sets the namespace for this context
 func (tc *TrebContext) WithNamespace(namespace string) *TrebContext {
-	tc.namespace = namespace
-	return tc
-}
-
-// WithSender sets the sender for this context
-func (tc *TrebContext) WithSender(sender string) *TrebContext {
-	tc.sender = sender
-	return tc
+	// Create a new context to avoid modifying the original
+	return &TrebContext{
+		t:         tc.t,
+		network:   tc.network,
+		namespace: namespace,
+	}
 }
 
 // treb runs a treb command with the context settings automatically applied
@@ -55,20 +55,33 @@ func (tc *TrebContext) treb(args ...string) (string, error) {
 	// Build the full command with context flags
 	allArgs := []string{"--non-interactive"}
 
-	// Only add deployment context flags for commands that support them
-	if len(args) > 0 {
-		cmd := args[0]
-		
-		// Add network flag for commands that support it
-		if tc.network != "" && tc.supportsNetworkFlag(cmd) {
-			allArgs = append(allArgs, "--network", tc.network)
-		}
-		
-		// Add namespace flag for commands that support it
-		if tc.namespace != "" && tc.supportsNamespaceFlag(cmd) {
-			allArgs = append(allArgs, "--namespace", tc.namespace)
-		}
-	}
+    // Only add deployment context flags for commands that support them,
+    // and only if not already explicitly provided in args
+    if len(args) > 0 {
+        cmd := args[0]
+
+        // Determine if user already passed network/namespace
+        hasNetwork := false
+        hasNamespace := false
+        for i := 0; i < len(args); i++ {
+            if args[i] == "--network" && i+1 < len(args) {
+                hasNetwork = true
+            }
+            if args[i] == "--namespace" && i+1 < len(args) {
+                hasNamespace = true
+            }
+        }
+
+        // Add network flag for commands that support it
+        if tc.network != "" && tc.supportsNetworkFlag(cmd) && !hasNetwork {
+            allArgs = append(allArgs, "--network", tc.network)
+        }
+
+        // Add namespace flag for commands that support it
+        if tc.namespace != "" && tc.supportsNamespaceFlag(cmd) && !hasNamespace {
+            allArgs = append(allArgs, "--namespace", tc.namespace)
+        }
+    }
 
 	// Add the command arguments
 	allArgs = append(allArgs, args...)
@@ -113,7 +126,7 @@ func (tc *TrebContext) treb(args ...string) (string, error) {
 
 // supportsNetworkFlag returns true if the command supports --network flag
 func (tc *TrebContext) supportsNetworkFlag(command string) bool {
-	networkCommands := []string{"run", "show", "orchestrate"}
+	networkCommands := []string{"run", "show", "orchestrate", "prune"}
 	for _, cmd := range networkCommands {
 		if command == cmd {
 			return true
@@ -122,7 +135,7 @@ func (tc *TrebContext) supportsNetworkFlag(command string) bool {
 	return false
 }
 
-// supportsNamespaceFlag returns true if the command supports --namespace flag  
+// supportsNamespaceFlag returns true if the command supports --namespace flag
 func (tc *TrebContext) supportsNamespaceFlag(command string) bool {
 	namespaceCommands := []string{"run", "show", "verify", "list", "tag", "prune"}
 	for _, cmd := range namespaceCommands {
@@ -221,7 +234,7 @@ func runTrebDebug(t *testing.T, args ...string) (string, error) {
 func runScript(t *testing.T, scriptPath string, envVars ...string) (string, error) {
 	t.Helper()
 
-	args := []string{"run", scriptPath, "--network", "anvil"}
+    args := []string{"run", scriptPath, "--network", "anvil0"}
 
 	// Add environment variables
 	for _, envVar := range envVars {

@@ -7,22 +7,37 @@ import (
 	"testing"
 )
 
+// AnvilNode represents a single anvil instance
+type AnvilNode struct {
+	Port string
+	RPC  string
+}
+
 // SnapshotManager handles EVM snapshot/revert for test isolation
 type SnapshotManager struct {
 	t              *testing.T
 	baseSnapshotID string
+	nodes          []AnvilNode
 }
 
 // baseSnapshot is the initial clean state snapshot ID (always "0x0")
 const baseSnapshot = "0x0"
 
 // NewSnapshotManager creates a new snapshot manager
-func NewSnapshotManager(t *testing.T) *SnapshotManager {
+func NewSnapshotManager(t *testing.T, nodes ...AnvilNode) *SnapshotManager {
 	t.Helper()
+	
+	// Default to single anvil on 8545 if no nodes provided
+	if len(nodes) == 0 {
+		nodes = []AnvilNode{
+			{Port: "8545", RPC: "http://localhost:8545"},
+		}
+	}
 	
 	sm := &SnapshotManager{
 		t:              t,
 		baseSnapshotID: baseSnapshot,
+		nodes:          nodes,
 	}
 	return sm
 }
@@ -31,13 +46,14 @@ func NewSnapshotManager(t *testing.T) *SnapshotManager {
 func (sm *SnapshotManager) Revert() {
 	sm.t.Helper()
 	
-	// Always revert to the base snapshot for deterministic state
-	output, err := runCommand("cast", "rpc", "evm_revert", sm.baseSnapshotID, "--rpc-url", "http://localhost:8545")
-	if err != nil {
-		sm.t.Fatalf("Failed to revert to base snapshot: %v\nOutput: %s", err, output)
+	// Revert all nodes to the base snapshot for deterministic state
+	for _, node := range sm.nodes {
+		output, err := runCommand("cast", "rpc", "evm_revert", sm.baseSnapshotID, "--rpc-url", node.RPC)
+		if err != nil {
+			sm.t.Fatalf("Failed to revert to base snapshot on %s: %v\nOutput: %s", node.RPC, err, output)
+		}
+		sm.t.Logf("Reverted %s to base snapshot: %s", node.RPC, sm.baseSnapshotID)
 	}
-	
-	sm.t.Logf("Reverted to base snapshot: %s", sm.baseSnapshotID)
 }
 
 // TestCleanup ensures clean state for each test
@@ -51,9 +67,15 @@ type TestCleanup struct {
 func NewTestCleanup(t *testing.T) *TestCleanup {
 	t.Helper()
 	
+	// Configure both anvil nodes
+	nodes := []AnvilNode{
+		{Port: "8545", RPC: "http://localhost:8545"}, // anvil0
+		{Port: "9545", RPC: "http://localhost:9545"}, // anvil1
+	}
+	
 	return &TestCleanup{
 		t:        t,
-		snapshot: NewSnapshotManager(t),
+		snapshot: NewSnapshotManager(t, nodes...),
 		cleanups: []func(){},
 	}
 }

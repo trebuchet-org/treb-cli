@@ -11,7 +11,7 @@ To deploy, run:
 🚀 Running Deployment Script
 ──────────────────────────────────────────────────
   Script:    DeployCounter.s.sol
-  Network:   anvil
+  Network:   anvil0
   Namespace: default
   Mode:      LIVE
 ──────────────────────────────────────────────────
@@ -21,24 +21,24 @@ To deploy, run:
 
 executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
 ├─ create2(16 bytes)
-│  └─ [return] 0x<ADDRESS>
+│  └─ [return] 0xDaFaC68f7D2133e3CE0229fAddcd2b1C96D8Eb83
 ├─ Create3ProxyContractCreation(newContract: 0xDaFa...Eb83, salt: 0x78714809...)
 ├─ 0xDaFaC68f...::0x60806040...
 │  └─ 🚀 new Counter()
-│     └─ [return] 0x<ADDRESS>
+│     └─ [return] 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
 └─ ContractCreation(newContract: Counter: [0x74148047D6bDf624C...)
-└─ Tx: 0x<ADDRESS>c2521e6655f698a018445532 | Block: 1 | Gas: 197581
+└─ Tx: 0x4930d067dac0dbb3c374706d363e5b86f4c287ecc2521e6655f698a018445532 | Block: 1 | Gas: 197581
 
 📦 Deployment Summary:
 ──────────────────────────────────────────────────
-Counter at 0x<ADDRESS>
+Counter at 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
 
 
 📝 Script Logs:
 ────────────────────────────────────────
   Registry: failed to load registry from .treb/registry.json
 
-✓ Updated registry for anvil network in namespace default
+✓ Updated registry for anvil0 network in namespace default
 ✓ Script execution completed successfully
 Warning: Could not check treb-sol version: failed to get current commit: failed to get submodule status: exit status 1
 
@@ -48,7 +48,7 @@ Warning: Could not check treb-sol version: failed to get current commit: failed 
 └─ ⛓ chain:       31337                         
   
   SINGLETONS
-  Counter     0x<ADDRESS>   🅔 ? 🅢 ?         <TIMESTAMP>   
+  Counter     0x74148047D6bDf624C94eFc07F60cEE7b6052FB29   🅔 ? 🅢 ?         <TIMESTAMP>   
 
 Total deployments: 1
 
@@ -59,32 +59,32 @@ Deployment: default/31337/Counter
 
 Basic Information:
   Contract: Counter
-  Address: 0x<ADDRESS>
+  Address: 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
   Type: SINGLETON
   Namespace: default
-  Network: anvil (chain ID: 31337)
+  Network: anvil0 (chain ID: 31337)
 
 Deployment Strategy:
   Method: CREATE3
-  Factory: 0x<ADDRESS>
-  Salt: 0x<ADDRESS>00bc0af06a84bc65cc2a2b7f
+  Factory: 0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed
+  Salt: 0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600bc0af06a84bc65cc2a2b7f
   Entropy: default/src/Counter.sol:Counter
-  Init Code Hash: 0x<ADDRESS>4da3daa5f22f428059b00ca6
+  Init Code Hash: 0x08a5436bd777e2be2f71818290bca133b07337ca4da3daa5f22f428059b00ca6
 
 Artifact Information:
   Path: src/Counter.sol
   Compiler: 0.8.30+commit.73712a01
-  Bytecode Hash: 0x<ADDRESS>4da3daa5f22f428059b00ca6
+  Bytecode Hash: 0x08a5436bd777e2be2f71818290bca133b07337ca4da3daa5f22f428059b00ca6
   Script: script/deploy/DeployCounter.s.sol
-  Git Commit: 5bea9a7d4b614c9a6b93ff300e5328b07ab08206
+  Git Commit: 6a2e70eb854f6aaeaccfd4de3b81556cd372a124
 
 Verification Status:
   Status: UNVERIFIED
 
 Transaction Information:
-  Hash: 0x<ADDRESS>c2521e6655f698a018445532
+  Hash: 0x4930d067dac0dbb3c374706d363e5b86f4c287ecc2521e6655f698a018445532
   Status: EXECUTED
-  Sender: 0x<ADDRESS>
+  Sender: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
   Block: 1
 
 Timestamps:

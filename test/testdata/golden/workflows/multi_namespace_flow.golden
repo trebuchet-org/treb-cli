@@ -1,12 +1,18 @@
 === Deploy to default namespace ===
 
+✅ Generated deployment script: script/deploy/DeployCounter.s.sol
+
+To deploy, run:
+  treb run script/deploy/DeployCounter.s.sol --network <network>
+
+
+
 🚀 Running Deployment Script
 ──────────────────────────────────────────────────
   Script:    DeployCounter.s.sol
-  Network:   anvil
+  Network:   anvil0
   Namespace: default
   Mode:      LIVE
-  Env Vars:  label=default
 ──────────────────────────────────────────────────
 
 🔄 Transactions:
@@ -16,7 +22,7 @@ No transactions executed (dry run or all deployments skipped)
 
 ⚠️ Deployment Collisions Detected:
 ──────────────────────────────────────────────────
-Counter already deployed at 0x<ADDRESS>
+Counter already deployed at 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
 Note: These contracts were already deployed and deployment was skipped.
 
 
@@ -24,20 +30,19 @@ Note: These contracts were already deployed and deployment was skipped.
 ────────────────────────────────────────
   Registry: failed to load registry from .treb/registry.json
 
-- No registry changes recorded for anvil network in namespace default
+- No registry changes recorded for anvil0 network in namespace default
 ✓ Script execution completed successfully
 Warning: Could not check treb-sol version: failed to get current commit: failed to get submodule status: exit status 1
 
 
-=== Deploy to default namespace with staging label ===
+=== Deploy to production namespace ===
 
 🚀 Running Deployment Script
 ──────────────────────────────────────────────────
   Script:    DeployCounter.s.sol
-  Network:   anvil
-  Namespace: default
+  Network:   anvil0
+  Namespace: production
   Mode:      LIVE
-  Env Vars:  label=staging
 ──────────────────────────────────────────────────
 
 🔄 Transactions:
@@ -47,7 +52,7 @@ No transactions executed (dry run or all deployments skipped)
 
 ⚠️ Deployment Collisions Detected:
 ──────────────────────────────────────────────────
-Counter already deployed at 0x<ADDRESS>
+Counter already deployed at 0x9526cB2eC6e5b9E38b5A6949543417F84cc878d5
 Note: These contracts were already deployed and deployment was skipped.
 
 
@@ -55,41 +60,13 @@ Note: These contracts were already deployed and deployment was skipped.
 ────────────────────────────────────────
   Registry: failed to load registry from .treb/registry.json
 
-- No registry changes recorded for anvil network in namespace default
-✓ Script execution completed successfully
-Warning: Could not check treb-sol version: failed to get current commit: failed to get submodule status: exit status 1
-
-
-=== Deploy to default namespace with production label ===
-
-🚀 Running Deployment Script
-──────────────────────────────────────────────────
-  Script:    DeployCounter.s.sol
-  Network:   anvil
-  Namespace: default
-  Mode:      LIVE
-  Env Vars:  label=production
-──────────────────────────────────────────────────
-
-🔄 Transactions:
-──────────────────────────────────────────────────
-No transactions executed (dry run or all deployments skipped)
-
-
-⚠️ Deployment Collisions Detected:
-──────────────────────────────────────────────────
-Counter already deployed at 0x<ADDRESS>
-Note: These contracts were already deployed and deployment was skipped.
-
-
-📝 Script Logs:
-────────────────────────────────────────
-  Registry: failed to load registry from .treb/registry.json
-
-- No registry changes recorded for anvil network in namespace default
+- No registry changes recorded for anvil0 network in namespace production
 ✓ Script execution completed successfully
 Warning: Could not check treb-sol version: failed to get current commit: failed to get submodule status: exit status 1
 
 
 === List all deployments across namespaces ===
+No deployments found
+
+
 No deployments found
