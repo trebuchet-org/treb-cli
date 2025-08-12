@@ -1,6 +1,7 @@
-package integration_test
+package golden
 
 import (
+	"github.com/trebuchet-org/treb-cli/test/helpers"
 	"testing"
 )
 
@@ -53,12 +54,13 @@ func TestSimpleCommandsGolden(t *testing.T) {
 
 	for _, tt := range tests {
 		test := tt // capture range variable
-		IsolatedTest(t, test.name, func(t *testing.T, ctx *TrebContext) {
+		helpers.IsolatedTest(t, test.name, func(t *testing.T, ctx *helpers.TrebContext) {
 			if test.expectErr {
-				ctx.trebGoldenWithError(test.goldenFile, test.args...)
+				TrebGoldenWithError(t, ctx, test.goldenFile, test.args...)
 			} else {
-				ctx.trebGolden(test.goldenFile, test.args...)
+				TrebGolden(t, ctx, test.goldenFile, test.args...)
 			}
 		})
 	}
 }
+

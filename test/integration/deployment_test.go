@@ -1,6 +1,7 @@
-package integration_test
+package integration
 
 import (
+	"github.com/trebuchet-org/treb-cli/test/helpers"
 	"strings"
 	"testing"
 
@@ -10,9 +11,9 @@ import (
 
 // Test full deployment flow using existing scripts
 func TestDeploymentFlow(t *testing.T) {
-	IsolatedTest(t, "deployment_flow", func(t *testing.T, ctx *TrebContext) {
+	helpers.IsolatedTest(t, "deployment_flow", func(t *testing.T, ctx *helpers.TrebContext) {
 		// Run the DeployWithTreb script with deployer=anvil
-		output, err := ctx.treb("run", "script/DeployWithTreb.s.sol", "--env", "deployer=anvil", "--env", "COUNTER_LABEL=test", "--env", "TOKEN_LABEL=test")
+		output, err := ctx.Treb("run", "script/DeployWithTreb.s.sol", "--env", "deployer=anvil", "--env", "COUNTER_LABEL=test", "--env", "TOKEN_LABEL=test")
 		require.NoError(t, err)
 
 		// Should have deployed 2 contracts - check for deployment summary
@@ -46,12 +47,12 @@ func TestDeploymentFlow(t *testing.T) {
 // Test show and list commands
 func TestShowAndList(t *testing.T) {
 	t.Run("list deployments", func(t *testing.T) {
-		IsolatedTest(t, "list_deployments", func(t *testing.T, ctx *TrebContext) {
+		helpers.IsolatedTest(t, "list_deployments", func(t *testing.T, ctx *helpers.TrebContext) {
 			// Run a deployment first to ensure we have something to list
-			_, err := ctx.treb("run", "script/DeployWithTreb.s.sol", "--env", "deployer=anvil", "--env", "COUNTER_LABEL=list-test")
+			_, err := ctx.Treb("run", "script/DeployWithTreb.s.sol", "--env", "deployer=anvil", "--env", "COUNTER_LABEL=list-test")
 			require.NoError(t, err)
 
-			output, err := ctx.treb("list")
+			output, err := ctx.Treb("list")
 			assert.NoError(t, err)
 			// Should show the deployments
 			assert.Contains(t, output, "31337")                    // Chain ID
@@ -60,13 +61,13 @@ func TestShowAndList(t *testing.T) {
 	})
 
 	t.Run("show existing deployment", func(t *testing.T) {
-		IsolatedTest(t, "show_existing_deployment", func(t *testing.T, ctx *TrebContext) {
+		helpers.IsolatedTest(t, "show_existing_deployment", func(t *testing.T, ctx *helpers.TrebContext) {
 			// Deploy using the script
-			_, err := ctx.treb("run", "script/DeployWithTreb.s.sol", "--env", "deployer=anvil", "--env", "COUNTER_LABEL=show-test", "--env", "TOKEN_LABEL=show-test")
+			_, err := ctx.Treb("run", "script/DeployWithTreb.s.sol", "--env", "deployer=anvil", "--env", "COUNTER_LABEL=show-test", "--env", "TOKEN_LABEL=show-test")
 			require.NoError(t, err)
 
 			// Get the deployment ID from list
-			listOutput, err := ctx.treb("list", "--namespace", "default", "--chain", "31337")
+			listOutput, err := ctx.Treb("list", "--namespace", "default", "--chain", "31337")
 			require.NoError(t, err)
 
 			// Extract a deployment ID (format: namespace/chainId/contractName:label)
@@ -75,7 +76,7 @@ func TestShowAndList(t *testing.T) {
 
 			// For show, we need the exact deployment ID which is hard to predict
 			// So let's just verify the command works with an invalid ID
-			output, err := ctx.treb("show", "default/31337/Counter:show-test")
+			output, err := ctx.Treb("show", "default/31337/Counter:show-test")
 			// It might error if not found, but that's ok - we're testing the command exists
 			_ = output
 			_ = err
@@ -83,17 +84,17 @@ func TestShowAndList(t *testing.T) {
 	})
 
 	t.Run("list with filters", func(t *testing.T) {
-		IsolatedTest(t, "list_with_filters", func(t *testing.T, ctx *TrebContext) {
+		helpers.IsolatedTest(t, "list_with_filters", func(t *testing.T, ctx *helpers.TrebContext) {
 			// Test list with namespace filter
-			output, err := ctx.treb("list", "--namespace", "default")
+			output, err := ctx.Treb("list", "--namespace", "default")
 			assert.NoError(t, err)
 
 			// Test list with chain filter
-			output, err = ctx.treb("list", "--chain", "31337")
+			output, err = ctx.Treb("list", "--chain", "31337")
 			assert.NoError(t, err)
 
 			// Test list with contract filter
-			output, err = ctx.treb("list", "--contract", "Counter")
+			output, err = ctx.Treb("list", "--contract", "Counter")
 			// Might not find anything if contract names aren't indexed
 			_ = err
 			_ = output
@@ -101,8 +102,8 @@ func TestShowAndList(t *testing.T) {
 	})
 
 	t.Run("show non-existent deployment", func(t *testing.T) {
-		IsolatedTest(t, "show_non_existent", func(t *testing.T, ctx *TrebContext) {
-			output, err := ctx.treb("show", "NonExistentContract")
+		helpers.IsolatedTest(t, "show_non_existent", func(t *testing.T, ctx *helpers.TrebContext) {
+			output, err := ctx.Treb("show", "NonExistentContract")
 			assert.Error(t, err)
 			assert.Contains(t, output, "no deployments found matching")
 		})
@@ -112,16 +113,16 @@ func TestShowAndList(t *testing.T) {
 // Test verify command behavior
 func TestVerifyCommand(t *testing.T) {
 	t.Run("verify non-existent contract", func(t *testing.T) {
-		IsolatedTest(t, "verify_non_existent", func(t *testing.T, ctx *TrebContext) {
-			output, err := ctx.treb("verify", "NonExistent")
+		helpers.IsolatedTest(t, "verify_non_existent", func(t *testing.T, ctx *helpers.TrebContext) {
+			output, err := ctx.Treb("verify", "NonExistent")
 			assert.Error(t, err)
 			assert.Contains(t, output, "no deployments found matching")
 		})
 	})
 
 	t.Run("verify without deployments", func(t *testing.T) {
-		IsolatedTest(t, "verify_without_deployments", func(t *testing.T, ctx *TrebContext) {
-			output, err := ctx.treb("verify", "Counter")
+		helpers.IsolatedTest(t, "verify_without_deployments", func(t *testing.T, ctx *helpers.TrebContext) {
+			output, err := ctx.Treb("verify", "Counter")
 			assert.Error(t, err)
 			assert.Contains(t, output, "no deployments found matching")
 		})

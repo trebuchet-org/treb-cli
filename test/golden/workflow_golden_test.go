@@ -1,15 +1,17 @@
-package integration_test
+package golden
 
 import (
+	"github.com/trebuchet-org/treb-cli/test/helpers"
 	"bytes"
 	"strings"
 	"testing"
+	
 )
 
 func TestDeploymentWorkflowGolden(t *testing.T) {
 	tests := []struct {
 		name       string
-		workflow   func(t *testing.T, ctx *TrebContext) string
+		workflow   func(t *testing.T, ctx *helpers.TrebContext) string
 		goldenFile string
 	}{
 		{
@@ -30,7 +32,7 @@ func TestDeploymentWorkflowGolden(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		IsolatedTest(t, tt.name, func(t *testing.T, ctx *TrebContext) {
+		helpers.IsolatedTest(t, tt.name, func(t *testing.T, ctx *helpers.TrebContext) {
 			output := tt.workflow(t, ctx)
 
 			compareGolden(t, output, GoldenConfig{
@@ -46,12 +48,12 @@ func TestDeploymentWorkflowGolden(t *testing.T) {
 }
 
 // fullDeploymentWorkflow captures a complete deployment lifecycle
-func fullDeploymentWorkflow(t *testing.T, ctx *TrebContext) string {
+func fullDeploymentWorkflow(t *testing.T, ctx *helpers.TrebContext) string {
 	var output bytes.Buffer
 
 	// Step 1: Generate deployment script
 	output.WriteString("=== Step 1: Generate deployment script ===\n")
-	out, err := ctx.treb("gen", "deploy", "src/Counter.sol:Counter")
+	out, err := ctx.Treb("gen", "deploy", "src/Counter.sol:Counter")
 	if err != nil {
 		t.Fatalf("Failed to generate: %v\n%s\n", err, out)
 	}
@@ -60,7 +62,7 @@ func fullDeploymentWorkflow(t *testing.T, ctx *TrebContext) string {
 
 	// Step 2: Run deployment
 	output.WriteString("=== Step 2: Deploy contract ===\n")
-	out, err = ctx.treb("run", "script/deploy/DeployCounter.s.sol")
+	out, err = ctx.Treb("run", "script/deploy/DeployCounter.s.sol")
 	if err != nil {
 		t.Fatalf("Failed to deploy: %v\n%s\n", err, out)
 	}
@@ -69,7 +71,7 @@ func fullDeploymentWorkflow(t *testing.T, ctx *TrebContext) string {
 
 	// Step 3: List deployments
 	output.WriteString("=== Step 3: List deployments ===\n")
-	out, err = ctx.treb("list")
+	out, err = ctx.Treb("list")
 	if err != nil {
 		t.Fatalf("Failed to list: %v\nOutput:\n%s", err, out)
 	}
@@ -78,7 +80,7 @@ func fullDeploymentWorkflow(t *testing.T, ctx *TrebContext) string {
 
 	// Step 4: Show deployment details
 	output.WriteString("=== Step 4: Show deployment details ===\n")
-	out, err = ctx.treb("show", "Counter")
+	out, err = ctx.Treb("show", "Counter")
 	if err != nil {
 		t.Fatalf("Failed to show: %v\nOutput:\n%s", err, out)
 	}
@@ -93,16 +95,16 @@ func fullDeploymentWorkflow(t *testing.T, ctx *TrebContext) string {
 }
 
 // proxyDeploymentWorkflow captures proxy deployment flow
-func proxyDeploymentWorkflow(t *testing.T, ctx *TrebContext) string {
+func proxyDeploymentWorkflow(t *testing.T, ctx *helpers.TrebContext) string {
 	var output bytes.Buffer
 
 	// Step 1: Deploy implementation
 	output.WriteString("=== Step 1: Deploy implementation ===\n")
-	genOut, genErr := ctx.treb("gen", "deploy", "src/UpgradeableCounter.sol:UpgradeableCounter")
+	genOut, genErr := ctx.Treb("gen", "deploy", "src/UpgradeableCounter.sol:UpgradeableCounter")
 	if genErr != nil {
 		t.Fatalf("Failed to generate deployment script: %v\nOutput:\n%s", genErr, genOut)
 	}
-	out, err := ctx.treb("run", "script/deploy/DeployUpgradeableCounter.s.sol")
+	out, err := ctx.Treb("run", "script/deploy/DeployUpgradeableCounter.s.sol")
 	if err != nil {
 		t.Fatalf("Failed to deploy implementation: %v\nOutput:\n%s", err, out)
 	}
@@ -111,7 +113,7 @@ func proxyDeploymentWorkflow(t *testing.T, ctx *TrebContext) string {
 
 	// Step 2: Generate proxy
 	output.WriteString("=== Step 2: Generate proxy script ===\n")
-	out, err = ctx.treb("gen", "UpgradeableCounter", "--proxy")
+	out, err = ctx.Treb("gen", "UpgradeableCounter", "--proxy")
 	// If proxy generation is not yet supported, provide fallback
 	if err != nil && strings.Contains(out, "unknown flag") {
 		out = "Proxy generation not yet implemented\n"
@@ -136,20 +138,20 @@ func proxyDeploymentWorkflow(t *testing.T, ctx *TrebContext) string {
 }
 
 // multiNamespaceWorkflow demonstrates working with multiple namespaces
-func multiNamespaceWorkflow(t *testing.T, ctx *TrebContext) string {
+func multiNamespaceWorkflow(t *testing.T, ctx *helpers.TrebContext) string {
 	var output bytes.Buffer
-	ctxProd := NewTrebContext(t).WithNamespace("production")
+	ctxProd := ctx.WithNamespace("production")
 
 	// Deploy to default namespace
 	output.WriteString("=== Deploy to default namespace ===\n")
-	out, err := ctx.treb("gen", "deploy", "src/Counter.sol:Counter")
+	out, err := ctx.Treb("gen", "deploy", "src/Counter.sol:Counter")
 	if err != nil {
 		t.Fatalf("Failed to generate deployment script: %v\nOutput:\n%s", err, out)
 	}
 	output.WriteString(out)
 	output.WriteString("\n\n")
 
-	out, err = ctx.treb("run", "script/deploy/DeployCounter.s.sol")
+	out, err = ctx.Treb("run", "script/deploy/DeployCounter.s.sol")
 	if err != nil {
 		t.Fatalf("Failed to deploy to default namespace: %v\nOutput:\n%s", err, out)
 	}
@@ -159,7 +161,7 @@ func multiNamespaceWorkflow(t *testing.T, ctx *TrebContext) string {
 
 	// Deploy to default namespace with different label
 	output.WriteString("=== Deploy to production namespace ===\n")
-	out, err = ctxProd.treb("run", "script/deploy/DeployCounter.s.sol")
+	out, err = ctxProd.Treb("run", "script/deploy/DeployCounter.s.sol")
 	if err != nil {
 		t.Fatalf("Failed to deploy with staging label: %v\nOutput:\n%s", err, out)
 	}
@@ -168,14 +170,14 @@ func multiNamespaceWorkflow(t *testing.T, ctx *TrebContext) string {
 
 	// List all deployments
 	output.WriteString("=== List all deployments across namespaces ===\n")
-	out, err = ctx.treb("list")
+	out, err = ctx.Treb("list")
 	if err != nil {
 		t.Fatalf("Failed to list deployments: %v\nOutput:\n%s", err, out)
 	}
 	output.WriteString(out)
 	output.WriteString("\n\n")
 
-	out, err = ctxProd.treb("list")
+	out, err = ctxProd.Treb("list")
 	if err != nil {
 		t.Fatalf("Failed to list deployments: %v\nOutput:\n%s", err, out)
 	}

@@ -1,6 +1,7 @@
-package integration_test
+package golden
 
 import (
+	"github.com/trebuchet-org/treb-cli/test/helpers"
 	"strings"
 	"testing"
 )
@@ -8,14 +9,14 @@ import (
 func TestShowCommandGolden(t *testing.T) {
 	tests := []struct {
 		name       string
-		setup      func(t *testing.T, ctx *TrebContext)
+		setup      func(t *testing.T, ctx *helpers.TrebContext)
 		args       []string
 		goldenFile string
 		expectErr  bool
 	}{
 		{
 			name: "show_counter",
-			setup: func(t *testing.T, ctx *TrebContext) {
+			setup: func(t *testing.T, ctx *helpers.TrebContext) {
 				setupTestDeployments(t, ctx)
 			},
 			args:       []string{"show", "Counter"},
@@ -23,7 +24,7 @@ func TestShowCommandGolden(t *testing.T) {
 		},
 		{
 			name: "show_with_namespace",
-			setup: func(t *testing.T, ctx *TrebContext) {
+			setup: func(t *testing.T, ctx *helpers.TrebContext) {
 				setupTestDeployments(t, ctx)
 			},
 			args:       []string{"show", "Counter", "--namespace", "production"},
@@ -31,7 +32,7 @@ func TestShowCommandGolden(t *testing.T) {
 		},
 		{
 			name: "show_proxy",
-			setup: func(t *testing.T, ctx *TrebContext) {
+			setup: func(t *testing.T, ctx *helpers.TrebContext) {
 				// Skip proxy tests for now since proxy generation isn't implemented
 				t.Skip("Proxy generation not yet implemented")
 			},
@@ -46,7 +47,7 @@ func TestShowCommandGolden(t *testing.T) {
 		},
 		{
 			name: "show_by_address",
-			setup: func(t *testing.T, ctx *TrebContext) {
+			setup: func(t *testing.T, ctx *helpers.TrebContext) {
 				setupTestDeployments(t, ctx)
 			},
 			args:       []string{"show", "PLACEHOLDER_ADDRESS"},
@@ -56,7 +57,7 @@ func TestShowCommandGolden(t *testing.T) {
 
 	for _, tt := range tests {
 		test := tt // capture range variable
-		IsolatedTest(t, test.name, func(t *testing.T, ctx *TrebContext) {
+		helpers.IsolatedTest(t, test.name, func(t *testing.T, ctx *helpers.TrebContext) {
 			// Run setup WITHIN the test execution to ensure registry persistence
 			if test.setup != nil {
 				test.setup(t, ctx)
@@ -65,7 +66,7 @@ func TestShowCommandGolden(t *testing.T) {
 			// For by_address test, we need to get the actual address first
 			if test.name == "show_by_address" {
 				// Get the actual address from list output
-				output, err := ctx.treb("list", "--contract", "Counter")
+				output, err := ctx.Treb("list", "--contract", "Counter")
 				if err != nil {
 					t.Fatalf("Failed to list contracts: %v\nOutput:\n%s", err, output)
 				}
@@ -90,9 +91,9 @@ func TestShowCommandGolden(t *testing.T) {
 			}
 
 			if test.expectErr {
-				ctx.trebGoldenWithError(test.goldenFile, test.args...)
+				TrebGoldenWithError(t, ctx, test.goldenFile, test.args...)
 			} else {
-				ctx.trebGolden(test.goldenFile, test.args...)
+				TrebGolden(t, ctx, test.goldenFile, test.args...)
 			}
 		})
 	}

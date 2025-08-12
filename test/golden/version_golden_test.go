@@ -1,6 +1,7 @@
-package integration_test
+package golden
 
 import (
+	"github.com/trebuchet-org/treb-cli/test/helpers"
 	"testing"
 )
 
@@ -23,29 +24,16 @@ func TestVersionGolden(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			output, err := runTreb(t, tt.args...)
+		helpers.IsolatedTest(t, tt.name, func(t *testing.T, ctx *helpers.TrebContext) {
+			output, err := ctx.Treb(tt.args...)
 			if err != nil {
 				t.Fatalf("Command failed unexpectedly: %v\nArgs: %v\nOutput:\n%s", err, tt.args, output)
 			}
 
-			// Use custom normalizers for version command
-			normalizers := []Normalizer{
-				ColorNormalizer{},
-				TimestampNormalizer{},
-				PathNormalizer{},
-			}
-
-			// Add version normalizer for version command
-			if tt.name == "version" {
-				normalizers = append(normalizers, VersionNormalizer{})
-			}
-
 			compareGolden(t, output, GoldenConfig{
 				Path:        tt.goldenFile,
-				Normalizers: normalizers,
+				Normalizers: getDefaultNormalizers(),
 			})
 		})
 	}
 }
-

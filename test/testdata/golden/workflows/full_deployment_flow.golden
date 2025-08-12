@@ -76,7 +76,7 @@ Artifact Information:
   Compiler: 0.8.30+commit.73712a01
   Bytecode Hash: 0x<HASH>
   Script: script/deploy/DeployCounter.s.sol
-  Git Commit: dc386947c6233f4a613f4b717c78d27fadabcfe7
+  Git Commit: c36ebc688a5c211efc4a426b423302977a9bb951
 
 Verification Status:
   Status: UNVERIFIED

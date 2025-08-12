@@ -1,6 +1,7 @@
-package integration_test
+package integration
 
 import (
+	"github.com/trebuchet-org/treb-cli/test/helpers"
 	"os"
 	"path/filepath"
 	"testing"
@@ -59,8 +60,8 @@ func TestGenerateCommands(t *testing.T) {
 
 	for _, tt := range tests {
 		tt := tt // capture loop variable
-		IsolatedTest(t, tt.name, func(t *testing.T, ctx *TrebContext) {
-			output, err := ctx.treb(tt.args...)
+		helpers.IsolatedTest(t, tt.name, func(t *testing.T, ctx *helpers.TrebContext) {
+			output, err := ctx.Treb(tt.args...)
 
 			if tt.wantErr {
 				require.Error(t, err, "Command should have failed")
@@ -72,7 +73,7 @@ func TestGenerateCommands(t *testing.T) {
 			}
 
 			if tt.checkFile != "" {
-				filePath := filepath.Join(fixtureDir, tt.checkFile)
+				filePath := filepath.Join(helpers.GetFixtureDir(), tt.checkFile)
 				content, err := os.ReadFile(filePath)
 				require.NoError(t, err, "Failed to read generated file")
 				assert.Contains(t, string(content), tt.contains, "Generated file should contain expected text")

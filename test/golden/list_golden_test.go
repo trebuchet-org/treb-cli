@@ -1,6 +1,7 @@
-package integration_test
+package golden
 
 import (
+	"github.com/trebuchet-org/treb-cli/test/helpers"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,7 +11,7 @@ import (
 func TestListCommandGolden(t *testing.T) {
 	tests := []struct {
 		name       string
-		setup      func(t *testing.T, ctx *TrebContext)
+		setup      func(t *testing.T, ctx *helpers.TrebContext)
 		args       []string
 		goldenFile string
 	}{
@@ -21,7 +22,7 @@ func TestListCommandGolden(t *testing.T) {
 		},
 		{
 			name: "default_with_deployments",
-			setup: func(t *testing.T, ctx *TrebContext) {
+			setup: func(t *testing.T, ctx *helpers.TrebContext) {
 				setupTestDeployments(t, ctx)
 			},
 			args:       []string{"list"},
@@ -29,7 +30,7 @@ func TestListCommandGolden(t *testing.T) {
 		},
 		{
 			name: "with_namespace",
-			setup: func(t *testing.T, ctx *TrebContext) {
+			setup: func(t *testing.T, ctx *helpers.TrebContext) {
 				setupTestDeployments(t, ctx)
 			},
 			args:       []string{"list", "--namespace", "production"},
@@ -37,7 +38,7 @@ func TestListCommandGolden(t *testing.T) {
 		},
 		{
 			name: "with_chain",
-			setup: func(t *testing.T, ctx *TrebContext) {
+			setup: func(t *testing.T, ctx *helpers.TrebContext) {
 				setupTestDeployments(t, ctx)
 			},
 			args:       []string{"list", "--chain", "31337"},
@@ -45,7 +46,7 @@ func TestListCommandGolden(t *testing.T) {
 		},
 		{
 			name: "with_contract",
-			setup: func(t *testing.T, ctx *TrebContext) {
+			setup: func(t *testing.T, ctx *helpers.TrebContext) {
 				setupTestDeployments(t, ctx)
 			},
 			args:       []string{"list", "--contract", "Counter"},
@@ -54,37 +55,23 @@ func TestListCommandGolden(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		IsolatedTest(t, tt.name, func(t *testing.T, ctx *TrebContext) {
+		helpers.IsolatedTest(t, tt.name, func(t *testing.T, ctx *helpers.TrebContext) {
 			if tt.setup != nil {
 				tt.setup(t, ctx)
-
-				// Check registry right after setup
-				if _, err := os.Stat(filepath.Join(fixtureDir, ".treb", "registry.json")); err == nil {
-					t.Logf("Registry exists after setup")
-				} else {
-					t.Logf("Registry missing after setup: %v", err)
-				}
 			}
 
-			// Check registry right before test command
-			if _, err := os.Stat(filepath.Join(fixtureDir, ".treb", "registry.json")); err == nil {
-				t.Logf("Registry exists before test command")
-			} else {
-				t.Logf("Registry missing before test command: %v", err)
-			}
-
-			ctx.trebGolden(tt.goldenFile, tt.args...)
+			TrebGolden(t, ctx, tt.goldenFile, tt.args...)
 		})
 	}
 }
 
 // setupTestDeployments creates test deployments for golden file testing
-func setupTestDeployments(t *testing.T, ctx *TrebContext) {
+func setupTestDeployments(t *testing.T, ctx *helpers.TrebContext) {
 	t.Helper()
 
 	// First check if deployment script exists, if not generate it
-	if _, err := os.Stat(filepath.Join(fixtureDir, "script/deploy/Counter.s.sol")); os.IsNotExist(err) {
-		output, err := ctx.treb("gen", "deploy", "src/Counter.sol:Counter")
+	if _, err := os.Stat(filepath.Join(helpers.GetFixtureDir(), "script/deploy/Counter.s.sol")); os.IsNotExist(err) {
+		output, err := ctx.Treb("gen", "deploy", "src/Counter.sol:Counter")
 		if err != nil {
 			t.Fatalf("Failed to generate Counter deployment script: %v\nOutput:\n%s", err, output)
 		}
@@ -93,7 +80,7 @@ func setupTestDeployments(t *testing.T, ctx *TrebContext) {
 
 	// Deploy Counter in default namespace
 	t.Logf("Deploying Counter in default namespace")
-	output, err := ctx.treb("run", "script/deploy/DeployCounter.s.sol")
+	output, err := ctx.Treb("run", "script/deploy/DeployCounter.s.sol")
 	if err != nil {
 		t.Fatalf("Failed to deploy Counter: %v\nOutput:\n%s", err, output)
 	}
@@ -105,7 +92,7 @@ func setupTestDeployments(t *testing.T, ctx *TrebContext) {
 	// Deploy another with different namespace
 	ctx2 := ctx.WithNamespace("production")
 	t.Logf("Deploying Counter in production namespace")
-	output, err = ctx2.treb("run", "script/deploy/DeployCounter.s.sol", "--env", "label=prod")
+	output, err = ctx2.Treb("run", "script/deploy/DeployCounter.s.sol", "--env", "label=prod")
 	if err != nil {
 		t.Fatalf("Failed to deploy Counter in production namespace: %v\nOutput:\n%s", err, output)
 	}
@@ -115,17 +102,17 @@ func setupTestDeployments(t *testing.T, ctx *TrebContext) {
 	t.Logf("Deployed Counter in production namespace")
 
 	// List to verify deployments
-	listOut0, _ := ctx.treb("list")
-	listOut1, _ := ctx2.treb("list")
+	listOut0, _ := ctx.Treb("list")
+	listOut1, _ := ctx2.Treb("list")
 	t.Logf("Deployments after setup:\n%s\n%s", listOut0, listOut1)
 
 	// Also check registry files
-	if registryBytes, err := os.ReadFile(filepath.Join(fixtureDir, ".treb", "registry.json")); err == nil {
+	if registryBytes, err := os.ReadFile(filepath.Join(helpers.GetFixtureDir(), ".treb", "registry.json")); err == nil {
 		t.Logf("Registry file content: %s", string(registryBytes))
 	} else {
 		t.Logf("Registry file error: %v", err)
 	}
-	if deploymentsBytes, err := os.ReadFile(filepath.Join(fixtureDir, ".treb", "deployments.json")); err == nil {
+	if deploymentsBytes, err := os.ReadFile(filepath.Join(helpers.GetFixtureDir(), ".treb", "deployments.json")); err == nil {
 		t.Logf("Deployments file size: %d bytes", len(deploymentsBytes))
 	} else {
 		t.Logf("Deployments file error: %v", err)

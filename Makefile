@@ -10,7 +10,13 @@ LDFLAGS = -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DAT
 # Build the CLI binary
 build: bindings
 	@echo "🔨 Building treb..."
-	@go build -ldflags="$(LDFLAGS)" -tags dev -o bin/treb ./cli 
+	@go build -ldflags="$(LDFLAGS)" -tags dev -o bin/treb ./cli
+
+# Build the v2 CLI binary (only imports from internal/)
+build-v2:
+	@echo "🔨 Building treb v2..."
+	@go build -ldflags="-X 'github.com/trebuchet-org/treb-cli/internal/cli.Version=$(VERSION)'" -o bin/treb-v2 ./cli/v2
+	@echo "✓ Built treb v2 at bin/treb-v2" 
 
 bindings: forge_build
 	@echo "🔨 Building bindings..."
@@ -55,30 +61,30 @@ setup-integration-test:
 	@echo "✅ Integration test dependencies ready"
 
 # Run integration tests  
-integration-test: build setup-integration-test
+integration-test: build build-v2 setup-integration-test
 	@echo "🔗 Running integration tests..."
 	@cd test && go mod download && go test -v -timeout=10m
 
 # Run integration tests with coverage
-integration-test-coverage: build setup-integration-test
+integration-test-coverage: build build-v2 setup-integration-test
 	@echo "🔗 Running integration tests with coverage..."
 	@cd test && go test -v -timeout=10m -coverprofile=coverage.out
 	@cd test && go tool cover -html=coverage.out -o coverage.html
 	@echo "✅ Coverage report generated: test/coverage.html"
 
 # Run integration tests with golden file updates
-update-golden: build setup-integration-test
+update-golden: build build-v2 setup-integration-test
 	@echo "🔄 Updating golden files..."
 	@cd test && UPDATE_GOLDEN=true go test -v -timeout=10m -run "Golden"
 	@echo "✅ Golden files updated"
 
 # Run golden file tests only
-golden-test: build setup-integration-test
+golden-test: build build-v2 setup-integration-test
 	@echo "📸 Running golden file tests..."
 	@cd test && go test -v -timeout=10m -run "Golden"
 
 # Generate initial golden files for all commands
-generate-golden: build setup-integration-test
+generate-golden: build build-v2 setup-integration-test
 	@echo "🏗️ Generating initial golden files..."
 	@cd test && UPDATE_GOLDEN=true go test -v -timeout=10m -run "Golden"
 	@echo "✅ Initial golden files generated in test/testdata/golden/"

@@ -1,8 +1,7 @@
-package integration_test
+package helpers
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 )
@@ -10,6 +9,8 @@ import (
 // cleanTestArtifacts removes all test-generated files
 func cleanTestArtifacts(t *testing.T) {
 	t.Helper()
+
+	fixtureDir := GetFixtureDir()
 
 	// Clean .treb directory
 	trebDir := filepath.Join(fixtureDir, ".treb")
@@ -52,15 +53,15 @@ type TestCleanup struct {
 }
 
 // NewTestCleanup creates a new test cleanup handler
-func NewTestCleanup(t *testing.T) *TestCleanup {
+func NewTestCleanup(t *testing.T, manager *AnvilManager) *TestCleanup {
 	t.Helper()
-	
+
 	// Create a snapshot at the beginning of the test
-	snapshot, err := globalAnvilManager.Snapshot()
+	snapshot, err := manager.Snapshot()
 	if err != nil {
 		t.Fatalf("Failed to create test snapshot: %v", err)
 	}
-	
+
 	return &TestCleanup{
 		t:        t,
 		snapshot: snapshot,
@@ -68,14 +69,14 @@ func NewTestCleanup(t *testing.T) *TestCleanup {
 }
 
 // Cleanup reverts the snapshot and cleans artifacts
-func (tc *TestCleanup) Cleanup() {
+func (tc *TestCleanup) Cleanup(manager *AnvilManager) {
 	tc.t.Helper()
-	
+
 	// Revert to the test snapshot
-	if err := globalAnvilManager.Revert(tc.snapshot); err != nil {
+	if err := manager.Revert(tc.snapshot); err != nil {
 		tc.t.Logf("Warning: failed to revert snapshot: %v", err)
 	}
-	
+
 	// Clean test artifacts
 	cleanTestArtifacts(tc.t)
 }
@@ -85,21 +86,33 @@ func IsolatedTest(t *testing.T, name string, fn func(t *testing.T, ctx *TrebCont
 	t.Run(name, func(t *testing.T) {
 		// Clean artifacts first to ensure clean state
 		cleanTestArtifacts(t)
-		
+
 		// Create cleanup handler with snapshot
-		cleanup := NewTestCleanup(t)
-		defer cleanup.Cleanup()
-		
+		cleanup := NewTestCleanup(t, anvilManager)
+		defer cleanup.Cleanup(anvilManager)
+
+		// Determine binary version from environment or default
+		version := GetBinaryVersionFromEnv()
+
 		// Create test context and run test
-		ctx := NewTrebContext(t)
+		ctx := NewTrebContext(t, version)
 		fn(t, ctx)
 	})
 }
 
-// runCommand is a helper to run shell commands
-func runCommand(command string, args ...string) (string, error) {
-	cmd := exec.Command(command, args...)
-	output, err := cmd.CombinedOutput()
-	return string(output), err
+// IsolatedTestWithVersion runs a test with a specific binary version
+func IsolatedTestWithVersion(t *testing.T, name string, version BinaryVersion, fn func(t *testing.T, ctx *TrebContext)) {
+	t.Run(name, func(t *testing.T) {
+		// Clean artifacts first to ensure clean state
+		cleanTestArtifacts(t)
+
+		// Create cleanup handler with snapshot
+		cleanup := NewTestCleanup(t, anvilManager)
+		defer cleanup.Cleanup(anvilManager)
+
+		// Create test context with specific version
+		ctx := NewTrebContext(t, version)
+		fn(t, ctx)
+	})
 }
 
