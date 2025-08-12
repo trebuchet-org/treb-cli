@@ -154,7 +154,7 @@ func TestNewArchitectureComponents(t *testing.T) {
 
 			// Test ShowDeployment use case
 			deployment, err := appInstance.ShowDeployment.Run(context.Background(), usecase.ShowDeploymentParams{
-				ID: counterDeployment.ID,
+				DeploymentRef: counterDeployment.ID,
 			})
 			require.NoError(t, err)
 			assert.Equal(t, counterDeployment.ID, deployment.ID)
