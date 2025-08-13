@@ -8,6 +8,7 @@ package app
 
 import (
 	"github.com/spf13/viper"
+	config2 "github.com/trebuchet-org/treb-cli/internal/adapters/config"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/forge"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/fs"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/interactive"
@@ -53,7 +54,10 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 		return nil, err
 	}
 	generateDeploymentScript := usecase.NewGenerateDeploymentScript(runtimeConfig, contractResolver, abiParserAdapter, scriptGeneratorAdapter, fileWriterAdapter, sink)
-	app, err := NewApp(runtimeConfig, listDeployments, showDeployment, generateDeploymentScript)
+	networkResolver := config.ProvideNetworkResolver(runtimeConfig)
+	networkResolverAdapter := config2.NewNetworkResolverAdapter(networkResolver)
+	listNetworks := usecase.NewListNetworks(networkResolverAdapter)
+	app, err := NewApp(runtimeConfig, listDeployments, showDeployment, generateDeploymentScript, listNetworks)
 	if err != nil {
 		return nil, err
 	}

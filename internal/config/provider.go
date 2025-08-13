@@ -105,3 +105,8 @@ func SetupViper(projectRoot string) *viper.Viper {
 	return v
 }
 
+// ProvideNetworkResolver creates a NetworkResolver for Wire dependency injection
+func ProvideNetworkResolver(cfg *RuntimeConfig) *NetworkResolver {
+	return NewNetworkResolver(cfg.ProjectRoot, cfg.FoundryConfig)
+}
+

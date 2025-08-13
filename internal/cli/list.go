@@ -69,7 +69,7 @@ The list can be filtered by namespace, chain ID, contract name, label, or deploy
 			// Render output (preserve existing format exactly)
 			// Detect if color is enabled from the command
 			color := cmd.OutOrStdout() == cmd.OutOrStdout() // Simple check, can be improved
-			renderer := render.NewTableRenderer(cmd.OutOrStdout(), color)
+			renderer := render.NewDeploymentsRenderer(cmd.OutOrStdout(), color)
 			return renderer.RenderDeploymentList(result)
 		},
 	}

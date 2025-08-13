@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -44,6 +45,17 @@ func NewNetworkResolver(projectRoot string, foundryConfig *FoundryConfig) *Netwo
 	r.loadCache()
 	
 	return r
+}
+
+// GetNetworks returns all configured network names
+func (r *NetworkResolver) GetNetworks() []string {
+	networks := make([]string, 0, len(r.foundryConfig.RpcEndpoints))
+	for name := range r.foundryConfig.RpcEndpoints {
+		networks = append(networks, name)
+	}
+	// Sort networks for deterministic output
+	sort.Strings(networks)
+	return networks
 }
 
 // Resolve resolves a network name to its configuration

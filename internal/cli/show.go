@@ -71,7 +71,7 @@ Examples:
 			// Render output (preserve existing format exactly)
 			// Detect if color is enabled from the command
 			color := cmd.OutOrStdout() == cmd.OutOrStdout() // Simple check, can be improved
-			renderer := render.NewDetailRenderer(cmd.OutOrStdout(), color)
+			renderer := render.NewDeploymentRenderer(cmd.OutOrStdout(), color)
 			return renderer.RenderDeployment(deployment)
 		},
 	}

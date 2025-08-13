@@ -157,3 +157,9 @@ type ContractFilter struct {
 	IncludeInterface bool
 	IncludeAbstract  bool
 }
+
+// NetworkResolver handles network configuration resolution
+type NetworkResolver interface {
+	GetNetworks(ctx context.Context) []string
+	ResolveNetwork(ctx context.Context, networkName string) (*domain.NetworkInfo, error)
+}

@@ -34,22 +34,22 @@ var (
 
 type TableData [][]string
 
-// TableRenderer renders output as formatted tables with tree-style layout
-type TableRenderer struct {
+// DeploymentsRenderer renders deployment lists as formatted tables with tree-style layout
+type DeploymentsRenderer struct {
 	out   io.Writer
 	color bool
 }
 
-// NewTableRenderer creates a new table renderer
-func NewTableRenderer(out io.Writer, color bool) *TableRenderer {
-	return &TableRenderer{
+// NewDeploymentsRenderer creates a new deployments renderer
+func NewDeploymentsRenderer(out io.Writer, color bool) *DeploymentsRenderer {
+	return &DeploymentsRenderer{
 		out:   out,
 		color: color,
 	}
 }
 
 // RenderDeploymentList renders deployments in the tree-style format
-func (r *TableRenderer) RenderDeploymentList(result *usecase.DeploymentListResult) error {
+func (r *DeploymentsRenderer) RenderDeploymentList(result *usecase.DeploymentListResult) error {
 	if len(result.Deployments) == 0 {
 		fmt.Fprintln(r.out, "No deployments found")
 		return nil
@@ -61,7 +61,7 @@ func (r *TableRenderer) RenderDeploymentList(result *usecase.DeploymentListResul
 }
 
 // displayTableFormat shows deployments in table format
-func (r *TableRenderer) displayTableFormat(deployments []*domain.Deployment) {
+func (r *DeploymentsRenderer) displayTableFormat(deployments []*domain.Deployment) {
 	// Group by namespace and chain
 	namespaceChainGroups := make(map[string]map[uint64][]*domain.Deployment)
 
@@ -199,7 +199,7 @@ func (r *TableRenderer) displayTableFormat(deployments []*domain.Deployment) {
 }
 
 // buildDeploymentTable creates a TableData for a list of deployments
-func (r *TableRenderer) buildDeploymentTable(deployments []*domain.Deployment) TableData {
+func (r *DeploymentsRenderer) buildDeploymentTable(deployments []*domain.Deployment) TableData {
 	tableData := make(TableData, 0)
 
 	// Sort deployments by timestamp (newest first)
@@ -267,7 +267,7 @@ func (r *TableRenderer) buildDeploymentTable(deployments []*domain.Deployment) T
 }
 
 // getVerifierStatuses returns the formatted verifier status string
-func (r *TableRenderer) getVerifierStatuses(deployment *domain.Deployment) string {
+func (r *DeploymentsRenderer) getVerifierStatuses(deployment *domain.Deployment) string {
 	verifierStatuses := []string{}
 
 	// Check Etherscan status
@@ -310,7 +310,7 @@ func (r *TableRenderer) getVerifierStatuses(deployment *domain.Deployment) strin
 }
 
 // getColoredDisplayName returns a colored display name for deployment
-func (r *TableRenderer) getColoredDisplayName(dep *domain.Deployment) string {
+func (r *DeploymentsRenderer) getColoredDisplayName(dep *domain.Deployment) string {
 	name := dep.ContractDisplayName()
 
 	switch dep.Type {

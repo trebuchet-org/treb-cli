@@ -9,22 +9,22 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/domain"
 )
 
-// DetailRenderer renders detailed information about a single item
-type DetailRenderer struct {
+// DeploymentRenderer renders detailed information about a single deployment
+type DeploymentRenderer struct {
 	out   io.Writer
 	color bool
 }
 
-// NewDetailRenderer creates a new detail renderer
-func NewDetailRenderer(out io.Writer, color bool) *DetailRenderer {
-	return &DetailRenderer{
+// NewDeploymentRenderer creates a new deployment renderer
+func NewDeploymentRenderer(out io.Writer, color bool) *DeploymentRenderer {
+	return &DeploymentRenderer{
 		out:   out,
 		color: color,
 	}
 }
 
 // RenderDeployment renders detailed deployment information
-func (r *DetailRenderer) RenderDeployment(deployment *domain.Deployment) error {
+func (r *DeploymentRenderer) RenderDeployment(deployment *domain.Deployment) error {
 	// Header
 	color.New(color.FgCyan, color.Bold).Fprintf(r.out, "Deployment: %s\n", deployment.ID)
 	fmt.Fprintln(r.out, strings.Repeat("=", 80))

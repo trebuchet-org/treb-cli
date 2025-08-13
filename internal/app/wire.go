@@ -21,6 +21,7 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	wire.Build(
 		// Configuration
 		config.Provider,
+		config.ProvideNetworkResolver,
 		
 		// Adapters - now receive RuntimeConfig
 		adapters.AllAdapters,
@@ -30,6 +31,7 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 		usecase.NewShowDeployment,
 		usecase.NewResolveContract,
 		usecase.NewGenerateDeploymentScript,
+		usecase.NewListNetworks,
 		
 		// Interface providers
 		ProvideContractResolver,
