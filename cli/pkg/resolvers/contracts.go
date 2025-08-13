@@ -2,6 +2,7 @@ package resolvers
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
@@ -62,8 +63,19 @@ func (c *ContractsResolver) ResolveContract(nameOrPath string, filter contracts.
 			return interactive.SelectContract(matches, prompt)
 		} else {
 			// Non-interactive: return error with suggestions
+			// Sort matches by artifact path for consistent output
+			sortedMatches := make([]*contracts.ContractInfo, len(matches))
+			copy(sortedMatches, matches)
+			
+			sort.Slice(sortedMatches, func(i, j int) bool {
+				// Sort by full artifact path (path:name)
+				artifactI := fmt.Sprintf("%s:%s", sortedMatches[i].Path, sortedMatches[i].Name)
+				artifactJ := fmt.Sprintf("%s:%s", sortedMatches[j].Path, sortedMatches[j].Name)
+				return artifactI < artifactJ
+			})
+			
 			var suggestions []string
-			for _, match := range matches {
+			for _, match := range sortedMatches {
 				suggestion := fmt.Sprintf("  - %s (%s)", match.Name, match.Path)
 				suggestions = append(suggestions, suggestion)
 			}

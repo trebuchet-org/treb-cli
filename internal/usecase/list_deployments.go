@@ -47,7 +47,10 @@ func (uc *ListDeployments) Run(ctx context.Context, params ListDeploymentsParams
 		ContractName: params.ContractName,
 		Label:        params.Label,
 		Type:         params.Type,
-		ChainID:      uc.config.Network.ChainID,
+	}
+
+	if uc.config.Network != nil {
+		filter.ChainID = uc.config.Network.ChainID
 	}
 
 	// Get deployments from store

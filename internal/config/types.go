@@ -38,41 +38,48 @@ type NetworkConfig struct {
 	Configured bool // Whether network was explicitly configured
 }
 
-// SenderConfig represents the active sender configuration
-type SenderConfig struct {
-	Name    string
-	Type    string // "private_key", "safe", "ledger"
-	Address string
-
-	// Type-specific fields
-	PrivateKey     string `json:"-"` // Never log/display
-	Safe           string
-	Proposer       string
-	DerivationPath string
-}
-
 // TrebConfig from foundry.toml [profile.*.treb] section
 type TrebConfig struct {
-	Senders         map[string]SenderConfig
-	LibraryDeployer string
+	Senders map[string]SenderConfig
 }
 
-// FoundryConfig represents parsed foundry.toml
+// FoundryConfig represents the full foundry.toml configuration
 type FoundryConfig struct {
-	RpcEndpoints map[string]string
-	Etherscan    map[string]EtherscanConfig
-	Profiles     map[string]ProfileConfig
+	Profile      map[string]ProfileConfig   `toml:"profile"`
+	RpcEndpoints map[string]string          `toml:"rpc_endpoints"`
+	Etherscan    map[string]EtherscanConfig `toml:"etherscan,omitempty"`
 }
 
-// EtherscanConfig for block explorer settings
+// EtherscanConfig represents Etherscan configuration for a network
+// This matches Foundry's expected structure
 type EtherscanConfig struct {
-	URL    string
-	APIKey string
+	Key string `toml:"key,omitempty"` // API key for verification
+	URL string `toml:"url,omitempty"` // API URL (for custom explorers)
 }
 
-// ProfileConfig contains profile-specific settings
+// ProfileFoundryConfig represents a profile's foundry configuration
 type ProfileConfig struct {
-	Treb TrebConfig `toml:"treb"`
-	// Other foundry profile settings can be added here as needed
+	Sender    SenderConfig `toml:"sender,omitempty"`
+	Libraries []string     `toml:"libraries,omitempty"`
+	// Other foundry settings
+	SrcPath       string      `toml:"src,omitempty"`
+	OutPath       string      `toml:"out,omitempty"`
+	LibPaths      []string    `toml:"libs,omitempty"`
+	TestPath      string      `toml:"test,omitempty"`
+	ScriptPath    string      `toml:"script,omitempty"`
+	Remappings    []string    `toml:"remappings,omitempty"`
+	SolcVersion   string      `toml:"solc_version,omitempty"`
+	Optimizer     bool        `toml:"optimizer,omitempty"`
+	OptimizerRuns int         `toml:"optimizer_runs,omitempty"`
+	Treb          *TrebConfig `toml:"treb,omitempty"`
 }
 
+// SenderConfig represents a sender configuration
+type SenderConfig struct {
+	Type           string `toml:"type"`
+	Address        string `toml:"address,omitempty"`
+	PrivateKey     string `toml:"private_key,omitempty"`
+	Safe           string `toml:"safe,omitempty"`
+	Signer         string `toml:"signer,omitempty"`          // For Safe senders
+	DerivationPath string `toml:"derivation_path,omitempty"` // For Ledger senders
+}

@@ -2,7 +2,6 @@ package forge
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/trebuchet-org/treb-cli/cli/pkg/forge"

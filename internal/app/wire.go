@@ -11,6 +11,11 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
+// ProvideContractResolver provides ContractResolver interface from ResolveContract
+func ProvideContractResolver(uc *usecase.ResolveContract) usecase.ContractResolver {
+	return uc
+}
+
 // InitApp creates a fully wired App instance with viper configuration
 func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	wire.Build(
@@ -23,6 +28,11 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 		// Use cases
 		usecase.NewListDeployments,
 		usecase.NewShowDeployment,
+		usecase.NewResolveContract,
+		usecase.NewGenerateDeploymentScript,
+		
+		// Interface providers
+		ProvideContractResolver,
 		
 		// App
 		NewApp,

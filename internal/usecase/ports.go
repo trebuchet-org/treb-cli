@@ -117,3 +117,43 @@ type ScriptExecutionResult struct {
 	GasUsed      uint64
 	Error        error
 }
+
+// ABIParser parses contract ABIs to extract constructor/initializer info
+type ABIParser interface {
+	ParseContractABI(ctx context.Context, contractName string) (*domain.ContractABI, error)
+	FindInitializeMethod(abi *domain.ContractABI) *domain.Method
+	GenerateConstructorArgs(abi *domain.ContractABI) (vars string, encode string)
+	GenerateInitializerArgs(method *domain.Method) (vars string, encode string)
+}
+
+// ScriptGenerator generates deployment scripts from templates
+type ScriptGenerator interface {
+	GenerateScript(ctx context.Context, template *domain.ScriptTemplate) (string, error)
+}
+
+// FileWriter handles file system operations for scripts
+type FileWriter interface {
+	WriteScript(ctx context.Context, path string, content string) error
+	FileExists(ctx context.Context, path string) (bool, error)
+	EnsureDirectory(ctx context.Context, path string) error
+}
+
+// InteractiveSelector handles interactive selection of options
+type InteractiveSelector interface {
+	SelectContract(ctx context.Context, contracts []*domain.ContractInfo, prompt string) (*domain.ContractInfo, error)
+}
+
+// ContractResolver resolves contract references to actual contracts
+type ContractResolver interface {
+	ResolveContract(ctx context.Context, contractRef string) (*domain.ContractInfo, error)
+	ResolveContractWithFilter(ctx context.Context, contractRef string, filter ContractFilter) (*domain.ContractInfo, error)
+	GetProxyContracts(ctx context.Context) ([]*domain.ContractInfo, error)
+	SelectProxyContract(ctx context.Context) (*domain.ContractInfo, error)
+}
+
+// ContractFilter defines filtering options for contract resolution
+type ContractFilter struct {
+	IncludeLibraries bool
+	IncludeInterface bool
+	IncludeAbstract  bool
+}

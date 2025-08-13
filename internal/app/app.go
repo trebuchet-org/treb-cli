@@ -11,12 +11,12 @@ type App struct {
 	Config *config.RuntimeConfig
 	
 	// Use cases
-	ListDeployments *usecase.ListDeployments
-	ShowDeployment  *usecase.ShowDeployment
+	ListDeployments         *usecase.ListDeployments
+	ShowDeployment          *usecase.ShowDeployment
+	GenerateDeploymentScript *usecase.GenerateDeploymentScript
 	
 	// Add more use cases as they are implemented
 	// RunScript       *usecase.RunScript
-	// GenerateScript  *usecase.GenerateScript
 	// VerifyContract  *usecase.VerifyContract
 	// InitProject     *usecase.InitProject
 }
@@ -26,10 +26,12 @@ func NewApp(
 	cfg *config.RuntimeConfig,
 	listDeployments *usecase.ListDeployments,
 	showDeployment *usecase.ShowDeployment,
+	generateDeploymentScript *usecase.GenerateDeploymentScript,
 ) (*App, error) {
 	return &App{
-		Config:          cfg,
-		ListDeployments: listDeployments,
-		ShowDeployment:  showDeployment,
+		Config:                   cfg,
+		ListDeployments:          listDeployments,
+		ShowDeployment:           showDeployment,
+		GenerateDeploymentScript: generateDeploymentScript,
 	}, nil
 }

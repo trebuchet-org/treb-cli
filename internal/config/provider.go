@@ -41,15 +41,7 @@ func Provider(v *viper.Viper) (*RuntimeConfig, error) {
 	cfg.FoundryConfig = foundryConfig
 
 	// Load profile-specific treb config (namespace = profile)
-	trebConfig, err := loadTrebConfig(foundryConfig, cfg.Namespace)
-	if err != nil {
-		// Not all profiles have treb config, that's ok
-		if cfg.Debug {
-			fmt.Fprintf(os.Stderr, "Debug: No treb config for profile %s: %v\n", cfg.Namespace, err)
-		}
-	} else {
-		cfg.TrebConfig = trebConfig
-	}
+	cfg.TrebConfig = foundryConfig.Profile[cfg.Namespace].Treb
 
 	// Resolve network if specified
 	if networkName := v.GetString("network"); networkName != "" {

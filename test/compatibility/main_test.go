@@ -19,7 +19,6 @@ func TestMain(m *testing.M) {
 	}
 
 	// Setup
-	fmt.Println("Hello")
 	if err := helpers.Setup(); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to setup: %v\n", err)
 		os.Exit(1)

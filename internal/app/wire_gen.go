@@ -8,7 +8,10 @@ package app
 
 import (
 	"github.com/spf13/viper"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/forge"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/fs"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/interactive"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/template"
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -27,9 +30,39 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	}
 	listDeployments := usecase.NewListDeployments(runtimeConfig, registryStoreAdapter, sink)
 	showDeployment := usecase.NewShowDeployment(runtimeConfig, registryStoreAdapter, sink)
-	app, err := NewApp(runtimeConfig, listDeployments, showDeployment)
+	contractIndexerAdapter, err := fs.NewContractIndexerAdapter(runtimeConfig)
+	if err != nil {
+		return nil, err
+	}
+	selectorAdapter, err := interactive.NewSelectorAdapter(runtimeConfig)
+	if err != nil {
+		return nil, err
+	}
+	resolveContract := usecase.NewResolveContract(runtimeConfig, contractIndexerAdapter, selectorAdapter, sink)
+	contractResolver := ProvideContractResolver(resolveContract)
+	abiParserAdapter, err := forge.NewABIParserAdapter(runtimeConfig)
+	if err != nil {
+		return nil, err
+	}
+	scriptGeneratorAdapter, err := template.NewScriptGeneratorAdapter(runtimeConfig, abiParserAdapter)
+	if err != nil {
+		return nil, err
+	}
+	fileWriterAdapter, err := fs.NewFileWriterAdapter(runtimeConfig)
+	if err != nil {
+		return nil, err
+	}
+	generateDeploymentScript := usecase.NewGenerateDeploymentScript(runtimeConfig, contractResolver, abiParserAdapter, scriptGeneratorAdapter, fileWriterAdapter, sink)
+	app, err := NewApp(runtimeConfig, listDeployments, showDeployment, generateDeploymentScript)
 	if err != nil {
 		return nil, err
 	}
 	return app, nil
+}
+
+// wire.go:
+
+// ProvideContractResolver provides ContractResolver interface from ResolveContract
+func ProvideContractResolver(uc *usecase.ResolveContract) usecase.ContractResolver {
+	return uc
 }
