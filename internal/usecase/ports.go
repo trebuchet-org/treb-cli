@@ -57,12 +57,6 @@ type ScriptResult struct {
 	Error      error
 }
 
-// NetworkResolver handles network configuration resolution
-type NetworkResolver interface {
-	ResolveNetwork(ctx context.Context, name string) (*domain.NetworkInfo, error)
-	GetPreferredNetwork(ctx context.Context, chainID uint64) (string, error)
-	ListNetworks(ctx context.Context) ([]*domain.NetworkInfo, error)
-}
 
 // ContractVerifier handles contract verification
 type ContractVerifier interface {

@@ -5,17 +5,19 @@ package app
 
 import (
 	"github.com/google/wire"
+	"github.com/spf13/viper"
 	"github.com/trebuchet-org/treb-cli/internal/adapters"
+	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
-// InitApp creates a fully wired App instance
-func InitApp(cfg Config, sink usecase.ProgressSink) (*App, error) {
+// InitApp creates a fully wired App instance with viper configuration
+func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	wire.Build(
-		// Extract fields from config
-		wire.FieldsOf(new(Config), "ProjectRoot"),
+		// Configuration
+		config.Provider,
 		
-		// Adapters
+		// Adapters - now receive RuntimeConfig
 		adapters.AllAdapters,
 		
 		// Use cases

@@ -7,22 +7,27 @@
 package app
 
 import (
+	"github.com/spf13/viper"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/fs"
+	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
 // Injectors from wire.go:
 
-// InitApp creates a fully wired App instance
-func InitApp(cfg Config, sink usecase.ProgressSink) (*App, error) {
-	string2 := cfg.ProjectRoot
-	registryStoreAdapter, err := fs.NewRegistryStoreAdapter(string2)
+// InitApp creates a fully wired App instance with viper configuration
+func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
+	runtimeConfig, err := config.Provider(v)
 	if err != nil {
 		return nil, err
 	}
-	listDeployments := usecase.NewListDeployments(registryStoreAdapter, sink)
-	showDeployment := usecase.NewShowDeployment(registryStoreAdapter, sink)
-	app, err := NewApp(listDeployments, showDeployment)
+	registryStoreAdapter, err := fs.NewRegistryStoreAdapter(runtimeConfig)
+	if err != nil {
+		return nil, err
+	}
+	listDeployments := usecase.NewListDeployments(runtimeConfig, registryStoreAdapter, sink)
+	showDeployment := usecase.NewShowDeployment(runtimeConfig, registryStoreAdapter, sink)
+	app, err := NewApp(runtimeConfig, listDeployments, showDeployment)
 	if err != nil {
 		return nil, err
 	}

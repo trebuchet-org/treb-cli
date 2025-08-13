@@ -1,22 +1,17 @@
 package cli
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
-	"github.com/trebuchet-org/treb-cli/internal/app"
 	"github.com/trebuchet-org/treb-cli/internal/cli/render"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
 // NewListCmd creates the list command using the new architecture
-func NewListCmd(baseCfg *app.Config) *cobra.Command {
+func NewListCmd() *cobra.Command {
 	var (
-		namespace    string
-		chainID      uint64
 		contractName string
 		label        string
 		deployType   string
@@ -32,34 +27,16 @@ The list can be filtered by namespace, chain ID, contract name, label, or deploy
 		Example: `  # List all deployments
   treb list
 
-  # List deployments in production namespace
-  treb list --namespace production
-
-  # List deployments on mainnet
-  treb list --chain 1
-
   # List all Counter deployments
   treb list --contract Counter
 
   # List proxy deployments only
   treb list --type proxy`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Use NOP progress for now to preserve exact output
-			progressSink := usecase.NopProgress{}
-
-			// Initialize app with Wire
-			app, err := app.InitApp(*baseCfg, progressSink)
+			// Get app from context
+			app, err := getApp(cmd)
 			if err != nil {
-				return fmt.Errorf("failed to initialize app: %w", err)
-			}
-
-			// Use default namespace from config if not specified AND no other filters are set
-			if namespace == "" && chainID == 0 && contractName == "" && label == "" && deployType == "" {
-				// Load the old config to get namespace
-				cfg, err := config.NewManager(baseCfg.ProjectRoot).Load()
-				if err == nil && cfg.Namespace != "" {
-					namespace = cfg.Namespace
-				}
+				return err
 			}
 
 			// Convert string type to domain type
@@ -79,14 +56,12 @@ The list can be filtered by namespace, chain ID, contract name, label, or deploy
 
 			// Run use case
 			params := usecase.ListDeploymentsParams{
-				Namespace:    namespace,
-				ChainID:      chainID,
 				ContractName: contractName,
 				Label:        label,
 				Type:         deploymentType,
 			}
 
-			result, err := app.ListDeployments.Run(context.Background(), params)
+			result, err := app.ListDeployments.Run(cmd.Context(), params)
 			if err != nil {
 				return err
 			}
@@ -99,9 +74,7 @@ The list can be filtered by namespace, chain ID, contract name, label, or deploy
 		},
 	}
 
-	// Add flags
-	cmd.Flags().StringVar(&namespace, "namespace", "", "Filter by namespace")
-	cmd.Flags().Uint64Var(&chainID, "chain", 0, "Filter by chain ID")
+	// Add flags (removed namespace and chain - these come from runtime config)
 	cmd.Flags().StringVar(&contractName, "contract", "", "Filter by contract name")
 	cmd.Flags().StringVar(&label, "label", "", "Filter by label")
 	cmd.Flags().StringVar(&deployType, "type", "", "Filter by deployment type (singleton, proxy, library)")

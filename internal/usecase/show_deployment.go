@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
 )
 
@@ -13,25 +14,23 @@ type ShowDeploymentParams struct {
 	// Deployment reference (can be ID, address, contract name, etc.)
 	DeploymentRef string
 	
-	// Optional filters for resolution
-	ChainID   uint64
-	Namespace string
-	
 	// Optional: resolve proxy implementation
 	ResolveProxy bool
 }
 
 // ShowDeployment is the use case for showing deployment details
 type ShowDeployment struct {
-	store DeploymentStore
-	sink  ProgressSink
+	config *config.RuntimeConfig
+	store  DeploymentStore
+	sink   ProgressSink
 }
 
 // NewShowDeployment creates a new ShowDeployment use case
-func NewShowDeployment(store DeploymentStore, sink ProgressSink) *ShowDeployment {
+func NewShowDeployment(cfg *config.RuntimeConfig, store DeploymentStore, sink ProgressSink) *ShowDeployment {
 	return &ShowDeployment{
-		store: store,
-		sink:  sink,
+		config: cfg,
+		store:  store,
+		sink:   sink,
 	}
 }
 
@@ -81,6 +80,13 @@ func (uc *ShowDeployment) Run(ctx context.Context, params ShowDeploymentParams) 
 func (uc *ShowDeployment) resolveDeployment(ctx context.Context, params ShowDeploymentParams) (*domain.Deployment, error) {
 	ref := params.DeploymentRef
 	
+	// Get namespace and chainID from runtime config
+	namespace := uc.config.Namespace
+	var chainID uint64
+	if uc.config.Network != nil {
+		chainID = uc.config.Network.ChainID
+	}
+	
 	// 1. Try as deployment ID
 	deployment, err := uc.store.GetDeployment(ctx, ref)
 	if err == nil {
@@ -89,9 +95,9 @@ func (uc *ShowDeployment) resolveDeployment(ctx context.Context, params ShowDepl
 	
 	// 2. Try as address (starts with 0x and is 42 chars)
 	if strings.HasPrefix(ref, "0x") && len(ref) == 42 {
-		if params.ChainID != 0 {
+		if chainID != 0 {
 			// If chain ID is specified, try direct lookup
-			deployment, err = uc.store.GetDeploymentByAddress(ctx, params.ChainID, ref)
+			deployment, err = uc.store.GetDeploymentByAddress(ctx, chainID, ref)
 			if err == nil {
 				return deployment, nil
 			}
@@ -126,11 +132,11 @@ func (uc *ShowDeployment) resolveDeployment(ctx context.Context, params ShowDepl
 		contractName = prefixParts[1]
 		
 		// Try to parse as chain ID
-		if chainID := parseChainID(prefix); chainID != 0 {
-			params.ChainID = chainID
+		if parsedChainID := parseChainID(prefix); parsedChainID != 0 {
+			chainID = parsedChainID
 		} else {
 			// Otherwise treat as namespace
-			params.Namespace = prefix
+			namespace = prefix
 		}
 	}
 	
@@ -138,8 +144,8 @@ func (uc *ShowDeployment) resolveDeployment(ctx context.Context, params ShowDepl
 	filter := DeploymentFilter{
 		ContractName: contractName,
 		Label:        label,
-		ChainID:      params.ChainID,
-		Namespace:    params.Namespace,
+		ChainID:      chainID,
+		Namespace:    namespace,
 	}
 	
 	deployments, err := uc.store.ListDeployments(ctx, filter)

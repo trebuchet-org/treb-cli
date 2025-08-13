@@ -1,24 +1,16 @@
 package cli
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
-	"github.com/trebuchet-org/treb-cli/internal/app"
 	"github.com/trebuchet-org/treb-cli/internal/cli/render"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
 // NewShowCmd creates the show command using the new architecture
-func NewShowCmd(baseCfg *app.Config) *cobra.Command {
-	var (
-		jsonOutput bool
-		network    string
-		namespace  string
-	)
+func NewShowCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "show <deployment>",
@@ -44,46 +36,25 @@ Examples:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			deploymentRef := args[0]
 
-			// Use NOP progress for now to preserve exact output
-			progressSink := usecase.NopProgress{}
-
-			// Initialize app with Wire
-			app, err := app.InitApp(*baseCfg, progressSink)
+			// Get app from context
+			app, err := getApp(cmd)
 			if err != nil {
-				return fmt.Errorf("failed to initialize app: %w", err)
-			}
-
-			// Use default namespace from config if not specified
-			if namespace == "" {
-				// Load the old config to get namespace
-				cfg, err := config.NewManager(baseCfg.ProjectRoot).Load()
-				if err == nil && cfg.Namespace != "" {
-					namespace = cfg.Namespace
-				}
-			}
-
-			// Resolve network to chain ID if specified
-			var chainID uint64
-			if network != "" {
-				// TODO: Implement network resolution when NetworkResolver is available
-				// For now, we'll skip network resolution
+				return err
 			}
 
 			// Run use case
 			params := usecase.ShowDeploymentParams{
 				DeploymentRef: deploymentRef,
-				ChainID:       chainID,
-				Namespace:     namespace,
 				ResolveProxy:  true, // Always resolve proxy implementations
 			}
 
-			deployment, err := app.ShowDeployment.Run(context.Background(), params)
+			deployment, err := app.ShowDeployment.Run(cmd.Context(), params)
 			if err != nil {
 				return fmt.Errorf("failed to resolve deployment: %w", err)
 			}
 
 			// Output JSON if requested
-			if jsonOutput {
+			if app.Config.JSON {
 				// For JSON output, we need to structure the data
 				output := map[string]interface{}{
 					"deployment": deployment,
@@ -105,10 +76,8 @@ Examples:
 		},
 	}
 
-	// Add flags
-	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output in JSON format")
-	cmd.Flags().StringVarP(&network, "network", "n", "", "Network to use (e.g., mainnet, sepolia)")
-	cmd.Flags().StringVar(&namespace, "namespace", "", "Namespace to use (defaults to current context)")
+	// No command-specific flags - all configuration comes from runtime config
 
 	return cmd
 }
+

@@ -7,6 +7,7 @@ import (
 
 	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
+	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -17,8 +18,8 @@ type RegistryStoreAdapter struct {
 }
 
 // NewRegistryStoreAdapter creates a new adapter wrapping the existing registry manager
-func NewRegistryStoreAdapter(rootDir string) (*RegistryStoreAdapter, error) {
-	manager, err := registry.NewManager(rootDir)
+func NewRegistryStoreAdapter(cfg *config.RuntimeConfig) (*RegistryStoreAdapter, error) {
+	manager, err := registry.NewManager(cfg.ProjectRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create registry manager: %w", err)
 	}

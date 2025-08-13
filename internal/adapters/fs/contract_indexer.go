@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
+	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -15,8 +16,8 @@ type ContractIndexerAdapter struct {
 }
 
 // NewContractIndexerAdapter creates a new adapter wrapping the existing contract indexer
-func NewContractIndexerAdapter(projectRoot string) (*ContractIndexerAdapter, error) {
-	indexer := contracts.NewIndexer(projectRoot)
+func NewContractIndexerAdapter(cfg *config.RuntimeConfig) (*ContractIndexerAdapter, error) {
+	indexer := contracts.NewIndexer(cfg.ProjectRoot)
 	
 	// Build the initial index
 	if err := indexer.Index(); err != nil {

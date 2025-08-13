@@ -4,13 +4,13 @@ import (
 	"context"
 	"sort"
 
+	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
 )
 
 // ListDeploymentsParams contains parameters for listing deployments
 type ListDeploymentsParams struct {
-	Namespace    string
-	ChainID      uint64
+	// Filter parameters (namespace and chainID come from RuntimeConfig)
 	ContractName string
 	Label        string
 	Type         domain.DeploymentType
@@ -18,15 +18,17 @@ type ListDeploymentsParams struct {
 
 // ListDeployments is the use case for listing deployments
 type ListDeployments struct {
-	store DeploymentStore
-	sink  ProgressSink
+	config *config.RuntimeConfig
+	store  DeploymentStore
+	sink   ProgressSink
 }
 
 // NewListDeployments creates a new ListDeployments use case
-func NewListDeployments(store DeploymentStore, sink ProgressSink) *ListDeployments {
+func NewListDeployments(cfg *config.RuntimeConfig, store DeploymentStore, sink ProgressSink) *ListDeployments {
 	return &ListDeployments{
-		store: store,
-		sink:  sink,
+		config: cfg,
+		store:  store,
+		sink:   sink,
 	}
 }
 
@@ -38,28 +40,28 @@ func (uc *ListDeployments) Run(ctx context.Context, params ListDeploymentsParams
 		Message: "Loading deployments from registry",
 		Spinner: true,
 	})
-	
-	// Create filter from params
+
+	// Create filter from params and runtime config
 	filter := DeploymentFilter{
-		Namespace:    params.Namespace,
-		ChainID:      params.ChainID,
+		Namespace:    uc.config.Namespace,
 		ContractName: params.ContractName,
 		Label:        params.Label,
 		Type:         params.Type,
+		ChainID:      uc.config.Network.ChainID,
 	}
-	
+
 	// Get deployments from store
 	deployments, err := uc.store.ListDeployments(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Sort deployments for consistent output
 	sortDeployments(deployments)
-	
+
 	// Calculate summary
 	summary := calculateSummary(deployments)
-	
+
 	// Report completion
 	uc.sink.OnProgress(ctx, ProgressEvent{
 		Stage:   "complete",
@@ -67,7 +69,7 @@ func (uc *ListDeployments) Run(ctx context.Context, params ListDeploymentsParams
 		Total:   len(deployments),
 		Message: "Deployments loaded",
 	})
-	
+
 	return &DeploymentListResult{
 		Deployments: deployments,
 		Summary:     summary,
@@ -81,17 +83,17 @@ func sortDeployments(deployments []*domain.Deployment) {
 		if deployments[i].Namespace != deployments[j].Namespace {
 			return deployments[i].Namespace < deployments[j].Namespace
 		}
-		
+
 		// Then by chain ID
 		if deployments[i].ChainID != deployments[j].ChainID {
 			return deployments[i].ChainID < deployments[j].ChainID
 		}
-		
+
 		// Then by contract name
 		if deployments[i].ContractName != deployments[j].ContractName {
 			return deployments[i].ContractName < deployments[j].ContractName
 		}
-		
+
 		// Finally by label
 		return deployments[i].Label < deployments[j].Label
 	})
@@ -105,17 +107,17 @@ func calculateSummary(deployments []*domain.Deployment) DeploymentSummary {
 		ByChain:     make(map[uint64]int),
 		ByType:      make(map[domain.DeploymentType]int),
 	}
-	
+
 	for _, dep := range deployments {
 		// Count by namespace
 		summary.ByNamespace[dep.Namespace]++
-		
+
 		// Count by chain
 		summary.ByChain[dep.ChainID]++
-		
+
 		// Count by type
 		summary.ByType[dep.Type]++
 	}
-	
+
 	return summary
 }
