@@ -1,3 +1,4 @@
+=== cmd 0: [--help] ===
 Trebuchet (treb) orchestrates Foundry script execution for deterministic 
 smart contract deployments using CreateX factory contracts.
 

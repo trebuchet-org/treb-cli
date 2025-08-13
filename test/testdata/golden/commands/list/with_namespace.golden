@@ -1,4 +1,5 @@
-◎ namespace:   PRODUCTION                    
+=== cmd 0: [list --namespace production] ===
+   ◎ namespace:   PRODUCTION                    
 └─ ⛓ chain:       31337                         
   
   SINGLETONS

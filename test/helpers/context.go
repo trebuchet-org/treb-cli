@@ -38,16 +38,11 @@ func NewTrebContext(t *testing.T, version BinaryVersion) *TrebContext {
 	}
 
 	// Resolve binary path based on version
-	baseBin := GetTrebBin()
 	switch version {
 	case BinaryV1:
-		tc.BinaryPath = baseBin
+		tc.BinaryPath = GetTrebBin()
 	case BinaryV2:
-		tc.BinaryPath = strings.Replace(baseBin, "/treb", "/treb-v2", 1)
-		// Check if v2 binary exists
-		if _, err := os.Stat(tc.BinaryPath); os.IsNotExist(err) {
-			t.Skipf("v2 binary not found at %s, run 'make build-v2' first", tc.BinaryPath)
-		}
+		tc.BinaryPath = GetV2Binary()
 	default:
 		t.Fatalf("Unknown binary version: %s", version)
 	}
@@ -187,4 +182,3 @@ func GetBinaryVersionFromEnv() BinaryVersion {
 		panic(fmt.Sprintf("Invalid TREB_TEST_BINARY value: %s", version))
 	}
 }
-

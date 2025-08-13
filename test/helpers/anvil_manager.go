@@ -57,7 +57,7 @@ func NewAnvilManager() (*AnvilManager, error) {
 			// Parse chain ID from name (anvil-31337 -> 31337)
 			parts := strings.Split(name, "-")
 			if len(parts) != 2 {
-				fmt.Println("Skipping invalid anvil node name: %s", name)
+				fmt.Printf("Skipping invalid anvil node name: %s\n", name)
 				continue
 			}
 			chainID := parts[1]

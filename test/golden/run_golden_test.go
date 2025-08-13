@@ -1,68 +1,43 @@
 package golden
 
 import (
+	"github.com/trebuchet-org/treb-cli/test/helpers"
 	"os"
 	"path/filepath"
 	"testing"
-	"github.com/trebuchet-org/treb-cli/test/helpers"
 )
 
 func TestRunCommandGolden(t *testing.T) {
-	tests := []struct {
-		name       string
-		setup      func(t *testing.T, ctx *helpers.TrebContext)
-		args       []string
-		goldenFile string
-		expectErr  bool
-	}{
+	tests := []GoldenTest{
 		{
-			name: "deploy_simple",
-			setup: func(t *testing.T, ctx *helpers.TrebContext) {
-				// Clean up any previous generated files
-				scriptPath := filepath.Join(helpers.GetFixtureDir(), "script/deploy/DeployCounter.s.sol")
-				os.Remove(scriptPath)
-
-				// Generate deployment script
-				output, err := ctx.Treb("gen", "deploy", "src/Counter.sol:Counter")
-				if err != nil {
-					t.Fatalf("Failed to generate script: %v\nOutput:\n%s", err, output)
-				}
+			Name: "deploy_simple",
+			SetupCmds: [][]string{
+				{"gen", "deploy", "src/Counter.sol:Counter"},
 			},
-			args:       []string{"run", "script/deploy/DeployCounter.s.sol"},
-			goldenFile: "commands/run/deploy_simple.golden",
+			TestCmds: [][]string{
+				{"run", "script/deploy/DeployCounter.s.sol"},
+			},
+			GoldenFile: "commands/run/deploy_simple.golden",
 		},
 		{
-			name: "deploy_with_label",
-			setup: func(t *testing.T, ctx *helpers.TrebContext) {
-				// Ensure script exists
-				if _, err := os.Stat(filepath.Join(helpers.GetFixtureDir(), "script/deploy/DeployCounter.s.sol")); os.IsNotExist(err) {
-					output, err := ctx.Treb("gen", "deploy", "src/Counter.sol:Counter")
-					if err != nil {
-						t.Fatalf("Failed to generate script: %v\nOutput:\n%s", err, output)
-					}
-				}
-				// Deploy first without label
-				output, err := ctx.Treb("run", "script/deploy/DeployCounter.s.sol")
-				if err != nil {
-					t.Fatalf("Failed initial deployment: %v\nOutput:\n%s", err, output)
-				}
+			Name: "deploy_with_label",
+			SetupCmds: [][]string{
+				{"gen", "deploy", "src/Counter.sol:Counter"},
 			},
-			args:       []string{"run", "script/deploy/DeployCounter.s.sol", "--env", "label=v2"},
-			goldenFile: "commands/run/deploy_with_label.golden",
+			TestCmds: [][]string{
+				{"run", "script/deploy/DeployCounter.s.sol", "--env", "label=v2"},
+			},
+			GoldenFile: "commands/run/deploy_with_label.golden",
 		},
 		{
-			name: "deploy_dry_run",
-			setup: func(t *testing.T, ctx *helpers.TrebContext) {
-				// Ensure script exists
-				if _, err := os.Stat(filepath.Join(helpers.GetFixtureDir(), "script/deploy/DeployCounter.s.sol")); os.IsNotExist(err) {
-					output, err := ctx.Treb("gen", "deploy", "src/Counter.sol:Counter")
-					if err != nil {
-						t.Fatalf("Failed to generate script: %v\nOutput:\n%s", err, output)
-					}
-				}
+			Name: "deploy_dry_run",
+			SetupCmds: [][]string{
+				{"gen", "deploy", "src/Counter.sol:Counter"},
 			},
-			args:       []string{"run", "script/deploy/DeployCounter.s.sol", "--dry-run"},
-			goldenFile: "commands/run/deploy_dry_run.golden",
+			TestCmds: [][]string{
+				{"run", "script/deploy/DeployCounter.s.sol", "--dry-run"},
+			},
+			GoldenFile: "commands/run/deploy_dry_run.golden",
 		},
 		// Skip this test for now - requires proper sender configuration
 		// {
@@ -79,44 +54,28 @@ func TestRunCommandGolden(t *testing.T) {
 		// 	goldenFile: "commands/run/deploy_with_params.golden",
 		// },
 		{
-			name: "deploy_already_exists",
-			setup: func(t *testing.T, ctx *helpers.TrebContext) {
-				// Generate script first
-				output, err := ctx.Treb("gen", "deploy", "src/Counter.sol:Counter")
-				if err != nil {
-					t.Fatalf("Failed to generate script: %v\nOutput:\n%s", err, output)
-				}
-				// Deploy once first
-				output, err = ctx.Treb("run", "script/deploy/DeployCounter.s.sol")
-				if err != nil {
-					t.Fatalf("Failed to deploy first time: %v\nOutput:\n%s", err, output)
-				}
+			Name: "deploy_already_exists",
+			SetupCmds: [][]string{
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"run", "script/deploy/DeployCounter.s.sol"},
 			},
-			args:       []string{"run", "script/deploy/DeployCounter.s.sol"},
-			goldenFile: "commands/run/deploy_already_exists.golden",
-			expectErr:  false, // CreateX returns existing address, so no error
+			TestCmds: [][]string{
+				{"run", "script/deploy/DeployCounter.s.sol"},
+			},
+			GoldenFile: "commands/run/deploy_already_exists.golden",
+			ExpectErr:  false, // CreateX returns existing address, so no error
 		},
 		{
-			name:       "script_not_found",
-			args:       []string{"run", "script/deploy/NonExistent.s.sol"},
-			goldenFile: "commands/run/script_not_found.golden",
-			expectErr:  true,
+			Name: "script_not_found",
+			TestCmds: [][]string{
+				{"run", "script/deploy/NonExistent.s.sol"},
+			},
+			GoldenFile: "commands/run/script_not_found.golden",
+			ExpectErr:  true,
 		},
 	}
 
-	for _, tt := range tests {
-		helpers.IsolatedTest(t, tt.name, func(t *testing.T, ctx *helpers.TrebContext) {
-			if tt.setup != nil {
-				tt.setup(t, ctx)
-			}
-
-			if tt.expectErr {
-				TrebGoldenWithError(t, ctx, tt.goldenFile, tt.args...)
-			} else {
-				TrebGolden(t, ctx, tt.goldenFile, tt.args...)
-			}
-		})
-	}
+	RunGoldenTests(t, tests)
 }
 
 // createParameterizedScript creates a test script that accepts parameters
@@ -157,4 +116,3 @@ contract ParameterizedDeploy is ConfigurableTrebScript {
 		t.Fatalf("Failed to create parameterized script: %v", err)
 	}
 }
-

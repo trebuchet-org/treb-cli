@@ -1,4 +1,4 @@
-=== Step 1: Generate deployment script ===
+=== cmd 0: [gen deploy src/Counter.sol:Counter] ===
 
 ✅ Generated deployment script: script/deploy/DeployCounter.s.sol
 
@@ -6,7 +6,7 @@ To deploy, run:
   treb run script/deploy/DeployCounter.s.sol --network <network>
 
 
-=== Step 2: Deploy contract ===
+=== cmd 1: [run script/deploy/DeployCounter.s.sol] ===
 
 🚀 Running Deployment Script
 ──────────────────────────────────────────────────
@@ -43,7 +43,7 @@ Counter at 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
 Warning: Could not check treb-sol version: failed to get current commit: failed to get submodule status: exit status 1
 
 
-=== Step 3: List deployments ===
+=== cmd 2: [list] ===
    ◎ namespace:   DEFAULT                       
 └─ ⛓ chain:       31337                         
   
@@ -53,7 +53,7 @@ Warning: Could not check treb-sol version: failed to get current commit: failed 
 Total deployments: 1
 
 
-=== Step 4: Show deployment details ===
+=== cmd 3: [show Counter] ===
 Deployment: default/31337/Counter
 ================================================================================
 
@@ -76,7 +76,7 @@ Artifact Information:
   Compiler: 0.8.30+commit.73712a01
   Bytecode Hash: 0x<HASH>
   Script: script/deploy/DeployCounter.s.sol
-  Git Commit: c36ebc688a5c211efc4a426b423302977a9bb951
+  Git Commit: <GIT_COMMIT>
 
 Verification Status:
   Status: UNVERIFIED
@@ -90,7 +90,3 @@ Transaction Information:
 Timestamps:
   Created: <TIMESTAMP>
   Updated: <TIMESTAMP>
-
-
-=== Step 5: Verify contract ===
-Verification skipped (local chain)

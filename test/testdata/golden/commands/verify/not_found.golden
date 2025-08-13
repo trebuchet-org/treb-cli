@@ -1,1 +1,2 @@
+=== cmd 0: [verify NonExistent] ===
 Error: no deployments found matching 'NonExistent'

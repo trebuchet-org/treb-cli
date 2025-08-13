@@ -1,3 +1,4 @@
+=== cmd 0: [run script/deploy/DeployCounter.s.sol --env label=v2] ===
 
 🚀 Running Deployment Script
 ──────────────────────────────────────────────────
@@ -10,14 +11,26 @@
 
 🔄 Transactions:
 ──────────────────────────────────────────────────
-No transactions executed (dry run or all deployments skipped)
 
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ create2(16 bytes)
+│  └─ [return] 0xDaFaC68f7D2133e3CE0229fAddcd2b1C96D8Eb83
+├─ Create3ProxyContractCreation(newContract: 0xDaFa...Eb83, salt: 0x78714809...)
+├─ 0xDaFaC68f...::0x60806040...
+│  └─ 🚀 new Counter()
+│     └─ [return] 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
+└─ ContractCreation(newContract: Counter: [0x74148047D6bDf624C...)
+└─ Tx: 0x<HASH> | Block: 1 | Gas: 197581
 
-⚠️ Deployment Collisions Detected:
+📦 Deployment Summary:
 ──────────────────────────────────────────────────
-Counter already deployed at 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
-Note: These contracts were already deployed and deployment was skipped.
+Counter at 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
 
-- No registry changes recorded for anvil-31337 network in namespace default
+
+📝 Script Logs:
+────────────────────────────────────────
+  Registry: failed to load registry from .treb/registry.json
+
+✓ Updated registry for anvil-31337 network in namespace default
 ✓ Script execution completed successfully
 Warning: Could not check treb-sol version: failed to get current commit: failed to get submodule status: exit status 1

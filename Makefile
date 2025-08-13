@@ -28,13 +28,11 @@ forge_build:
 	@cd treb-sol && forge build
 
 # Install globally
-install: build
-	@echo "📦 Installing treb..."
-	@cp bin/treb /usr/local/bin/treb
-	@echo "✅ treb installed to /usr/local/bin/treb"
+install: 
+	@trebup --path $(pwd)
 
 # Run tests
-test:
+unit-test:
 	@echo "🧪 Running tests..."
 	@go test -v ./...
 
@@ -63,36 +61,14 @@ setup-integration-test:
 # Run integration tests  
 integration-test: build build-v2 setup-integration-test
 	@echo "🔗 Running integration tests..."
-	@cd test && go mod download && go test -v -timeout=10m
+	@cd test && go mod download && go test ./... -v -timeout=10m -p=1
 
 # Run integration tests with coverage
 integration-test-coverage: build build-v2 setup-integration-test
 	@echo "🔗 Running integration tests with coverage..."
-	@cd test && go test -v -timeout=10m -coverprofile=coverage.out
+	@cd test && go test ./... -v -timeout=10m -coverprofile=coverage.out -p=1
 	@cd test && go tool cover -html=coverage.out -o coverage.html
 	@echo "✅ Coverage report generated: test/coverage.html"
-
-# Run integration tests with golden file updates
-update-golden: build build-v2 setup-integration-test
-	@echo "🔄 Updating golden files..."
-	@cd test && UPDATE_GOLDEN=true go test -v -timeout=10m -run "Golden"
-	@echo "✅ Golden files updated"
-
-# Run golden file tests only
-golden-test: build build-v2 setup-integration-test
-	@echo "📸 Running golden file tests..."
-	@cd test && go test -v -timeout=10m -run "Golden"
-
-# Generate initial golden files for all commands
-generate-golden: build build-v2 setup-integration-test
-	@echo "🏗️ Generating initial golden files..."
-	@cd test && UPDATE_GOLDEN=true go test -v -timeout=10m -run "Golden"
-	@echo "✅ Initial golden files generated in test/testdata/golden/"
-
-# Show golden file diff
-golden-diff:
-	@echo "📊 Showing golden file differences..."
-	@git diff --no-index test/testdata/golden/ || true
 
 # Clean build artifacts
 clean:

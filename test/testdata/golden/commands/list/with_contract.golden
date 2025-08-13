@@ -1,4 +1,5 @@
-◎ namespace:   DEFAULT                       
+=== cmd 0: [list --contract Counter] ===
+   ◎ namespace:   DEFAULT                       
 └─ ⛓ chain:       31337                         
   
   SINGLETONS

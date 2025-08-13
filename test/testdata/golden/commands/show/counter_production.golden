@@ -1,3 +1,4 @@
+=== cmd 0: [show Counter --namespace production] ===
 Deployment: production/31337/Counter
 ================================================================================
 

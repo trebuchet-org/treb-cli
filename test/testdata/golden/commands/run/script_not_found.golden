@@ -1,2 +1,3 @@
+=== cmd 0: [run script/deploy/NonExistent.s.sol] ===
 Warning: Could not check treb-sol version: failed to get current commit: failed to get submodule status: exit status 1
 Error: failed to resolve script contract: contract 'script/deploy/NonExistent.s.sol' not found
