@@ -22,6 +22,9 @@ var FSSet = wire.NewSet(
 	
 	fs.NewFileWriterAdapter,
 	wire.Bind(new(usecase.FileWriter), new(*fs.FileWriterAdapter)),
+	
+	fs.NewLocalConfigStoreAdapter,
+	wire.Bind(new(usecase.LocalConfigStore), new(*fs.LocalConfigStoreAdapter)),
 )
 
 // ForgeSet provides forge-based implementations

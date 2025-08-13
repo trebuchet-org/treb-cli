@@ -128,7 +128,7 @@ func configSet(key, value string) error {
 		cfg.Network = value
 		fmt.Printf("✅ Set network to: %s\n", value)
 	default:
-		return fmt.Errorf("unknown config key: %s\nAvailable keys: namespace, network", key)
+		return fmt.Errorf("unknown config key: %s\nAvailable keys: namespace (ns), network", key)
 	}
 
 	// Save the updated config
@@ -166,7 +166,7 @@ func configRemove(key string) error {
 		cfg.Network = ""
 		fmt.Printf("✅ Removed network from config (will be required as flag)\n")
 	default:
-		return fmt.Errorf("unknown config key: %s\nAvailable keys: namespace (ns), network, sender", key)
+		return fmt.Errorf("unknown config key: %s\nAvailable keys: namespace (ns), network", key)
 	}
 
 	// Save the updated config

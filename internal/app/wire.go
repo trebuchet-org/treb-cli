@@ -33,6 +33,9 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 		usecase.NewGenerateDeploymentScript,
 		usecase.NewListNetworks,
 		usecase.NewPruneRegistry,
+		usecase.NewShowConfig,
+		usecase.NewSetConfig,
+		usecase.NewRemoveConfig,
 		
 		// Interface providers
 		ProvideContractResolver,

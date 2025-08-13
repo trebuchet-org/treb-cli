@@ -177,3 +177,11 @@ type RegistryPruner interface {
 	CollectPrunableItems(ctx context.Context, chainID uint64, includePending bool, checker BlockchainChecker) (*domain.ItemsToPrune, error)
 	ExecutePrune(ctx context.Context, items *domain.ItemsToPrune) error
 }
+
+// LocalConfigStore manages local configuration persistence
+type LocalConfigStore interface {
+	Exists() bool
+	Load(ctx context.Context) (*domain.LocalConfig, error)
+	Save(ctx context.Context, config *domain.LocalConfig) error
+	GetPath() string
+}

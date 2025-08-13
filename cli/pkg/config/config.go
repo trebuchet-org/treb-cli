@@ -61,6 +61,12 @@ func (m *Manager) Load() (*Config, error) {
 
 // Save writes the configuration to the .treb file
 func (m *Manager) Save(config *Config) error {
+	// Ensure directory exists
+	dir := filepath.Dir(m.configPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
+	}
+
 	data, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)

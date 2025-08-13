@@ -16,6 +16,9 @@ type App struct {
 	GenerateDeploymentScript *usecase.GenerateDeploymentScript
 	ListNetworks            *usecase.ListNetworks
 	PruneRegistry           *usecase.PruneRegistry
+	ShowConfig              *usecase.ShowConfig
+	SetConfig               *usecase.SetConfig
+	RemoveConfig            *usecase.RemoveConfig
 	
 	// Add more use cases as they are implemented
 	// RunScript       *usecase.RunScript
@@ -31,6 +34,9 @@ func NewApp(
 	generateDeploymentScript *usecase.GenerateDeploymentScript,
 	listNetworks *usecase.ListNetworks,
 	pruneRegistry *usecase.PruneRegistry,
+	showConfig *usecase.ShowConfig,
+	setConfig *usecase.SetConfig,
+	removeConfig *usecase.RemoveConfig,
 ) (*App, error) {
 	return &App{
 		Config:                   cfg,
@@ -39,5 +45,8 @@ func NewApp(
 		GenerateDeploymentScript: generateDeploymentScript,
 		ListNetworks:             listNetworks,
 		PruneRegistry:            pruneRegistry,
+		ShowConfig:               showConfig,
+		SetConfig:                setConfig,
+		RemoveConfig:             removeConfig,
 	}, nil
 }

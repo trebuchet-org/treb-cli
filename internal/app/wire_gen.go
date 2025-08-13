@@ -60,7 +60,11 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	listNetworks := usecase.NewListNetworks(networkResolverAdapter)
 	checkerAdapter := blockchain.NewCheckerAdapter()
 	pruneRegistry := usecase.NewPruneRegistry(networkResolverAdapter, checkerAdapter, registryStoreAdapter, sink)
-	app, err := NewApp(runtimeConfig, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry)
+	localConfigStoreAdapter := fs.NewLocalConfigStoreAdapter(runtimeConfig)
+	showConfig := usecase.NewShowConfig(localConfigStoreAdapter)
+	setConfig := usecase.NewSetConfig(localConfigStoreAdapter)
+	removeConfig := usecase.NewRemoveConfig(localConfigStoreAdapter)
+	app, err := NewApp(runtimeConfig, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, showConfig, setConfig, removeConfig)
 	if err != nil {
 		return nil, err
 	}
