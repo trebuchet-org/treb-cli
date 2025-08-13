@@ -8,6 +8,7 @@ package app
 
 import (
 	"github.com/spf13/viper"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/blockchain"
 	config2 "github.com/trebuchet-org/treb-cli/internal/adapters/config"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/forge"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/fs"
@@ -57,7 +58,9 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	networkResolver := config.ProvideNetworkResolver(runtimeConfig)
 	networkResolverAdapter := config2.NewNetworkResolverAdapter(networkResolver)
 	listNetworks := usecase.NewListNetworks(networkResolverAdapter)
-	app, err := NewApp(runtimeConfig, listDeployments, showDeployment, generateDeploymentScript, listNetworks)
+	checkerAdapter := blockchain.NewCheckerAdapter()
+	pruneRegistry := usecase.NewPruneRegistry(networkResolverAdapter, checkerAdapter, registryStoreAdapter, sink)
+	app, err := NewApp(runtimeConfig, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry)
 	if err != nil {
 		return nil, err
 	}

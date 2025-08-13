@@ -15,6 +15,7 @@ type App struct {
 	ShowDeployment          *usecase.ShowDeployment
 	GenerateDeploymentScript *usecase.GenerateDeploymentScript
 	ListNetworks            *usecase.ListNetworks
+	PruneRegistry           *usecase.PruneRegistry
 	
 	// Add more use cases as they are implemented
 	// RunScript       *usecase.RunScript
@@ -29,6 +30,7 @@ func NewApp(
 	showDeployment *usecase.ShowDeployment,
 	generateDeploymentScript *usecase.GenerateDeploymentScript,
 	listNetworks *usecase.ListNetworks,
+	pruneRegistry *usecase.PruneRegistry,
 ) (*App, error) {
 	return &App{
 		Config:                   cfg,
@@ -36,5 +38,6 @@ func NewApp(
 		ShowDeployment:           showDeployment,
 		GenerateDeploymentScript: generateDeploymentScript,
 		ListNetworks:             listNetworks,
+		PruneRegistry:            pruneRegistry,
 	}, nil
 }

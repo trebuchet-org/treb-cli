@@ -118,17 +118,21 @@ func runPrune(cmd *cobra.Command, args []string) error {
 	}
 
 	// Confirmation prompt
-	fmt.Print("⚠️  Are you sure you want to prune these items? This cannot be undone. [y/N]: ")
-	var response string
-	if _, err := fmt.Scanln(&response); err != nil {
-		// Treat error as "no" response
-		fmt.Println("❌ Prune cancelled.")
-		return nil
-	}
+	if !IsNonInteractive() {
+		fmt.Print("⚠️  Are you sure you want to prune these items? This cannot be undone. [y/N]: ")
+		var response string
+		if _, err := fmt.Scanln(&response); err != nil {
+			// Treat error as "no" response
+			fmt.Println("❌ Prune cancelled.")
+			return nil
+		}
 
-	if strings.ToLower(strings.TrimSpace(response)) != "y" {
-		fmt.Println("❌ Prune cancelled.")
-		return nil
+		if strings.ToLower(strings.TrimSpace(response)) != "y" {
+			fmt.Println("❌ Prune cancelled.")
+			return nil
+		}
+	} else {
+		fmt.Println("⚠️  Running in non-interactive mode. Proceeding with prune...")
 	}
 
 	// Execute prune

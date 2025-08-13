@@ -212,3 +212,27 @@ func (d *Deployment) GetShortID() string {
 func (d *Deployment) ContractDisplayName() string {
 	return d.GetShortID()
 }
+
+// PruneItem represents an item that should be pruned with the reason
+type PruneItem struct {
+	ID      string
+	Address string // For deployments
+	Hash    string // For transactions
+	Status  TransactionStatus
+	Reason  string
+}
+
+// SafePruneItem represents a safe transaction that should be pruned
+type SafePruneItem struct {
+	SafeTxHash  string
+	SafeAddress string
+	Status      TransactionStatus
+	Reason      string
+}
+
+// ItemsToPrune contains all items that should be pruned
+type ItemsToPrune struct {
+	Deployments      []PruneItem
+	Transactions     []PruneItem
+	SafeTransactions []SafePruneItem
+}

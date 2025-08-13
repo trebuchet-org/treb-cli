@@ -12,8 +12,9 @@ import (
 // CompatibilityTest runs a test against both v1 and v2 binaries
 type CompatibilityTest struct {
 	Name        string
-	Setup       func(t *testing.T, ctx *helpers.TrebContext)
+	PreSetup    func(t *testing.T, ctx *helpers.TrebContext)
 	SetupCmds   [][]string
+	PostSetup   func(t *testing.T, ctx *helpers.TrebContext)
 	TestCmds    [][]string
 	ExpectErr   bool
 	Normalizers []helpers.Normalizer
@@ -50,9 +51,9 @@ func runTest(t *testing.T, version helpers.BinaryVersion, test CompatibilityTest
 	var output bytes.Buffer
 	helpers.IsolatedTestWithVersion(t, string(version), version, func(t *testing.T, ctx *helpers.TrebContext) {
 		// Run setup if provided
-		if test.Setup != nil {
-			t.Logf("Running setup function")
-			test.Setup(t, ctx)
+		if test.PreSetup != nil {
+			t.Logf("Running pre-setup function")
+			test.PreSetup(t, ctx)
 		}
 
 		setupCtx := ctx
@@ -68,6 +69,11 @@ func runTest(t *testing.T, version helpers.BinaryVersion, test CompatibilityTest
 					t.Fatalf("Failed setup command %v: %v\nOutput:\n%s", cmd, err, output)
 				}
 			}
+		}
+
+		if test.PostSetup != nil {
+			t.Logf("Running post-setup function")
+			test.PostSetup(t, ctx)
 		}
 
 		// Run the command

@@ -163,3 +163,17 @@ type NetworkResolver interface {
 	GetNetworks(ctx context.Context) []string
 	ResolveNetwork(ctx context.Context, networkName string) (*domain.NetworkInfo, error)
 }
+
+// BlockchainChecker checks on-chain state of contracts and transactions
+type BlockchainChecker interface {
+	Connect(ctx context.Context, rpcURL string, chainID uint64) error
+	CheckDeploymentExists(ctx context.Context, address string) (exists bool, reason string, err error)
+	CheckTransactionExists(ctx context.Context, txHash string) (exists bool, blockNumber uint64, reason string, err error)
+	CheckSafeContract(ctx context.Context, safeAddress string) (exists bool, reason string, err error)
+}
+
+// RegistryPruner handles registry pruning operations
+type RegistryPruner interface {
+	CollectPrunableItems(ctx context.Context, chainID uint64, includePending bool, checker BlockchainChecker) (*domain.ItemsToPrune, error)
+	ExecutePrune(ctx context.Context, items *domain.ItemsToPrune) error
+}

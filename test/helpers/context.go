@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -151,23 +152,13 @@ func (tc *TrebContext) GetVersion() BinaryVersion {
 // supportsNetworkFlag returns true if the command supports --network flag
 func supportsNetworkFlag(command string) bool {
 	networkCommands := []string{"run", "show", "orchestrate", "prune"}
-	for _, cmd := range networkCommands {
-		if command == cmd {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(networkCommands, command)
 }
 
 // supportsNamespaceFlag returns true if the command supports --namespace flag
 func supportsNamespaceFlag(command string) bool {
-	namespaceCommands := []string{"run", "show", "verify", "list", "tag", "prune"}
-	for _, cmd := range namespaceCommands {
-		if command == cmd {
-			return true
-		}
-	}
-	return false
+	namespaceCommands := []string{"run", "show", "verify", "list", "tag"}
+	return slices.Contains(namespaceCommands, command)
 }
 
 // Helper to determine which binary version to use based on environment

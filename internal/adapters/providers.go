@@ -2,6 +2,7 @@ package adapters
 
 import (
 	"github.com/google/wire"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/blockchain"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/config"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/forge"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/fs"
@@ -14,6 +15,7 @@ import (
 var FSSet = wire.NewSet(
 	fs.NewRegistryStoreAdapter,
 	wire.Bind(new(usecase.DeploymentStore), new(*fs.RegistryStoreAdapter)),
+	wire.Bind(new(usecase.RegistryPruner), new(*fs.RegistryStoreAdapter)),
 	
 	fs.NewContractIndexerAdapter,
 	wire.Bind(new(usecase.ContractIndexer), new(*fs.ContractIndexerAdapter)),
@@ -49,6 +51,12 @@ var ConfigSet = wire.NewSet(
 	wire.Bind(new(usecase.NetworkResolver), new(*config.NetworkResolverAdapter)),
 )
 
+// BlockchainSet provides blockchain-based implementations
+var BlockchainSet = wire.NewSet(
+	blockchain.NewCheckerAdapter,
+	wire.Bind(new(usecase.BlockchainChecker), new(*blockchain.CheckerAdapter)),
+)
+
 // AllAdapters includes all adapter sets
 var AllAdapters = wire.NewSet(
 	FSSet,
@@ -56,4 +64,5 @@ var AllAdapters = wire.NewSet(
 	TemplateSet,
 	InteractiveSet,
 	ConfigSet,
+	BlockchainSet,
 )
