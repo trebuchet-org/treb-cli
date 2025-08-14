@@ -2,14 +2,26 @@ package adapters
 
 import (
 	"github.com/google/wire"
+	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/blockchain"
-	"github.com/trebuchet-org/treb-cli/internal/adapters/config"
+	internalconfig "github.com/trebuchet-org/treb-cli/internal/adapters/config"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/forge"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/fs"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/interactive"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/template"
+	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
+
+// ProvideContractsIndexer provides a singleton contracts.Indexer
+func ProvideContractsIndexer(cfg *config.RuntimeConfig) (*contracts.Indexer, error) {
+	return contracts.GetGlobalIndexer(cfg.ProjectRoot)
+}
+
+// ProvideProjectPath provides the project path from RuntimeConfig
+func ProvideProjectPath(cfg *config.RuntimeConfig) string {
+	return cfg.ProjectRoot
+}
 
 // FSSet provides filesystem-based implementations
 var FSSet = wire.NewSet(
@@ -50,8 +62,8 @@ var InteractiveSet = wire.NewSet(
 
 // ConfigSet provides configuration-based implementations
 var ConfigSet = wire.NewSet(
-	config.NewNetworkResolverAdapter,
-	wire.Bind(new(usecase.NetworkResolver), new(*config.NetworkResolverAdapter)),
+	internalconfig.NewNetworkResolverAdapter,
+	wire.Bind(new(usecase.NetworkResolver), new(*internalconfig.NetworkResolverAdapter)),
 )
 
 // BlockchainSet provides blockchain-based implementations
@@ -62,10 +74,16 @@ var BlockchainSet = wire.NewSet(
 
 // AllAdapters includes all adapter sets
 var AllAdapters = wire.NewSet(
+	// Provider functions
+	ProvideContractsIndexer,
+	ProvideProjectPath,
+	
+	// Adapter sets
 	FSSet,
 	ForgeSet,
 	TemplateSet,
 	InteractiveSet,
 	ConfigSet,
 	BlockchainSet,
+	ScriptAdapters,
 )

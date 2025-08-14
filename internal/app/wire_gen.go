@@ -8,11 +8,18 @@ package app
 
 import (
 	"github.com/spf13/viper"
+	"github.com/trebuchet-org/treb-cli/internal/adapters"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/blockchain"
 	config2 "github.com/trebuchet-org/treb-cli/internal/adapters/config"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/contracts"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/environment"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/forge"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/fs"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/interactive"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/parameters"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/parser"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/progress"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/registry"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/template"
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
@@ -64,7 +71,31 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	showConfig := usecase.NewShowConfig(localConfigStoreAdapter)
 	setConfig := usecase.NewSetConfig(localConfigStoreAdapter)
 	removeConfig := usecase.NewRemoveConfig(localConfigStoreAdapter)
-	app, err := NewApp(runtimeConfig, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, showConfig, setConfig, removeConfig)
+	scriptResolverAdapter, err := contracts.NewScriptResolverAdapter(runtimeConfig)
+	if err != nil {
+		return nil, err
+	}
+	parameterResolverAdapter := parameters.NewParameterResolverAdapter(runtimeConfig)
+	parameterPrompterAdapter := parameters.NewParameterPrompterAdapter(parameterResolverAdapter)
+	scriptExecutorAdapter := forge.NewScriptExecutorAdapter(runtimeConfig)
+	indexer, err := adapters.ProvideContractsIndexer(runtimeConfig)
+	if err != nil {
+		return nil, err
+	}
+	executionParserAdapter := parser.NewExecutionParserAdapter(indexer)
+	string2 := adapters.ProvideProjectPath(runtimeConfig)
+	updaterAdapter, err := registry.NewUpdaterAdapter(string2)
+	if err != nil {
+		return nil, err
+	}
+	builderAdapter := environment.NewBuilderAdapter(string2)
+	libraryResolverAdapter, err := registry.NewLibraryResolverAdapter(string2)
+	if err != nil {
+		return nil, err
+	}
+	spinnerProgressReporter := progress.NewSpinnerProgressReporter()
+	runScript := usecase.NewRunScript(runtimeConfig, scriptResolverAdapter, parameterResolverAdapter, parameterPrompterAdapter, scriptExecutorAdapter, executionParserAdapter, updaterAdapter, builderAdapter, libraryResolverAdapter, spinnerProgressReporter)
+	app, err := NewApp(runtimeConfig, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, showConfig, setConfig, removeConfig, runScript)
 	if err != nil {
 		return nil, err
 	}

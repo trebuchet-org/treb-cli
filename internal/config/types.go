@@ -40,7 +40,8 @@ type NetworkConfig struct {
 
 // TrebConfig from foundry.toml [profile.*.treb] section
 type TrebConfig struct {
-	Senders map[string]SenderConfig
+	Senders         map[string]SenderConfig
+	LibraryDeployer string `toml:"library_deployer,omitempty"`
 }
 
 // FoundryConfig represents the full foundry.toml configuration
@@ -76,10 +77,17 @@ type ProfileConfig struct {
 
 // SenderConfig represents a sender configuration
 type SenderConfig struct {
+	Type           string         `toml:"type"`
+	Account        string         `toml:"account,omitempty"`
+	PrivateKey     string         `toml:"private_key,omitempty"`
+	Safe           string         `toml:"safe,omitempty"`
+	DerivationPath string         `toml:"derivation_path,omitempty"` // For hardware wallets
+	Proposer       *ProposerConfig `toml:"proposer,omitempty"`       // For Safe senders
+}
+
+// ProposerConfig represents proposer configuration for Safe transactions  
+type ProposerConfig struct {
 	Type           string `toml:"type"`
-	Address        string `toml:"address,omitempty"`
 	PrivateKey     string `toml:"private_key,omitempty"`
-	Safe           string `toml:"safe,omitempty"`
-	Signer         string `toml:"signer,omitempty"`          // For Safe senders
-	DerivationPath string `toml:"derivation_path,omitempty"` // For Ledger senders
+	DerivationPath string `toml:"derivation_path,omitempty"`
 }

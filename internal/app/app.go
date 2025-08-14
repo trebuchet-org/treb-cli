@@ -19,9 +19,9 @@ type App struct {
 	ShowConfig              *usecase.ShowConfig
 	SetConfig               *usecase.SetConfig
 	RemoveConfig            *usecase.RemoveConfig
+	RunScript               *usecase.RunScript
 	
 	// Add more use cases as they are implemented
-	// RunScript       *usecase.RunScript
 	// VerifyContract  *usecase.VerifyContract
 	// InitProject     *usecase.InitProject
 }
@@ -37,6 +37,7 @@ func NewApp(
 	showConfig *usecase.ShowConfig,
 	setConfig *usecase.SetConfig,
 	removeConfig *usecase.RemoveConfig,
+	runScript *usecase.RunScript,
 ) (*App, error) {
 	return &App{
 		Config:                   cfg,
@@ -48,5 +49,6 @@ func NewApp(
 		ShowConfig:               showConfig,
 		SetConfig:                setConfig,
 		RemoveConfig:             removeConfig,
+		RunScript:                runScript,
 	}, nil
 }

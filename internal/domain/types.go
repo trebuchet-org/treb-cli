@@ -181,6 +181,29 @@ type NetworkInfo struct {
 	ExplorerURL string `json:"explorerUrl,omitempty"`
 }
 
+// TrebConfig represents treb-specific configuration
+type TrebConfig struct {
+	Senders         map[string]SenderConfig `json:"senders"`
+	LibraryDeployer string                  `json:"libraryDeployer,omitempty"`
+}
+
+// SenderConfig represents a sender configuration
+type SenderConfig struct {
+	Type           string            `json:"type"`
+	Account        string            `json:"account,omitempty"`
+	PrivateKey     string            `json:"privateKey,omitempty"`
+	Safe           string            `json:"safe,omitempty"`
+	DerivationPath string            `json:"derivationPath,omitempty"`
+	Proposer       *ProposerConfig   `json:"proposer,omitempty"`
+}
+
+// ProposerConfig represents proposer configuration for Safe transactions
+type ProposerConfig struct {
+	Type           string `json:"type"`
+	PrivateKey     string `json:"privateKey,omitempty"`
+	DerivationPath string `json:"derivationPath,omitempty"`
+}
+
 // ContractInfo represents information about a discovered contract
 type ContractInfo struct {
 	Name         string `json:"name"`

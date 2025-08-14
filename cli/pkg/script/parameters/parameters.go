@@ -20,6 +20,7 @@ const (
 	TypeInt256  ParameterType = "int256"
 	TypeBytes32 ParameterType = "bytes32"
 	TypeBytes   ParameterType = "bytes"
+	TypeBool    ParameterType = "bool"
 
 	// Meta types
 	TypeSender     ParameterType = "sender"
