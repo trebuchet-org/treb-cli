@@ -149,6 +149,7 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 				PrivateKey:     sender.PrivateKey,
 				Safe:           sender.Safe,
 				DerivationPath: sender.DerivationPath,
+				Signer:         sender.Signer, // Map legacy v1 field
 			}
 			if sender.Proposer != nil {
 				domainSender.Proposer = &domain.ProposerConfig{

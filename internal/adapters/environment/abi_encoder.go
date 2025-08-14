@@ -12,17 +12,31 @@ import (
 )
 
 // Magic sender type constants matching Senders.sol
+// Note: These must be calculated at runtime since they depend on each other
 var (
-	// Base types
-	SENDER_TYPE_IN_MEMORY       = calculateBytes8("in-memory")
-	SENDER_TYPE_HARDWARE_WALLET = calculateBytes8("hw-wallet")
-	SENDER_TYPE_MULTISIG        = calculateBytes8("multisig")
-
-	// Specific types (bitwise OR with base types)
-	SENDER_TYPE_GNOSIS_SAFE = bitwiseOr(SENDER_TYPE_MULTISIG, calculateBytes8("gnosis-safe"))
-	SENDER_TYPE_LEDGER      = bitwiseOr(calculateBytes8("ledger"), SENDER_TYPE_HARDWARE_WALLET)
-	SENDER_TYPE_TREZOR      = bitwiseOr(calculateBytes8("trezor"), SENDER_TYPE_HARDWARE_WALLET)
+	SENDER_TYPE_CUSTOM          [8]byte
+	SENDER_TYPE_PRIVATE_KEY     [8]byte
+	SENDER_TYPE_MULTISIG        [8]byte
+	SENDER_TYPE_HARDWARE_WALLET [8]byte
+	SENDER_TYPE_IN_MEMORY       [8]byte
+	SENDER_TYPE_GNOSIS_SAFE     [8]byte
+	SENDER_TYPE_LEDGER          [8]byte
+	SENDER_TYPE_TREZOR          [8]byte
 )
+
+func init() {
+	// Base types
+	SENDER_TYPE_CUSTOM = calculateBytes8("custom")
+	SENDER_TYPE_PRIVATE_KEY = calculateBytes8("private-key")
+	SENDER_TYPE_MULTISIG = calculateBytes8("multisig")
+	SENDER_TYPE_HARDWARE_WALLET = bitwiseOr(calculateBytes8("hardware-wallet"), SENDER_TYPE_PRIVATE_KEY)
+
+	// Composite types
+	SENDER_TYPE_IN_MEMORY = bitwiseOr(calculateBytes8("in-memory"), SENDER_TYPE_PRIVATE_KEY)
+	SENDER_TYPE_GNOSIS_SAFE = bitwiseOr(SENDER_TYPE_MULTISIG, calculateBytes8("gnosis-safe"))
+	SENDER_TYPE_LEDGER = bitwiseOr(calculateBytes8("ledger"), SENDER_TYPE_HARDWARE_WALLET)
+	SENDER_TYPE_TREZOR = bitwiseOr(calculateBytes8("trezor"), SENDER_TYPE_HARDWARE_WALLET)
+}
 
 // SenderInitConfig represents a sender configuration matching Solidity struct
 type SenderInitConfig struct {
@@ -204,6 +218,9 @@ func buildSenderInitConfig(name string, sender domain.SenderConfig, allSenders m
 			// Find or create a proposer sender name
 			// In v1, this is referenced by signer name
 			proposerName = fmt.Sprintf("%s_proposer", name)
+		} else if sender.Signer != "" {
+			// Handle legacy v1 format where signer references another sender
+			proposerName = sender.Signer
 		}
 
 		if proposerName == "" {
@@ -233,9 +250,9 @@ func buildSenderInitConfig(name string, sender domain.SenderConfig, allSenders m
 
 // calculateBytes8 converts a string to bytes8 for magic constants
 func calculateBytes8(s string) [8]byte {
+	hash := crypto.Keccak256([]byte(s))
 	var result [8]byte
-	bytes := []byte(s)
-	copy(result[:], bytes)
+	copy(result[:], hash[:8])
 	return result
 }
 

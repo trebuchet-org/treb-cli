@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -17,7 +18,8 @@ import (
 
 // UpdaterAdapter adapts the existing registry updater to the RegistryUpdater interface
 type UpdaterAdapter struct {
-	manager *registry.Manager
+	manager        *registry.Manager
+	currentUpdater *registry.ScriptExecutionUpdater // Store the current updater for ApplyUpdates
 }
 
 // NewUpdaterAdapter creates a new registry updater adapter
@@ -45,6 +47,9 @@ func (a *UpdaterAdapter) PrepareUpdates(
 	// Create the updater
 	updater := a.manager.NewScriptExecutionUpdater(v1Execution, namespace, network, execution.ScriptPath)
 
+	// Store the updater for later use in ApplyUpdates
+	a.currentUpdater = updater
+
 	// Check if there are changes
 	if !updater.HasChanges() {
 		return &usecase.RegistryChanges{
@@ -53,10 +58,10 @@ func (a *UpdaterAdapter) PrepareUpdates(
 	}
 
 	// Prepare the changes
-	changes := &usecase.RegistryChanges{
-		HasChanges: true,
-		AddedCount: len(execution.Deployments),
-	}
+    changes := &usecase.RegistryChanges{
+        HasChanges: true,
+        AddedCount: 0,
+    }
 
 	// Convert deployments to domain deployments for the result
 	for _, scriptDep := range execution.Deployments {
@@ -80,7 +85,8 @@ func (a *UpdaterAdapter) PrepareUpdates(
 			Factory:      "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed", // CreateX
 		}
 
-		changes.Deployments = append(changes.Deployments, dep)
+        changes.Deployments = append(changes.Deployments, dep)
+        changes.AddedCount++
 	}
 
 	return changes, nil
@@ -88,14 +94,19 @@ func (a *UpdaterAdapter) PrepareUpdates(
 
 // ApplyUpdates applies the prepared changes to the registry
 func (a *UpdaterAdapter) ApplyUpdates(ctx context.Context, changes *usecase.RegistryChanges) error {
-	// The v1 updater handles everything in Write(), so we need to
-	// reconstruct the execution and call Write() directly
+	if a.currentUpdater == nil {
+		return fmt.Errorf("no updater prepared - call PrepareUpdates first")
+	}
 	
-	// For now, this is a simplified implementation
-	// In a real implementation, we'd need to store the updater instance
-	// or reconstruct it from the changes
+	// Use the stored updater to write the changes
+	if err := a.currentUpdater.Write(); err != nil {
+		return fmt.Errorf("failed to write registry updates: %w", err)
+	}
 	
-	return fmt.Errorf("apply updates not implemented - use v1 Write() directly")
+	// Clear the current updater after use
+	a.currentUpdater = nil
+	
+	return nil
 }
 
 // HasChanges returns true if there are any changes to apply
@@ -113,6 +124,10 @@ func (a *UpdaterAdapter) convertToV1Execution(execution *domain.ScriptExecution)
 		Logs:          execution.Logs,
 		Deployments:   make([]*parser.DeploymentRecord, 0),
 		Transactions:  make([]*parser.Transaction, 0),
+		Script: &types.ContractInfo{
+			Name: execution.ScriptName,
+			Path: execution.ScriptPath,
+		},
 	}
 
 	// Convert deployments
@@ -129,6 +144,10 @@ func (a *UpdaterAdapter) convertToV1Execution(execution *domain.ScriptExecution)
 				InitCodeHash:    dep.InitCodeHash,
 				ConstructorArgs: dep.ConstructorArgs,
 				BytecodeHash:    dep.BytecodeHash,
+			},
+			Contract: &types.ContractInfo{
+				Name: dep.ContractName,
+				Path: extractPathFromArtifact(dep.Artifact),
 			},
 		}
 		v1Execution.Deployments = append(v1Execution.Deployments, v1Dep)
@@ -191,6 +210,33 @@ func mapCreateStrategy(strategy string) domain.DeploymentMethod {
 	default:
 		return domain.DeploymentMethodCreate2
 	}
+}
+
+// extractPathFromArtifact extracts the source path from artifact name
+// e.g., "src/Counter.sol:Counter" -> "src/Counter.sol"
+func extractPathFromArtifact(artifact string) string {
+	if idx := strings.LastIndex(artifact, ":"); idx > 0 {
+		return artifact[:idx]
+	}
+	return artifact
+}
+
+// extractScriptName extracts script name from path
+// e.g., "script/deploy/DeployCounter.s.sol" -> "DeployCounter"
+func extractScriptName(scriptPath string) string {
+	base := scriptPath
+	if idx := strings.LastIndex(scriptPath, "/"); idx >= 0 {
+		base = scriptPath[idx+1:]
+	}
+	// Remove .s.sol extension
+	if strings.HasSuffix(base, ".s.sol") {
+		return base[:len(base)-6]
+	}
+	// Remove .sol extension
+	if strings.HasSuffix(base, ".sol") {
+		return base[:len(base)-4]
+	}
+	return base
 }
 
 // DirectUpdaterAdapter provides direct access to the v1 updater for compatibility

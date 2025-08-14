@@ -195,6 +195,7 @@ type SenderConfig struct {
 	Safe           string            `json:"safe,omitempty"`
 	DerivationPath string            `json:"derivationPath,omitempty"`
 	Proposer       *ProposerConfig   `json:"proposer,omitempty"`
+	Signer         string            `json:"signer,omitempty"` // Legacy v1 field for Safe senders
 }
 
 // ProposerConfig represents proposer configuration for Safe transactions

@@ -83,6 +83,7 @@ type SenderConfig struct {
 	Safe           string         `toml:"safe,omitempty"`
 	DerivationPath string         `toml:"derivation_path,omitempty"` // For hardware wallets
 	Proposer       *ProposerConfig `toml:"proposer,omitempty"`       // For Safe senders
+	Signer         string         `toml:"signer,omitempty"`           // Legacy v1 field for Safe senders
 }
 
 // ProposerConfig represents proposer configuration for Safe transactions  
