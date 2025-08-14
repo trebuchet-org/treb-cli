@@ -134,9 +134,10 @@ func (ep *EventParser) parseProxyEvent(rawLog forge.EventLog) (interface{}, erro
 
 	// Known proxy event signatures
 	var (
-		upgradedTopic       = crypto.Keccak256Hash([]byte("Upgraded(address)"))
-		adminChangedTopic   = crypto.Keccak256Hash([]byte("AdminChanged(address,address)"))
-		beaconUpgradedTopic = crypto.Keccak256Hash([]byte("BeaconUpgraded(address)"))
+		upgradedTopic          = crypto.Keccak256Hash([]byte("Upgraded(address)"))
+		adminChangedTopic      = crypto.Keccak256Hash([]byte("AdminChanged(address,address)"))
+		beaconUpgradedTopic    = crypto.Keccak256Hash([]byte("BeaconUpgraded(address)"))
+		implementationSetTopic = crypto.Keccak256Hash([]byte("ImplementationSet(address)"))
 	)
 
 	switch eventSig {
@@ -146,6 +147,8 @@ func (ep *EventParser) parseProxyEvent(rawLog forge.EventLog) (interface{}, erro
 		return ep.parseAdminChangedEvent(rawLog)
 	case beaconUpgradedTopic:
 		return ep.parseBeaconUpgradedEvent(rawLog)
+	case implementationSetTopic:
+		return ep.parseUpgradedEvent(rawLog)
 	}
 
 	return nil, fmt.Errorf("not a proxy event")
