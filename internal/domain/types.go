@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 )
@@ -176,11 +177,12 @@ type SafeContext struct {
 // SafeTransaction represents a Safe multisig transaction record
 type SafeTransaction struct {
 	// Identification
-	SafeTxHash    string            `json:"safeTxHash"`    // Safe transaction hash
-	ChainID       uint64            `json:"chainId"`       // Chain ID
-	SafeAddress   string            `json:"safeAddress"`   // Safe contract address
-	Nonce         uint64            `json:"nonce"`         // Safe nonce
-	Status        TransactionStatus `json:"status"`        // QUEUED, EXECUTED, FAILED
+	ID            string       `json:"id"`            // e.g., "safe-tx-0x1234abcd..."
+	SafeTxHash    string       `json:"safeTxHash"`    // Safe transaction hash
+	ChainID       uint64       `json:"chainId"`       // Chain ID
+	SafeAddress   string       `json:"safeAddress"`   // Safe contract address
+	Nonce         uint64       `json:"nonce"`         // Safe nonce
+	Status        SafeTxStatus `json:"status"`        // QUEUED, EXECUTED, FAILED
 
 	// Transaction details
 	To              string   `json:"to"`               // Target address
@@ -318,4 +320,85 @@ type AnvilStatus struct {
 	CreateXDeployed bool   `json:"createXDeployed"`
 	CreateXAddress  string `json:"createXAddress,omitempty"`
 	Error           string `json:"error,omitempty"`
+}
+
+// SafeTxStatus represents the status of a safe transaction
+type SafeTxStatus string
+
+const (
+	SafeTxStatusQueued   SafeTxStatus = "QUEUED"
+	SafeTxStatusExecuted SafeTxStatus = "EXECUTED"
+	SafeTxStatusFailed   SafeTxStatus = "FAILED"
+)
+
+// LookupIndexes contains various indexes for efficient lookups
+type LookupIndexes struct {
+	Version string `json:"version"`
+
+	// Address to deployment ID mapping
+	ByAddress map[uint64]map[string]string `json:"byAddress"` // chainId -> address -> deploymentId
+
+	// Namespace indexes
+	ByNamespace map[string]map[uint64][]string `json:"byNamespace"` // namespace -> chainId -> deploymentIds
+
+	// Contract name indexes
+	ByContract map[string][]string `json:"byContract"` // contractName -> deploymentIds
+
+	// Proxy relationships
+	Proxies ProxyIndexes `json:"proxies"`
+
+	// Pending items
+	Pending PendingItems `json:"pending"`
+}
+
+// ProxyIndexes contains proxy relationship mappings
+type ProxyIndexes struct {
+	// Implementation to proxy mappings
+	Implementations map[string][]string `json:"implementations"` // implAddr -> proxyIds
+
+	// Proxy to current implementation
+	ProxyToImpl map[string]string `json:"proxyToImpl"` // proxyAddr -> implAddr
+}
+
+// PendingItems contains pending transactions
+type PendingItems struct {
+	SafeTxs []string `json:"safeTxs"` // Pending Safe transaction IDs
+}
+
+// SolidityRegistry is a simplified format for Solidity contract consumption
+// Structure: chainId -> namespace -> "contractName:label" -> address
+type SolidityRegistry map[uint64]map[string]map[string]string
+
+// BytecodeObject represents bytecode information in a Foundry artifact
+type BytecodeObject struct {
+	Object         string                 `json:"object"`
+	SourceMap      string                 `json:"sourceMap"`
+	LinkReferences map[string]interface{} `json:"linkReferences"`
+}
+
+// ArtifactMetadata represents the metadata section of a Foundry artifact
+type ArtifactMetadata struct {
+	Compiler struct {
+		Version string `json:"version"`
+	} `json:"compiler"`
+	Language string `json:"language"`
+	Output   struct {
+		ABI      json.RawMessage `json:"abi"`
+		DevDoc   json.RawMessage `json:"devdoc"`
+		UserDoc  json.RawMessage `json:"userdoc"`
+		Metadata string          `json:"metadata"`
+	} `json:"output"`
+	Settings struct {
+		CompilationTarget map[string]string `json:"compilationTarget"`
+	} `json:"settings"`
+}
+
+// Artifact represents a Foundry compilation artifact
+type Artifact struct {
+	ABI               json.RawMessage   `json:"abi"`
+	Bytecode          BytecodeObject    `json:"bytecode"`
+	DeployedBytecode  BytecodeObject    `json:"deployedBytecode"`
+	MethodIdentifiers map[string]string `json:"methodIdentifiers"`
+	RawMetadata       string            `json:"rawMetadata"`
+	Metadata          ArtifactMetadata  `json:"metadata"`
 }

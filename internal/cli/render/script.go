@@ -6,14 +6,6 @@ import (
     "strings"
 
     "github.com/fatih/color"
-    v1display "github.com/trebuchet-org/treb-cli/cli/pkg/script/display"
-    v1contracts "github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
-    v1parser "github.com/trebuchet-org/treb-cli/cli/pkg/script/parser"
-    v1types "github.com/trebuchet-org/treb-cli/cli/pkg/types"
-    bindings "github.com/trebuchet-org/treb-cli/cli/pkg/abi/bindings"
-    "math/big"
-    "github.com/ethereum/go-ethereum/common"
-
     "github.com/trebuchet-org/treb-cli/internal/domain"
     "github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -62,8 +54,9 @@ func (r *ScriptRenderer) RenderExecution(result *usecase.RunScriptResult) error 
 	// Display deployment banner (already shown during execution)
 	// The banner is displayed by the script runner before execution
 
-    // For full v1-compat output, re-use v1 Display rendering by converting execution
-    if err := renderWithV1Display(exec, ".", r.verbose); err != nil { return err }
+    // Use internal display for rendering
+    display := NewInternalDisplay(r.out, r.verbose)
+    display.DisplayExecution(exec)
 
     // Registry update summary is handled by the caller for v1-compat
     if !exec.DryRun && len(exec.Deployments) == 0 {
@@ -75,92 +68,7 @@ func (r *ScriptRenderer) RenderExecution(result *usecase.RunScriptResult) error 
     return nil
 }
 
-// renderWithV1Display converts domain execution to v1 structures and renders them with v1 display
-func renderWithV1Display(exec *domain.ScriptExecution, workDir string, verbose bool) error {
-    v1Exec := &v1parser.ScriptExecution{
-        Network:       exec.Network,
-        ChainID:       exec.ChainID,
-        Success:       exec.Success,
-        BroadcastPath: exec.BroadcastPath,
-        Logs:          exec.Logs,
-        Script: &v1types.ContractInfo{
-            // v1 displays the script filename with .s.sol suffix
-            Name: exec.ScriptName,
-            Path: exec.ScriptPath,
-        },
-    }
-
-    for _, tx := range exec.Transactions {
-        v1Tx := &v1parser.Transaction{
-            SimulatedTransaction: bindings.SimulatedTransaction{
-                TransactionId: tx.TransactionID,
-                SenderId:      [32]byte{},
-                Sender:        common.HexToAddress(tx.Sender),
-                ReturnData:    []byte{},
-                Transaction: bindings.Transaction{
-                    To:    common.HexToAddress(tx.To),
-                    Data:  tx.Data,
-                    Value: big.NewInt(0),
-                },
-            },
-            Status: v1types.TransactionStatus(tx.Status),
-        }
-        if tx.TxHash != nil { h := common.HexToHash(*tx.TxHash); v1Tx.TxHash = &h }
-        v1Tx.BlockNumber = tx.BlockNumber
-        v1Tx.GasUsed = tx.GasUsed
-        if tx.SafeTransaction != nil {
-            v1Tx.SafeTransaction = &v1parser.SafeTransaction{
-                SafeTxHash: tx.SafeTransaction.SafeTxHash,
-                Safe:       common.HexToAddress(tx.SafeTransaction.SafeAddress),
-                Proposer:   common.HexToAddress(tx.SafeTransaction.Proposer),
-                Executed:   tx.SafeTransaction.Executed,
-            }
-            if tx.SafeTransaction.ExecutionTxHash != nil {
-                eh := common.HexToHash(*tx.SafeTransaction.ExecutionTxHash)
-                v1Tx.SafeTransaction.ExecutionTxHash = &eh
-            }
-            v1Tx.SafeBatchIdx = tx.SafeTransaction.BatchIndex
-        }
-        v1Exec.Transactions = append(v1Exec.Transactions, v1Tx)
-    }
-
-    for _, dep := range exec.Deployments {
-        v1Dep := &v1parser.DeploymentRecord{
-            TransactionID: dep.TransactionID,
-            Address:       common.HexToAddress(dep.Address),
-            Deployer:      common.HexToAddress(dep.Deployer),
-            Deployment: &bindings.ITrebEventsDeploymentDetails{
-                Artifact:        dep.Artifact,
-                Label:           dep.Label,
-                CreateStrategy:  dep.CreateStrategy,
-                Salt:            dep.Salt,
-                InitCodeHash:    dep.InitCodeHash,
-                ConstructorArgs: dep.ConstructorArgs,
-                BytecodeHash:    dep.BytecodeHash,
-            },
-            Contract: &v1types.ContractInfo{ Name: dep.ContractName, Path: artifactPath(dep.Artifact) },
-        }
-        // If this is a proxy and we can find implementation, seed proxy relationship
-        // The v1 display will append [Implementation] when it discovers relationships.
-        v1Exec.Deployments = append(v1Exec.Deployments, v1Dep)
-    }
-
-    indexer, err := v1contracts.GetGlobalIndexer(workDir)
-    if err != nil { return err }
-    disp := v1display.NewDisplay(indexer, v1Exec)
-    // Align known deployer name with v1 tests by seeding knownAddresses
-    // (we cannot call internal method directly; rely on side effect during registerDeployments)
-    disp.SetVerbose(verbose)
-    disp.DisplayExecution()
-    return nil
-}
-
-func artifactPath(artifact string) string {
-    for i := len(artifact)-1; i >= 0; i-- {
-        if artifact[i] == ':' { return artifact[:i] }
-    }
-    return artifact
-}
+// Removed renderWithV1Display - now using internal display
 
 // renderTransactions displays the transaction list
 func (r *ScriptRenderer) renderTransactions(exec *domain.ScriptExecution) error {

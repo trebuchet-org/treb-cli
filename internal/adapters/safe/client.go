@@ -5,22 +5,21 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/safe"
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
-// ClientAdapter wraps the existing safe.Client to implement SafeClient
+// ClientAdapter wraps the internal Safe client to implement SafeClient
 type ClientAdapter struct {
-	client  *safe.Client
+	client  *Client
 	chainID uint64
 }
 
-// NewClientAdapter creates a new adapter wrapping the existing Safe client
+// NewClientAdapter creates a new adapter wrapping the internal Safe client
 func NewClientAdapter(cfg *config.RuntimeConfig) (*ClientAdapter, error) {
 	// Create with a default chain ID (will be set later)
-	client, err := safe.NewClient(1)
+	client, err := NewClient(1)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Safe client: %w", err)
 	}
@@ -34,7 +33,7 @@ func NewClientAdapter(cfg *config.RuntimeConfig) (*ClientAdapter, error) {
 // SetChain configures the client for a specific chain
 func (c *ClientAdapter) SetChain(ctx context.Context, chainID uint64) error {
 	// Create a new client for the specified chain
-	client, err := safe.NewClient(chainID)
+	client, err := NewClient(chainID)
 	if err != nil {
 		return fmt.Errorf("failed to create Safe client for chain %d: %w", chainID, err)
 	}
@@ -118,12 +117,12 @@ func (c *ClientAdapter) GetTransactionDetails(ctx context.Context, safeTxHash st
 	
 	// Check execution status
 	if tx.IsExecuted {
-		safeTx.Status = domain.TransactionStatusExecuted
+		safeTx.Status = domain.SafeTxStatusExecuted
 		if tx.TransactionHash != nil && *tx.TransactionHash != "" {
 			safeTx.ExecutionTxHash = *tx.TransactionHash
 		}
 	} else {
-		safeTx.Status = domain.TransactionStatusQueued
+		safeTx.Status = domain.SafeTxStatusQueued
 	}
 	
 	return safeTx, nil

@@ -156,7 +156,7 @@ func (s *SyncRegistry) syncPendingSafeTransactions(ctx context.Context, debug bo
 
 			if executionInfo.IsExecuted {
 				// Update the Safe transaction
-				safeTx.Status = domain.TransactionStatusExecuted
+				safeTx.Status = domain.SafeTxStatusExecuted
 				safeTx.ExecutionTxHash = executionInfo.TxHash
 				now := time.Now()
 				safeTx.ExecutedAt = &now

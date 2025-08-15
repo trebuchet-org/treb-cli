@@ -3,15 +3,14 @@ package forge
 import (
 	"context"
 	"fmt"
-	"strings"
 
-	"github.com/trebuchet-org/treb-cli/cli/pkg/abi"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/abi"
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
-// ABIParserAdapter wraps the existing ABI parser to implement the ABIParser interface
+// ABIParserAdapter wraps the internal ABI parser to implement the ABIParser interface
 type ABIParserAdapter struct {
 	parser *abi.Parser
 }
@@ -39,7 +38,7 @@ func (a *ABIParserAdapter) ParseContractABI(ctx context.Context, contractName st
 	// Convert constructor
 	if contractABI.Constructor != nil {
 		result.Constructor = &domain.Constructor{
-			Inputs: convertParameters(contractABI.Constructor.Inputs),
+			Inputs: convertABIInputsToParameters(contractABI.Constructor.Inputs),
 		}
 	}
 
@@ -47,7 +46,7 @@ func (a *ABIParserAdapter) ParseContractABI(ctx context.Context, contractName st
 	for _, method := range contractABI.Methods {
 		result.Methods = append(result.Methods, domain.Method{
 			Name:   method.Name,
-			Inputs: convertParameters(method.Inputs),
+			Inputs: convertABIInputsToParameters(method.Inputs),
 		})
 	}
 
@@ -55,14 +54,25 @@ func (a *ABIParserAdapter) ParseContractABI(ctx context.Context, contractName st
 }
 
 // FindInitializeMethod finds the initializer method in the ABI
-func (a *ABIParserAdapter) FindInitializeMethod(abi *domain.ContractABI) *domain.Method {
-	// Look for common initializer method names
-	initializerNames := []string{"initialize", "init", "__init", "initializer"}
+func (a *ABIParserAdapter) FindInitializeMethod(contractABI *domain.ContractABI) *domain.Method {
+	// Convert to internal ABI type
+	abiContract := &abi.ContractABI{
+		Methods: make([]abi.Method, 0, len(contractABI.Methods)),
+	}
 	
-	for _, method := range abi.Methods {
-		for _, name := range initializerNames {
-			if strings.EqualFold(method.Name, name) {
-				return &method
+	for _, method := range contractABI.Methods {
+		abiContract.Methods = append(abiContract.Methods, abi.Method{
+			Name:   method.Name,
+			Inputs: convertParametersToABIInputs(method.Inputs),
+		})
+	}
+	
+	// Use internal parser's method
+	if initMethod := a.parser.FindInitializeMethod(abiContract); initMethod != nil {
+		// Find corresponding domain method
+		for i, method := range contractABI.Methods {
+			if method.Name == initMethod.Name {
+				return &contractABI.Methods[i]
 			}
 		}
 	}
@@ -79,7 +89,7 @@ func (a *ABIParserAdapter) GenerateConstructorArgs(contractABI *domain.ContractA
 
 	abiConstructor := &abi.ABIConstructor{
 		Type:   "constructor",
-		Inputs: convertParametersToABI(contractABI.Constructor.Inputs),
+		Inputs: convertParametersToABIInputs(contractABI.Constructor.Inputs),
 	}
 
 	abiContractABI := &abi.ContractABI{
@@ -100,14 +110,14 @@ func (a *ABIParserAdapter) GenerateInitializerArgs(method *domain.Method) (vars 
 	abiMethod := &abi.Method{
 		Name:   method.Name,
 		Type:   "function",
-		Inputs: convertParametersToABI(method.Inputs),
+		Inputs: convertParametersToABIInputs(method.Inputs),
 	}
 
 	return a.parser.GenerateInitializerArgs(abiMethod)
 }
 
-// convertParameters converts ABI parameters to domain parameters
-func convertParameters(inputs []abi.ABIInput) []domain.Parameter {
+// convertABIInputsToParameters converts ABI parameters to domain parameters
+func convertABIInputsToParameters(inputs []abi.ABIInput) []domain.Parameter {
 	params := make([]domain.Parameter, 0, len(inputs))
 	for _, input := range inputs {
 		params = append(params, domain.Parameter{
@@ -119,8 +129,8 @@ func convertParameters(inputs []abi.ABIInput) []domain.Parameter {
 	return params
 }
 
-// convertParametersToABI converts domain parameters back to ABI parameters
-func convertParametersToABI(params []domain.Parameter) []abi.ABIInput {
+// convertParametersToABIInputs converts domain parameters back to ABI parameters
+func convertParametersToABIInputs(params []domain.Parameter) []abi.ABIInput {
 	inputs := make([]abi.ABIInput, 0, len(params))
 	for _, param := range params {
 		inputs = append(inputs, abi.ABIInput{

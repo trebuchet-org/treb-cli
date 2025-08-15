@@ -3,110 +3,123 @@ package forge
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
 
-	pkgconfig "github.com/trebuchet-org/treb-cli/cli/pkg/config"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/forge"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/script/senders"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
-// ScriptExecutorAdapter adapts the existing forge package to the ScriptExecutor interface
+// ScriptExecutorAdapter adapts the forge executor to the ScriptExecutor interface
 type ScriptExecutorAdapter struct {
 	projectPath string
-	forge       *forge.Forge
+	forge       *InternalForgeExecutor
+	cfg         *config.RuntimeConfig
 }
 
 // NewScriptExecutorAdapter creates a new forge script executor adapter
 func NewScriptExecutorAdapter(cfg *config.RuntimeConfig) *ScriptExecutorAdapter {
 	return &ScriptExecutorAdapter{
 		projectPath: cfg.ProjectRoot,
-		forge:       forge.NewForge(cfg.ProjectRoot),
+		forge:       NewInternalForgeExecutor(cfg.ProjectRoot),
+		cfg:         cfg,
 	}
 }
 
-// Execute runs a Foundry script using the existing forge package
+// Execute runs a Foundry script
 func (a *ScriptExecutorAdapter) Execute(ctx context.Context, config usecase.ScriptExecutionConfig) (*usecase.ScriptExecutionOutput, error) {
-	// Convert domain script info to v1 contract info
-	contractInfo := &types.ContractInfo{
-		Name: config.Script.ContractName,
-		Path: config.Script.Path,
+	// Build forge script arguments
+	var flags []string
+	
+	// Add network flags
+	if config.Network != "" && config.Network != "local" {
+		flags = append(flags, "--rpc-url", config.NetworkInfo.RPCURL)
 	}
-	if config.Script.Artifact != nil {
-		// TODO: Map artifact data if needed
+	
+	// Add profile if not default
+	if config.Namespace != "" && config.Namespace != "default" {
+		flags = append(flags, "--profile", config.Namespace)
 	}
-
-	// Build sender configs from environment
-	senderConfigs, err := a.buildSenderConfigs(config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build sender configs: %w", err)
+	
+	// Add broadcast/dry-run flags
+	if config.DryRun {
+		// No broadcast in dry-run mode
+	} else {
+		flags = append(flags, "--broadcast")
 	}
-
-	// Get deployed libraries from environment
-	var libraries []string
+	
+	// Add debug flags
+	if config.Debug {
+		flags = append(flags, "-vvvv")
+	} else if config.DebugJSON {
+		flags = append(flags, "--json")
+	}
+	
+	// Check for hardware wallet flags in environment
+	if hwType, ok := config.Environment["HARDWARE_WALLET_TYPE"]; ok {
+		switch hwType {
+		case "ledger":
+			flags = append(flags, "--ledger")
+			if paths, ok := config.Environment["DERIVATION_PATHS"]; ok {
+				// Add each derivation path
+				for _, path := range strings.Split(paths, ",") {
+					if path != "" {
+						flags = append(flags, "--mnemonic-derivation-paths", path)
+					}
+				}
+			}
+		case "trezor":
+			flags = append(flags, "--trezor")
+			if paths, ok := config.Environment["DERIVATION_PATHS"]; ok {
+				// Add each derivation path
+				for _, path := range strings.Split(paths, ",") {
+					if path != "" {
+						flags = append(flags, "--mnemonic-derivation-paths", path)
+					}
+				}
+			}
+		}
+	}
+	
+	// Add deployed libraries if present
 	if libs, ok := config.Environment["DEPLOYED_LIBRARIES"]; ok && libs != "" {
 		// Parse library references from environment
-		// Format: "path:name:address,path:name:address"
-		// This would be set by the EnvironmentBuilder
-		libraries = parseLibraryReferences(libs)
+		// Format: "path:name:address path:name:address"
+		for _, lib := range strings.Split(libs, " ") {
+			if lib != "" {
+				flags = append(flags, "--libraries", lib)
+			}
+		}
 	}
-
-	// Build forge options
-	forgeOpts := forge.ScriptOptions{
-		Script:          contractInfo,
-		Network:         config.Network,
-		RpcUrl:          config.NetworkInfo.RPCURL,
-		Profile:         config.Namespace,
-		DryRun:          config.DryRun,
-		Broadcast:       !config.DryRun,
-		Debug:           config.Debug,
-		JSON:            !config.Debug || config.DebugJSON,
-		EnvVars:         config.Environment,
-		UseLedger:       senders.RequiresLedgerFlag(senderConfigs),
-		UseTrezor:       senders.RequiresTrezorFlag(senderConfigs),
-		DerivationPaths: senders.GetDerivationPaths(senderConfigs),
-		Libraries:       libraries,
-	}
-
+	
 	// Execute the script
-	result, err := a.forge.Run(forgeOpts)
-	if err != nil {
-		return nil, err
+	scriptPath := config.Script.Path
+	output, err := a.forge.RunScript(scriptPath, flags, config.Environment)
+	
+	// Determine success based on error
+	success := err == nil
+	
+	// Find broadcast file if successful and not dry-run
+	var broadcastPath string
+	if success && !config.DryRun {
+		// Broadcast files are in broadcast/{contract_file}/{chain_id}/run-latest.json
+		contractFile := filepath.Base(scriptPath)
+		chainID := "31337" // default local chain
+		if config.NetworkInfo != nil && config.NetworkInfo.ChainID != 0 {
+			chainID = fmt.Sprintf("%d", config.NetworkInfo.ChainID)
+		}
+		broadcastPath = filepath.Join(a.projectPath, "broadcast", contractFile, chainID, "run-latest.json")
 	}
-
-	// Convert to use case output
+	
 	return &usecase.ScriptExecutionOutput{
-		Success:       result.Success,
-		RawOutput:     result.RawOutput,
-		ParsedOutput:  result.ParsedOutput,
-		BroadcastPath: result.BroadcastPath,
+		Success:       success,
+		RawOutput:     []byte(output),
+		ParsedOutput:  output, // For now, raw and parsed are the same
+		BroadcastPath: broadcastPath,
 	}, nil
 }
 
-// buildSenderConfigs builds sender configs from the execution config
-func (a *ScriptExecutorAdapter) buildSenderConfigs(config usecase.ScriptExecutionConfig) (*pkgconfig.SenderConfigs, error) {
-	// The sender configs are already encoded in the environment by EnvironmentBuilder
-	// We need to extract hardware wallet info for forge flags
-	
-	// For now, return empty configs as the actual configs are in env vars
-	// The forge executor only needs this to detect hardware wallet flags
-	configs := &pkgconfig.SenderConfigs{
-		Configs: []pkgconfig.SenderInitConfig{},
-	}
-	
-	return configs, nil
-}
-
-// parseLibraryReferences parses library references from environment string
-func parseLibraryReferences(libs string) []string {
-	// Format expected: "path:name:address path:name:address"
-	// This matches the format produced by EnvironmentBuilder.encodeLibraries
-	if libs == "" {
-		return nil
-	}
-	
-	// Split by spaces to get individual library references
-	return strings.Split(libs, " ")
+// Build runs forge build
+func (a *ScriptExecutorAdapter) Build(ctx context.Context) error {
+	return a.forge.Build()
 }

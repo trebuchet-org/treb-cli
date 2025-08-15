@@ -2,7 +2,6 @@ package adapters
 
 import (
 	"github.com/google/wire"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/anvil"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/blockchain"
 	internalconfig "github.com/trebuchet-org/treb-cli/internal/adapters/config"
@@ -16,10 +15,7 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
-// ProvideContractsIndexer provides a singleton contracts.Indexer
-func ProvideContractsIndexer(cfg *config.RuntimeConfig) (*contracts.Indexer, error) {
-	return contracts.GetGlobalIndexer(cfg.ProjectRoot)
-}
+// Removed ProvideContractsIndexer - no longer needed as we use fs.ContractIndexerAdapter
 
 // ProvideProjectPath provides the project path from RuntimeConfig
 func ProvideProjectPath(cfg *config.RuntimeConfig) string {
@@ -98,7 +94,6 @@ var AnvilSet = wire.NewSet(
 // AllAdapters includes all adapter sets
 var AllAdapters = wire.NewSet(
 	// Provider functions
-	ProvideContractsIndexer,
 	ProvideProjectPath,
 	
 	// Adapter sets

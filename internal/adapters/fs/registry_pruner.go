@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/trebuchet-org/treb-cli/cli/pkg/registry"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -50,7 +48,7 @@ func (s *RegistryStoreAdapter) CollectPrunableItems(
 		}
 
 		// Skip pending transactions unless includePending is set
-		if !includePending && (tx.Status == types.TransactionStatusSimulated || tx.Status == types.TransactionStatusQueued) {
+		if !includePending && (tx.Status == domain.TransactionStatusSimulated || tx.Status == domain.TransactionStatusQueued) {
 			continue
 		}
 
@@ -74,7 +72,7 @@ func (s *RegistryStoreAdapter) CollectPrunableItems(
 		}
 
 		// Skip pending safe transactions unless includePending is set
-		if !includePending && safeTx.Status == types.TransactionStatusQueued {
+		if !includePending && safeTx.Status == domain.SafeTxStatusQueued {
 			continue
 		}
 
@@ -95,7 +93,7 @@ func (s *RegistryStoreAdapter) CollectPrunableItems(
 // shouldPruneDeployment checks if a deployment should be pruned
 func (s *RegistryStoreAdapter) shouldPruneDeployment(
 	ctx context.Context,
-	deployment *types.Deployment,
+	deployment *domain.Deployment,
 	checker usecase.BlockchainChecker,
 ) (string, bool) {
 	// Check if contract exists at address
@@ -127,12 +125,12 @@ func (s *RegistryStoreAdapter) shouldPruneDeployment(
 // shouldPruneTransaction checks if a transaction should be pruned
 func (s *RegistryStoreAdapter) shouldPruneTransaction(
 	ctx context.Context,
-	tx *types.Transaction,
+	tx *domain.Transaction,
 	checker usecase.BlockchainChecker,
 ) (string, bool) {
 	// If transaction has no hash, it was never broadcast
 	if tx.Hash == "" {
-		if tx.Status == types.TransactionStatusExecuted {
+		if tx.Status == domain.TransactionStatusExecuted {
 			return "executed transaction has no hash", true
 		}
 		// For simulated/queued transactions without hash, don't prune unless includePending
@@ -161,7 +159,7 @@ func (s *RegistryStoreAdapter) shouldPruneTransaction(
 // shouldPruneSafeTransaction checks if a safe transaction should be pruned
 func (s *RegistryStoreAdapter) shouldPruneSafeTransaction(
 	ctx context.Context,
-	safeTx *types.SafeTransaction,
+	safeTx *domain.SafeTransaction,
 	checker usecase.BlockchainChecker,
 ) (string, bool) {
 	// First check if the Safe contract exists
@@ -176,7 +174,7 @@ func (s *RegistryStoreAdapter) shouldPruneSafeTransaction(
 	}
 
 	// For executed safe transactions, check if the execution transaction exists
-	if safeTx.Status == types.TransactionStatusExecuted && safeTx.ExecutionTxHash != "" {
+	if safeTx.Status == domain.SafeTxStatusExecuted && safeTx.ExecutionTxHash != "" {
 		txExists, _, txReason, err := checker.CheckTransactionExists(ctx, safeTx.ExecutionTxHash)
 		if err != nil {
 			// Be conservative on errors - don't prune
@@ -192,47 +190,28 @@ func (s *RegistryStoreAdapter) shouldPruneSafeTransaction(
 
 // ExecutePrune removes the collected items from the registry
 func (s *RegistryStoreAdapter) ExecutePrune(ctx context.Context, items *domain.ItemsToPrune) error {
-	// Create a Pruner instance to reuse the v1 implementation
-	pruner := s.manager.NewPruner("", 0) // We don't need RPC connection for ExecutePrune
-	
-	// Convert domain items to v1 types
-	v1Items := &registry.ItemsToPrune{
-		Deployments:      make([]registry.PruneItem, len(items.Deployments)),
-		Transactions:     make([]registry.PruneItem, len(items.Transactions)),
-		SafeTransactions: make([]registry.SafePruneItem, len(items.SafeTransactions)),
-	}
-	
-	// Convert deployments
-	for i, item := range items.Deployments {
-		v1Items.Deployments[i] = registry.PruneItem{
-			ID:      item.ID,
-			Address: item.Address,
-			Reason:  item.Reason,
+	// Remove deployments
+	for _, item := range items.Deployments {
+		if err := s.manager.RemoveDeployment(item.ID); err != nil {
+			return fmt.Errorf("failed to remove deployment %s: %w", item.ID, err)
 		}
 	}
 	
-	// Convert transactions
-	for i, item := range items.Transactions {
-		v1Items.Transactions[i] = registry.PruneItem{
-			ID:     item.ID,
-			Hash:   item.Hash,
-			Status: types.TransactionStatus(item.Status),
-			Reason: item.Reason,
+	// Remove transactions
+	for _, item := range items.Transactions {
+		if err := s.manager.RemoveTransaction(item.ID); err != nil {
+			return fmt.Errorf("failed to remove transaction %s: %w", item.ID, err)
 		}
 	}
 	
-	// Convert safe transactions
-	for i, item := range items.SafeTransactions {
-		v1Items.SafeTransactions[i] = registry.SafePruneItem{
-			SafeTxHash:  item.SafeTxHash,
-			SafeAddress: item.SafeAddress,
-			Status:      types.TransactionStatus(item.Status),
-			Reason:      item.Reason,
+	// Remove safe transactions
+	for _, item := range items.SafeTransactions {
+		if err := s.manager.RemoveSafeTransaction(item.SafeTxHash); err != nil {
+			return fmt.Errorf("failed to remove safe transaction %s: %w", item.SafeTxHash, err)
 		}
 	}
 	
-	// Execute prune using v1 implementation
-	return pruner.ExecutePrune(v1Items)
+	return nil
 }
 
 // Ensure RegistryStoreAdapter implements RegistryPruner

@@ -4,19 +4,18 @@ import (
 	"context"
 	"strings"
 
-	"github.com/trebuchet-org/treb-cli/cli/pkg/forge"
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
-// ForgeExecutorAdapter wraps the existing forge.Forge to implement ForgeExecutor
+// ForgeExecutorAdapter wraps the internal Forge to implement ForgeExecutor
 type ForgeExecutorAdapter struct {
-	forge *forge.Forge
+	forge *Forge
 }
 
-// NewForgeExecutorAdapter creates a new adapter wrapping the existing forge executor
+// NewForgeExecutorAdapter creates a new adapter wrapping the internal forge executor
 func NewForgeExecutorAdapter(cfg *config.RuntimeConfig) (*ForgeExecutorAdapter, error) {
-	f := forge.NewForge(cfg.ProjectRoot)
+	f := NewForge(cfg.ProjectRoot)
 	
 	// Check that forge is installed
 	if err := f.CheckInstallation(); err != nil {

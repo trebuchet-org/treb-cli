@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	v1submodule "github.com/trebuchet-org/treb-cli/cli/pkg/submodule"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/submodule"
 	"github.com/trebuchet-org/treb-cli/internal/cli/render"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -87,9 +87,10 @@ Examples:
 
 			// Optional treb-sol submodule check (non-blocking)
 			if !skipSubmodule {
-				mgr := v1submodule.NewTrebSolManager(".")
-				if mgr.IsTrebSolInstalled() {
-					_ = mgr.CheckAndUpdate(false)
+				checker := submodule.NewChecker(".")
+				if err := checker.CheckTrebSol(); err != nil {
+					// Just warn, don't fail
+					fmt.Printf("Warning: %v\n", err)
 				}
 			}
 

@@ -79,24 +79,14 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	parameterResolverAdapter := parameters.NewParameterResolverAdapter(runtimeConfig)
-	parameterPrompterAdapter := parameters.NewParameterPrompterAdapter(parameterResolverAdapter)
+	parameterResolverAdapter := parameters.NewParameterResolverAdapter(runtimeConfig, registryStoreAdapter, contractIndexerAdapter)
+	parameterPrompterAdapter := parameters.NewParameterPrompterAdapter(runtimeConfig, registryStoreAdapter, contractIndexerAdapter)
 	scriptExecutorAdapter := forge.NewScriptExecutorAdapter(runtimeConfig)
-	indexer, err := adapters.ProvideContractsIndexer(runtimeConfig)
-	if err != nil {
-		return nil, err
-	}
-	executionParserAdapter := parser.NewExecutionParserAdapter(indexer)
 	string2 := adapters.ProvideProjectPath(runtimeConfig)
-	updaterAdapter, err := registry.NewUpdaterAdapter(string2)
-	if err != nil {
-		return nil, err
-	}
+	executionParserAdapter := parser.NewExecutionParserAdapter(string2)
+	updaterAdapter := registry.NewUpdaterAdapter(registryStoreAdapter, registryStoreAdapter)
 	builderAdapter := environment.NewBuilderAdapter(string2)
-	libraryResolverAdapter, err := registry.NewLibraryResolverAdapter(string2)
-	if err != nil {
-		return nil, err
-	}
+	libraryResolverAdapter := registry.NewLibraryResolverAdapter(registryStoreAdapter)
 	spinnerProgressReporter := progress.NewSpinnerProgressReporter()
 	runScript := usecase.NewRunScript(runtimeConfig, scriptResolverAdapter, parameterResolverAdapter, parameterPrompterAdapter, scriptExecutorAdapter, executionParserAdapter, updaterAdapter, builderAdapter, libraryResolverAdapter, spinnerProgressReporter)
 	verifierAdapter, err := verification.NewVerifierAdapter(runtimeConfig)

@@ -79,6 +79,7 @@ type Method struct {
 // ScriptExecution represents the complete result of running a script
 type ScriptExecution struct {
 	ID              string
+	Script          string // Script path or name
 	ScriptPath      string
 	ScriptName      string
 	Network         string
@@ -86,6 +87,9 @@ type ScriptExecution struct {
 	ChainID         uint64
 	Success         bool
 	DryRun          bool
+	Error           string
+	GasUsed         uint64
+	Metadata        map[string]string
 	Transactions    []ScriptTransaction
 	Deployments     []ScriptDeployment
 	Events          []ScriptEvent
@@ -100,14 +104,18 @@ type ScriptExecution struct {
 type ScriptTransaction struct {
 	ID              string
 	TransactionID   [32]byte // Internal ID from script
-	Sender          string
+	From            string   // Transaction sender
+	Sender          string   // Alias for From
 	To              string
 	Value           string
 	Data            []byte
+	Nonce           uint64
 	Status          TransactionStatus
 	TxHash          *string
+	Hash            string   // Transaction hash
 	BlockNumber     *uint64
 	GasUsed         *uint64
+	DeploymentIDs   []string // IDs of deployments created by this transaction
 	SafeTransaction *SafeTransactionInfo
 }
 
@@ -127,9 +135,11 @@ type ScriptDeployment struct {
 	Address          string
 	ContractName     string
 	Artifact         string
+	ArtifactPath     string // Path to artifact file
 	Label            string
 	Deployer         string
 	DeploymentType   DeploymentType
+	DeploymentMethod string // CREATE2, CREATE3, etc.
 	CreateStrategy   string
 	Salt             [32]byte
 	InitCodeHash     [32]byte
@@ -228,4 +238,84 @@ type ContractArtifact struct {
 	Bytecode     []byte
 	DeployedCode []byte
 	Metadata     []byte
+}
+
+// ScriptExecutionEvent represents an event emitted during script execution
+type ScriptExecutionEvent struct {
+	Type string
+	Data map[string]interface{}
+}
+
+// BroadcastFile represents a Foundry broadcast file
+type BroadcastFile struct {
+	Chain        uint64                  `json:"chain"`
+	Transactions []BroadcastTransaction  `json:"transactions"`
+	Receipts     []BroadcastReceipt      `json:"receipts"`
+	Timestamp    uint64                  `json:"timestamp"`
+	Commit       string                  `json:"commit"`
+}
+
+// BroadcastTransaction represents a transaction in a broadcast file
+type BroadcastTransaction struct {
+	Hash                string                  `json:"hash"`
+	Transaction         map[string]interface{}  `json:"transaction"`
+	ContractName        string                  `json:"contractName"`
+	ContractAddr        string                  `json:"contractAddress"`
+	Function            string                  `json:"function"`
+	Arguments           []interface{}           `json:"arguments"`
+	AdditionalContracts []AdditionalContract    `json:"additionalContracts,omitempty"`
+}
+
+// AdditionalContract represents additional contracts deployed in a transaction
+type AdditionalContract struct {
+	ContractName string `json:"contractName"`
+	ContractAddr string `json:"contractAddress"`
+}
+
+// BroadcastReceipt represents a receipt in a broadcast file
+type BroadcastReceipt struct {
+	TransactionHash string `json:"transactionHash"`
+	BlockNumber     string `json:"blockNumber"`
+	GasUsed         string `json:"gasUsed"`
+	Status          string `json:"status"`
+	ContractAddress string `json:"contractAddress"`
+}
+
+// ExecutedTransaction represents a transaction that was executed
+type ExecutedTransaction struct {
+	ID            string
+	Hash          string
+	From          string
+	To            string
+	Value         string
+	Data          string
+	Nonce         uint64
+	GasUsed       uint64
+	BlockNumber   uint64
+	Status        string
+	DeploymentIDs []string
+	SafeContext   *SafeTransactionContext
+}
+
+// SafeTransactionContext contains Safe-specific transaction context
+type SafeTransactionContext struct {
+	SafeAddress string
+	SafeTxHash  string
+	Proposer    string
+}
+
+// DeploymentResult represents the result of a deployment
+type DeploymentResult struct {
+	ID                string
+	TransactionID     string
+	Address           string
+	ContractName      string
+	ArtifactPath      string
+	Deployer          string
+	DeploymentMethod  string
+	Salt              [32]byte
+	BytecodeHash      [32]byte
+	ConstructorArgs   []byte
+	Label             string
+	Namespace         string
 }
