@@ -27,9 +27,11 @@ type App struct {
 	OrchestrateDeployment   *usecase.OrchestrateDeployment
 	SyncRegistry            *usecase.SyncRegistry
 	TagDeployment           *usecase.TagDeployment
+	ManageAnvil             *usecase.ManageAnvil
+	InitProject             *usecase.InitProject
 	
-	// Add more use cases as they are implemented
-	// InitProject     *usecase.InitProject
+	// Adapters (needed for special cases like log streaming)
+	AnvilManager            usecase.AnvilManager
 }
 
 // NewApp creates a new application instance with all use cases
@@ -49,6 +51,9 @@ func NewApp(
 	orchestrateDeployment *usecase.OrchestrateDeployment,
 	syncRegistry *usecase.SyncRegistry,
 	tagDeployment *usecase.TagDeployment,
+	manageAnvil *usecase.ManageAnvil,
+	initProject *usecase.InitProject,
+	anvilManager usecase.AnvilManager,
 ) (*App, error) {
 	return &App{
 		Config:                   cfg,
@@ -66,5 +71,8 @@ func NewApp(
 		OrchestrateDeployment:    orchestrateDeployment,
 		SyncRegistry:             syncRegistry,
 		TagDeployment:            tagDeployment,
+		ManageAnvil:              manageAnvil,
+		InitProject:              initProject,
+		AnvilManager:             anvilManager,
 	}, nil
 }

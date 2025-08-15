@@ -101,6 +101,10 @@ smart contract deployments using CreateX factory contracts.`,
 	rootCmd.AddCommand(deploymentCmd)
 
 	// Add main commands
+	initCmd := NewInitCmd()
+	initCmd.GroupID = "main"
+	rootCmd.AddCommand(initCmd)
+
 	listCmd := NewListCmd()
 	listCmd.GroupID = "main"
 	rootCmd.AddCommand(listCmd)
@@ -132,6 +136,10 @@ smart contract deployments using CreateX factory contracts.`,
 	tagCmd := NewTagCmd()
 	tagCmd.GroupID = "management"
 	rootCmd.AddCommand(tagCmd)
+
+	devCmd := NewDevCmd()
+	devCmd.GroupID = "management"
+	rootCmd.AddCommand(devCmd)
 
 	// TODO: Add more commands as they are migrated
 	// deployCmd := NewDeployCmd(baseCfg)

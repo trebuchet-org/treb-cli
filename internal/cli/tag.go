@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/trebuchet-org/treb-cli/internal/cli/renderers"
+	"github.com/trebuchet-org/treb-cli/internal/cli/render"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -107,7 +107,7 @@ func runTag(cmd *cobra.Command, identifier string, flags *tagFlags) error {
 			if err != nil {
 				// Handle tag already exists/doesn't exist errors as warnings
 				if strings.Contains(err.Error(), "already exists") || strings.Contains(err.Error(), "does not exist") {
-					fmt.Println(renderers.FormatWarning(err.Error()))
+					fmt.Println(render.FormatWarning(err.Error()))
 					return nil
 				}
 				return err
@@ -115,7 +115,7 @@ func runTag(cmd *cobra.Command, identifier string, flags *tagFlags) error {
 		} else {
 			// Handle tag already exists/doesn't exist errors as warnings
 			if strings.Contains(err.Error(), "already exists") || strings.Contains(err.Error(), "does not exist") {
-				fmt.Println(renderers.FormatWarning(err.Error()))
+				fmt.Println(render.FormatWarning(err.Error()))
 				return nil
 			}
 			return err
@@ -123,7 +123,7 @@ func runTag(cmd *cobra.Command, identifier string, flags *tagFlags) error {
 	}
 
 	// Render the result
-	renderer := renderers.NewTagRenderer(app.Config)
+	renderer := render.NewTagRenderer(app.Config)
 	return renderer.Render(result)
 }
 

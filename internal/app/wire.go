@@ -47,6 +47,8 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 		usecase.NewOrchestrateDeployment,
 		usecase.NewSyncRegistry,
 		usecase.NewTagDeployment,
+		usecase.NewManageAnvil,
+		usecase.NewInitProject,
 		
 		// Interface providers
 		ProvideContractResolver,

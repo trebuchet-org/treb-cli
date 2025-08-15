@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"io"
 
 	"github.com/trebuchet-org/treb-cli/internal/domain"
 )
@@ -164,6 +165,14 @@ type InteractiveSelector interface {
 // DeploymentSelector handles interactive selection of deployments
 type DeploymentSelector interface {
 	SelectDeployment(ctx context.Context, deployments []*domain.Deployment, prompt string) (*domain.Deployment, error)
+}
+
+// AnvilManager manages local anvil node instances
+type AnvilManager interface {
+	Start(ctx context.Context, instance *domain.AnvilInstance) error
+	Stop(ctx context.Context, instance *domain.AnvilInstance) error
+	GetStatus(ctx context.Context, instance *domain.AnvilInstance) (*domain.AnvilStatus, error)
+	StreamLogs(ctx context.Context, instance *domain.AnvilInstance, writer io.Writer) error
 }
 
 // ContractResolver resolves contract references to actual contracts

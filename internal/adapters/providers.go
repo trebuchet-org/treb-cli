@@ -3,6 +3,7 @@ package adapters
 import (
 	"github.com/google/wire"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/anvil"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/blockchain"
 	internalconfig "github.com/trebuchet-org/treb-cli/internal/adapters/config"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/forge"
@@ -88,6 +89,12 @@ var SafeSet = wire.NewSet(
 	wire.Bind(new(usecase.SafeClient), new(*safe.ClientAdapter)),
 )
 
+// AnvilSet provides anvil-based implementations
+var AnvilSet = wire.NewSet(
+	anvil.NewManager,
+	wire.Bind(new(usecase.AnvilManager), new(*anvil.Manager)),
+)
+
 // AllAdapters includes all adapter sets
 var AllAdapters = wire.NewSet(
 	// Provider functions
@@ -103,5 +110,6 @@ var AllAdapters = wire.NewSet(
 	BlockchainSet,
 	VerificationSet,
 	SafeSet,
+	AnvilSet,
 	ScriptAdapters,
 )

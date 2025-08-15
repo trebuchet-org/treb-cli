@@ -9,6 +9,7 @@ package app
 import (
 	"github.com/spf13/viper"
 	"github.com/trebuchet-org/treb-cli/internal/adapters"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/anvil"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/blockchain"
 	config2 "github.com/trebuchet-org/treb-cli/internal/adapters/config"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/contracts"
@@ -110,7 +111,10 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	}
 	syncRegistry := usecase.NewSyncRegistry(registryStoreAdapter, registryStoreAdapter, registryStoreAdapter, clientAdapter, sink)
 	tagDeployment := usecase.NewTagDeployment(registryStoreAdapter, sink)
-	app, err := NewApp(runtimeConfig, deploymentSelector, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, showConfig, setConfig, removeConfig, runScript, verifyDeployment, orchestrateDeployment, syncRegistry, tagDeployment)
+	manager := anvil.NewManager()
+	manageAnvil := usecase.NewManageAnvil(manager, sink)
+	initProject := usecase.NewInitProject(fileWriterAdapter, sink)
+	app, err := NewApp(runtimeConfig, deploymentSelector, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, showConfig, setConfig, removeConfig, runScript, verifyDeployment, orchestrateDeployment, syncRegistry, tagDeployment, manageAnvil, initProject, manager)
 	if err != nil {
 		return nil, err
 	}
