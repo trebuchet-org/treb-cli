@@ -42,3 +42,6 @@ main
 # OS
 .DS_Store
 Thumbs.db
+
+# Crush working dir
+.crush/

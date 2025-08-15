@@ -15,6 +15,20 @@ type DeploymentStore interface {
 	DeleteDeployment(ctx context.Context, id string) error
 }
 
+// TransactionStore handles persistence of transactions
+type TransactionStore interface {
+	GetTransaction(ctx context.Context, id string) (*domain.Transaction, error)
+	ListTransactions(ctx context.Context, filter TransactionFilter) ([]*domain.Transaction, error)
+	SaveTransaction(ctx context.Context, transaction *domain.Transaction) error
+}
+
+// TransactionFilter defines filtering options for transactions
+type TransactionFilter struct {
+	ChainID   uint64
+	Status    domain.TransactionStatus
+	Namespace string
+}
+
 // DeploymentFilter defines filtering options for deployments
 type DeploymentFilter struct {
 	Namespace    string
@@ -85,12 +99,16 @@ type ProgressEvent struct {
 // ProgressSink receives progress events
 type ProgressSink interface {
 	OnProgress(ctx context.Context, event ProgressEvent)
+	Info(message string)
+	Error(message string)
 }
 
 // NopProgress is a no-op implementation of ProgressSink
 type NopProgress struct{}
 
 func (NopProgress) OnProgress(context.Context, ProgressEvent) {}
+func (NopProgress) Info(string) {}
+func (NopProgress) Error(string) {}
 
 // Use case result types
 
@@ -143,6 +161,11 @@ type InteractiveSelector interface {
 	SelectContract(ctx context.Context, contracts []*domain.ContractInfo, prompt string) (*domain.ContractInfo, error)
 }
 
+// DeploymentSelector handles interactive selection of deployments
+type DeploymentSelector interface {
+	SelectDeployment(ctx context.Context, deployments []*domain.Deployment, prompt string) (*domain.Deployment, error)
+}
+
 // ContractResolver resolves contract references to actual contracts
 type ContractResolver interface {
 	ResolveContract(ctx context.Context, contractRef string) (*domain.ContractInfo, error)
@@ -184,4 +207,35 @@ type LocalConfigStore interface {
 	Load(ctx context.Context) (*domain.LocalConfig, error)
 	Save(ctx context.Context, config *domain.LocalConfig) error
 	GetPath() string
+}
+
+// SafeTransactionStore handles persistence of Safe transactions
+type SafeTransactionStore interface {
+	GetSafeTransaction(ctx context.Context, safeTxHash string) (*domain.SafeTransaction, error)
+	ListSafeTransactions(ctx context.Context, filter SafeTransactionFilter) ([]*domain.SafeTransaction, error)
+	SaveSafeTransaction(ctx context.Context, safeTx *domain.SafeTransaction) error
+	UpdateSafeTransaction(ctx context.Context, safeTx *domain.SafeTransaction) error
+}
+
+// SafeTransactionFilter defines filtering options for Safe transactions
+type SafeTransactionFilter struct {
+	ChainID uint64
+	Status  domain.TransactionStatus
+	SafeAddress string
+}
+
+// SafeClient handles interactions with Safe multisig contracts
+type SafeClient interface {
+	SetChain(ctx context.Context, chainID uint64) error
+	GetTransactionExecutionInfo(ctx context.Context, safeTxHash string) (*SafeExecutionInfo, error)
+	GetTransactionDetails(ctx context.Context, safeTxHash string) (*domain.SafeTransaction, error)
+}
+
+// SafeExecutionInfo contains execution information for a Safe transaction
+type SafeExecutionInfo struct {
+	IsExecuted           bool
+	TxHash               string
+	Confirmations        int
+	ConfirmationsRequired int
+	ConfirmationDetails  []domain.Confirmation
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/google/wire"
 	"github.com/spf13/viper"
 	"github.com/trebuchet-org/treb-cli/internal/adapters"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/interactive"
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -14,6 +15,11 @@ import (
 // ProvideContractResolver provides ContractResolver interface from ResolveContract
 func ProvideContractResolver(uc *usecase.ResolveContract) usecase.ContractResolver {
 	return uc
+}
+
+// ProvideDeploymentSelector provides DeploymentSelector interface from SelectorAdapter
+func ProvideDeploymentSelector(adapter *interactive.SelectorAdapter) usecase.DeploymentSelector {
+	return adapter
 }
 
 // InitApp creates a fully wired App instance with viper configuration
@@ -37,9 +43,14 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 		usecase.NewSetConfig,
 		usecase.NewRemoveConfig,
 		usecase.NewRunScript,
+		usecase.NewVerifyDeployment,
+		usecase.NewOrchestrateDeployment,
+		usecase.NewSyncRegistry,
+		usecase.NewTagDeployment,
 		
 		// Interface providers
 		ProvideContractResolver,
+		ProvideDeploymentSelector,
 		
 		// App
 		NewApp,

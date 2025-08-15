@@ -164,3 +164,49 @@ func (r *NopProgressReporter) ReportStage(ctx context.Context, stage usecase.Exe
 
 // ReportProgress does nothing
 func (r *NopProgressReporter) ReportProgress(ctx context.Context, event usecase.ProgressEvent) {}
+
+// Implement ProgressSink methods for SpinnerProgressReporter
+
+// OnProgress handles progress events
+func (r *SpinnerProgressReporter) OnProgress(ctx context.Context, event usecase.ProgressEvent) {
+	r.ReportProgress(ctx, event)
+}
+
+// Info displays an info message
+func (r *SpinnerProgressReporter) Info(message string) {
+	// Stop spinner temporarily if active
+	wasActive := r.spinner.Active()
+	if wasActive {
+		r.spinner.Stop()
+	}
+	
+	// Print info message
+	fmt.Println(color.New(color.FgCyan).Sprint("ℹ ") + message)
+	
+	// Restart spinner if it was active
+	if wasActive {
+		r.spinner.Start()
+		r.updateSpinnerDisplay()
+	}
+}
+
+// Error displays an error message
+func (r *SpinnerProgressReporter) Error(message string) {
+	// Stop spinner temporarily if active
+	wasActive := r.spinner.Active()
+	if wasActive {
+		r.spinner.Stop()
+	}
+	
+	// Print error message
+	fmt.Println(color.New(color.FgRed).Sprint("✗ ") + message)
+	
+	// Restart spinner if it was active
+	if wasActive {
+		r.spinner.Start()
+		r.updateSpinnerDisplay()
+	}
+}
+
+// Ensure SpinnerProgressReporter implements ProgressSink
+var _ usecase.ProgressSink = (*SpinnerProgressReporter)(nil)

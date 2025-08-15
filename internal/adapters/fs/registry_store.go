@@ -308,5 +308,238 @@ func convertToDomainTransaction(tx *types.Transaction) *domain.Transaction {
 	return domainTx
 }
 
-// Ensure the adapter implements the interface
+// GetTransaction retrieves a transaction by ID
+func (r *RegistryStoreAdapter) GetTransaction(ctx context.Context, id string) (*domain.Transaction, error) {
+	tx, err := r.manager.GetTransaction(id)
+	if err != nil {
+		// Check if error message indicates not found
+		if strings.Contains(err.Error(), "not found") {
+			return nil, domain.ErrNotFound
+		}
+		return nil, err
+	}
+	return convertToDomainTransaction(tx), nil
+}
+
+// ListTransactions retrieves transactions matching the filter
+func (r *RegistryStoreAdapter) ListTransactions(ctx context.Context, filter usecase.TransactionFilter) ([]*domain.Transaction, error) {
+	// Get all transactions from registry
+	allTxs := r.manager.GetAllTransactions()
+	
+	// Apply filters
+	var filtered []*domain.Transaction
+	for _, tx := range allTxs {
+		// Apply chain ID filter
+		if filter.ChainID != 0 && tx.ChainID != filter.ChainID {
+			continue
+		}
+		
+		// Apply status filter
+		if filter.Status != "" && domain.TransactionStatus(tx.Status) != filter.Status {
+			continue
+		}
+		
+		// Apply namespace filter
+		if filter.Namespace != "" && tx.Environment != filter.Namespace {
+			continue
+		}
+		
+		filtered = append(filtered, convertToDomainTransaction(tx))
+	}
+	
+	return filtered, nil
+}
+
+// SaveTransaction saves a transaction to the registry
+func (r *RegistryStoreAdapter) SaveTransaction(ctx context.Context, transaction *domain.Transaction) error {
+	// Convert from domain to legacy types
+	legacyTx := convertFromDomainTransaction(transaction)
+	return r.manager.AddTransaction(legacyTx)
+}
+
+// convertFromDomainTransaction converts from domain types back to pkg/types
+func convertFromDomainTransaction(tx *domain.Transaction) *types.Transaction {
+	if tx == nil {
+		return nil
+	}
+	
+	legacyTx := &types.Transaction{
+		ID:          tx.ID,
+		ChainID:     tx.ChainID,
+		Hash:        tx.Hash,
+		Status:      types.TransactionStatus(tx.Status),
+		BlockNumber: tx.BlockNumber,
+		Sender:      tx.Sender,
+		Nonce:       tx.Nonce,
+		Deployments: tx.Deployments,
+		Environment: tx.Environment,
+		CreatedAt:   tx.CreatedAt,
+	}
+	
+	// Convert operations
+	for _, op := range tx.Operations {
+		legacyTx.Operations = append(legacyTx.Operations, types.Operation{
+			Type:   op.Type,
+			Target: op.Target,
+			Method: op.Method,
+			Result: op.Result,
+		})
+	}
+	
+	// Convert safe context if present
+	if tx.SafeContext != nil {
+		legacyTx.SafeContext = &types.SafeContext{
+			SafeAddress:     tx.SafeContext.SafeAddress,
+			SafeTxHash:      tx.SafeContext.SafeTxHash,
+			BatchIndex:      tx.SafeContext.BatchIndex,
+			ProposerAddress: tx.SafeContext.ProposerAddress,
+		}
+	}
+	
+	return legacyTx
+}
+
+// GetSafeTransaction retrieves a Safe transaction by hash
+func (r *RegistryStoreAdapter) GetSafeTransaction(ctx context.Context, safeTxHash string) (*domain.SafeTransaction, error) {
+	tx, err := r.manager.GetSafeTransaction(safeTxHash)
+	if err != nil {
+		// Check if error message indicates not found
+		if strings.Contains(err.Error(), "not found") {
+			return nil, domain.ErrNotFound
+		}
+		return nil, err
+	}
+	return convertToDomainSafeTransaction(tx), nil
+}
+
+// ListSafeTransactions retrieves Safe transactions matching the filter
+func (r *RegistryStoreAdapter) ListSafeTransactions(ctx context.Context, filter usecase.SafeTransactionFilter) ([]*domain.SafeTransaction, error) {
+	// Get all Safe transactions from registry
+	allSafeTxs := r.manager.GetAllSafeTransactions()
+	
+	// Apply filters
+	var filtered []*domain.SafeTransaction
+	for _, safeTx := range allSafeTxs {
+		// Apply chain ID filter
+		if filter.ChainID != 0 && safeTx.ChainID != filter.ChainID {
+			continue
+		}
+		
+		// Apply status filter
+		if filter.Status != "" && domain.TransactionStatus(safeTx.Status) != filter.Status {
+			continue
+		}
+		
+		// Apply Safe address filter
+		if filter.SafeAddress != "" && safeTx.SafeAddress != filter.SafeAddress {
+			continue
+		}
+		
+		filtered = append(filtered, convertToDomainSafeTransaction(safeTx))
+	}
+	
+	return filtered, nil
+}
+
+// SaveSafeTransaction saves a Safe transaction to the registry
+func (r *RegistryStoreAdapter) SaveSafeTransaction(ctx context.Context, safeTx *domain.SafeTransaction) error {
+	// Convert from domain to legacy types
+	legacySafeTx := convertFromDomainSafeTransaction(safeTx)
+	return r.manager.AddSafeTransaction(legacySafeTx)
+}
+
+// UpdateSafeTransaction updates a Safe transaction in the registry
+func (r *RegistryStoreAdapter) UpdateSafeTransaction(ctx context.Context, safeTx *domain.SafeTransaction) error {
+	// Convert from domain to legacy types
+	legacySafeTx := convertFromDomainSafeTransaction(safeTx)
+	return r.manager.UpdateSafeTransaction(legacySafeTx)
+}
+
+// convertToDomainSafeTransaction converts from legacy types to domain
+func convertToDomainSafeTransaction(tx *types.SafeTransaction) *domain.SafeTransaction {
+	if tx == nil {
+		return nil
+	}
+	
+	domainTx := &domain.SafeTransaction{
+		SafeTxHash:           tx.SafeTxHash,
+		ChainID:              tx.ChainID,
+		SafeAddress:          tx.SafeAddress,
+		Nonce:                tx.Nonce,
+		Status:               domain.TransactionStatus(tx.Status),
+		ProposedBy:           tx.ProposedBy,
+		TransactionIDs:       tx.TransactionIDs,
+		ExecutionTxHash:      tx.ExecutionTxHash,
+		ExecutedAt:           tx.ExecutedAt,
+		ConfirmationCount:    len(tx.Confirmations),
+		CreatedAt:            tx.ProposedAt,
+		UpdatedAt:            tx.ProposedAt,
+	}
+	
+	// Extract first transaction data if available
+	if len(tx.Transactions) > 0 {
+		domainTx.To = tx.Transactions[0].To
+		domainTx.Value = tx.Transactions[0].Value
+		domainTx.Data = tx.Transactions[0].Data
+		domainTx.Operation = int(tx.Transactions[0].Operation)
+	}
+	
+	// Convert confirmations
+	for _, conf := range tx.Confirmations {
+		domainTx.Confirmations = append(domainTx.Confirmations, domain.Confirmation{
+			Signer:      conf.Signer,
+			Signature:   conf.Signature,
+			ConfirmedAt: conf.ConfirmedAt,
+		})
+	}
+	
+	return domainTx
+}
+
+// convertFromDomainSafeTransaction converts from domain types back to pkg/types
+func convertFromDomainSafeTransaction(tx *domain.SafeTransaction) *types.SafeTransaction {
+	if tx == nil {
+		return nil
+	}
+	
+	legacyTx := &types.SafeTransaction{
+		SafeTxHash:      tx.SafeTxHash,
+		ChainID:         tx.ChainID,
+		SafeAddress:     tx.SafeAddress,
+		Nonce:           tx.Nonce,
+		Status:          types.TransactionStatus(tx.Status),
+		ProposedBy:      tx.ProposedBy,
+		TransactionIDs:  tx.TransactionIDs,
+		ExecutionTxHash: tx.ExecutionTxHash,
+		ExecutedAt:      tx.ExecutedAt,
+		ProposedAt:      tx.CreatedAt,
+	}
+	
+	// Convert transaction data if available
+	if tx.To != "" {
+		legacyTx.Transactions = []types.SafeTxData{
+			{
+				To:        tx.To,
+				Value:     tx.Value,
+				Data:      tx.Data,
+				Operation: uint8(tx.Operation),
+			},
+		}
+	}
+	
+	// Convert confirmations
+	for _, conf := range tx.Confirmations {
+		legacyTx.Confirmations = append(legacyTx.Confirmations, types.Confirmation{
+			Signer:      conf.Signer,
+			Signature:   conf.Signature,
+			ConfirmedAt: conf.ConfirmedAt,
+		})
+	}
+	
+	return legacyTx
+}
+
+// Ensure the adapter implements the interfaces
 var _ usecase.DeploymentStore = (*RegistryStoreAdapter)(nil)
+var _ usecase.TransactionStore = (*RegistryStoreAdapter)(nil)
+var _ usecase.SafeTransactionStore = (*RegistryStoreAdapter)(nil)

@@ -10,6 +10,9 @@ type App struct {
 	// Configuration
 	Config *config.RuntimeConfig
 	
+	// Shared dependencies
+	Selector usecase.DeploymentSelector
+	
 	// Use cases
 	ListDeployments         *usecase.ListDeployments
 	ShowDeployment          *usecase.ShowDeployment
@@ -20,15 +23,19 @@ type App struct {
 	SetConfig               *usecase.SetConfig
 	RemoveConfig            *usecase.RemoveConfig
 	RunScript               *usecase.RunScript
+	VerifyDeployment        *usecase.VerifyDeployment
+	OrchestrateDeployment   *usecase.OrchestrateDeployment
+	SyncRegistry            *usecase.SyncRegistry
+	TagDeployment           *usecase.TagDeployment
 	
 	// Add more use cases as they are implemented
-	// VerifyContract  *usecase.VerifyContract
 	// InitProject     *usecase.InitProject
 }
 
 // NewApp creates a new application instance with all use cases
 func NewApp(
 	cfg *config.RuntimeConfig,
+	selector usecase.DeploymentSelector,
 	listDeployments *usecase.ListDeployments,
 	showDeployment *usecase.ShowDeployment,
 	generateDeploymentScript *usecase.GenerateDeploymentScript,
@@ -38,9 +45,14 @@ func NewApp(
 	setConfig *usecase.SetConfig,
 	removeConfig *usecase.RemoveConfig,
 	runScript *usecase.RunScript,
+	verifyDeployment *usecase.VerifyDeployment,
+	orchestrateDeployment *usecase.OrchestrateDeployment,
+	syncRegistry *usecase.SyncRegistry,
+	tagDeployment *usecase.TagDeployment,
 ) (*App, error) {
 	return &App{
 		Config:                   cfg,
+		Selector:                 selector,
 		ListDeployments:          listDeployments,
 		ShowDeployment:           showDeployment,
 		GenerateDeploymentScript: generateDeploymentScript,
@@ -50,5 +62,9 @@ func NewApp(
 		SetConfig:                setConfig,
 		RemoveConfig:             removeConfig,
 		RunScript:                runScript,
+		VerifyDeployment:         verifyDeployment,
+		OrchestrateDeployment:    orchestrateDeployment,
+		SyncRegistry:             syncRegistry,
+		TagDeployment:            tagDeployment,
 	}, nil
 }

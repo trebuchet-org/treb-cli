@@ -20,7 +20,9 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/adapters/parser"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/progress"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/registry"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/safe"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/template"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/verification"
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -33,6 +35,11 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
+	selectorAdapter, err := interactive.NewSelectorAdapter(runtimeConfig)
+	if err != nil {
+		return nil, err
+	}
+	deploymentSelector := ProvideDeploymentSelector(selectorAdapter)
 	registryStoreAdapter, err := fs.NewRegistryStoreAdapter(runtimeConfig)
 	if err != nil {
 		return nil, err
@@ -40,10 +47,6 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	listDeployments := usecase.NewListDeployments(runtimeConfig, registryStoreAdapter, sink)
 	showDeployment := usecase.NewShowDeployment(runtimeConfig, registryStoreAdapter, sink)
 	contractIndexerAdapter, err := fs.NewContractIndexerAdapter(runtimeConfig)
-	if err != nil {
-		return nil, err
-	}
-	selectorAdapter, err := interactive.NewSelectorAdapter(runtimeConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +98,19 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	}
 	spinnerProgressReporter := progress.NewSpinnerProgressReporter()
 	runScript := usecase.NewRunScript(runtimeConfig, scriptResolverAdapter, parameterResolverAdapter, parameterPrompterAdapter, scriptExecutorAdapter, executionParserAdapter, updaterAdapter, builderAdapter, libraryResolverAdapter, spinnerProgressReporter)
-	app, err := NewApp(runtimeConfig, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, showConfig, setConfig, removeConfig, runScript)
+	verifierAdapter, err := verification.NewVerifierAdapter(runtimeConfig)
+	if err != nil {
+		return nil, err
+	}
+	verifyDeployment := usecase.NewVerifyDeployment(registryStoreAdapter, verifierAdapter, networkResolverAdapter, registryStoreAdapter)
+	orchestrateDeployment := usecase.NewOrchestrateDeployment(runScript, sink)
+	clientAdapter, err := safe.NewClientAdapter(runtimeConfig)
+	if err != nil {
+		return nil, err
+	}
+	syncRegistry := usecase.NewSyncRegistry(registryStoreAdapter, registryStoreAdapter, registryStoreAdapter, clientAdapter, sink)
+	tagDeployment := usecase.NewTagDeployment(registryStoreAdapter, sink)
+	app, err := NewApp(runtimeConfig, deploymentSelector, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, showConfig, setConfig, removeConfig, runScript, verifyDeployment, orchestrateDeployment, syncRegistry, tagDeployment)
 	if err != nil {
 		return nil, err
 	}
@@ -107,4 +122,9 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 // ProvideContractResolver provides ContractResolver interface from ResolveContract
 func ProvideContractResolver(uc *usecase.ResolveContract) usecase.ContractResolver {
 	return uc
+}
+
+// ProvideDeploymentSelector provides DeploymentSelector interface from SelectorAdapter
+func ProvideDeploymentSelector(adapter *interactive.SelectorAdapter) usecase.DeploymentSelector {
+	return adapter
 }

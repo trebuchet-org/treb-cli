@@ -18,5 +18,15 @@ func (n *NopSink) OnProgress(ctx context.Context, event usecase.ProgressEvent) {
 	// No-op
 }
 
+// Info does nothing with info messages
+func (n *NopSink) Info(message string) {
+	// No-op
+}
+
+// Error does nothing with error messages
+func (n *NopSink) Error(message string) {
+	// No-op
+}
+
 // Ensure NopSink implements ProgressSink
 var _ usecase.ProgressSink = (*NopSink)(nil)

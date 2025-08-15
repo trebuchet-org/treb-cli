@@ -8,7 +8,9 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/adapters/forge"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/fs"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/interactive"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/safe"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/template"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/verification"
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -27,6 +29,8 @@ func ProvideProjectPath(cfg *config.RuntimeConfig) string {
 var FSSet = wire.NewSet(
 	fs.NewRegistryStoreAdapter,
 	wire.Bind(new(usecase.DeploymentStore), new(*fs.RegistryStoreAdapter)),
+	wire.Bind(new(usecase.TransactionStore), new(*fs.RegistryStoreAdapter)),
+	wire.Bind(new(usecase.SafeTransactionStore), new(*fs.RegistryStoreAdapter)),
 	wire.Bind(new(usecase.RegistryPruner), new(*fs.RegistryStoreAdapter)),
 	
 	fs.NewContractIndexerAdapter,
@@ -72,6 +76,18 @@ var BlockchainSet = wire.NewSet(
 	wire.Bind(new(usecase.BlockchainChecker), new(*blockchain.CheckerAdapter)),
 )
 
+// VerificationSet provides verification-based implementations
+var VerificationSet = wire.NewSet(
+	verification.NewVerifierAdapter,
+	wire.Bind(new(usecase.ContractVerifier), new(*verification.VerifierAdapter)),
+)
+
+// SafeSet provides Safe-based implementations
+var SafeSet = wire.NewSet(
+	safe.NewClientAdapter,
+	wire.Bind(new(usecase.SafeClient), new(*safe.ClientAdapter)),
+)
+
 // AllAdapters includes all adapter sets
 var AllAdapters = wire.NewSet(
 	// Provider functions
@@ -85,5 +101,7 @@ var AllAdapters = wire.NewSet(
 	InteractiveSet,
 	ConfigSet,
 	BlockchainSet,
+	VerificationSet,
+	SafeSet,
 	ScriptAdapters,
 )
