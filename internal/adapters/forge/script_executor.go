@@ -51,6 +51,8 @@ func (a *ScriptExecutorAdapter) Execute(ctx context.Context, config usecase.Scri
 	// Add debug flags
 	if config.Debug {
 		flags = append(flags, "-vvvv")
+		// Also set DEBUG env var so the executor knows to print debug info
+		config.Environment["DEBUG"] = "true"
 	} else if config.DebugJSON {
 		flags = append(flags, "--json")
 	}

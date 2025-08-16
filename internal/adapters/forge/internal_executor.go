@@ -61,13 +61,44 @@ func (f *InternalForgeExecutor) RunScriptWithArgs(scriptPath string, flags []str
 
 	args = append(args, flags...)
 
-	// Debug: print the full command
+	// Check if debug mode is enabled
+	isDebug := false
 	if envVars != nil {
-		if _, debug := envVars["DEBUG"]; debug || os.Getenv("TREB_DEBUG") != "" {
-			fmt.Printf("Running forge command: forge %s\n", strings.Join(args, " "))
+		if debugVal, ok := envVars["DEBUG"]; ok && debugVal == "true" {
+			isDebug = true
 		}
-	} else if os.Getenv("TREB_DEBUG") != "" {
-		fmt.Printf("Running forge command: forge %s\n", strings.Join(args, " "))
+	}
+	if os.Getenv("TREB_DEBUG") != "" {
+		isDebug = true
+	}
+	// Also check for -vvvv flag which indicates debug mode
+	for _, flag := range flags {
+		if flag == "-vvvv" {
+			isDebug = true
+			break
+		}
+	}
+
+	// Print debug information if enabled
+	if isDebug {
+		fmt.Printf("Running: forge %s\n", strings.Join(args, " "))
+		if len(envVars) > 0 {
+			fmt.Println("With env vars:")
+			for key, value := range envVars {
+				// Mask sensitive values
+				displayValue := value
+				if strings.Contains(strings.ToLower(key), "private_key") || 
+				   strings.Contains(strings.ToLower(key), "secret") ||
+				   strings.Contains(strings.ToLower(key), "password") {
+					if len(value) > 10 {
+						displayValue = value[:10] + "..."
+					} else {
+						displayValue = "***"
+					}
+				}
+				fmt.Printf("  %s=%s\n", key, displayValue)
+			}
+		}
 	}
 
 	cmd := exec.Command("forge", args...)
