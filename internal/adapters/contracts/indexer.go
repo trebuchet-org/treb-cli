@@ -130,7 +130,13 @@ func (i *Indexer) Index() error {
 	
 	if os.Getenv("TREB_TEST_DEBUG") == "true" {
 		fmt.Fprintf(os.Stderr, "DEBUG: Total artifacts found: %d\n", len(allArtifacts))
-		fmt.Fprintf(os.Stderr, "DEBUG: Indexed %d script contracts total\n", scriptCount)
+		fmt.Fprintf(os.Stderr, "DEBUG: Indexed %d script contracts total (misleading count)\n", scriptCount)
+		// Show actual script count
+		realScripts := i.GetScriptContracts()
+		fmt.Fprintf(os.Stderr, "DEBUG: Actual script contracts: %d\n", len(realScripts))
+		for _, s := range realScripts {
+			fmt.Fprintf(os.Stderr, "  - %s at %s\n", s.Name, s.Path)
+		}
 		// Show specific artifacts we care about
 		hasDeployCounter := false
 		for _, art := range allArtifacts {

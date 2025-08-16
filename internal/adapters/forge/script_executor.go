@@ -96,12 +96,19 @@ func (a *ScriptExecutorAdapter) Execute(ctx context.Context, config usecase.Scri
 	scriptPath := config.Script.Path
 	output, err := a.forge.RunScript(scriptPath, flags, config.Environment)
 	
-	// Determine success based on error
-	success := err == nil
+	// If there's an error, return it properly
+	if err != nil {
+		return &usecase.ScriptExecutionOutput{
+			Success:       false,
+			RawOutput:     []byte(output),
+			ParsedOutput:  output,
+			BroadcastPath: "",
+		}, err
+	}
 	
 	// Find broadcast file if successful and not dry-run
 	var broadcastPath string
-	if success && !config.DryRun {
+	if !config.DryRun {
 		// Broadcast files are in broadcast/{contract_file}/{chain_id}/run-latest.json
 		contractFile := filepath.Base(scriptPath)
 		chainID := "31337" // default local chain
@@ -112,7 +119,7 @@ func (a *ScriptExecutorAdapter) Execute(ctx context.Context, config usecase.Scri
 	}
 	
 	return &usecase.ScriptExecutionOutput{
-		Success:       success,
+		Success:       true,
 		RawOutput:     []byte(output),
 		ParsedOutput:  output, // For now, raw and parsed are the same
 		BroadcastPath: broadcastPath,
