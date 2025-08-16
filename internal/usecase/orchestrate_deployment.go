@@ -41,10 +41,10 @@ type OrchestrateParams struct {
 
 // OrchestrateResult contains the result of orchestration
 type OrchestrateResult struct {
-	Plan            *ExecutionPlan
-	ExecutedSteps   []*StepResult
-	FailedStep      *StepResult
-	Success         bool
+	Plan             *ExecutionPlan
+	ExecutedSteps    []*StepResult
+	FailedStep       *StepResult
+	Success          bool
 	TotalDeployments int
 }
 
@@ -150,7 +150,7 @@ func (o *OrchestrateDeployment) createExecutionPlan(config *OrchestrationConfig)
 func (o *OrchestrateDeployment) executeStep(ctx context.Context, step *ExecutionStep, params OrchestrateParams) *StepResult {
 	// Prepare parameters for run script
 	scriptParams := RunScriptParams{
-		ScriptPath:     step.Script,
+		ScriptRef:      step.Script,
 		Network:        params.Network,
 		Namespace:      params.Namespace,
 		Parameters:     step.Env,
@@ -163,7 +163,7 @@ func (o *OrchestrateDeployment) executeStep(ctx context.Context, step *Execution
 
 	// Execute the script
 	runResult, err := o.runScript.Run(ctx, scriptParams)
-	
+
 	return &StepResult{
 		Step:      step,
 		RunResult: runResult,
@@ -335,3 +335,4 @@ func (g *DependencyGraph) TopologicalSort() ([]*ExecutionStep, error) {
 
 	return result, nil
 }
+

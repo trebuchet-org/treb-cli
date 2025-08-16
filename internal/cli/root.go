@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/progress"
 	"github.com/trebuchet-org/treb-cli/internal/app"
 	"github.com/trebuchet-org/treb-cli/internal/config"
@@ -27,7 +26,7 @@ func NewRootCmd() *cobra.Command {
 		Long: `Trebuchet (treb) orchestrates Foundry script execution for deterministic 
 smart contract deployments using CreateX factory contracts.`,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			// Skip for help/version commands
+			// Skip for help/version/completion commands
 			if cmd.Name() == "version" || cmd.Name() == "help" || cmd.Name() == "completion" {
 				return nil
 			}
@@ -43,27 +42,24 @@ smart contract deployments using CreateX factory contracts.`,
 			}
 
 			// Set up viper
-			v := config.SetupViper(projectRoot)
-
-			// Bind global flags that have been set
-			bindGlobalFlags(v, cmd)
+			v := config.SetupViper(projectRoot, cmd)
 
 			// Create progress sink (can be replaced with proper implementation later)
 			sink := progress.NewNopSink()
 
 			// Initialize app with DI
-			appInstance, err := app.InitApp(v, sink)
+			app, err := app.InitApp(v, sink)
 			if err != nil {
 				return fmt.Errorf("failed to initialize app: %w", err)
 			}
 
 			// Store app in context
-			ctx := context.WithValue(cmd.Context(), appKey, appInstance)
+			ctx := context.WithValue(cmd.Context(), appKey, app)
 
 			// Add timeout if configured
-			if appInstance.Config.Timeout > 0 {
+			if app.Config.Timeout > 0 {
 				var cancel context.CancelFunc
-				ctx, cancel = context.WithTimeout(ctx, appInstance.Config.Timeout)
+				ctx, cancel = context.WithTimeout(ctx, app.Config.Timeout)
 				// Store cancel func to be called on command completion
 				cmd.PostRun = func(cmd *cobra.Command, args []string) {
 					cancel()
@@ -138,23 +134,6 @@ smart contract deployments using CreateX factory contracts.`,
 	devCmd.GroupID = "management"
 	rootCmd.AddCommand(devCmd)
 
-	// TODO: Add more commands as they are migrated
-	// deployCmd := NewDeployCmd(baseCfg)
-	// deployCmd.GroupID = "main"
-	// rootCmd.AddCommand(deployCmd)
-
-	// genCmd := NewGenCmd(baseCfg)
-	// genCmd.GroupID = "main"
-	// rootCmd.AddCommand(genCmd)
-
-	// verifyCmd := NewVerifyCmd(baseCfg)
-	// verifyCmd.GroupID = "main"
-	// rootCmd.AddCommand(verifyCmd)
-
-	// initCmd := NewInitCmd(baseCfg)
-	// initCmd.GroupID = "main"
-	// rootCmd.AddCommand(initCmd)
-
 	// Management commands
 	networksCmd := NewNetworksCmd()
 	networksCmd.GroupID = "management"
@@ -167,14 +146,6 @@ smart contract deployments using CreateX factory contracts.`,
 	configCmd := NewConfigCmd()
 	configCmd.GroupID = "management"
 	rootCmd.AddCommand(configCmd)
-
-	// syncCmd := NewSyncCmd(baseCfg)
-	// syncCmd.GroupID = "management"
-	// rootCmd.AddCommand(syncCmd)
-
-	// tagCmd := NewTagCmd(baseCfg)
-	// tagCmd.GroupID = "management"
-	// rootCmd.AddCommand(tagCmd)
 
 	// Version command
 	versionCmd := NewVersionCmd()
@@ -197,24 +168,6 @@ func newDeploymentCommands() *cobra.Command {
 	// deployCmd.AddCommand(newVerifyCmd())
 
 	return deployCmd
-}
-
-// bindGlobalFlags binds command flags to viper
-func bindGlobalFlags(v *viper.Viper, cmd *cobra.Command) {
-	// Only bind flags that exist and have been changed
-	if f := cmd.Flag("debug"); f != nil && f.Changed {
-		v.Set("debug", f.Value.String())
-	}
-	if f := cmd.Flag("non-interactive"); f != nil && f.Changed {
-		v.Set("non_interactive", f.Value.String())
-	}
-	// Intentionally omit --json to preserve v1 compatibility in usage output
-	if f := cmd.Flag("namespace"); f != nil && f.Changed {
-		v.Set("namespace", f.Value.String())
-	}
-	if f := cmd.Flag("network"); f != nil && f.Changed {
-		v.Set("network", f.Value.String())
-	}
 }
 
 // getApp retrieves the app instance from the command context

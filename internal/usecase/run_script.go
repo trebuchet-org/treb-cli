@@ -11,7 +11,7 @@ import (
 
 // RunScriptParams contains parameters for running a script
 type RunScriptParams struct {
-	ScriptPath     string
+	ScriptRef      string
 	Network        string
 	Namespace      string
 	Parameters     map[string]string
@@ -20,6 +20,7 @@ type RunScriptParams struct {
 	DebugJSON      bool
 	Verbose        bool
 	NonInteractive bool
+	Progress       ProgressSink
 }
 
 // RunScriptResult contains the result of running a script
@@ -32,16 +33,16 @@ type RunScriptResult struct {
 
 // RunScript is the main use case for running deployment scripts
 type RunScript struct {
-	config             *config.RuntimeConfig
-	scriptResolver     ScriptResolver
-	paramResolver      ParameterResolver
-	paramPrompter      ParameterPrompter
-	scriptExecutor     ScriptExecutor
-	executionParser    ExecutionParser
-	registryUpdater    RegistryUpdater
-	envBuilder         EnvironmentBuilder
-	libraryResolver    LibraryResolver
-	progress           ProgressReporter
+	config          *config.RuntimeConfig
+	scriptResolver  ScriptResolver
+	paramResolver   ParameterResolver
+	paramPrompter   ParameterPrompter
+	scriptExecutor  ScriptExecutor
+	executionParser ExecutionParser
+	registryUpdater RegistryUpdater
+	envBuilder      EnvironmentBuilder
+	libraryResolver LibraryResolver
+	progress        ProgressReporter
 }
 
 // NewRunScript creates a new RunScript use case
@@ -81,15 +82,13 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 	}
 
 	// Stage 1: Resolve script
-	uc.progress.ReportStage(ctx, StageResolving)
-	script, err := uc.scriptResolver.ResolveScript(ctx, params.ScriptPath)
+	script, err := uc.scriptResolver.ResolveScript(ctx, params.ScriptRef)
 	if err != nil {
 		result.Error = fmt.Errorf("failed to resolve script: %w", err)
 		return result, nil
 	}
 
 	// Stage 2: Resolve parameters
-	uc.progress.ReportStage(ctx, StageParameters)
 	scriptParams, err := uc.scriptResolver.GetScriptParameters(ctx, script)
 	if err != nil {
 		result.Error = fmt.Errorf("failed to get script parameters: %w", err)
@@ -246,7 +245,7 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 	// Stage 5: Update registry (if not dry run)
 	if !params.DryRun && len(execution.Deployments) > 0 {
 		uc.progress.ReportStage(ctx, StageUpdating)
-		
+
 		changes, err := uc.registryUpdater.PrepareUpdates(ctx, execution, params.Namespace, params.Network)
 		if err != nil {
 			result.Error = fmt.Errorf("failed to prepare registry updates: %w", err)
@@ -264,7 +263,8 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 
 	// Stage 6: Complete
 	uc.progress.ReportStage(ctx, StageCompleted)
-	
+
 	result.Success = true
 	return result, nil
 }
+

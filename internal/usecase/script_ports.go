@@ -11,7 +11,7 @@ import (
 // ScriptResolver resolves script paths to script information
 type ScriptResolver interface {
 	// ResolveScript resolves a script path or name to script info
-	ResolveScript(ctx context.Context, pathOrName string) (*domain.ScriptInfo, error)
+	ResolveScript(ctx context.Context, scriptRef string) (*domain.ScriptInfo, error)
 	// GetScriptParameters extracts parameters from a script's artifact
 	GetScriptParameters(ctx context.Context, script *domain.ScriptInfo) ([]domain.ScriptParameter, error)
 }
@@ -114,9 +114,6 @@ const (
 	StageCompleted    ExecutionStage = "Completed"
 )
 
-
-
-
 // Environment Building Ports
 
 // EnvironmentBuilder builds environment variables for script execution
@@ -127,21 +124,20 @@ type EnvironmentBuilder interface {
 
 // BuildEnvironmentParams contains parameters for building the environment
 type BuildEnvironmentParams struct {
-	Network          string
-	Namespace        string
-	Parameters       map[string]string
-	TrebConfig       *domain.TrebConfig // From RuntimeConfig
-	DryRun           bool
+	Network           string
+	Namespace         string
+	Parameters        map[string]string
+	TrebConfig        *domain.TrebConfig // From RuntimeConfig
+	DryRun            bool
 	DeployedLibraries []LibraryReference
 }
 
 // LibraryReference represents a deployed library
 type LibraryReference struct {
-	Path     string
-	Name     string
-	Address  string
+	Path    string
+	Name    string
+	Address string
 }
-
 
 // Library Resolution Ports
 
@@ -150,3 +146,4 @@ type LibraryResolver interface {
 	// GetDeployedLibraries gets all deployed libraries for the given context
 	GetDeployedLibraries(ctx context.Context, namespace string, chainID uint64) ([]LibraryReference, error)
 }
+

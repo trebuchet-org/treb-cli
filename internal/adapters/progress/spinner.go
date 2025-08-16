@@ -12,9 +12,9 @@ import (
 
 // SpinnerProgressReporter implements progress reporting with a spinner
 type SpinnerProgressReporter struct {
-	spinner       *spinner.Spinner
-	stages        []stageInfo
-	currentStage  usecase.ExecutionStage
+	spinner        *spinner.Spinner
+	stages         []stageInfo
+	currentStage   usecase.ExecutionStage
 	stageStartTime time.Time
 }
 
@@ -30,7 +30,6 @@ type stageInfo struct {
 func NewSpinnerProgressReporter() *SpinnerProgressReporter {
 	// Create custom spinner with colors (matching v1 implementation)
 	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-	s.HideCursor = true
 
 	return &SpinnerProgressReporter{
 		spinner: s,
@@ -179,10 +178,10 @@ func (r *SpinnerProgressReporter) Info(message string) {
 	if wasActive {
 		r.spinner.Stop()
 	}
-	
+
 	// Print info message
 	fmt.Println(color.New(color.FgCyan).Sprint("ℹ ") + message)
-	
+
 	// Restart spinner if it was active
 	if wasActive {
 		r.spinner.Start()
@@ -197,10 +196,10 @@ func (r *SpinnerProgressReporter) Error(message string) {
 	if wasActive {
 		r.spinner.Stop()
 	}
-	
+
 	// Print error message
 	fmt.Println(color.New(color.FgRed).Sprint("✗ ") + message)
-	
+
 	// Restart spinner if it was active
 	if wasActive {
 		r.spinner.Start()
@@ -210,3 +209,4 @@ func (r *SpinnerProgressReporter) Error(message string) {
 
 // Ensure SpinnerProgressReporter implements ProgressSink
 var _ usecase.ProgressSink = (*SpinnerProgressReporter)(nil)
+

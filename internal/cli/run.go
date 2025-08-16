@@ -1,11 +1,11 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/trebuchet-org/treb-cli/internal/adapters/submodule"
 	"github.com/trebuchet-org/treb-cli/internal/cli/render"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -13,14 +13,11 @@ import (
 // NewRunCmd creates the run command using the new architecture
 func NewRunCmd() *cobra.Command {
 	var (
-		network       string
-		namespace     string
-		envVars       []string
-		dryRun        bool
-		debug         bool
-		debugJSON     bool
-		verbose       bool
-		skipSubmodule bool
+		envVars   []string
+		dryRun    bool
+		debug     bool
+		debugJSON bool
+		verbose   bool
 	)
 
 	cmd := &cobra.Command{
@@ -67,12 +64,17 @@ Examples:
   # Run with specific network and profile
   treb run script/deploy/DeployCounter.s.sol --network sepolia --profile production`,
 		Args:         cobra.ExactArgs(1),
-		SilenceUsage: false,
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get app from context (v2 usecase wiring)
+			deploymentScriptRef := args[0]
 			app, err := getApp(cmd)
 			if err != nil {
 				return err
+			}
+
+			if app.Config.Network == nil {
+				return fmt.Errorf("No active network set in config, --network flag is required")
 			}
 
 			// Parse environment variables (KEY=VALUE)
@@ -80,52 +82,23 @@ Examples:
 			for _, envVar := range envVars {
 				parts := strings.SplitN(envVar, "=", 2)
 				if len(parts) != 2 {
-					return fmt.Errorf("invalid env var format: %s (expected KEY=VALUE)", envVar)
+					return fmt.Errorf("invalid env var format: %s (expected key=value)", envVar)
 				}
 				parsedEnvVars[parts[0]] = parts[1]
 			}
 
-			// Optional treb-sol submodule check (non-blocking)
-			if !skipSubmodule {
-				checker := submodule.NewChecker(".")
-				if err := checker.CheckTrebSol(); err != nil {
-					// Just warn, don't fail
-					fmt.Printf("Warning: %v\n", err)
-				}
-			}
-
-			// Apply defaults from config
-			if namespace == "" {
-				namespace = app.Config.Namespace
-			}
-			if namespace == "" {
-				namespace = "default"
-			}
-			if network == "" && app.Config.Network != nil {
-				network = app.Config.Network.Name
-			}
-			if network == "" {
-				network = "local"
-			}
-
 			// Banner
-			scriptName := args[0]
-			if idx := strings.LastIndex(scriptName, "/"); idx >= 0 {
-				scriptName = scriptName[idx+1:]
-			}
-			render.PrintDeploymentBanner(cmd.OutOrStdout(), scriptName, network, namespace, dryRun, parsedEnvVars)
+			renderer := render.NewScriptRenderer(cmd.OutOrStdout(), verbose)
+			progress := &RunProgress{renderer}
 
 			// Run v2 usecase
 			params := usecase.RunScriptParams{
-				ScriptPath:     args[0],
-				Network:        network,
-				Namespace:      namespace,
-				Parameters:     parsedEnvVars,
-				DryRun:         dryRun,
-				Debug:          debug,
-				DebugJSON:      debugJSON,
-				Verbose:        verbose,
-				NonInteractive: app.Config.NonInteractive,
+				ScriptRef:  deploymentScriptRef,
+				Parameters: parsedEnvVars,
+				DryRun:     dryRun,
+				Debug:      debug,
+				DebugJSON:  debugJSON,
+				Progress:   progress,
 			}
 			result, err := app.RunScript.Run(cmd.Context(), params)
 			if err != nil {
@@ -138,8 +111,6 @@ Examples:
 				return fmt.Errorf("script execution failed")
 			}
 
-			// Render using v2 renderer (which bridges to v1 display for 1:1 output)
-			renderer := render.NewScriptRenderer(cmd.OutOrStdout(), verbose)
 			if err := renderer.RenderExecution(result); err != nil {
 				return err
 			}
@@ -157,8 +128,23 @@ Examples:
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Perform a dry run without broadcasting transactions")
 	cmd.Flags().BoolVar(&debug, "debug", false, "Enable debug mode (shows forge output and saves to file)")
 	cmd.Flags().BoolVar(&debugJSON, "debug-json", false, "Enable JSON debug mode (shows raw JSON output)")
-	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Show extra detailed information for events and transactions")
-	cmd.Flags().BoolVar(&skipSubmodule, "skip-treb-sol-update", false, "Skip automatic treb-sol update check")
+	cmd.Flags().BoolP("verbose", "v", false, "Show extra detailed information for events and transactions")
 
 	return cmd
+}
+
+type RunProgress struct {
+	renderer *render.ScriptRenderer
+}
+
+func (rp *RunProgress) OnProgress(ctx context.Context, event usecase.ProgressEvent) {
+
+}
+
+func (rp *RunProgress) Info(message string) {
+
+}
+
+func (rp *RunProgress) Error(message string) {
+
 }
