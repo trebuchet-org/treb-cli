@@ -102,8 +102,12 @@ func (p *InternalParser) ParseExecution(
 }
 
 // parseBroadcastFile reads and parses a Foundry broadcast JSON file
-func (p *InternalParser) parseBroadcastFile(relativePath string) (*domain.BroadcastFile, error) {
-	fullPath := filepath.Join(p.projectRoot, relativePath)
+func (p *InternalParser) parseBroadcastFile(path string) (*domain.BroadcastFile, error) {
+	// Check if the path is already absolute
+	fullPath := path
+	if !filepath.IsAbs(path) {
+		fullPath = filepath.Join(p.projectRoot, path)
+	}
 	
 	data, err := os.ReadFile(fullPath)
 	if err != nil {

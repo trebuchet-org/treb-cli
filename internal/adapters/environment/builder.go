@@ -44,7 +44,12 @@ func (b *BuilderAdapter) BuildEnvironment(
 	env["SENDER_CONFIGS"] = encodedConfigs
 	env["NAMESPACE"] = params.Namespace
 	env["NETWORK"] = params.Network
-	env["FOUNDRY_PROFILE"] = params.Namespace
+	// Use namespace for profile, default to "default" if empty
+	profile := params.Namespace
+	if profile == "" {
+		profile = "default"
+	}
+	env["FOUNDRY_PROFILE"] = profile
 	env["DRYRUN"] = strconv.FormatBool(params.DryRun)
 
 	// Add library deployer if configured

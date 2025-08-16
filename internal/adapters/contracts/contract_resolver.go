@@ -3,9 +3,9 @@ package contracts
 import (
 	"context"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
@@ -267,66 +267,104 @@ func (r *ContractResolver) buildAmbiguousErrorMessage(ref string, contracts []*d
 type ContractResolverAdapter struct {
 	indexer  *Indexer
 	resolver *ContractResolver
+	indexed  bool
+	mu       sync.Mutex
 }
 
 // NewContractResolverAdapter creates a new contract resolver adapter
 func NewContractResolverAdapter(cfg *config.RuntimeConfig, selector usecase.InteractiveSelector) (*ContractResolverAdapter, error) {
 	indexer := NewIndexer(cfg.ProjectRoot)
 	
-	// Index contracts
-	if err := indexer.Index(); err != nil {
-		return nil, fmt.Errorf("failed to index contracts: %w", err)
-	}
-
+	// Don't index immediately - wait until first use
 	resolver := NewContractResolver(cfg, indexer, selector)
 	
 	return &ContractResolverAdapter{
 		indexer:  indexer,
 		resolver: resolver,
+		indexed:  false,
 	}, nil
+}
+
+// ensureIndexed ensures the contracts are indexed (lazy initialization)
+func (a *ContractResolverAdapter) ensureIndexed() error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	
+	if !a.indexed {
+		if err := a.indexer.Index(); err != nil {
+			return fmt.Errorf("failed to index contracts: %w", err)
+		}
+		a.indexed = true
+	}
+	return nil
 }
 
 // ResolveContract resolves a contract reference to a contract
 func (a *ContractResolverAdapter) ResolveContract(ctx context.Context, contractRef string) (*domain.ContractInfo, error) {
+	if err := a.ensureIndexed(); err != nil {
+		return nil, err
+	}
 	return a.resolver.ResolveContract(ctx, contractRef)
 }
 
 // ResolveContractWithFilter resolves a contract reference with filtering
 func (a *ContractResolverAdapter) ResolveContractWithFilter(ctx context.Context, contractRef string, filter usecase.ContractFilter) (*domain.ContractInfo, error) {
+	if err := a.ensureIndexed(); err != nil {
+		return nil, err
+	}
 	return a.resolver.ResolveContractWithFilter(ctx, contractRef, filter)
 }
 
 // GetProxyContracts returns all available proxy contracts
 func (a *ContractResolverAdapter) GetProxyContracts(ctx context.Context) ([]*domain.ContractInfo, error) {
+	if err := a.ensureIndexed(); err != nil {
+		return nil, err
+	}
 	return a.resolver.GetProxyContracts(ctx)
 }
 
 // SelectProxyContract interactively selects a proxy contract
 func (a *ContractResolverAdapter) SelectProxyContract(ctx context.Context) (*domain.ContractInfo, error) {
+	if err := a.ensureIndexed(); err != nil {
+		return nil, err
+	}
 	return a.resolver.SelectProxyContract(ctx)
 }
 
 // GetContract retrieves a contract by key (delegated to indexer for compatibility)
 func (a *ContractResolverAdapter) GetContract(ctx context.Context, key string) (*domain.ContractInfo, error) {
+	if err := a.ensureIndexed(); err != nil {
+		return nil, err
+	}
 	return a.indexer.GetContract(key)
 }
 
 // SearchContracts searches for contracts matching a pattern (delegated to indexer for compatibility)
 func (a *ContractResolverAdapter) SearchContracts(ctx context.Context, pattern string) []*domain.ContractInfo {
+	// Ignore error for search - return empty if indexing fails
+	_ = a.ensureIndexed()
 	return a.indexer.SearchContracts(pattern)
 }
 
 // GetContractByArtifact retrieves a contract by its artifact path (delegated to indexer for compatibility)
 func (a *ContractResolverAdapter) GetContractByArtifact(ctx context.Context, artifact string) *domain.ContractInfo {
+	// Ignore error for search - return nil if indexing fails
+	_ = a.ensureIndexed()
 	return a.indexer.GetContractByArtifact(artifact)
 }
 
 // RefreshIndex refreshes the contract index (delegated to indexer for compatibility)
 func (a *ContractResolverAdapter) RefreshIndex(ctx context.Context) error {
-	if os.Getenv("TREB_TEST_DEBUG") == "true" {
-		fmt.Fprintf(os.Stderr, "DEBUG: RefreshIndex called on ContractResolverAdapter\n")
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	
+	// Reset indexed flag and re-index
+	a.indexed = false
+	if err := a.indexer.Index(); err != nil {
+		return err
 	}
-	return a.indexer.Index()
+	a.indexed = true
+	return nil
 }
 
 // GetIndexer returns the internal indexer (for sharing with script resolver)

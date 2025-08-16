@@ -87,6 +87,12 @@ Examples:
 				parsedEnvVars[parts[0]] = parts[1]
 			}
 
+			// Get namespace from flag or use default
+			namespace, _ := cmd.Flags().GetString("namespace")
+			if namespace == "" {
+				namespace = "default"
+			}
+
 			// Banner
 			renderer := render.NewScriptRenderer(cmd.OutOrStdout(), verbose)
 			progress := &RunProgress{renderer}
@@ -94,6 +100,8 @@ Examples:
 			// Run v2 usecase
 			params := usecase.RunScriptParams{
 				ScriptRef:  deploymentScriptRef,
+				Network:    app.Config.Network.Name,
+				Namespace:  namespace,
 				Parameters: parsedEnvVars,
 				DryRun:     dryRun,
 				Debug:      debug,

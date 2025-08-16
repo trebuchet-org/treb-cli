@@ -32,7 +32,8 @@ func (a *ScriptExecutorAdapter) Execute(ctx context.Context, config usecase.Scri
 	var flags []string
 	
 	// Add network flags
-	if config.Network != "" && config.Network != "local" {
+	// For local networks (anvil), we always need to provide the RPC URL
+	if config.NetworkInfo != nil && config.NetworkInfo.RPCURL != "" {
 		flags = append(flags, "--rpc-url", config.NetworkInfo.RPCURL)
 	}
 	

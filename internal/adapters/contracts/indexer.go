@@ -39,32 +39,12 @@ func (i *Indexer) Index() error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	
-	if os.Getenv("TREB_TEST_DEBUG") == "true" {
-		fmt.Fprintf(os.Stderr, "DEBUG: Index() called\n")
-	}
 
 	// Reset indexes
 	i.contracts = make(map[string]*domain.ContractInfo)
 	i.contractNames = make(map[string][]*domain.ContractInfo)
 	i.bytecodeHashIndex = make(map[string]*domain.ContractInfo)
 
-	// Check if script/deploy directory exists
-	if os.Getenv("TREB_TEST_DEBUG") == "true" {
-		deployDir := filepath.Join(i.projectRoot, "script", "deploy")
-		if info, err := os.Stat(deployDir); err == nil && info.IsDir() {
-			files, _ := os.ReadDir(deployDir)
-			fmt.Fprintf(os.Stderr, "DEBUG: Found %d files in script/deploy directory\n", len(files))
-			for _, f := range files {
-				fmt.Fprintf(os.Stderr, "  - %s\n", f.Name())
-			}
-		}
-		
-		// Also check if out directory has artifacts for deploy scripts
-		deployArtifactDir := filepath.Join(i.projectRoot, "out", "DeployCounter.s.sol")
-		if info, err := os.Stat(deployArtifactDir); err == nil && info.IsDir() {
-			fmt.Fprintf(os.Stderr, "DEBUG: Found DeployCounter.s.sol artifact directory\n")
-		}
-	}
 
 	// Always run forge build to ensure new scripts are compiled
 	if err := i.runForgeBuild(); err != nil {
@@ -77,26 +57,8 @@ func (i *Indexer) Index() error {
 		return fmt.Errorf("out directory not found after forge build")
 	}
 
-	// Check for artifacts after build
-	if os.Getenv("TREB_TEST_DEBUG") == "true" {
-		// Check if DeployCounter artifact exists after build
-		deployCounterArtifact := filepath.Join(outDir, "DeployCounter.s.sol")
-		if info, err := os.Stat(deployCounterArtifact); err == nil && info.IsDir() {
-			fmt.Fprintf(os.Stderr, "DEBUG: Found DeployCounter.s.sol artifact directory after build\n")
-			// Check contents
-			files, _ := os.ReadDir(deployCounterArtifact)
-			for _, f := range files {
-				fmt.Fprintf(os.Stderr, "  - %s\n", f.Name())
-			}
-		}
-	}
 
 	// Walk through all artifact directories
-	var scriptCount int
-	var allArtifacts []string
-	if os.Getenv("TREB_TEST_DEBUG") == "true" {
-		fmt.Fprintf(os.Stderr, "DEBUG: Starting walk of out directory: %s\n", outDir)
-	}
 	err := filepath.Walk(outDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -112,49 +74,13 @@ func (i *Indexer) Index() error {
 			return nil
 		}
 
-		// Debug: collect all artifacts
-		if os.Getenv("TREB_TEST_DEBUG") == "true" {
-			relPath, _ := filepath.Rel(outDir, path)
-			allArtifacts = append(allArtifacts, relPath)
-		}
 
 		// Process the artifact
 		if procErr := i.processArtifact(path); procErr != nil {
 			return procErr
 		}
-		if strings.Contains(path, "script") {
-			scriptCount++
-		}
 		return nil
 	})
-	
-	if os.Getenv("TREB_TEST_DEBUG") == "true" {
-		fmt.Fprintf(os.Stderr, "DEBUG: Total artifacts found: %d\n", len(allArtifacts))
-		fmt.Fprintf(os.Stderr, "DEBUG: Indexed %d script contracts total (misleading count)\n", scriptCount)
-		// Show actual script count
-		realScripts := i.GetScriptContracts()
-		fmt.Fprintf(os.Stderr, "DEBUG: Actual script contracts: %d\n", len(realScripts))
-		for _, s := range realScripts {
-			fmt.Fprintf(os.Stderr, "  - %s at %s\n", s.Name, s.Path)
-		}
-		// Show specific artifacts we care about
-		hasDeployCounter := false
-		for _, art := range allArtifacts {
-			if strings.Contains(art, "DeployCounter") {
-				fmt.Fprintf(os.Stderr, "DEBUG: Found DeployCounter artifact: %s\n", art)
-				hasDeployCounter = true
-			}
-		}
-		if !hasDeployCounter && len(allArtifacts) > 0 {
-			fmt.Fprintf(os.Stderr, "DEBUG: DeployCounter artifact NOT found. Total artifacts: %d\n", len(allArtifacts))
-			// Show first few artifacts as examples
-			for i, art := range allArtifacts {
-				if i < 5 {
-					fmt.Fprintf(os.Stderr, "  Example artifact: %s\n", art)
-				}
-			}
-		}
-	}
 
 	return err
 }
@@ -204,11 +130,6 @@ func (i *Indexer) processArtifact(artifactPath string) error {
 	if contractName == "" || sourceName == "" {
 		return nil // Skip if we can't determine the contract
 	}
-	
-	// Debug output for deploy scripts
-	if os.Getenv("TREB_TEST_DEBUG") == "true" && strings.Contains(artifactPath, "DeployCounter") {
-		fmt.Fprintf(os.Stderr, "DEBUG: Processing DeployCounter artifact: path=%s, source=%s, contract=%s\n", artifactPath, sourceName, contractName)
-	}
 
 	// Make artifact path relative to project root
 	relArtifactPath, _ := filepath.Rel(i.projectRoot, artifactPath)
@@ -243,11 +164,6 @@ func (i *Indexer) processArtifact(artifactPath string) error {
 		i.contractNames[info.Name] = []*domain.ContractInfo{info}
 		// Also add simple key
 		i.contracts[info.Name] = info
-	}
-	
-	// Debug output for script contracts
-	if os.Getenv("TREB_TEST_DEBUG") == "true" && (strings.HasPrefix(info.Path, "script/") || strings.Contains(info.Path, "/script/")) {
-		fmt.Fprintf(os.Stderr, "DEBUG: Indexed script contract: %s (path: %s, artifact: %s)\n", info.Name, info.Path, info.ArtifactPath)
 	}
 
 	return nil
@@ -347,26 +263,15 @@ func (i *Indexer) GetAllContracts() map[string]*domain.ContractInfo {
 
 // runForgeBuild runs forge build command
 func (i *Indexer) runForgeBuild() error {
-	// Run forge build with --force to ensure new files are compiled
-	// This is important when scripts are generated dynamically
-	cmd := exec.Command("forge", "build", "--force")
+	// Check if we need to rebuild by looking for a cache indicator
+	// For now, always build without --force to improve performance
+	// The --force flag was causing significant slowdowns
+	cmd := exec.Command("forge", "build")
 	cmd.Dir = i.projectRoot
-	
-	if os.Getenv("TREB_TEST_DEBUG") == "true" {
-		fmt.Fprintf(os.Stderr, "DEBUG: Running forge build --force in %s\n", i.projectRoot)
-	}
 	
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("forge build failed: %w\nOutput: %s", err, string(output))
-	}
-	
-	if os.Getenv("TREB_TEST_DEBUG") == "true" {
-		fmt.Fprintf(os.Stderr, "DEBUG: Forge build completed (%d bytes output)\n", len(output))
-		// Check if DeployCounter was built
-		if strings.Contains(string(output), "DeployCounter") {
-			fmt.Fprintf(os.Stderr, "DEBUG: Forge output mentions DeployCounter\n")
-		}
 	}
 	
 	return nil
