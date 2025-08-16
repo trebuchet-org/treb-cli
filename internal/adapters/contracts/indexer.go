@@ -94,6 +94,9 @@ func (i *Indexer) Index() error {
 	// Walk through all artifact directories
 	var scriptCount int
 	var allArtifacts []string
+	if os.Getenv("TREB_TEST_DEBUG") == "true" {
+		fmt.Fprintf(os.Stderr, "DEBUG: Starting walk of out directory: %s\n", outDir)
+	}
 	err := filepath.Walk(outDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -113,9 +116,6 @@ func (i *Indexer) Index() error {
 		if os.Getenv("TREB_TEST_DEBUG") == "true" {
 			relPath, _ := filepath.Rel(outDir, path)
 			allArtifacts = append(allArtifacts, relPath)
-			if strings.Contains(path, "deploy") || strings.Contains(path, "DeployCounter") {
-				fmt.Fprintf(os.Stderr, "DEBUG: Found potential deploy artifact: %s\n", relPath)
-			}
 		}
 
 		// Process the artifact
@@ -131,15 +131,23 @@ func (i *Indexer) Index() error {
 	if os.Getenv("TREB_TEST_DEBUG") == "true" {
 		fmt.Fprintf(os.Stderr, "DEBUG: Total artifacts found: %d\n", len(allArtifacts))
 		fmt.Fprintf(os.Stderr, "DEBUG: Indexed %d script contracts total\n", scriptCount)
-		// Only show deploy-related artifacts to reduce noise
-		deployCount := 0
+		// Show specific artifacts we care about
+		hasDeployCounter := false
 		for _, art := range allArtifacts {
-			if strings.Contains(art, "Deploy") {
-				fmt.Fprintf(os.Stderr, "DEBUG: Deploy artifact: %s\n", art)
-				deployCount++
+			if strings.Contains(art, "DeployCounter") {
+				fmt.Fprintf(os.Stderr, "DEBUG: Found DeployCounter artifact: %s\n", art)
+				hasDeployCounter = true
 			}
 		}
-		fmt.Fprintf(os.Stderr, "DEBUG: Found %d Deploy artifacts\n", deployCount)
+		if !hasDeployCounter && len(allArtifacts) > 0 {
+			fmt.Fprintf(os.Stderr, "DEBUG: DeployCounter artifact NOT found. Total artifacts: %d\n", len(allArtifacts))
+			// Show first few artifacts as examples
+			for i, art := range allArtifacts {
+				if i < 5 {
+					fmt.Fprintf(os.Stderr, "  Example artifact: %s\n", art)
+				}
+			}
+		}
 	}
 
 	return err
@@ -189,6 +197,11 @@ func (i *Indexer) processArtifact(artifactPath string) error {
 
 	if contractName == "" || sourceName == "" {
 		return nil // Skip if we can't determine the contract
+	}
+	
+	// Debug output for deploy scripts
+	if os.Getenv("TREB_TEST_DEBUG") == "true" && strings.Contains(artifactPath, "DeployCounter") {
+		fmt.Fprintf(os.Stderr, "DEBUG: Processing DeployCounter artifact: path=%s, source=%s, contract=%s\n", artifactPath, sourceName, contractName)
 	}
 
 	// Make artifact path relative to project root

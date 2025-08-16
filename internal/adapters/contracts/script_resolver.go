@@ -289,6 +289,9 @@ func NewScriptResolverAdapter(cfg *config.RuntimeConfig, contractIndexer usecase
 
 // ResolveScript resolves a script path or name to script info
 func (a *ScriptResolverAdapter) ResolveScript(ctx context.Context, pathOrName string) (*domain.ScriptInfo, error) {
+	if os.Getenv("TREB_TEST_DEBUG") == "true" {
+		fmt.Fprintf(os.Stderr, "DEBUG: ScriptResolverAdapter.ResolveScript called for: %s\n", pathOrName)
+	}
 	// Refresh the index to pick up any newly generated scripts
 	if err := a.contractIndexer.RefreshIndex(ctx); err != nil {
 		return nil, fmt.Errorf("failed to refresh index: %w", err)
