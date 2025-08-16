@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -43,7 +44,14 @@ func (i *InternalIndexer) Index() error {
 	// Find the 'out' directory
 	outDir := filepath.Join(i.projectRoot, "out")
 	if _, err := os.Stat(outDir); os.IsNotExist(err) {
-		return fmt.Errorf("out directory not found. Run 'forge build' first")
+		// Run forge build to create artifacts
+		if err := i.runForgeBuild(); err != nil {
+			return fmt.Errorf("failed to build contracts: %w", err)
+		}
+		// Check again
+		if _, err := os.Stat(outDir); os.IsNotExist(err) {
+			return fmt.Errorf("out directory not found after forge build")
+		}
 	}
 
 	// Walk through all artifact directories
@@ -77,39 +85,57 @@ func (i *InternalIndexer) processArtifact(artifactPath string) error {
 		return err
 	}
 
-	// Parse basic artifact structure
+	// Parse Foundry artifact structure
 	var artifact struct {
-		ContractName string `json:"contractName"`
-		SourceName   string `json:"sourceName"`
-		Bytecode     struct {
+		Bytecode struct {
 			Object string `json:"object"`
 		} `json:"bytecode"`
 		DeployedBytecode struct {
 			Object string `json:"object"`
 		} `json:"deployedBytecode"`
-		Metadata string `json:"metadata"`
+		Metadata struct {
+			Settings struct {
+				CompilationTarget map[string]string `json:"compilationTarget"`
+			} `json:"settings"`
+		} `json:"metadata"`
 	}
 	
 	if err := json.Unmarshal(data, &artifact); err != nil {
+		// Debug: print error
+		// fmt.Printf("Failed to parse %s: %v\n", artifactPath, err)
 		return nil // Skip invalid artifacts
 	}
 
 	// Skip if no bytecode
 	if artifact.Bytecode.Object == "" || artifact.Bytecode.Object == "0x" {
+		// Debug: print skip reason
+		// fmt.Printf("Skipping %s: no bytecode\n", artifactPath)
 		return nil
+	}
+
+	// Extract contract name and source from compilation target
+	var contractName, sourceName string
+	for source, contract := range artifact.Metadata.Settings.CompilationTarget {
+		sourceName = source
+		contractName = contract
+		break // There should only be one entry
+	}
+
+	if contractName == "" || sourceName == "" {
+		return nil // Skip if we can't determine the contract
 	}
 
 	// Create contract info
 	info := &domain.ContractInfo{
-		Name:         artifact.ContractName,
-		Path:         artifact.SourceName,
+		Name:         contractName,
+		Path:         sourceName,
 		ArtifactPath: artifactPath,
 	}
 
 	// Determine if it's a library (simple heuristic)
-	if strings.Contains(strings.ToLower(artifact.ContractName), "lib") || 
-	   strings.Contains(artifact.SourceName, "/libraries/") ||
-	   strings.Contains(artifact.SourceName, "/lib/") {
+	if strings.Contains(strings.ToLower(contractName), "lib") || 
+	   strings.Contains(sourceName, "/libraries/") ||
+	   strings.Contains(sourceName, "/lib/") {
 		info.IsLibrary = true
 	}
 
@@ -210,5 +236,31 @@ func (i *InternalIndexer) GetContractByArtifact(artifactPath string) *domain.Con
 		}
 	}
 
+	return nil
+}
+
+// GetAllContracts returns all indexed contracts (for debugging)
+func (i *InternalIndexer) GetAllContracts() map[string]*domain.ContractInfo {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+	
+	// Return a copy to avoid race conditions
+	result := make(map[string]*domain.ContractInfo)
+	for k, v := range i.contracts {
+		result[k] = v
+	}
+	return result
+}
+
+// runForgeBuild runs forge build command
+func (i *InternalIndexer) runForgeBuild() error {
+	cmd := exec.Command("forge", "build")
+	cmd.Dir = i.projectRoot
+	
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("forge build failed: %w\nOutput: %s", err, string(output))
+	}
+	
 	return nil
 }

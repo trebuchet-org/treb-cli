@@ -2,6 +2,7 @@ package parser
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -10,13 +11,17 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/abi"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
 // InternalParser is our new clean implementation of the execution parser
 type InternalParser struct {
-	projectRoot string
+	projectRoot  string
+	eventDecoder *abi.EventDecoder
 }
 
 // parseHexUint64 parses a hex string to uint64
@@ -35,10 +40,16 @@ func parseHexUint64(hexStr string) (uint64, bool) {
 }
 
 // NewInternalParser creates a new internal parser
-func NewInternalParser(projectRoot string) *InternalParser {
-	return &InternalParser{
-		projectRoot: projectRoot,
+func NewInternalParser(projectRoot string) (*InternalParser, error) {
+	eventDecoder, err := abi.NewEventDecoder()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create event decoder: %w", err)
 	}
+	
+	return &InternalParser{
+		projectRoot:  projectRoot,
+		eventDecoder: eventDecoder,
+	}, nil
 }
 
 // ParseExecution parses the script output into a structured execution result
@@ -187,48 +198,148 @@ func (p *InternalParser) extractTransactions(broadcast *domain.BroadcastFile) []
 // extractDeployments extracts deployment information from broadcast data
 func (p *InternalParser) extractDeployments(broadcast *domain.BroadcastFile, transactions []domain.ScriptTransaction) []domain.ScriptDeployment {
 	var deployments []domain.ScriptDeployment
+	deploymentMap := make(map[string]*domain.ScriptDeployment)
 
-	// Process main contract deployments
-	for i, btx := range broadcast.Transactions {
-		if btx.ContractName != "" && btx.ContractAddr != "" {
-			deployment := domain.ScriptDeployment{
-				Address:        btx.ContractAddr,
-				ContractName:   btx.ContractName,
-				DeploymentType: domain.SingletonDeployment,
+	// Create transaction lookup map
+	txByHash := make(map[string]*domain.ScriptTransaction)
+	for i := range transactions {
+		txByHash[transactions[i].Hash] = &transactions[i]
+	}
+
+	// Parse events from receipts
+	for _, receipt := range broadcast.Receipts {
+		tx, hasTx := txByHash[receipt.TransactionHash]
+		
+		for _, log := range receipt.Logs {
+			// Convert to types.Log for the decoder
+			ethLog, err := p.convertBroadcastLog(log)
+			if err != nil {
+				continue
 			}
 
-			// Extract deployer from transaction
-			if i < len(transactions) {
-				deployment.Deployer = transactions[i].From
+			// Try to decode the event
+			event, err := p.eventDecoder.DecodeLog(*ethLog)
+			if err != nil {
+				continue
 			}
 
-			// Determine deployment type
-			if strings.Contains(strings.ToLower(btx.ContractName), "proxy") {
-				deployment.DeploymentType = domain.ProxyDeployment
-			}
-
-			deployments = append(deployments, deployment)
-		}
-
-		// Process additional contracts
-		for _, additional := range btx.AdditionalContracts {
-			if additional.ContractName != "" && additional.ContractAddr != "" {
-				deployment := domain.ScriptDeployment{
-					Address:        additional.ContractAddr,
-					ContractName:   additional.ContractName,
+			// Process deployment events
+			switch event.EventType {
+			case domain.EventContractDeployed:
+				deployment := &domain.ScriptDeployment{
+					Address:        event.Address,
+					ContractName:   event.ContractName,
+					Label:          event.Label,
+					Deployer:       event.Deployer,
 					DeploymentType: domain.SingletonDeployment,
 				}
-
-				if i < len(transactions) {
-					deployment.Deployer = transactions[i].From
+				if hasTx {
+					deployment.TransactionID = tx.TransactionID
 				}
+				// Use address as key to handle duplicates
+				deploymentMap[event.Address] = deployment
 
-				deployments = append(deployments, deployment)
+			case domain.EventProxyDeployed:
+				deployment := &domain.ScriptDeployment{
+					Address:        event.Address,
+					ContractName:   event.ContractName,
+					Label:          event.Label,
+					Deployer:       event.Deployer,
+					DeploymentType: domain.ProxyDeployment,
+					IsProxy:        true,
+					ProxyInfo: &domain.ProxyInfo{
+						Implementation: event.Implementation,
+						Type:           "TransparentUpgradeableProxy",
+					},
+				}
+				if hasTx {
+					deployment.TransactionID = tx.TransactionID
+				}
+				deploymentMap[event.Address] = deployment
+
+			case domain.EventCreateXContractCreation:
+				// CreateX events don't contain contract names, so we need to match with broadcast data
+				if deployment, exists := deploymentMap[event.Address]; exists {
+					deployment.Salt = event.Salt
+				}
 			}
 		}
 	}
 
+	// Fall back to broadcast transaction data if no events found
+	if len(deploymentMap) == 0 {
+		for i, btx := range broadcast.Transactions {
+			if btx.ContractName != "" && btx.ContractAddr != "" {
+				deployment := domain.ScriptDeployment{
+					Address:        btx.ContractAddr,
+					ContractName:   btx.ContractName,
+					DeploymentType: domain.SingletonDeployment,
+				}
+
+				// Extract deployer from transaction
+				if i < len(transactions) {
+					deployment.Deployer = transactions[i].From
+					deployment.TransactionID = transactions[i].TransactionID
+				}
+
+				// Determine deployment type
+				if strings.Contains(strings.ToLower(btx.ContractName), "proxy") {
+					deployment.DeploymentType = domain.ProxyDeployment
+					deployment.IsProxy = true
+				}
+
+				deployments = append(deployments, deployment)
+			}
+
+			// Process additional contracts
+			for _, additional := range btx.AdditionalContracts {
+				if additional.ContractName != "" && additional.ContractAddr != "" {
+					deployment := domain.ScriptDeployment{
+						Address:        additional.ContractAddr,
+						ContractName:   additional.ContractName,
+						DeploymentType: domain.SingletonDeployment,
+					}
+
+					if i < len(transactions) {
+						deployment.Deployer = transactions[i].From
+						deployment.TransactionID = transactions[i].TransactionID
+					}
+
+					deployments = append(deployments, deployment)
+				}
+			}
+		}
+	} else {
+		// Convert map to slice
+		for _, deployment := range deploymentMap {
+			deployments = append(deployments, *deployment)
+		}
+	}
+
 	return deployments
+}
+
+// convertBroadcastLog converts a broadcast log to an Ethereum types.Log
+func (p *InternalParser) convertBroadcastLog(log domain.BroadcastLog) (*types.Log, error) {
+	ethLog := &types.Log{
+		Address: common.HexToAddress(log.Address),
+	}
+
+	// Convert topics
+	for _, topic := range log.Topics {
+		ethLog.Topics = append(ethLog.Topics, common.HexToHash(topic))
+	}
+
+	// Convert data
+	if log.Data != "" {
+		data, err := hex.DecodeString(strings.TrimPrefix(log.Data, "0x"))
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode log data: %w", err)
+		}
+		ethLog.Data = data
+	}
+
+	return ethLog, nil
 }
 
 // extractLogs extracts console.log outputs from raw script output

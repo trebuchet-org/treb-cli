@@ -22,6 +22,9 @@ bindings: forge_build
 	@echo "🔨 Building bindings..."
 	@cat treb-sol/out/ITrebEvents.sol/ITrebEvents.json | jq ".abi" | abigen --v2 --pkg bindings --type Treb --out cli/pkg/abi/bindings/treb.go --abi -
 	@cat treb-sol/out/ICreateX.sol/ICreateX.json | jq ".abi" | abigen --v2 --pkg bindings --type CreateX --out cli/pkg/abi/bindings/createx.go --abi -
+	# Generate bindings for v2 architecture
+	@cat treb-sol/out/ITrebEvents.sol/ITrebEvents.json | jq ".abi" | abigen --v2 --pkg bindings --type Treb --out internal/adapters/abi/bindings/treb.go --abi -
+	@cat treb-sol/out/ICreateX.sol/ICreateX.json | jq ".abi" | abigen --v2 --pkg bindings --type CreateX --out internal/adapters/abi/bindings/createx.go --abi -
 
 forge_build:
 	@echo ">> forge build"

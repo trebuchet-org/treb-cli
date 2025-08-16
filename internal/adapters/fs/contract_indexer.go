@@ -9,14 +9,14 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/domain"
 )
 
-// ContractIndexerAdapter wraps the internal contracts.Indexer to implement ContractIndexer
+// ContractIndexerAdapter wraps the internal contracts.InternalIndexer to implement ContractIndexer
 type ContractIndexerAdapter struct {
-	indexer *contracts.Indexer
+	indexer *contracts.InternalIndexer
 }
 
 // NewContractIndexerAdapter creates a new adapter wrapping the internal contract indexer
 func NewContractIndexerAdapter(cfg *config.RuntimeConfig) (*ContractIndexerAdapter, error) {
-	indexer := contracts.NewIndexer(cfg.ProjectRoot)
+	indexer := contracts.NewInternalIndexer(cfg.ProjectRoot)
 	
 	// Build the initial index
 	if err := indexer.Index(); err != nil {
@@ -28,11 +28,7 @@ func NewContractIndexerAdapter(cfg *config.RuntimeConfig) (*ContractIndexerAdapt
 
 // GetContract retrieves a contract by key
 func (c *ContractIndexerAdapter) GetContract(ctx context.Context, key string) (*domain.ContractInfo, error) {
-	contract := c.indexer.GetContract(key)
-	if contract == nil {
-		return nil, domain.ErrContractNotFound
-	}
-	return contract, nil
+	return c.indexer.GetContract(key)
 }
 
 // SearchContracts searches for contracts matching a pattern

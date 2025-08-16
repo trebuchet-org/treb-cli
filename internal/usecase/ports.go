@@ -72,7 +72,6 @@ type ScriptResult struct {
 	Error      error
 }
 
-
 // ContractVerifier handles contract verification
 type ContractVerifier interface {
 	Verify(ctx context.Context, deployment *domain.Deployment, network *domain.NetworkInfo) error
@@ -108,8 +107,8 @@ type ProgressSink interface {
 type NopProgress struct{}
 
 func (NopProgress) OnProgress(context.Context, ProgressEvent) {}
-func (NopProgress) Info(string) {}
-func (NopProgress) Error(string) {}
+func (NopProgress) Info(string)                               {}
+func (NopProgress) Error(string)                              {}
 
 // Use case result types
 
@@ -228,8 +227,8 @@ type SafeTransactionStore interface {
 
 // SafeTransactionFilter defines filtering options for Safe transactions
 type SafeTransactionFilter struct {
-	ChainID uint64
-	Status  domain.TransactionStatus
+	ChainID     uint64
+	Status      domain.TransactionStatus
 	SafeAddress string
 }
 
@@ -242,9 +241,10 @@ type SafeClient interface {
 
 // SafeExecutionInfo contains execution information for a Safe transaction
 type SafeExecutionInfo struct {
-	IsExecuted           bool
-	TxHash               string
-	Confirmations        int
+	IsExecuted            bool
+	TxHash                string
+	Confirmations         int
 	ConfirmationsRequired int
-	ConfirmationDetails  []domain.Confirmation
+	ConfirmationDetails   []domain.Confirmation
 }
+

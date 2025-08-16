@@ -151,8 +151,8 @@ Examples:
 	}
 
 	// Flags
-	cmd.Flags().StringVarP(&network, "network", "n", "", "Network to run on (e.g., mainnet, sepolia, local)")
-	cmd.Flags().StringVarP(&namespace, "namespace", "s", "", "Namespace to use (defaults to current context namespace) [also sets foundry profile]")
+	cmd.Flags().StringP("network", "n", "", "Network to run on (e.g., mainnet, sepolia, local)")
+	cmd.Flags().StringP("namespace", "s", "", "Namespace to use (defaults to current context namespace) [also sets foundry profile]")
 	cmd.Flags().StringSliceVarP(&envVars, "env", "e", []string{}, "Set environment variables for the script (format: KEY=VALUE, can be used multiple times)")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Perform a dry run without broadcasting transactions")
 	cmd.Flags().BoolVar(&debug, "debug", false, "Enable debug mode (shows forge output and saves to file)")
@@ -162,4 +162,3 @@ Examples:
 
 	return cmd
 }
-

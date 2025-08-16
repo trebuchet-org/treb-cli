@@ -24,6 +24,7 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/adapters/safe"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/template"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/verification"
+	"github.com/trebuchet-org/treb-cli/internal/cli/render"
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -83,7 +84,10 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	parameterPrompterAdapter := parameters.NewParameterPrompterAdapter(runtimeConfig, registryStoreAdapter, contractIndexerAdapter)
 	scriptExecutorAdapter := forge.NewScriptExecutorAdapter(runtimeConfig)
 	string2 := adapters.ProvideProjectPath(runtimeConfig)
-	executionParserAdapter := parser.NewExecutionParserAdapter(string2)
+	executionParserAdapter, err := parser.NewExecutionParserAdapter(string2)
+	if err != nil {
+		return nil, err
+	}
 	updaterAdapter := registry.NewUpdaterAdapter(registryStoreAdapter, registryStoreAdapter)
 	builderAdapter := environment.NewBuilderAdapter(string2)
 	libraryResolverAdapter := registry.NewLibraryResolverAdapter(registryStoreAdapter)
@@ -104,7 +108,8 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	manager := anvil.NewManager()
 	manageAnvil := usecase.NewManageAnvil(manager, sink)
 	initProject := usecase.NewInitProject(fileWriterAdapter, sink)
-	app, err := NewApp(runtimeConfig, deploymentSelector, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, showConfig, setConfig, removeConfig, runScript, verifyDeployment, orchestrateDeployment, syncRegistry, tagDeployment, manageAnvil, initProject, manager)
+	renderer := render.NewGenerateRenderer()
+	app, err := NewApp(runtimeConfig, deploymentSelector, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, showConfig, setConfig, removeConfig, runScript, verifyDeployment, orchestrateDeployment, syncRegistry, tagDeployment, manageAnvil, initProject, manager, renderer)
 	if err != nil {
 		return nil, err
 	}

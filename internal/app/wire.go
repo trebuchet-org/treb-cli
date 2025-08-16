@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/trebuchet-org/treb-cli/internal/adapters"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/interactive"
+	"github.com/trebuchet-org/treb-cli/internal/cli/render"
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -28,10 +29,11 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 		// Configuration
 		config.Provider,
 		config.ProvideNetworkResolver,
-		
+
 		// Adapters - now receive RuntimeConfig
 		adapters.AllAdapters,
-		
+		render.NewGenerateRenderer,
+
 		// Use cases
 		usecase.NewListDeployments,
 		usecase.NewShowDeployment,
@@ -49,13 +51,14 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 		usecase.NewTagDeployment,
 		usecase.NewManageAnvil,
 		usecase.NewInitProject,
-		
+
 		// Interface providers
 		ProvideContractResolver,
 		ProvideDeploymentSelector,
-		
+
 		// App
 		NewApp,
 	)
 	return nil, nil
 }
+

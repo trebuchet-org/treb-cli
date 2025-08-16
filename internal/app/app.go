@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/trebuchet-org/treb-cli/internal/cli/render"
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -9,29 +10,32 @@ import (
 type App struct {
 	// Configuration
 	Config *config.RuntimeConfig
-	
+
 	// Shared dependencies
 	Selector usecase.DeploymentSelector
-	
+
 	// Use cases
-	ListDeployments         *usecase.ListDeployments
-	ShowDeployment          *usecase.ShowDeployment
+	ListDeployments          *usecase.ListDeployments
+	ShowDeployment           *usecase.ShowDeployment
 	GenerateDeploymentScript *usecase.GenerateDeploymentScript
-	ListNetworks            *usecase.ListNetworks
-	PruneRegistry           *usecase.PruneRegistry
-	ShowConfig              *usecase.ShowConfig
-	SetConfig               *usecase.SetConfig
-	RemoveConfig            *usecase.RemoveConfig
-	RunScript               *usecase.RunScript
-	VerifyDeployment        *usecase.VerifyDeployment
-	OrchestrateDeployment   *usecase.OrchestrateDeployment
-	SyncRegistry            *usecase.SyncRegistry
-	TagDeployment           *usecase.TagDeployment
-	ManageAnvil             *usecase.ManageAnvil
-	InitProject             *usecase.InitProject
-	
+	ListNetworks             *usecase.ListNetworks
+	PruneRegistry            *usecase.PruneRegistry
+	ShowConfig               *usecase.ShowConfig
+	SetConfig                *usecase.SetConfig
+	RemoveConfig             *usecase.RemoveConfig
+	RunScript                *usecase.RunScript
+	VerifyDeployment         *usecase.VerifyDeployment
+	OrchestrateDeployment    *usecase.OrchestrateDeployment
+	SyncRegistry             *usecase.SyncRegistry
+	TagDeployment            *usecase.TagDeployment
+	ManageAnvil              *usecase.ManageAnvil
+	InitProject              *usecase.InitProject
+
 	// Adapters (needed for special cases like log streaming)
-	AnvilManager            usecase.AnvilManager
+	AnvilManager usecase.AnvilManager
+
+	// Renderers
+	GenerateRenderer render.Renderer[*usecase.GenerateScriptResult]
 }
 
 // NewApp creates a new application instance with all use cases
@@ -54,6 +58,7 @@ func NewApp(
 	manageAnvil *usecase.ManageAnvil,
 	initProject *usecase.InitProject,
 	anvilManager usecase.AnvilManager,
+	generateRenderer render.Renderer[*usecase.GenerateScriptResult],
 ) (*App, error) {
 	return &App{
 		Config:                   cfg,
@@ -74,5 +79,7 @@ func NewApp(
 		ManageAnvil:              manageAnvil,
 		InitProject:              initProject,
 		AnvilManager:             anvilManager,
+		GenerateRenderer:         generateRenderer,
 	}, nil
 }
+

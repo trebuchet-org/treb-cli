@@ -18,11 +18,10 @@ func NewGenerateCmd() *cobra.Command {
 		Long: `Generate deployment scripts for contracts and libraries.
 
 This command creates template scripts using treb-sol's base contracts.
-The generated scripts handle both direct deployments and proxy patterns.`,
+The generated scripts handle both direct deployments and common proxy patterns.`,
 	}
 
 	cmd.AddCommand(newGenerateDeployCmd())
-	// Future: cmd.AddCommand(newGenerateProxyCmd())
 
 	return cmd
 }
@@ -89,7 +88,7 @@ Examples:
 
 			// Build parameters
 			params := usecase.GenerateScriptParams{
-				ArtifactPath:  args[0],
+				ArtifactRef:   args[0],
 				UseProxy:      useProxy,
 				ProxyContract: proxyContract,
 				Strategy:      deployStrategy,
@@ -102,12 +101,7 @@ Examples:
 				return err
 			}
 
-			// Display result
-			fmt.Printf("\n✅ Generated deployment script: %s\n", result.ScriptPath)
-			for _, instruction := range result.Instructions {
-				fmt.Println(instruction)
-			}
-
+			app.GenerateRenderer.Render(result)
 			return nil
 		},
 	}
@@ -118,37 +112,6 @@ Examples:
 	cmd.Flags().StringVar(&strategy, "strategy", "", "Deployment strategy: CREATE2 or CREATE3 (default: CREATE3)")
 	cmd.Flags().StringVar(&scriptPath, "script-path", "", "Custom path for the generated script")
 
-	// Override the help template to only show non-interactive flag
-	cmd.SetUsageTemplate(`Usage:{{if .Runnable}}
-  {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
-  {{.CommandPath}} [command]{{end}}{{if gt (len .Aliases) 0}}
-
-Aliases:
-  {{.NameAndAliases}}{{end}}{{if .HasExample}}
-
-Examples:
-{{.Example}}{{end}}{{if .HasAvailableSubCommands}}{{$cmds := .Commands}}{{if eq (len .Groups) 0}}
-
-Available Commands:{{range $cmds}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
-  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{else}}{{range $group := .Groups}}
-
-{{.Title}}{{range $cmds}}{{if (and (eq .GroupID $group.ID) (or .IsAvailableCommand (eq .Name "help")))}}
-  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if not .AllChildCommandsHaveGroup}}
-
-Additional Commands:{{range $cmds}}{{if (and (eq .GroupID "") (or .IsAvailableCommand (eq .Name "help")))}}
-  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
-
-Flags:
-{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}
-
-Global Flags:
-      --non-interactive   Disable interactive prompts{{if .HasHelpSubCommands}}
-
-Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
-  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
-
-Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
-`)
-
 	return cmd
 }
+

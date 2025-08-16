@@ -109,7 +109,7 @@ This will execute: Broker → Tokens → Reserve → SortedOracles`,
 
 	// Network and namespace flags
 	cmd.Flags().StringVarP(&network, "network", "n", "", "Network to deploy to (local, sepolia, mainnet, etc.)")
-	cmd.Flags().StringVar(&namespace, "namespace", "", "Deployment namespace (default, staging, production) [also sets foundry profile]")
+	cmd.Flags().StringVarP(&namespace, "namespace", "s", "", "Deployment namespace (default, staging, production) [also sets foundry profile]")
 	cmd.Flags().StringVar(&profile, "profile", "", "Foundry profile to use (overrides namespace-based profile)")
 
 	// Execution flags
@@ -121,3 +121,4 @@ This will execute: Broker → Tokens → Reserve → SortedOracles`,
 
 	return cmd
 }
+

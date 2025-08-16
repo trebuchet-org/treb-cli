@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
@@ -12,7 +11,7 @@ import (
 
 // GenerateScriptParams contains parameters for generating a deployment script
 type GenerateScriptParams struct {
-	ArtifactPath  string
+	ArtifactRef   string
 	UseProxy      bool
 	ProxyContract string // optional, interactive if empty with UseProxy
 	Strategy      domain.ScriptDeploymentStrategy
@@ -58,7 +57,7 @@ func NewGenerateDeploymentScript(
 // Run executes the generate deployment script use case
 func (uc *GenerateDeploymentScript) Run(ctx context.Context, params GenerateScriptParams) (*GenerateScriptResult, error) {
 	// Resolve the main artifact
-	contractInfo, err := uc.contractResolver.ResolveContract(ctx, params.ArtifactPath)
+	contractInfo, err := uc.contractResolver.ResolveContract(ctx, params.ArtifactRef)
 	if err != nil {
 		return nil, err
 	}
@@ -93,10 +92,7 @@ func (uc *GenerateDeploymentScript) Run(ctx context.Context, params GenerateScri
 	}
 
 	// Build artifact path if not already specified
-	artifactPath := params.ArtifactPath
-	if !strings.Contains(artifactPath, ":") {
-		artifactPath = fmt.Sprintf("%s:%s", contractInfo.Path, contractInfo.Name)
-	}
+	artifactPath := fmt.Sprintf("%s:%s", contractInfo.Path, contractInfo.Name)
 
 	// Determine script path
 	scriptPath := uc.determineScriptPath(contractInfo.Name, scriptType, params.CustomPath)

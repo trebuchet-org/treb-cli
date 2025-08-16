@@ -274,11 +274,19 @@ type AdditionalContract struct {
 
 // BroadcastReceipt represents a receipt in a broadcast file
 type BroadcastReceipt struct {
-	TransactionHash string `json:"transactionHash"`
-	BlockNumber     string `json:"blockNumber"`
-	GasUsed         string `json:"gasUsed"`
-	Status          string `json:"status"`
-	ContractAddress string `json:"contractAddress"`
+	TransactionHash string         `json:"transactionHash"`
+	BlockNumber     string         `json:"blockNumber"`
+	GasUsed         string         `json:"gasUsed"`
+	Status          string         `json:"status"`
+	ContractAddress string         `json:"contractAddress"`
+	Logs            []BroadcastLog `json:"logs"`
+}
+
+// BroadcastLog represents a log entry from a transaction receipt
+type BroadcastLog struct {
+	Address string   `json:"address"`
+	Topics  []string `json:"topics"`
+	Data    string   `json:"data"`
 }
 
 // ExecutedTransaction represents a transaction that was executed

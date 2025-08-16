@@ -53,16 +53,14 @@ func (uc *ResolveContract) ResolveContractWithFilter(ctx context.Context, contra
 		Spinner: true,
 	})
 
-	// First try exact match (path:name format)
-	if strings.Contains(contractRef, ":") {
-		contract := uc.contractIndexer.GetContractByArtifact(ctx, contractRef)
-		if contract != nil {
-			// Check if it matches the filter
-			if err := uc.validateContractAgainstFilter(contract, filter, contractRef); err != nil {
-				return nil, err
-			}
-			return contract, nil
+	// First try exact match (could be "Counter" or "src/Counter.sol:Counter")
+	contract, err := uc.contractIndexer.GetContract(ctx, contractRef)
+	if err == nil && contract != nil {
+		// Check if it matches the filter
+		if err := uc.validateContractAgainstFilter(contract, filter, contractRef); err != nil {
+			return nil, err
 		}
+		return contract, nil
 	}
 
 	// Search for contracts

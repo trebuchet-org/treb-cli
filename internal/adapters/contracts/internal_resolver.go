@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/trebuchet-org/treb-cli/internal/domain"
@@ -19,7 +20,7 @@ type InternalScriptResolver struct {
 // NewInternalScriptResolver creates a new internal script resolver
 func NewInternalScriptResolver(projectRoot string) (*InternalScriptResolver, error) {
 	indexer := NewInternalIndexer(projectRoot)
-	
+
 	// Index contracts
 	if err := indexer.Index(); err != nil {
 		return nil, fmt.Errorf("failed to index contracts: %w", err)
@@ -39,9 +40,32 @@ func (r *InternalScriptResolver) ResolveScript(ctx context.Context, pathOrName s
 		return r.contractToScriptInfo(contract)
 	}
 
+	// Check if it's a direct file path that exists
+	if strings.HasSuffix(pathOrName, ".sol") {
+		fullPath := path.Join(r.projectRoot, pathOrName)
+		if _, err := os.Stat(fullPath); err == nil {
+			// Extract contract name from file path
+			baseName := path.Base(pathOrName)
+			contractName := strings.TrimSuffix(baseName, ".sol")
+
+			// Try to find it in indexed contracts first
+			contract, err := r.indexer.GetContract(pathOrName + ":" + contractName)
+			if err == nil {
+				return r.contractToScriptInfo(contract)
+			}
+
+			// If not indexed, create a basic script info
+			return &domain.ScriptInfo{
+				Path:         pathOrName,
+				Name:         contractName,
+				ContractName: contractName,
+			}, nil
+		}
+	}
+
 	// If that fails, search for scripts
 	scripts := r.indexer.GetScriptContracts()
-	
+
 	// Look for exact name match
 	for _, script := range scripts {
 		if script.Name == pathOrName {
@@ -86,7 +110,7 @@ func (r *InternalScriptResolver) GetScriptParameters(ctx context.Context, script
 	if err != nil {
 		return nil, fmt.Errorf("failed to find contract: %w", err)
 	}
-	
+
 	// Load artifact
 	artifact, err := r.loadArtifact(contract.ArtifactPath)
 	if err != nil {
@@ -240,3 +264,4 @@ func mapStringToParamType(typeStr string) domain.ParameterType {
 		return domain.ParamTypeString
 	}
 }
+

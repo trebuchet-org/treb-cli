@@ -36,8 +36,6 @@ func (d *InternalDisplay) DisplayExecution(exec *domain.ScriptExecution) {
 	gray := color.New(color.FgHiBlack).SprintFunc()
 	cyan := color.New(color.FgCyan).SprintFunc()
 	green := color.New(color.FgGreen).SprintFunc()
-	yellow := color.New(color.FgYellow).SprintFunc()
-	red := color.New(color.FgRed).SprintFunc()
 
 	// Display header
 	fmt.Fprintf(d.out, "\n%s🔄 Transactions:%s\n", bold(), reset())

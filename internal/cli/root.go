@@ -59,7 +59,7 @@ smart contract deployments using CreateX factory contracts.`,
 
 			// Store app in context
 			ctx := context.WithValue(cmd.Context(), appKey, appInstance)
-			
+
 			// Add timeout if configured
 			if appInstance.Config.Timeout > 0 {
 				var cancel context.CancelFunc
@@ -69,7 +69,7 @@ smart contract deployments using CreateX factory contracts.`,
 					cancel()
 				}
 			}
-			
+
 			cmd.SetContext(ctx)
 
 			return nil
@@ -77,10 +77,7 @@ smart contract deployments using CreateX factory contracts.`,
 	}
 
 	// Global flags
-    rootCmd.PersistentFlags().Bool("debug", false, "Enable debug output")
-    rootCmd.PersistentFlags().Bool("non-interactive", false, "Disable interactive prompts")
-	rootCmd.PersistentFlags().StringP("namespace", "s", "", "Deployment namespace (defaults to 'default')")
-	rootCmd.PersistentFlags().StringP("network", "n", "", "Network to use (e.g., mainnet, sepolia)")
+	rootCmd.PersistentFlags().Bool("non-interactive", false, "Disable interactive prompts")
 
 	// Add command groups
 	rootCmd.AddGroup(&cobra.Group{
@@ -211,7 +208,7 @@ func bindGlobalFlags(v *viper.Viper, cmd *cobra.Command) {
 	if f := cmd.Flag("non-interactive"); f != nil && f.Changed {
 		v.Set("non_interactive", f.Value.String())
 	}
-    // Intentionally omit --json to preserve v1 compatibility in usage output
+	// Intentionally omit --json to preserve v1 compatibility in usage output
 	if f := cmd.Flag("namespace"); f != nil && f.Changed {
 		v.Set("namespace", f.Value.String())
 	}
@@ -226,11 +223,12 @@ func getApp(cmd *cobra.Command) (*app.App, error) {
 	if appInstance == nil {
 		return nil, fmt.Errorf("app not initialized")
 	}
-	
+
 	app, ok := appInstance.(*app.App)
 	if !ok {
 		return nil, fmt.Errorf("invalid app instance")
 	}
-	
+
 	return app, nil
 }
+

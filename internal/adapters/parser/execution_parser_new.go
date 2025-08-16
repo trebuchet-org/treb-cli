@@ -14,10 +14,14 @@ type ExecutionParserAdapterNew struct {
 }
 
 // NewExecutionParserAdapterNew creates a new execution parser adapter using internal implementation
-func NewExecutionParserAdapterNew(cfg *config.RuntimeConfig) *ExecutionParserAdapterNew {
-	return &ExecutionParserAdapterNew{
-		parser: NewInternalParser(cfg.ProjectRoot),
+func NewExecutionParserAdapterNew(cfg *config.RuntimeConfig) (*ExecutionParserAdapterNew, error) {
+	parser, err := NewInternalParser(cfg.ProjectRoot)
+	if err != nil {
+		return nil, err
 	}
+	return &ExecutionParserAdapterNew{
+		parser: parser,
+	}, nil
 }
 
 // ParseExecution parses the script output into a structured execution result

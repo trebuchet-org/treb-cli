@@ -13,10 +13,14 @@ type ExecutionParserAdapter struct {
 }
 
 // NewExecutionParserAdapter creates a new execution parser adapter
-func NewExecutionParserAdapter(projectRoot string) *ExecutionParserAdapter {
-	return &ExecutionParserAdapter{
-		parser: NewInternalParser(projectRoot),
+func NewExecutionParserAdapter(projectRoot string) (*ExecutionParserAdapter, error) {
+	parser, err := NewInternalParser(projectRoot)
+	if err != nil {
+		return nil, err
 	}
+	return &ExecutionParserAdapter{
+		parser: parser,
+	}, nil
 }
 
 // ParseExecution parses the script output into a structured execution result
