@@ -74,7 +74,7 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	showConfig := usecase.NewShowConfig(localConfigStoreAdapter)
 	setConfig := usecase.NewSetConfig(localConfigStoreAdapter)
 	removeConfig := usecase.NewRemoveConfig(localConfigStoreAdapter)
-	scriptResolverAdapter, err := contracts.NewScriptResolverAdapter(runtimeConfig)
+	scriptResolverAdapter, err := contracts.NewScriptResolverAdapter(runtimeConfig, contractResolverAdapter)
 	if err != nil {
 		return nil, err
 	}

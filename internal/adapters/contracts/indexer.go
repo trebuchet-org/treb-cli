@@ -38,26 +38,62 @@ func NewIndexer(projectRoot string) *Indexer {
 func (i *Indexer) Index() error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
+	
+	if os.Getenv("TREB_TEST_DEBUG") == "true" {
+		fmt.Fprintf(os.Stderr, "DEBUG: Index() called\n")
+	}
 
 	// Reset indexes
 	i.contracts = make(map[string]*domain.ContractInfo)
 	i.contractNames = make(map[string][]*domain.ContractInfo)
 	i.bytecodeHashIndex = make(map[string]*domain.ContractInfo)
 
+	// Check if script/deploy directory exists
+	if os.Getenv("TREB_TEST_DEBUG") == "true" {
+		deployDir := filepath.Join(i.projectRoot, "script", "deploy")
+		if info, err := os.Stat(deployDir); err == nil && info.IsDir() {
+			files, _ := os.ReadDir(deployDir)
+			fmt.Fprintf(os.Stderr, "DEBUG: Found %d files in script/deploy directory\n", len(files))
+			for _, f := range files {
+				fmt.Fprintf(os.Stderr, "  - %s\n", f.Name())
+			}
+		}
+		
+		// Also check if out directory has artifacts for deploy scripts
+		deployArtifactDir := filepath.Join(i.projectRoot, "out", "DeployCounter.s.sol")
+		if info, err := os.Stat(deployArtifactDir); err == nil && info.IsDir() {
+			fmt.Fprintf(os.Stderr, "DEBUG: Found DeployCounter.s.sol artifact directory\n")
+		}
+	}
+
+	// Always run forge build to ensure new scripts are compiled
+	if err := i.runForgeBuild(); err != nil {
+		return fmt.Errorf("failed to build contracts: %w", err)
+	}
+	
 	// Find the 'out' directory
 	outDir := filepath.Join(i.projectRoot, "out")
 	if _, err := os.Stat(outDir); os.IsNotExist(err) {
-		// Run forge build to create artifacts
-		if err := i.runForgeBuild(); err != nil {
-			return fmt.Errorf("failed to build contracts: %w", err)
-		}
-		// Check again
-		if _, err := os.Stat(outDir); os.IsNotExist(err) {
-			return fmt.Errorf("out directory not found after forge build")
+		return fmt.Errorf("out directory not found after forge build")
+	}
+
+	// Check for artifacts after build
+	if os.Getenv("TREB_TEST_DEBUG") == "true" {
+		// Check if DeployCounter artifact exists after build
+		deployCounterArtifact := filepath.Join(outDir, "DeployCounter.s.sol")
+		if info, err := os.Stat(deployCounterArtifact); err == nil && info.IsDir() {
+			fmt.Fprintf(os.Stderr, "DEBUG: Found DeployCounter.s.sol artifact directory after build\n")
+			// Check contents
+			files, _ := os.ReadDir(deployCounterArtifact)
+			for _, f := range files {
+				fmt.Fprintf(os.Stderr, "  - %s\n", f.Name())
+			}
 		}
 	}
 
 	// Walk through all artifact directories
+	var scriptCount int
+	var allArtifacts []string
 	err := filepath.Walk(outDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -73,9 +109,38 @@ func (i *Indexer) Index() error {
 			return nil
 		}
 
+		// Debug: collect all artifacts
+		if os.Getenv("TREB_TEST_DEBUG") == "true" {
+			relPath, _ := filepath.Rel(outDir, path)
+			allArtifacts = append(allArtifacts, relPath)
+			if strings.Contains(path, "deploy") || strings.Contains(path, "DeployCounter") {
+				fmt.Fprintf(os.Stderr, "DEBUG: Found potential deploy artifact: %s\n", relPath)
+			}
+		}
+
 		// Process the artifact
-		return i.processArtifact(path)
+		if procErr := i.processArtifact(path); procErr != nil {
+			return procErr
+		}
+		if strings.Contains(path, "script") {
+			scriptCount++
+		}
+		return nil
 	})
+	
+	if os.Getenv("TREB_TEST_DEBUG") == "true" {
+		fmt.Fprintf(os.Stderr, "DEBUG: Total artifacts found: %d\n", len(allArtifacts))
+		fmt.Fprintf(os.Stderr, "DEBUG: Indexed %d script contracts total\n", scriptCount)
+		// Only show deploy-related artifacts to reduce noise
+		deployCount := 0
+		for _, art := range allArtifacts {
+			if strings.Contains(art, "Deploy") {
+				fmt.Fprintf(os.Stderr, "DEBUG: Deploy artifact: %s\n", art)
+				deployCount++
+			}
+		}
+		fmt.Fprintf(os.Stderr, "DEBUG: Found %d Deploy artifacts\n", deployCount)
+	}
 
 	return err
 }
@@ -126,11 +191,14 @@ func (i *Indexer) processArtifact(artifactPath string) error {
 		return nil // Skip if we can't determine the contract
 	}
 
+	// Make artifact path relative to project root
+	relArtifactPath, _ := filepath.Rel(i.projectRoot, artifactPath)
+
 	// Create contract info
 	info := &domain.ContractInfo{
 		Name:         contractName,
 		Path:         sourceName,
-		ArtifactPath: artifactPath,
+		ArtifactPath: relArtifactPath,
 	}
 
 	// Determine if it's a library (simple heuristic)
@@ -156,6 +224,11 @@ func (i *Indexer) processArtifact(artifactPath string) error {
 		i.contractNames[info.Name] = []*domain.ContractInfo{info}
 		// Also add simple key
 		i.contracts[info.Name] = info
+	}
+	
+	// Debug output for script contracts
+	if os.Getenv("TREB_TEST_DEBUG") == "true" && (strings.HasPrefix(info.Path, "script/") || strings.Contains(info.Path, "/script/")) {
+		fmt.Fprintf(os.Stderr, "DEBUG: Indexed script contract: %s (path: %s, artifact: %s)\n", info.Name, info.Path, info.ArtifactPath)
 	}
 
 	return nil
@@ -255,12 +328,26 @@ func (i *Indexer) GetAllContracts() map[string]*domain.ContractInfo {
 
 // runForgeBuild runs forge build command
 func (i *Indexer) runForgeBuild() error {
-	cmd := exec.Command("forge", "build")
+	// Run forge build with --force to ensure new files are compiled
+	// This is important when scripts are generated dynamically
+	cmd := exec.Command("forge", "build", "--force")
 	cmd.Dir = i.projectRoot
+	
+	if os.Getenv("TREB_TEST_DEBUG") == "true" {
+		fmt.Fprintf(os.Stderr, "DEBUG: Running forge build --force in %s\n", i.projectRoot)
+	}
 	
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("forge build failed: %w\nOutput: %s", err, string(output))
+	}
+	
+	if os.Getenv("TREB_TEST_DEBUG") == "true" {
+		fmt.Fprintf(os.Stderr, "DEBUG: Forge build completed (%d bytes output)\n", len(output))
+		// Check if DeployCounter was built
+		if strings.Contains(string(output), "DeployCounter") {
+			fmt.Fprintf(os.Stderr, "DEBUG: Forge output mentions DeployCounter\n")
+		}
 	}
 	
 	return nil

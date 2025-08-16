@@ -322,7 +322,15 @@ func (a *ContractResolverAdapter) GetContractByArtifact(ctx context.Context, art
 
 // RefreshIndex refreshes the contract index (delegated to indexer for compatibility)
 func (a *ContractResolverAdapter) RefreshIndex(ctx context.Context) error {
+	if os.Getenv("TREB_TEST_DEBUG") == "true" {
+		fmt.Fprintf(os.Stderr, "DEBUG: RefreshIndex called on ContractResolverAdapter\n")
+	}
 	return a.indexer.Index()
+}
+
+// GetIndexer returns the internal indexer (for sharing with script resolver)
+func (a *ContractResolverAdapter) GetIndexer() *Indexer {
+	return a.indexer
 }
 
 // Ensure the adapter implements both interfaces

@@ -30,6 +30,7 @@ type stageInfo struct {
 func NewSpinnerProgressReporter() *SpinnerProgressReporter {
 	// Create custom spinner with colors (matching v1 implementation)
 	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+	s.HideCursor = false
 
 	return &SpinnerProgressReporter{
 		spinner: s,

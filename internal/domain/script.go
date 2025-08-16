@@ -229,6 +229,7 @@ type ScriptInfo struct {
 	Path         string
 	Name         string
 	ContractName string
+	ArtifactPath string
 	Artifact     *ContractArtifact
 }
 
