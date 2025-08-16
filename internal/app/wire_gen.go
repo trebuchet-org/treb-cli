@@ -48,12 +48,10 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	}
 	listDeployments := usecase.NewListDeployments(runtimeConfig, registryStoreAdapter, sink)
 	showDeployment := usecase.NewShowDeployment(runtimeConfig, registryStoreAdapter, sink)
-	contractIndexerAdapter, err := fs.NewContractIndexerAdapter(runtimeConfig)
+	contractResolverAdapter, err := contracts.NewContractResolverAdapter(runtimeConfig, selectorAdapter)
 	if err != nil {
 		return nil, err
 	}
-	resolveContract := usecase.NewResolveContract(runtimeConfig, contractIndexerAdapter, selectorAdapter, sink)
-	contractResolver := ProvideContractResolver(resolveContract)
 	abiParserAdapter, err := forge.NewABIParserAdapter(runtimeConfig)
 	if err != nil {
 		return nil, err
@@ -66,7 +64,7 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	generateDeploymentScript := usecase.NewGenerateDeploymentScript(runtimeConfig, contractResolver, abiParserAdapter, scriptGeneratorAdapter, fileWriterAdapter, sink)
+	generateDeploymentScript := usecase.NewGenerateDeploymentScript(runtimeConfig, contractResolverAdapter, abiParserAdapter, scriptGeneratorAdapter, fileWriterAdapter, sink)
 	networkResolver := config.ProvideNetworkResolver(runtimeConfig)
 	networkResolverAdapter := config2.NewNetworkResolverAdapter(networkResolver)
 	listNetworks := usecase.NewListNetworks(networkResolverAdapter)
@@ -80,8 +78,8 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	parameterResolverAdapter := parameters.NewParameterResolverAdapter(runtimeConfig, registryStoreAdapter, contractIndexerAdapter)
-	parameterPrompterAdapter := parameters.NewParameterPrompterAdapter(runtimeConfig, registryStoreAdapter, contractIndexerAdapter)
+	parameterResolverAdapter := parameters.NewParameterResolverAdapter(runtimeConfig, registryStoreAdapter, contractResolverAdapter)
+	parameterPrompterAdapter := parameters.NewParameterPrompterAdapter(runtimeConfig, registryStoreAdapter, contractResolverAdapter)
 	scriptExecutorAdapter := forge.NewScriptExecutorAdapter(runtimeConfig)
 	string2 := adapters.ProvideProjectPath(runtimeConfig)
 	executionParserAdapter, err := parser.NewExecutionParserAdapter(string2)
@@ -117,11 +115,6 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 }
 
 // wire.go:
-
-// ProvideContractResolver provides ContractResolver interface from ResolveContract
-func ProvideContractResolver(uc *usecase.ResolveContract) usecase.ContractResolver {
-	return uc
-}
 
 // ProvideDeploymentSelector provides DeploymentSelector interface from SelectorAdapter
 func ProvideDeploymentSelector(adapter *interactive.SelectorAdapter) usecase.DeploymentSelector {

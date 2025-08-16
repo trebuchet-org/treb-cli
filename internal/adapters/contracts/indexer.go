@@ -1,23 +1,17 @@
 package contracts
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 
-	"github.com/trebuchet-org/treb-cli/internal/adapters/config"
-	"github.com/trebuchet-org/treb-cli/internal/adapters/forge"
+	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
-)
-
-var (
-	globalIndexer *Indexer
-	indexerMutex  sync.Once
 )
 
 // Indexer discovers and indexes contracts and their artifacts
@@ -29,7 +23,7 @@ type Indexer struct {
 	mu                sync.RWMutex
 }
 
-// NewIndexer creates a new contract indexer (always includes libraries)
+// NewIndexer creates a new contract indexer
 func NewIndexer(projectRoot string) *Indexer {
 	return &Indexer{
 		projectRoot:       projectRoot,
@@ -39,215 +33,169 @@ func NewIndexer(projectRoot string) *Indexer {
 	}
 }
 
-// getLibraryPaths returns all library paths to index based on remappings
-func (i *Indexer) getLibraryPaths() []string {
-	var paths []string
-	seen := make(map[string]bool)
-
-	// Load foundry config to get remappings
-	foundryManager := config.NewFoundryManager(i.projectRoot)
-	remappings := foundryManager.GetRemappings()
-	// Parse remappings to find library paths
-	for _, path := range remappings {
-		// Convert to absolute path
-		absPath := filepath.Join(i.projectRoot, path)
-
-		// Remove trailing slash if present
-		absPath = strings.TrimSuffix(absPath, "/")
-
-		// Check if path exists
-		if info, err := os.Stat(absPath); err == nil && info.IsDir() {
-			// Avoid duplicates
-			if !seen[absPath] {
-				seen[absPath] = true
-				paths = append(paths, absPath)
-			}
-		}
-	}
-
-	normalizedPaths := make([]string, 0)
-	for _, path := range paths {
-		skip := false
-		for i, normalizedPath := range normalizedPaths {
-			if strings.HasPrefix(path, normalizedPath) {
-				skip = true
-			} else if strings.HasPrefix(normalizedPath, path) {
-				normalizedPaths[i] = path
-				skip = true
-			}
-
-			if skip {
-				break
-			}
-		}
-		if !skip {
-			normalizedPaths = append(normalizedPaths, path)
-		}
-	}
-
-	return normalizedPaths
-}
 
 // Index discovers all contracts and artifacts
 func (i *Indexer) Index() error {
-	// Trigger a forge build to ensure artifacts are up to date
-	forgeExecutor := forge.NewForge(i.projectRoot)
-	if err := forgeExecutor.Build(); err != nil {
-		// Show the build output and fail
-		return fmt.Errorf("forge build failed: %w", err)
-	}
-
-	// Clear existing indices
 	i.mu.Lock()
+	defer i.mu.Unlock()
+
+	// Reset indexes
 	i.contracts = make(map[string]*domain.ContractInfo)
 	i.contractNames = make(map[string][]*domain.ContractInfo)
 	i.bytecodeHashIndex = make(map[string]*domain.ContractInfo)
-	i.mu.Unlock()
 
-	// Index all contracts
-	srcPath := filepath.Join(i.projectRoot, "src")
-	if err := i.indexDirectory(srcPath); err != nil {
-		return fmt.Errorf("failed to index src: %w", err)
-	}
-
-	// Also index libraries
-	for _, libPath := range i.getLibraryPaths() {
-		if err := i.indexDirectory(libPath); err != nil {
-			// Don't fail on library indexing errors, just log them
-			fmt.Fprintf(os.Stderr, "Warning: failed to index library %s: %v\n", libPath, err)
+	// Find the 'out' directory
+	outDir := filepath.Join(i.projectRoot, "out")
+	if _, err := os.Stat(outDir); os.IsNotExist(err) {
+		// Run forge build to create artifacts
+		if err := i.runForgeBuild(); err != nil {
+			return fmt.Errorf("failed to build contracts: %w", err)
+		}
+		// Check again
+		if _, err := os.Stat(outDir); os.IsNotExist(err) {
+			return fmt.Errorf("out directory not found after forge build")
 		}
 	}
 
-	return nil
-}
-
-// indexDirectory recursively indexes contracts in a directory
-func (i *Indexer) indexDirectory(dir string) error {
-	return filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	// Walk through all artifact directories
+	err := filepath.Walk(outDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
-		// Skip directories and non-Solidity files
-		if d.IsDir() || !strings.HasSuffix(path, ".sol") {
+		// Skip if not a JSON file
+		if filepath.Ext(path) != ".json" || info.IsDir() {
 			return nil
 		}
 
-		// Skip test files
-		if strings.Contains(path, "/test/") || strings.HasSuffix(path, ".t.sol") {
+		// Skip build info files
+		if strings.Contains(path, "build-info") {
 			return nil
 		}
 
-		// Index this file
-		return i.indexFile(path)
+		// Process the artifact
+		return i.processArtifact(path)
 	})
+
+	return err
 }
 
-// indexFile indexes all contracts in a Solidity file
-func (i *Indexer) indexFile(path string) error {
-	// Read the file
-	content, err := os.ReadFile(path)
+
+// processArtifact processes a single artifact file
+func (i *Indexer) processArtifact(artifactPath string) error {
+	// Read artifact file
+	data, err := os.ReadFile(artifactPath)
 	if err != nil {
 		return err
 	}
 
-	// Extract contract names using regex
-	// This regex matches: contract, library, interface, abstract contract
-	contractRegex := regexp.MustCompile(`(?m)^\s*(?:abstract\s+)?(?:contract|library|interface)\s+(\w+)`)
-	matches := contractRegex.FindAllSubmatch(content, -1)
+	// Parse Foundry artifact structure
+	var artifact struct {
+		Bytecode struct {
+			Object string `json:"object"`
+		} `json:"bytecode"`
+		DeployedBytecode struct {
+			Object string `json:"object"`
+		} `json:"deployedBytecode"`
+		Metadata struct {
+			Settings struct {
+				CompilationTarget map[string]string `json:"compilationTarget"`
+			} `json:"settings"`
+		} `json:"metadata"`
+	}
+	
+	if err := json.Unmarshal(data, &artifact); err != nil {
+		// Skip invalid artifacts
+		return nil
+	}
 
-	relPath, _ := filepath.Rel(i.projectRoot, path)
+	// Skip if no bytecode
+	if artifact.Bytecode.Object == "" || artifact.Bytecode.Object == "0x" {
+		return nil
+	}
 
-	for _, match := range matches {
-		contractName := string(match[1])
-		
-		// Check if it's a library
-		isLibrary := strings.Contains(string(match[0]), "library")
-		isInterface := strings.Contains(string(match[0]), "interface")
-		isAbstract := strings.Contains(string(match[0]), "abstract")
+	// Extract contract name and source from compilation target
+	var contractName, sourceName string
+	for source, contract := range artifact.Metadata.Settings.CompilationTarget {
+		sourceName = source
+		contractName = contract
+		break // There should only be one entry
+	}
 
-		// Create contract info
-		info := &domain.ContractInfo{
-			Name:        contractName,
-			Path:        relPath,
-			IsLibrary:   isLibrary,
-			IsInterface: isInterface,
-			IsAbstract:  isAbstract,
-		}
+	if contractName == "" || sourceName == "" {
+		return nil // Skip if we can't determine the contract
+	}
 
-		// Try to load the artifact to get more details
-		artifactPath := i.findArtifact(relPath, contractName)
-		if artifactPath != "" {
-			info.ArtifactPath = artifactPath
-			// Could load artifact here to get bytecode hash, version etc
-		}
+	// Create contract info
+	info := &domain.ContractInfo{
+		Name:         contractName,
+		Path:         sourceName,
+		ArtifactPath: artifactPath,
+	}
 
-		i.mu.Lock()
-		// Add to indices
-		key := fmt.Sprintf("%s:%s", relPath, contractName)
-		i.contracts[key] = info
-		
-		// Also index by just contract name if unique
-		if existing, exists := i.contractNames[contractName]; !exists || len(existing) == 0 {
-			i.contracts[contractName] = info
-		}
-		
-		i.contractNames[contractName] = append(i.contractNames[contractName], info)
-		i.mu.Unlock()
+	// Determine if it's a library (simple heuristic)
+	if strings.Contains(strings.ToLower(contractName), "lib") || 
+	   strings.Contains(sourceName, "/libraries/") ||
+	   strings.Contains(sourceName, "/lib/") {
+		info.IsLibrary = true
+	}
+
+	// Add to indexes
+	// Full key for unique identification
+	fullKey := fmt.Sprintf("%s:%s", info.Path, info.Name)
+	i.contracts[fullKey] = info
+
+	// Also index by name alone if unique
+	if existingList, exists := i.contractNames[info.Name]; exists {
+		// Multiple contracts with same name
+		i.contractNames[info.Name] = append(existingList, info)
+		// Remove simple key if it exists
+		delete(i.contracts, info.Name)
+	} else {
+		// First contract with this name
+		i.contractNames[info.Name] = []*domain.ContractInfo{info}
+		// Also add simple key
+		i.contracts[info.Name] = info
 	}
 
 	return nil
 }
 
-// findArtifact finds the artifact path for a contract
-func (i *Indexer) findArtifact(solPath, contractName string) string {
-	// Standard artifact path
-	artifactBase := strings.TrimSuffix(solPath, ".sol")
-	artifactPath := filepath.Join(i.projectRoot, "out", artifactBase+".sol", contractName+".json")
-	
-	if _, err := os.Stat(artifactPath); err == nil {
-		relPath, _ := filepath.Rel(i.projectRoot, artifactPath)
-		return relPath
-	}
 
-	return ""
-}
-
-// GetContract finds a contract by key (path:name or just name)
-func (i *Indexer) GetContract(key string) *domain.ContractInfo {
+// GetContract retrieves a contract by key (name or path:name)
+func (i *Indexer) GetContract(key string) (*domain.ContractInfo, error) {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
-	
-	return i.contracts[key]
+
+	if contract, exists := i.contracts[key]; exists {
+		return contract, nil
+	}
+
+	return nil, fmt.Errorf("contract not found: %s", key)
 }
 
-// SearchContracts searches for contracts by pattern
+// SearchContracts searches for contracts matching a pattern
 func (i *Indexer) SearchContracts(pattern string) []*domain.ContractInfo {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 
 	var results []*domain.ContractInfo
-	seen := make(map[*domain.ContractInfo]bool)
+	lowPattern := strings.ToLower(pattern)
 
-	// Convert pattern to regex
-	regex, err := regexp.Compile(pattern)
-	if err != nil {
-		// If invalid regex, treat as literal string
-		pattern = strings.ToLower(pattern)
-		for _, info := range i.contracts {
-			if strings.Contains(strings.ToLower(info.Name), pattern) && !seen[info] {
-				results = append(results, info)
-				seen[info] = true
-			}
-		}
-		return results
-	}
-
-	// Search by regex
+	// Search through all contracts
+	seen := make(map[string]bool)
 	for _, info := range i.contracts {
-		if regex.MatchString(info.Name) && !seen[info] {
+		// Skip duplicates
+		key := fmt.Sprintf("%s:%s", info.Path, info.Name)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+
+		// Match on name or path
+		if strings.Contains(strings.ToLower(info.Name), lowPattern) ||
+		   strings.Contains(strings.ToLower(info.Path), lowPattern) {
 			results = append(results, info)
-			seen[info] = true
 		}
 	}
 
@@ -267,27 +215,92 @@ func (i *Indexer) GetContractByArtifact(artifactPath string) *domain.ContractInf
 	return nil
 }
 
-// LoadArtifact loads and parses a contract artifact
-func (i *Indexer) LoadArtifact(artifactPath string) (*domain.Artifact, error) {
-	fullPath := filepath.Join(i.projectRoot, artifactPath)
-	
-	data, err := os.ReadFile(fullPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read artifact: %w", err)
+// GetScriptContracts returns all script contracts
+func (i *Indexer) GetScriptContracts() []*domain.ContractInfo {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
+	var scripts []*domain.ContractInfo
+	seen := make(map[string]bool)
+
+	for _, info := range i.contracts {
+		// Skip duplicates
+		key := fmt.Sprintf("%s:%s", info.Path, info.Name)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+
+		// Check if it's a script based on path
+		if strings.HasPrefix(info.Path, "script/") || strings.Contains(info.Path, "/script/") {
+			scripts = append(scripts, info)
+		}
 	}
 
-	var artifact domain.Artifact
-	if err := json.Unmarshal(data, &artifact); err != nil {
-		return nil, fmt.Errorf("failed to parse artifact: %w", err)
-	}
-
-	return &artifact, nil
+	return scripts
 }
 
-// GetSingleton returns the global singleton indexer
-func GetSingleton(projectRoot string) *Indexer {
-	indexerMutex.Do(func() {
-		globalIndexer = NewIndexer(projectRoot)
-	})
-	return globalIndexer
+// GetAllContracts returns all indexed contracts (for debugging)
+func (i *Indexer) GetAllContracts() map[string]*domain.ContractInfo {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+	
+	// Return a copy to avoid race conditions
+	result := make(map[string]*domain.ContractInfo)
+	for k, v := range i.contracts {
+		result[k] = v
+	}
+	return result
+}
+
+// runForgeBuild runs forge build command
+func (i *Indexer) runForgeBuild() error {
+	cmd := exec.Command("forge", "build")
+	cmd.Dir = i.projectRoot
+	
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("forge build failed: %w\nOutput: %s", err, string(output))
+	}
+	
+	return nil
+}
+
+// IndexerAdapter adapts the internal indexer to the ContractIndexer interface
+type IndexerAdapter struct {
+	indexer *Indexer
+}
+
+// NewIndexerAdapter creates a new contract indexer adapter
+func NewIndexerAdapter(cfg *config.RuntimeConfig) (*IndexerAdapter, error) {
+	indexer := NewIndexer(cfg.ProjectRoot)
+	
+	// Index contracts
+	if err := indexer.Index(); err != nil {
+		return nil, fmt.Errorf("failed to index contracts: %w", err)
+	}
+
+	return &IndexerAdapter{
+		indexer: indexer,
+	}, nil
+}
+
+// GetContract retrieves a contract by key
+func (a *IndexerAdapter) GetContract(ctx context.Context, key string) (*domain.ContractInfo, error) {
+	return a.indexer.GetContract(key)
+}
+
+// SearchContracts searches for contracts matching a pattern
+func (a *IndexerAdapter) SearchContracts(ctx context.Context, pattern string) []*domain.ContractInfo {
+	return a.indexer.SearchContracts(pattern)
+}
+
+// GetContractByArtifact retrieves a contract by its artifact path
+func (a *IndexerAdapter) GetContractByArtifact(ctx context.Context, artifact string) *domain.ContractInfo {
+	return a.indexer.GetContractByArtifact(artifact)
+}
+
+// RefreshIndex refreshes the contract index
+func (a *IndexerAdapter) RefreshIndex(ctx context.Context) error {
+	return a.indexer.Index()
 }

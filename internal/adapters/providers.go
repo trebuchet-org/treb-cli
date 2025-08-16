@@ -30,9 +30,6 @@ var FSSet = wire.NewSet(
 	wire.Bind(new(usecase.SafeTransactionStore), new(*fs.RegistryStoreAdapter)),
 	wire.Bind(new(usecase.RegistryPruner), new(*fs.RegistryStoreAdapter)),
 	
-	fs.NewContractIndexerAdapter,
-	wire.Bind(new(usecase.ContractIndexer), new(*fs.ContractIndexerAdapter)),
-	
 	fs.NewFileWriterAdapter,
 	wire.Bind(new(usecase.FileWriter), new(*fs.FileWriterAdapter)),
 	

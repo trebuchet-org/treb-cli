@@ -14,6 +14,11 @@ import (
 
 // ScriptAdapters provides all adapters needed for script execution
 var ScriptAdapters = wire.NewSet(
+	// Contract resolution and indexing
+	contracts.NewContractResolverAdapter,
+	wire.Bind(new(usecase.ContractResolver), new(*contracts.ContractResolverAdapter)),
+	wire.Bind(new(usecase.ContractIndexer), new(*contracts.ContractResolverAdapter)),
+
 	// Script resolution
 	contracts.NewScriptResolverAdapter,
 	wire.Bind(new(usecase.ScriptResolver), new(*contracts.ScriptResolverAdapter)),

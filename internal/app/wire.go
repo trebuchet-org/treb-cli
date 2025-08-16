@@ -13,11 +13,6 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
-// ProvideContractResolver provides ContractResolver interface from ResolveContract
-func ProvideContractResolver(uc *usecase.ResolveContract) usecase.ContractResolver {
-	return uc
-}
-
 // ProvideDeploymentSelector provides DeploymentSelector interface from SelectorAdapter
 func ProvideDeploymentSelector(adapter *interactive.SelectorAdapter) usecase.DeploymentSelector {
 	return adapter
@@ -37,7 +32,6 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 		// Use cases
 		usecase.NewListDeployments,
 		usecase.NewShowDeployment,
-		usecase.NewResolveContract,
 		usecase.NewGenerateDeploymentScript,
 		usecase.NewListNetworks,
 		usecase.NewPruneRegistry,
@@ -53,7 +47,6 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 		usecase.NewInitProject,
 
 		// Interface providers
-		ProvideContractResolver,
 		ProvideDeploymentSelector,
 
 		// App
