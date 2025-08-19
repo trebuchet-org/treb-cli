@@ -7,6 +7,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
 // DeploymentRenderer renders detailed information about a single deployment
@@ -24,7 +25,7 @@ func NewDeploymentRenderer(out io.Writer, color bool) *DeploymentRenderer {
 }
 
 // RenderDeployment renders detailed deployment information
-func (r *DeploymentRenderer) RenderDeployment(deployment *domain.Deployment) error {
+func (r *DeploymentRenderer) RenderDeployment(deployment *models.Deployment) error {
 	// Header
 	color.New(color.FgCyan, color.Bold).Fprintf(r.out, "Deployment: %s\n", deployment.ID)
 	fmt.Fprintln(r.out, strings.Repeat("=", 80))
@@ -82,7 +83,7 @@ func (r *DeploymentRenderer) RenderDeployment(deployment *domain.Deployment) err
 		if deployment.ProxyInfo.Admin != "" {
 			fmt.Fprintf(r.out, "  Admin: %s\n", deployment.ProxyInfo.Admin)
 		}
-		
+
 		if len(deployment.ProxyInfo.History) > 0 {
 			fmt.Fprintln(r.out, "  Upgrade History:")
 			for i, upgrade := range deployment.ProxyInfo.History {
@@ -116,7 +117,7 @@ func (r *DeploymentRenderer) RenderDeployment(deployment *domain.Deployment) err
 	fmt.Fprintln(r.out, "\nVerification Status:")
 	status := deployment.Verification.Status
 	statusColor := color.FgRed
-	if status == domain.VerificationStatusVerified {
+	if status == models.VerificationStatusVerified {
 		statusColor = color.FgGreen
 	}
 	fmt.Fprintf(r.out, "  Status: %s\n", color.New(statusColor).Sprint(status))
@@ -160,3 +161,4 @@ func (r *DeploymentRenderer) RenderDeployment(deployment *domain.Deployment) err
 
 	return nil
 }
+

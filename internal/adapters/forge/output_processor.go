@@ -13,7 +13,34 @@ import (
 
 	"github.com/briandowns/spinner"
 	"github.com/fatih/color"
+	"github.com/trebuchet-org/treb-cli/internal/domain/forge"
 )
+
+type Stage string
+
+const (
+	StageSimulating   Stage = "Simulating"
+	StageBroadcasting Stage = "Broadcasting"
+	StageCompleted    Stage = "Completed"
+)
+
+// ParsedEntity represents different types of parsed output
+type ParsedEntity struct {
+	Type    string
+	Data    interface{}
+	RawLine string
+	Stage   Stage
+}
+
+// StageInfo tracks information about each stage
+type StageInfo struct {
+	Stage     Stage
+	StartTime time.Time
+	EndTime   time.Time
+	Completed bool
+	Skipped   bool
+	Lines     int
+}
 
 // OutputProcessor handles real-time output processing
 type OutputProcessor struct {
@@ -158,7 +185,7 @@ func (op *OutputProcessor) parseLine(line string) (ParsedEntity, bool) {
 	// Check if it's JSON
 	if strings.HasPrefix(strings.TrimSpace(line), "{") {
 		// Try to parse as ScriptOutput
-		var scriptOutput ScriptOutput
+		var scriptOutput forge.ScriptOutput
 		if err := decoder.Decode(&scriptOutput); err == nil {
 			if scriptOutput.RawLogs != nil {
 				return ParsedEntity{
@@ -173,7 +200,7 @@ func (op *OutputProcessor) parseLine(line string) (ParsedEntity, bool) {
 		}
 
 		// Try to parse as GasEstimate
-		var gasEstimate GasEstimate
+		var gasEstimate forge.GasEstimate
 		if err := decoder.Decode(&gasEstimate); err == nil {
 			if gasEstimate.Chain != 0 {
 				return ParsedEntity{
@@ -188,7 +215,7 @@ func (op *OutputProcessor) parseLine(line string) (ParsedEntity, bool) {
 		}
 
 		// Try to parse as Receipt
-		var receipt Receipt
+		var receipt forge.Receipt
 		if err := decoder.Decode(&receipt); err == nil {
 			return ParsedEntity{
 				Type:    "Receipt",
@@ -201,7 +228,7 @@ func (op *OutputProcessor) parseLine(line string) (ParsedEntity, bool) {
 		}
 
 		// Try to parse as StatusOutput
-		var statusOutput StatusOutput
+		var statusOutput forge.StatusOutput
 		if err := decoder.Decode(&statusOutput); err == nil {
 			if statusOutput.Status != "" {
 				return ParsedEntity{
@@ -216,7 +243,7 @@ func (op *OutputProcessor) parseLine(line string) (ParsedEntity, bool) {
 		}
 
 		// Try to parse as TraceOutput
-		var traceOutput TraceOutput
+		var traceOutput forge.TraceOutput
 		if err := decoder.Decode(&traceOutput); err == nil {
 			if len(traceOutput.Arena) > 0 {
 				return ParsedEntity{

@@ -1,184 +1,171 @@
-package parser
+package forge
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/abi/bindings"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/broadcast"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/events"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/forge"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/types"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/abi/bindings"
+	"github.com/trebuchet-org/treb-cli/internal/domain/forge"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
+	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
-// Parser handles parsing of forge script results into a unified execution structure
-type Parser struct {
-	eventParser        *events.EventParser
-	transactions       map[[32]byte]*Transaction
+// RunResultHydrator is our new clean implementation of the execution parser
+type RunResultHydrator struct {
+	projectRoot        string
+	parser             usecase.ABIParser
+	indexer            usecase.ContractIndexer
+	transactions       map[[32]byte]*forge.Transaction
 	transactionOrder   [][32]byte // Track order of transactions
-	proxyRelationships map[common.Address]*ProxyRelationship
-	contractsIndexer   *contracts.Indexer
+	proxyRelationships map[common.Address]*forge.ProxyRelationship
 	mu                 sync.RWMutex
 }
 
-// NewParser creates a new parser
-func NewParser(contractsIndexer *contracts.Indexer) *Parser {
-	return &Parser{
-		eventParser:        events.NewEventParser(),
-		transactions:       make(map[[32]byte]*Transaction),
-		transactionOrder:   make([][32]byte, 0),
-		proxyRelationships: make(map[common.Address]*ProxyRelationship),
-		contractsIndexer:   contractsIndexer,
-	}
+// NewRunResultHydrator creates a new internal parser
+func NewRunResultHydrator(projectRoot string, parser usecase.ABIParser) (*RunResultHydrator, error) {
+	return &RunResultHydrator{
+		projectRoot: projectRoot,
+		parser:      parser,
+	}, nil
 }
 
-// Parse converts a forge.ScriptResult into a ScriptExecution
-func (p *Parser) Parse(result *forge.ScriptResult, network string, chainID uint64) (*ScriptExecution, error) {
+// ParseExecution parses the script output into a structured execution result
+func (h *RunResultHydrator) Hydrate(
+	ctx context.Context,
+	runResult *forge.RunResult,
+) (*forge.HydratedRunResult, error) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	// Reset parser state
-	p.transactions = make(map[[32]byte]*Transaction)
-	p.transactionOrder = make([][32]byte, 0)
-	p.proxyRelationships = make(map[common.Address]*ProxyRelationship)
+	h.transactions = make(map[[32]byte]*forge.Transaction)
+	h.transactionOrder = make([][32]byte, 0)
+	h.proxyRelationships = make(map[common.Address]*forge.ProxyRelationship)
 
-	execution := &ScriptExecution{
-		Transactions:       []*Transaction{},
-		SafeTransactions:   []*SafeTransaction{},
-		Deployments:        []*DeploymentRecord{},
-		ProxyRelationships: make(map[common.Address]*ProxyRelationship),
-		Collisions:         make(map[common.Address]*CollisionInfo),
-		Events:             []any{},
-		Logs:               []string{},
-		TextOutput:         string(result.RawOutput),
-		ParsedOutput:       result.ParsedOutput,
-		Success:            result.Success,
-		BroadcastPath:      result.BroadcastPath,
-		Network:            network,
-		ChainID:            chainID,
-		Script:             result.Script,
+	hydrated := &HydratedRunResult{
+		RunResult:          *runResult,
+		Transactions:       []*forge.Transaction{},
+		SafeTransactions:   []*forge.SafeTransaction{},
+		Deployments:        []*forge.Deployment{},
+		ProxyRelationships: make(map[common.Address]*forge.ProxyRelationship),
+		Collisions:         make(map[common.Address]*bindings.TrebDeploymentCollision),
 	}
 
 	// Parse events if we have parsed output
-	if result.ParsedOutput != nil && result.ParsedOutput.ScriptOutput != nil {
+	if runResult.ParsedOutput != nil && runResult.ParsedOutput.ScriptOutput != nil {
 		// Parse events
-		parsedEvents, err := p.eventParser.ParseEvents(result.ParsedOutput.ScriptOutput)
+		parsedEvents, err := h.parser.ParseEvents(runResult.ParsedOutput.ScriptOutput)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse events: %w", err)
 		}
-		execution.Events = parsedEvents
+		hydrated.Events = parsedEvents
 
 		// Process events
 		for _, event := range parsedEvents {
 			// Process transaction events
 			switch e := event.(type) {
 			case *bindings.TrebTransactionSimulated:
-				p.processTransactionSimulated(e)
+				h.processTransactionSimulated(e)
 			case *bindings.TrebSafeTransactionQueued:
-				p.processSafeTransactionQueued(e, execution)
+				h.processSafeTransactionQueued(e, hydrated)
 			case *bindings.TrebSafeTransactionExecuted:
-				p.processSafeTransactionExecuted(e, execution)
+				h.processSafeTransactionExecuted(e, hydrated)
 			case *bindings.TrebContractDeployed:
-				deploymentRecord := &DeploymentRecord{
+				deployment := &forge.Deployment{
 					TransactionID: e.TransactionId,
-					Deployment:    &e.Deployment,
+					Event:         &e.Deployment,
 					Address:       e.Location,
 					Deployer:      e.Deployer,
 				}
 
 				// Look up contract info by artifact
-				if p.contractsIndexer != nil && e.Deployment.Artifact != "" {
-					if contractInfo := p.contractsIndexer.GetContractByArtifact(e.Deployment.Artifact); contractInfo != nil {
-						deploymentRecord.Contract = contractInfo
+				if h.indexer != nil && e.Deployment.Artifact != "" {
+					if contractInfo := h.indexer.GetContractByArtifact(ctx, e.Deployment.Artifact); contractInfo != nil {
+						deployment.Contract = contractInfo
 					}
 				}
 
-				execution.Deployments = append(execution.Deployments, deploymentRecord)
+				hydrated.Deployments = append(hydrated.Deployments, deployment)
 			case *bindings.TrebDeploymentCollision:
-				// Record collision information
-				collision := &CollisionInfo{
-					ExistingContract: e.ExistingContract,
-					Artifact:         e.DeploymentDetails.Artifact,
-					Label:            e.DeploymentDetails.Label,
-					Entropy:          e.DeploymentDetails.Entropy,
-					Salt:             e.DeploymentDetails.Salt,
-					CreateStrategy:   e.DeploymentDetails.CreateStrategy,
-				}
-				execution.Collisions[e.ExistingContract] = collision
+				hydrated.Collisions[e.ExistingContract] = e
 			}
 
 			// Process proxy events
-			p.processProxyEvent(event)
+			h.processProxyEvent(event)
 		}
 
 		// Extract simulation traces BEFORE processing broadcast traces
-		p.extractSimulationTraces(result.ParsedOutput.ScriptOutput)
+		h.extractSimulationTraces(runResult.ParsedOutput.ScriptOutput)
 
 		// Enrich with forge output data
-		if result.ParsedOutput != nil {
+		if runResult.ParsedOutput != nil {
 			// Process trace outputs (for broadcast transactions)
-			for _, trace := range result.ParsedOutput.TraceOutputs {
-				p.processTraceOutput(&trace)
+			for _, trace := range runResult.ParsedOutput.TraceOutputs {
+				h.processTraceOutput(&trace)
 			}
-
-			// Extract console logs
-			execution.Logs = result.ParsedOutput.ConsoleLogs
 		}
 
 		// Get final transaction list
-		execution.Transactions = p.getTransactions()
+		hydrated.Transactions = h.getTransactions()
 
 		// Copy proxy relationships
-		for addr, rel := range p.proxyRelationships {
-			execution.ProxyRelationships[addr] = rel
+		for addr, rel := range h.proxyRelationships {
+			hydrated.ProxyRelationships[addr] = rel
 		}
 	}
 
 	// Enrich with broadcast data if available
-	if result.BroadcastPath != "" {
-		if err := p.enrichFromBroadcast(execution, result.BroadcastPath); err != nil {
+	if runResult.BroadcastPath != "" {
+		if err := h.enrichFromBroadcast(hydrated, runResult.BroadcastPath); err != nil {
 			// Don't fail, just log warning
 			fmt.Printf("Warning: Failed to enrich from broadcast: %v\n", err)
 		}
 	}
 
-	return execution, nil
+	// Unwrap the local type
+	forgeHydrated := forge.HydratedRunResult(*hydrated)
+	return &forgeHydrated, nil
 }
 
 // processTransactionSimulated processes a TransactionSimulated event
-func (p *Parser) processTransactionSimulated(event *bindings.TrebTransactionSimulated) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+func (h *RunResultHydrator) processTransactionSimulated(event *bindings.TrebTransactionSimulated) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
-	tx := &Transaction{
-		SimulatedTransaction: bindings.SimulatedTransaction(event.SimulatedTx),
-		Status:               types.TransactionStatusSimulated,
-		Deployments:          []DeploymentInfo{},
+	tx := &forge.Transaction{
+		SimulatedTransaction: event.SimulatedTx,
+		Status:               models.TransactionStatusSimulated,
+		Deployments:          []forge.DeploymentInfo{},
 	}
 
-	p.transactions[event.SimulatedTx.TransactionId] = tx
-	p.transactionOrder = append(p.transactionOrder, event.SimulatedTx.TransactionId)
+	h.transactions[event.SimulatedTx.TransactionId] = tx
+	h.transactionOrder = append(h.transactionOrder, event.SimulatedTx.TransactionId)
 }
 
 // processSafeTransactionQueued processes a SafeTransactionQueued event
-func (p *Parser) processSafeTransactionQueued(event *bindings.TrebSafeTransactionQueued, execution *ScriptExecution) {
+func (h *RunResultHydrator) processSafeTransactionQueued(event *bindings.TrebSafeTransactionQueued, hydrated *HydratedRunResult) {
 	// Create Safe transaction record
-	safeTx := &SafeTransaction{
+	safeTx := &forge.SafeTransaction{
 		SafeTxHash:     event.SafeTxHash,
 		Safe:           event.Safe,
 		Proposer:       event.Proposer,
-		TransactionIDs: event.TransactionIds,
+		TransactionIds: event.TransactionIds,
+		Executed:       false, // Mark as executed
 	}
-	execution.SafeTransactions = append(execution.SafeTransactions, safeTx)
+	hydrated.SafeTransactions = append(hydrated.SafeTransactions, safeTx)
 
 	// Update all referenced transactions to QUEUED status
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
 	for idx, txID := range event.TransactionIds {
-		if tx, exists := p.transactions[txID]; exists {
-			tx.Status = types.TransactionStatusQueued
+		if tx, exists := h.transactions[txID]; exists {
+			tx.Status = models.TransactionStatusQueued
 			tx.SafeTransaction = safeTx
 			batchIdx := idx
 			tx.SafeBatchIdx = &batchIdx
@@ -187,24 +174,24 @@ func (p *Parser) processSafeTransactionQueued(event *bindings.TrebSafeTransactio
 }
 
 // processSafeTransactionExecuted processes a SafeTransactionExecuted event
-func (p *Parser) processSafeTransactionExecuted(event *bindings.TrebSafeTransactionExecuted, execution *ScriptExecution) {
+func (h *RunResultHydrator) processSafeTransactionExecuted(event *bindings.TrebSafeTransactionExecuted, hydrated *HydratedRunResult) {
 	// Create Safe transaction record
-	safeTx := &SafeTransaction{
+	safeTx := &forge.SafeTransaction{
 		SafeTxHash:     event.SafeTxHash,
 		Safe:           event.Safe,
-		Proposer:       event.Executor, // Use executor as proposer for executed transactions
-		TransactionIDs: event.TransactionIds,
+		Proposer:       event.Executor,
+		TransactionIds: event.TransactionIds,
 		Executed:       true, // Mark as executed
 	}
-	execution.SafeTransactions = append(execution.SafeTransactions, safeTx)
+	hydrated.SafeTransactions = append(hydrated.SafeTransactions, safeTx)
 
 	// Update all referenced transactions to EXECUTED status
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
 	for idx, txID := range event.TransactionIds {
-		if tx, exists := p.transactions[txID]; exists {
-			tx.Status = types.TransactionStatusExecuted
+		if tx, exists := h.transactions[txID]; exists {
+			tx.Status = models.TransactionStatusExecuted
 			tx.SafeTransaction = safeTx
 			batchIdx := idx
 			tx.SafeBatchIdx = &batchIdx
@@ -213,51 +200,51 @@ func (p *Parser) processSafeTransactionExecuted(event *bindings.TrebSafeTransact
 }
 
 // processProxyEvent processes proxy-related events
-func (p *Parser) processProxyEvent(event interface{}) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+func (h *RunResultHydrator) processProxyEvent(event interface{}) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
 	switch e := event.(type) {
 	case *events.ProxyDeployedEvent:
-		p.proxyRelationships[e.ProxyAddress] = &ProxyRelationship{
+		h.proxyRelationships[e.ProxyAddress] = &forge.ProxyRelationship{
 			ProxyAddress:          e.ProxyAddress,
 			ImplementationAddress: e.ImplementationAddress,
-			ProxyType:             ProxyTypeMinimal,
+			ProxyType:             forge.ProxyTypeMinimal,
 		}
 	case *events.UpgradedEvent:
-		if rel, exists := p.proxyRelationships[e.ProxyAddress]; exists {
+		if rel, exists := h.proxyRelationships[e.ProxyAddress]; exists {
 			rel.ImplementationAddress = e.ImplementationAddress
 		} else {
-			p.proxyRelationships[e.ProxyAddress] = &ProxyRelationship{
+			h.proxyRelationships[e.ProxyAddress] = &forge.ProxyRelationship{
 				ProxyAddress:          e.ProxyAddress,
 				ImplementationAddress: e.ImplementationAddress,
-				ProxyType:             ProxyTypeUUPS,
+				ProxyType:             forge.ProxyTypeUUPS,
 			}
 		}
 	case *events.AdminChangedEvent:
-		if rel, exists := p.proxyRelationships[e.ProxyAddress]; exists {
+		if rel, exists := h.proxyRelationships[e.ProxyAddress]; exists {
 			rel.AdminAddress = &e.NewAdmin
-			if rel.ProxyType == ProxyTypeMinimal {
-				rel.ProxyType = ProxyTypeTransparent
+			if rel.ProxyType == forge.ProxyTypeMinimal {
+				rel.ProxyType = forge.ProxyTypeTransparent
 			}
 		} else {
-			p.proxyRelationships[e.ProxyAddress] = &ProxyRelationship{
+			h.proxyRelationships[e.ProxyAddress] = &forge.ProxyRelationship{
 				ProxyAddress:          e.ProxyAddress,
 				ImplementationAddress: common.Address{}, // Will be set by Upgraded event if present
 				AdminAddress:          &e.NewAdmin,
-				ProxyType:             ProxyTypeTransparent,
+				ProxyType:             forge.ProxyTypeTransparent,
 			}
 		}
 	case *events.BeaconUpgradedEvent:
-		if rel, exists := p.proxyRelationships[e.ProxyAddress]; exists {
+		if rel, exists := h.proxyRelationships[e.ProxyAddress]; exists {
 			rel.BeaconAddress = &e.Beacon
-			rel.ProxyType = ProxyTypeBeacon
+			rel.ProxyType = forge.ProxyTypeBeacon
 		}
 	}
 }
 
 // nodeMatchesTransaction checks if a trace node matches a transaction
-func nodeMatchesTransaction(tx *Transaction, node *forge.TraceNode, prank *common.Address) bool {
+func nodeMatchesTransaction(tx *forge.Transaction, node *forge.TraceNode, prank *common.Address) bool {
 	// Only match CALL/CREATE/CREATE2 nodes
 	if node.Trace.Kind != "CALL" && node.Trace.Kind != "CREATE" && node.Trace.Kind != "CREATE2" {
 		return false
@@ -290,9 +277,9 @@ func nodeMatchesTransaction(tx *Transaction, node *forge.TraceNode, prank *commo
 }
 
 // processTraceOutput processes a trace output to enrich transactions
-func (p *Parser) processTraceOutput(trace *forge.TraceOutput) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+func (h *RunResultHydrator) processTraceOutput(trace *forge.TraceOutput) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
 	// Walk through trace nodes
 	if len(trace.Arena) == 0 {
@@ -302,7 +289,7 @@ func (p *Parser) processTraceOutput(trace *forge.TraceOutput) {
 	root := &trace.Arena[0]
 
 	// Try to match with existing transactions
-	for _, tx := range p.transactions {
+	for _, tx := range h.transactions {
 		if nodeMatchesTransaction(tx, root, nil) {
 			tx.TraceData = trace
 			break
@@ -312,7 +299,7 @@ func (p *Parser) processTraceOutput(trace *forge.TraceOutput) {
 
 // extractSimulationTraces processes the full trace tree from ScriptOutput
 // and extracts individual transaction traces
-func (p *Parser) extractSimulationTraces(scriptOutput *forge.ScriptOutput) {
+func (h *RunResultHydrator) extractSimulationTraces(scriptOutput *forge.ScriptOutput) {
 	if scriptOutput == nil || len(scriptOutput.Traces) == 0 {
 		return
 	}
@@ -320,8 +307,8 @@ func (p *Parser) extractSimulationTraces(scriptOutput *forge.ScriptOutput) {
 	for _, traceWithLabel := range scriptOutput.Traces {
 		// Process each labeled trace
 		visitor := &traceVisitor{
-			parser: p,
-			label:  traceWithLabel.Label,
+			hydrator: h,
+			label:    traceWithLabel.Label,
 		}
 		visitor.walkTraceTree(&traceWithLabel.Trace, 0)
 	}
@@ -329,8 +316,8 @@ func (p *Parser) extractSimulationTraces(scriptOutput *forge.ScriptOutput) {
 
 // traceVisitor helps walk the trace tree
 type traceVisitor struct {
-	parser *Parser
-	label  string
+	hydrator *RunResultHydrator
+	label    string
 }
 
 // walkTraceTree recursively walks the trace tree
@@ -342,9 +329,9 @@ func (v *traceVisitor) walkTraceTree(fullTrace *forge.TraceOutput, nodeIdx int) 
 	node := &fullTrace.Arena[nodeIdx]
 
 	// Try to match this node with any transaction
-	v.parser.mu.Lock()
-	var matchedTx *Transaction
-	for _, tx := range v.parser.transactions {
+	v.hydrator.mu.Lock()
+	var matchedTx *forge.Transaction
+	for _, tx := range v.hydrator.transactions {
 		// Skip if already has trace data
 		if tx.TraceData != nil {
 			continue
@@ -357,15 +344,15 @@ func (v *traceVisitor) walkTraceTree(fullTrace *forge.TraceOutput, nodeIdx int) 
 			break
 		}
 	}
-	v.parser.mu.Unlock()
+	v.hydrator.mu.Unlock()
 
 	// If we found a match, extract the subtree
 	if matchedTx != nil {
 		subtree := v.extractSubtree(fullTrace, nodeIdx)
 
-		v.parser.mu.Lock()
+		v.hydrator.mu.Lock()
 		matchedTx.TraceData = subtree
-		v.parser.mu.Unlock()
+		v.hydrator.mu.Unlock()
 	}
 
 	// Recursively process children
@@ -464,14 +451,14 @@ func (v *traceVisitor) extractSubtree(fullTrace *forge.TraceOutput, rootIdx int)
 }
 
 // getTransactions returns all transactions in order
-func (p *Parser) getTransactions() []*Transaction {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
+func (h *RunResultHydrator) getTransactions() []*forge.Transaction {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 
 	// Return transactions in the order they were simulated
-	txs := make([]*Transaction, 0, len(p.transactionOrder))
-	for _, txID := range p.transactionOrder {
-		if tx, exists := p.transactions[txID]; exists {
+	txs := make([]*forge.Transaction, 0, len(h.transactionOrder))
+	for _, txID := range h.transactionOrder {
+		if tx, exists := h.transactions[txID]; exists {
 			txs = append(txs, tx)
 		}
 	}
@@ -480,7 +467,7 @@ func (p *Parser) getTransactions() []*Transaction {
 }
 
 // enrichFromBroadcast enriches the execution with data from the broadcast file
-func (p *Parser) enrichFromBroadcast(execution *ScriptExecution, broadcastPath string) error {
+func (h *RunResultHydrator) enrichFromBroadcast(hydrated *HydratedRunResult, broadcastPath string) error {
 	// Parse broadcast file
 	parser := broadcast.NewParser(broadcastPath)
 	broadcastData, err := parser.ParseBroadcastFile(broadcastPath)
@@ -491,9 +478,9 @@ func (p *Parser) enrichFromBroadcast(execution *ScriptExecution, broadcastPath s
 	// First, match regular transactions with broadcast data
 	for _, tx := range broadcastData.Transactions {
 		// Find matching transaction by various criteria
-		for _, execTx := range execution.Transactions {
+		for _, execTx := range hydrated.Transactions {
 			// Skip if already executed
-			if execTx.Status == types.TransactionStatusExecuted {
+			if execTx.Status == models.TransactionStatusExecuted {
 				continue
 			}
 
@@ -507,12 +494,12 @@ func (p *Parser) enrichFromBroadcast(execution *ScriptExecution, broadcastPath s
 			if toMatches && dataMatches && fromMatches {
 				// Update status to executed if we have a hash
 				if tx.Hash != "" {
-					execTx.Status = types.TransactionStatusExecuted
+					execTx.Status = models.TransactionStatusExecuted
 					txHash := common.HexToHash(tx.Hash)
 					execTx.TxHash = &txHash
 					// Try ParsedOutput receipts first
-					if execution.ParsedOutput != nil {
-						for _, receipt := range execution.ParsedOutput.Receipts {
+					if hydrated.ParsedOutput != nil {
+						for _, receipt := range hydrated.ParsedOutput.Receipts {
 							if receipt.TxHash == tx.Hash {
 								execTx.GasUsed = &receipt.GasUsed
 								execTx.BlockNumber = &receipt.BlockNumber
@@ -541,8 +528,8 @@ func (p *Parser) enrichFromBroadcast(execution *ScriptExecution, broadcastPath s
 
 	// Second, match Safe execTransaction calls with SafeTransactionExecuted events
 	// Group SafeTransactionExecuted events by Safe address
-	executedSafeTxBySafe := make(map[common.Address][]*SafeTransaction)
-	for _, safeTx := range execution.SafeTransactions {
+	executedSafeTxBySafe := make(map[common.Address][]*forge.SafeTransaction)
+	for _, safeTx := range hydrated.SafeTransactions {
 		if safeTx.Executed {
 			executedSafeTxBySafe[safeTx.Safe] = append(executedSafeTxBySafe[safeTx.Safe], safeTx)
 		}
@@ -592,11 +579,11 @@ func (p *Parser) enrichFromBroadcast(execution *ScriptExecution, broadcastPath s
 			}
 
 			// Update all transactions that are part of this Safe transaction
-			for _, txID := range safeTx.TransactionIDs {
-				for _, execTx := range execution.Transactions {
+			for _, txID := range safeTx.TransactionIds {
+				for _, execTx := range hydrated.Transactions {
 					if execTx.TransactionId == txID {
 						// Update the transaction with execution details
-						execTx.Status = types.TransactionStatusExecuted
+						execTx.Status = models.TransactionStatusExecuted
 						execTx.TxHash = &txHash
 						if blockNum != nil {
 							execTx.BlockNumber = blockNum
@@ -615,52 +602,4 @@ func (p *Parser) enrichFromBroadcast(execution *ScriptExecution, broadcastPath s
 	}
 
 	return nil
-}
-
-// GetDeploymentByAddress returns the deployment record for a given address
-func (e *ScriptExecution) GetDeploymentByAddress(address common.Address) *DeploymentRecord {
-	for _, dep := range e.Deployments {
-		if dep.Address == address {
-			return dep
-		}
-	}
-	return nil
-}
-
-// GetProxyInfo returns proxy info for an address if it's a proxy
-func (e *ScriptExecution) GetProxyInfo(address common.Address) (*ProxyInfo, bool) {
-	rel, exists := e.ProxyRelationships[address]
-	if !exists {
-		return nil, false
-	}
-
-	info := &ProxyInfo{
-		Implementation: rel.ImplementationAddress,
-		ProxyType:      string(rel.ProxyType),
-		Admin:          rel.AdminAddress,
-		Beacon:         rel.BeaconAddress,
-	}
-
-	return info, true
-}
-
-// GetTransactionByID returns a transaction by its ID
-func (e *ScriptExecution) GetTransactionByID(txID [32]byte) *Transaction {
-	for _, tx := range e.Transactions {
-		if tx.TransactionId == txID {
-			return tx
-		}
-	}
-	return nil
-}
-
-// GetProxiesForImplementation returns all proxies pointing to an implementation
-func (e *ScriptExecution) GetProxiesForImplementation(implAddress common.Address) []*ProxyRelationship {
-	var proxies []*ProxyRelationship
-	for _, rel := range e.ProxyRelationships {
-		if rel.ImplementationAddress == implAddress {
-			proxies = append(proxies, rel)
-		}
-	}
-	return proxies
 }

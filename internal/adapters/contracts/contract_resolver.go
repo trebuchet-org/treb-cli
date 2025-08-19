@@ -8,6 +8,7 @@ import (
 
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -28,7 +29,7 @@ func NewContractResolver(cfg *config.RuntimeConfig, indexer *Indexer, selector u
 }
 
 // ResolveContractWithFilter resolves a contract reference with filtering
-func (r *ContractResolver) ResolveContract(ctx context.Context, query domain.ContractQuery) (*domain.ContractInfo, error) {
+func (r *ContractResolver) ResolveContract(ctx context.Context, query domain.ContractQuery) (*models.Contract, error) {
 	// First try exact match (could be "Counter" or "src/Counter.sol:Counter")
 	contracts := r.indexer.SearchContracts(ctx, query)
 
@@ -55,7 +56,7 @@ func (r *ContractResolver) ResolveContract(ctx context.Context, query domain.Con
 }
 
 // GetProxyContracts returns all available proxy contracts
-func (r *ContractResolver) GetProxyContracts(ctx context.Context) ([]*domain.ContractInfo, error) {
+func (r *ContractResolver) GetProxyContracts(ctx context.Context) ([]*models.Contract, error) {
 	var proxy = "Proxy"
 	proxies := r.indexer.SearchContracts(ctx, domain.ContractQuery{Query: &proxy})
 	if len(proxies) == 0 {
@@ -65,7 +66,7 @@ func (r *ContractResolver) GetProxyContracts(ctx context.Context) ([]*domain.Con
 }
 
 // SelectProxyContract interactively selects a proxy contract
-func (r *ContractResolver) SelectProxyContract(ctx context.Context) (*domain.ContractInfo, error) {
+func (r *ContractResolver) SelectProxyContract(ctx context.Context) (*models.Contract, error) {
 	// Get all proxy contracts
 	proxies, err := r.GetProxyContracts(ctx)
 	if err != nil {
@@ -91,7 +92,7 @@ func (r *ContractResolver) SelectProxyContract(ctx context.Context) (*domain.Con
 }
 
 // A bit of a heuristic, could do better using solidity ASTs, but should work for 99% of cases.
-func (r *ContractResolver) IsLibrary(ctx context.Context, contract *domain.ContractInfo) (bool, error) {
+func (r *ContractResolver) IsLibrary(ctx context.Context, contract *models.Contract) (bool, error) {
 	content, err := os.ReadFile(contract.Path)
 	if err != nil {
 		return false, err

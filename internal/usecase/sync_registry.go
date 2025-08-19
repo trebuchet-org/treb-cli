@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
 // SyncRegistry handles syncing the registry with on-chain state
@@ -114,7 +115,7 @@ func (s *SyncRegistry) syncPendingSafeTransactions(ctx context.Context, debug bo
 
 	// Get all Safe transactions
 	safeTxs, err := s.safeTransactionStore.ListSafeTransactions(ctx, domain.SafeTransactionFilter{
-		Status: domain.TransactionStatusQueued,
+		Status: models.TransactionStatusQueued,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list Safe transactions: %w", err)
@@ -125,7 +126,7 @@ func (s *SyncRegistry) syncPendingSafeTransactions(ctx context.Context, debug bo
 	}
 
 	// Group by chain
-	pendingByChain := make(map[uint64][]*domain.SafeTransaction)
+	pendingByChain := make(map[uint64][]*models.SafeTransaction)
 	for _, safeTx := range safeTxs {
 		pendingByChain[safeTx.ChainID] = append(pendingByChain[safeTx.ChainID], safeTx)
 	}
@@ -156,7 +157,7 @@ func (s *SyncRegistry) syncPendingSafeTransactions(ctx context.Context, debug bo
 
 			if executionInfo.IsExecuted {
 				// Update the Safe transaction
-				safeTx.Status = domain.SafeTxStatusExecuted
+				safeTx.Status = models.SafeTxStatusExecuted
 				safeTx.ExecutionTxHash = executionInfo.TxHash
 				now := time.Now()
 				safeTx.ExecutedAt = &now
@@ -193,7 +194,7 @@ func (s *SyncRegistry) syncPendingSafeTransactions(ctx context.Context, debug bo
 }
 
 // updateTransactionsForSafeTx updates transaction records when a Safe tx is executed
-func (s *SyncRegistry) updateTransactionsForSafeTx(ctx context.Context, safeTx *domain.SafeTransaction) (int, error) {
+func (s *SyncRegistry) updateTransactionsForSafeTx(ctx context.Context, safeTx *models.SafeTransaction) (int, error) {
 	updated := 0
 
 	for _, txID := range safeTx.TransactionIDs {
@@ -204,7 +205,7 @@ func (s *SyncRegistry) updateTransactionsForSafeTx(ctx context.Context, safeTx *
 
 		// Update transaction with execution details
 		tx.Hash = safeTx.ExecutionTxHash
-		tx.Status = domain.TransactionStatusExecuted
+		tx.Status = models.TransactionStatusExecuted
 		if safeTx.ExecutedAt != nil {
 			tx.CreatedAt = *safeTx.ExecutedAt
 		}
@@ -218,7 +219,7 @@ func (s *SyncRegistry) updateTransactionsForSafeTx(ctx context.Context, safeTx *
 }
 
 // updateDeploymentsForSafeTx updates deployment records when a Safe tx is executed
-func (s *SyncRegistry) updateDeploymentsForSafeTx(ctx context.Context, safeTx *domain.SafeTransaction) (int, error) {
+func (s *SyncRegistry) updateDeploymentsForSafeTx(ctx context.Context, safeTx *models.SafeTransaction) (int, error) {
 	updated := 0
 
 	// Get all deployments and check if they reference any of the transactions

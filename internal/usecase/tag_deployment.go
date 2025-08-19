@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
 // TagDeployment handles tagging of deployments
@@ -38,7 +39,7 @@ type TagDeploymentParams struct {
 // TagDeploymentResult contains the result of a tag operation
 type TagDeploymentResult struct {
 	// The deployment that was tagged
-	Deployment *domain.Deployment
+	Deployment *models.Deployment
 	// Operation performed
 	Operation string
 	// Tag that was added/removed
@@ -69,7 +70,7 @@ func (t *TagDeployment) Execute(ctx context.Context, params TagDeploymentParams)
 }
 
 // findDeployment locates a deployment by identifier
-func (t *TagDeployment) findDeployment(ctx context.Context, params TagDeploymentParams) (*domain.Deployment, error) {
+func (t *TagDeployment) findDeployment(ctx context.Context, params TagDeploymentParams) (*models.Deployment, error) {
 	// Try as deployment ID first
 	deployment, err := t.deploymentStore.GetDeployment(ctx, params.Identifier)
 	if err == nil {
@@ -117,7 +118,7 @@ func (t *TagDeployment) findDeployment(ctx context.Context, params TagDeployment
 }
 
 // showTags displays current tags for a deployment
-func (t *TagDeployment) showTags(deployment *domain.Deployment) (*TagDeploymentResult, error) {
+func (t *TagDeployment) showTags(deployment *models.Deployment) (*TagDeploymentResult, error) {
 	return &TagDeploymentResult{
 		Deployment:  deployment,
 		Operation:   "show",
@@ -126,7 +127,7 @@ func (t *TagDeployment) showTags(deployment *domain.Deployment) (*TagDeploymentR
 }
 
 // addTag adds a tag to a deployment
-func (t *TagDeployment) addTag(ctx context.Context, deployment *domain.Deployment, tag string) (*TagDeploymentResult, error) {
+func (t *TagDeployment) addTag(ctx context.Context, deployment *models.Deployment, tag string) (*TagDeploymentResult, error) {
 	// Check if tag already exists
 	for _, existingTag := range deployment.Tags {
 		if existingTag == tag {
@@ -154,7 +155,7 @@ func (t *TagDeployment) addTag(ctx context.Context, deployment *domain.Deploymen
 }
 
 // removeTag removes a tag from a deployment
-func (t *TagDeployment) removeTag(ctx context.Context, deployment *domain.Deployment, tag string) (*TagDeploymentResult, error) {
+func (t *TagDeployment) removeTag(ctx context.Context, deployment *models.Deployment, tag string) (*TagDeploymentResult, error) {
 	// Check if tag exists
 	found := false
 	newTags := make([]string, 0, len(deployment.Tags))
@@ -190,7 +191,7 @@ func (t *TagDeployment) removeTag(ctx context.Context, deployment *domain.Deploy
 }
 
 // FindDeploymentInteractive finds a deployment with support for interactive selection
-func (t *TagDeployment) FindDeploymentInteractive(ctx context.Context, identifier string, chainID uint64, namespace string, selector DeploymentSelector) (*domain.Deployment, error) {
+func (t *TagDeployment) FindDeploymentInteractive(ctx context.Context, identifier string, chainID uint64, namespace string, selector DeploymentSelector) (*models.Deployment, error) {
 	// Try exact match first
 	params := TagDeploymentParams{
 		Identifier: identifier,

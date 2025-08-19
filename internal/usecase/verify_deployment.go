@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
 // VerifyDeployment handles contract verification on block explorers
@@ -40,7 +41,7 @@ type VerifyOptions struct {
 
 // VerifyResult contains the result of verification
 type VerifyResult struct {
-	Deployment *domain.Deployment
+	Deployment *models.Deployment
 	Success    bool
 	Errors     []string
 }
@@ -54,7 +55,7 @@ func (v *VerifyDeployment) VerifyAll(ctx context.Context, options VerifyOptions)
 	}
 
 	result := &VerifyAllResult{
-		ToVerify: make([]*domain.Deployment, 0),
+		ToVerify: make([]*models.Deployment, 0),
 		Skipped:  make([]*SkippedDeployment, 0),
 		Results:  make([]*VerifyResult, 0),
 	}
@@ -89,7 +90,7 @@ func (v *VerifyDeployment) VerifyAll(ctx context.Context, options VerifyOptions)
 			continue
 		}
 
-		if tx.Status != domain.TransactionStatusExecuted {
+		if tx.Status != models.TransactionStatusExecuted {
 			result.Skipped = append(result.Skipped, &SkippedDeployment{
 				Deployment: deployment,
 				Reason:     fmt.Sprintf("Transaction %s", tx.Status),
@@ -100,7 +101,7 @@ func (v *VerifyDeployment) VerifyAll(ctx context.Context, options VerifyOptions)
 		// Check if should verify
 		if options.Force || shouldVerify(deployment) {
 			result.ToVerify = append(result.ToVerify, deployment)
-		} else if deployment.Verification.Status == domain.VerificationStatusVerified {
+		} else if deployment.Verification.Status == models.VerificationStatusVerified {
 			result.Skipped = append(result.Skipped, &SkippedDeployment{
 				Deployment: deployment,
 				Reason:     "Already verified",
@@ -122,7 +123,7 @@ func (v *VerifyDeployment) VerifyAll(ctx context.Context, options VerifyOptions)
 
 // VerifySpecific verifies a specific deployment
 func (v *VerifyDeployment) VerifySpecific(ctx context.Context, identifier string, filter domain.DeploymentFilter, options VerifyOptions) (*VerifyResult, error) {
-	var deployment *domain.Deployment
+	var deployment *models.Deployment
 	var err error
 
 	// Check if identifier is an address
@@ -143,7 +144,7 @@ func (v *VerifyDeployment) VerifySpecific(ctx context.Context, identifier string
 	}
 
 	// Check if already verified
-	if deployment.Verification.Status == domain.VerificationStatusVerified && !options.Force {
+	if deployment.Verification.Status == models.VerificationStatusVerified && !options.Force {
 		return &VerifyResult{
 			Deployment: deployment,
 			Success:    true,
@@ -170,7 +171,7 @@ func (v *VerifyDeployment) VerifySpecific(ctx context.Context, identifier string
 }
 
 // verifyDeployment performs the actual verification
-func (v *VerifyDeployment) verifyDeployment(ctx context.Context, deployment *domain.Deployment, options VerifyOptions) *VerifyResult {
+func (v *VerifyDeployment) verifyDeployment(ctx context.Context, deployment *models.Deployment, options VerifyOptions) *VerifyResult {
 	// Get network info
 	networkInfo, err := v.networkResolver.ResolveNetwork(ctx, getNetworkName(deployment.ChainID))
 	if err != nil {
@@ -207,7 +208,7 @@ func (v *VerifyDeployment) verifyDeployment(ctx context.Context, deployment *dom
 }
 
 // findDeploymentByIdentifier finds a deployment by various identifier formats
-func (v *VerifyDeployment) findDeploymentByIdentifier(ctx context.Context, identifier string, filter domain.DeploymentFilter) (*domain.Deployment, error) {
+func (v *VerifyDeployment) findDeploymentByIdentifier(ctx context.Context, identifier string, filter domain.DeploymentFilter) (*models.Deployment, error) {
 	// Get all deployments with filter
 	deployments, err := v.deploymentStore.ListDeployments(ctx, filter)
 	if err != nil {
@@ -215,7 +216,7 @@ func (v *VerifyDeployment) findDeploymentByIdentifier(ctx context.Context, ident
 	}
 
 	// Look for matches
-	matches := make([]*domain.Deployment, 0)
+	matches := make([]*models.Deployment, 0)
 	parts := strings.Split(identifier, "/")
 
 	for _, d := range deployments {
@@ -235,7 +236,7 @@ func (v *VerifyDeployment) findDeploymentByIdentifier(ctx context.Context, ident
 }
 
 // matchesIdentifier checks if a deployment matches the given identifier
-func matchesIdentifier(d *domain.Deployment, identifier string, parts []string) bool {
+func matchesIdentifier(d *models.Deployment, identifier string, parts []string) bool {
 	// Simple match: contract name or contract:label
 	shortID := d.ContractName
 	if d.Label != "" {
@@ -279,11 +280,11 @@ func matchesIdentifier(d *domain.Deployment, identifier string, parts []string) 
 }
 
 // shouldVerify checks if a deployment should be verified
-func shouldVerify(deployment *domain.Deployment) bool {
+func shouldVerify(deployment *models.Deployment) bool {
 	status := deployment.Verification.Status
-	return status == domain.VerificationStatusFailed ||
-		status == domain.VerificationStatusPartial ||
-		status == domain.VerificationStatusUnverified ||
+	return status == models.VerificationStatusFailed ||
+		status == models.VerificationStatusPartial ||
+		status == models.VerificationStatusUnverified ||
 		status == ""
 }
 
@@ -313,7 +314,7 @@ func getNetworkName(chainID uint64) string {
 
 // VerifyAllResult contains the result of verifying all deployments
 type VerifyAllResult struct {
-	ToVerify     []*domain.Deployment
+	ToVerify     []*models.Deployment
 	Skipped      []*SkippedDeployment
 	Results      []*VerifyResult
 	SuccessCount int
@@ -321,7 +322,7 @@ type VerifyAllResult struct {
 
 // SkippedDeployment represents a deployment that was skipped
 type SkippedDeployment struct {
-	Deployment *domain.Deployment
+	Deployment *models.Deployment
 	Reason     string
 }
 

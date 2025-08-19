@@ -1,27 +1,35 @@
 package forge
 
 import (
+	"bytes"
+	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
-	"regexp"
+	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/creack/pty"
+	"github.com/trebuchet-org/treb-cli/internal/domain/forge"
+	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
-// Forge handles Forge command execution with enhanced output
-type Forge struct {
+// ForgeAdapter handles Forge command execution with streaming output
+type ForgeAdapter struct {
 	projectRoot string
 }
 
-// NewForge creates a new Forge executor
-func NewForge(projectRoot string) *Forge {
-	return &Forge{
+// NewForgeAdapter creates a new forge executor
+func NewForgeAdapter(projectRoot string) *ForgeAdapter {
+	return &ForgeAdapter{
 		projectRoot: projectRoot,
 	}
 }
 
 // Build runs forge build with proper output handling
-func (f *Forge) Build() error {
+func (f *ForgeAdapter) Build() error {
 	cmd := exec.Command("forge", "build")
 	cmd.Dir = f.projectRoot
 
@@ -35,152 +43,248 @@ func (f *Forge) Build() error {
 	return nil
 }
 
-// CheckInstallation verifies that Forge is installed and accessible
-func (f *Forge) CheckInstallation() error {
-	cmd := exec.Command("forge", "--version")
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("forge not found. Please install Foundry: https://getfoundry.sh")
-	}
-	return nil
-}
+// Run executes a Foundry script with the given options
+func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptConfig) (*forge.RunResult, error) {
+	// Build forge command arguments
+	args := f.buildArgs(config)
 
-// RunScript runs a forge script
-func (f *Forge) RunScript(scriptPath string, flags []string, envVars map[string]string) (string, error) {
-	return f.RunScriptWithArgs(scriptPath, flags, envVars, nil)
-}
+	// Build environment variables
+	env := f.buildEnv(config)
 
-// RunScriptWithArgs runs a forge script with optional function arguments
-func (f *Forge) RunScriptWithArgs(scriptPath string, flags []string, envVars map[string]string, functionArgs []string) (string, error) {
-	args := []string{"script", scriptPath, "--ffi"}
-
-	// Add function arguments BEFORE other flags when using --sig
-	// This is important for forge's argument parsing
-	if len(functionArgs) > 0 {
-		args = append(args, functionArgs...)
-	}
-
-	args = append(args, flags...)
-
-	// Debug: print the full command
-	if envVars != nil {
-		if _, debug := envVars["DEBUG"]; debug || os.Getenv("TREB_DEBUG") != "" {
-			fmt.Printf("Running forge command: forge %s\n", strings.Join(args, " "))
+	if config.Debug {
+		fmt.Printf("Running: forge %s\n", strings.Join(args, " "))
+		if len(env) > 0 {
+			fmt.Printf("With env vars: %v\n", env)
 		}
-	} else if os.Getenv("TREB_DEBUG") != "" {
-		fmt.Printf("Running forge command: forge %s\n", strings.Join(args, " "))
 	}
 
+	// Execute the script
 	cmd := exec.Command("forge", args...)
 	cmd.Dir = f.projectRoot
-	cmd.Env = os.Environ()
-	for key, value := range envVars {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
-	}
+	cmd.Env = append(os.Environ(), env...)
 
-	output, err := cmd.CombinedOutput()
-	fmt.Println("Here?")
-	if _, debug := envVars["DEBUG"]; debug || os.Getenv("TREB_DEBUG") != "" {
-		fmt.Printf("Forge output: %s\n", string(output))
-	} else if os.Getenv("TREB_DEBUG") != "" {
-		fmt.Printf("Forge output: %s\n", string(output))
-	}
-
+	// Start with PTY for proper color handling
+	ptyFile, err := pty.Start(cmd)
 	if err != nil {
-		return string(output), parseForgeError(err, string(output))
+		return nil, fmt.Errorf("failed to start pty: %w", err)
 	}
-	return string(output), nil
-}
+	defer ptyFile.Close()
 
-// parseForgeError extracts meaningful error messages from forge output
-func parseForgeError(err error, output string) error {
-	// Check for common error patterns
-	if strings.Contains(output, "DeploymentAlreadyExists") {
-		re := regexp.MustCompile(`Contract already deployed at: (0x[a-fA-F0-9]{40})`)
-		if match := re.FindStringSubmatch(output); len(match) > 1 {
-			return fmt.Errorf("contract already deployed at %s", match[1])
+	result := &forge.RunResult{
+		Script:  config.Script,
+		Success: true, // Will be updated based on command exit
+	}
+
+	// Debug mode: direct copy to stdout
+	if config.Debug && !config.DebugJSON {
+		// Simple copy for debug mode
+		_, _ = io.Copy(os.Stdout, ptyFile)
+
+		// Wait for command to finish
+		if err := cmd.Wait(); err != nil {
+			result.Success = false
+			result.Error = fmt.Errorf("forge script failed: %w", err)
 		}
-		return fmt.Errorf("contract already deployed")
+
+		return result, nil
 	}
 
-	if strings.Contains(output, "insufficient funds") {
-		return fmt.Errorf("insufficient funds for deployment")
+	// Normal mode: process output with scanner
+	// Create debug directory for this run
+	runUUID := fmt.Sprintf("%d", time.Now().Unix())
+	debugDir := filepath.Join(f.projectRoot, "out", ".treb-debug", runUUID)
+	if err := os.MkdirAll(debugDir, 0755); err != nil {
+		fmt.Printf("Warning: failed to create debug directory: %v\n", err)
+		// Continue anyway
+		debugDir = ""
 	}
 
-	if strings.Contains(output, "reverted") {
-		// Try to extract revert reason
-		re := regexp.MustCompile(`revert: (.+)`)
-		if match := re.FindStringSubmatch(output); len(match) > 1 {
-			return fmt.Errorf("transaction reverted: %s", match[1])
+	// Create channels for parsed entities
+	entityChan := make(chan ParsedEntity, 100)
+	errChan := make(chan error, 1)
+
+	// Collect all output for raw output
+	var outputBuffer bytes.Buffer
+	teeReader := io.TeeReader(ptyFile, &outputBuffer)
+
+	// Start output processor
+	processor := NewOutputProcessor(debugDir)
+
+	// Process output in goroutine
+	go func() {
+		if err := processor.ProcessOutput(teeReader, entityChan); err != nil {
+			errChan <- err
 		}
-		return fmt.Errorf("transaction reverted")
+		close(entityChan)
+		close(errChan)
+	}()
+
+	// Collect parsed entities
+	parsedOutput := &forge.ParsedOutput{
+		ConsoleLogs:  []string{},
+		TraceOutputs: []forge.TraceOutput{},
 	}
 
-	// Return the original error with output context
-	return fmt.Errorf("%w\nforge output: %s", err, output)
-}
-
-// InstallDependency installs a Foundry dependency
-func (f *Forge) InstallDependency(dependency string) error {
-	cmd := exec.Command("forge", "install", dependency, "--no-commit")
-	cmd.Dir = f.projectRoot
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to install %s: %w\nOutput: %s", dependency, err, string(output))
-	}
-
-	return nil
-}
-
-// GetInstalledDependencies returns a list of installed dependencies
-func (f *Forge) GetInstalledDependencies() ([]string, error) {
-	libPath := f.projectRoot + "/lib"
-	entries, err := os.ReadDir(libPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return []string{}, nil
+	for entity := range entityChan {
+		switch entity.Type {
+		case "ScriptOutput":
+			if output, ok := entity.Data.(forge.ScriptOutput); ok {
+				parsedOutput.ScriptOutput = &output
+				// Console logs are already in output.Logs
+				parsedOutput.ConsoleLogs = append(parsedOutput.ConsoleLogs, output.Logs...)
+			}
+		case "GasEstimate":
+			if gas, ok := entity.Data.(forge.GasEstimate); ok {
+				parsedOutput.GasEstimate = &gas
+			}
+		case "StatusOutput":
+			if status, ok := entity.Data.(forge.StatusOutput); ok {
+				parsedOutput.StatusOutput = &status
+				// Extract broadcast path
+				if status.Transactions != "" {
+					result.BroadcastPath = status.Transactions
+				}
+			}
+		case "TraceOutput":
+			if trace, ok := entity.Data.(forge.TraceOutput); ok {
+				parsedOutput.TraceOutputs = append(parsedOutput.TraceOutputs, trace)
+			}
+		case "TextOutput":
+			if text, ok := entity.Data.(string); ok {
+				parsedOutput.TextOutput = text
+			}
+		case "Receipt":
+			if receipt, ok := entity.Data.(forge.Receipt); ok {
+				if parsedOutput.Receipts == nil {
+					parsedOutput.Receipts = []forge.Receipt{}
+				}
+				parsedOutput.Receipts = append(parsedOutput.Receipts, receipt)
+			}
 		}
-		return nil, err
 	}
 
-	var deps []string
-	for _, entry := range entries {
-		if entry.IsDir() && !strings.HasPrefix(entry.Name(), ".") {
-			deps = append(deps, entry.Name())
+	// Check for processing errors
+	select {
+	case err := <-errChan:
+		if err != nil {
+			result.Error = fmt.Errorf("output processing error: %w", err)
+		}
+	default:
+	}
+
+	// Wait for command to finish
+	if err := cmd.Wait(); err != nil {
+		result.Success = false
+		if result.Error == nil {
+			result.Error = fmt.Errorf("forge script failed: %w", err)
 		}
 	}
 
-	return deps, nil
+	// Set results
+	result.RawOutput = outputBuffer.Bytes()
+	result.ParsedOutput = parsedOutput
+
+	// Print text output if script failed or in debug/verbose mode
+	if parsedOutput.TextOutput != "" && (result.Error != nil || config.Debug) {
+		fmt.Println("\n📝 Forge Output:")
+		fmt.Println(strings.Repeat("─", 50))
+		fmt.Println(parsedOutput.TextOutput)
+		fmt.Println(strings.Repeat("─", 50))
+	}
+
+	// Save debug output if requested
+	if config.Debug && config.DebugJSON && len(result.RawOutput) > 0 {
+		f.saveDebugOutput(result.RawOutput)
+	}
+
+	return result, nil
 }
 
-// Format runs forge fmt on the project
-func (f *Forge) Format() error {
-	cmd := exec.Command("forge", "fmt")
-	cmd.Dir = f.projectRoot
+// buildArgs builds the forge script command arguments
+func (f *ForgeAdapter) buildArgs(config usecase.RunScriptConfig, senders SendersConfig) []string {
+	args := []string{"script", config.Script.ArtifactPath, "--ffi"}
 
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("forge fmt failed: %w\nOutput: %s", err, string(output))
+	// // Add function signature if specified
+	// if opts.FunctionName != "" {
+	// 	args = append(args, "--sig", opts.FunctionName)
+	// 	if len(opts.FunctionArgs) > 0 {
+	// 		args = append(args, opts.FunctionArgs...)
+	// 	}
+	// }
+
+	// Network configuration
+	args = append(args, "--rpc-url", config.Network.Name)
+
+	// Broadcast/dry run
+	if !config.DryRun {
+		args = append(args, "--broadcast")
 	}
 
-	return nil
+	// Ledger flag if required
+	if senders.HasLedger {
+		args = append(args, "--ledger")
+	}
+
+	if senders.HasTrezor {
+		args = append(args, "--trezor")
+	}
+
+	if len(senders.DerivationPaths) > 0 {
+		args = append(args, "--mnemonic-derivation-paths", strings.Join(sender.DerivationPaths, ","))
+	}
+
+	// Libraries for linking
+	for _, lib := range opts.Libraries {
+		args = append(args, "--libraries", lib)
+	}
+
+	// JSON output
+	if config.DebugJSON || !config.Debug {
+		args = append(args, "--json")
+	}
+
+	args = append(args, "-vvvv")
+
+	// Additional arguments
+	args = append(args, opts.AdditionalArgs...)
+
+	return args
 }
 
-// Test runs forge test
-func (f *Forge) Test(testPattern string) error {
-	args := []string{"test"}
-	if testPattern != "" {
-		args = append(args, "--match-test", testPattern)
+// buildEnv builds environment variable array
+func (f *ForgeAdapter) buildEnv(opts ScriptOptions) []string {
+	var env []string
+	for k, v := range opts.EnvVars {
+		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
 
-	cmd := exec.Command("forge", args...)
-	cmd.Dir = f.projectRoot
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("forge test failed: %w\nOutput: %s", err, string(output))
+	// Profile
+	if opts.Profile != "" {
+		env = append(env, fmt.Sprintf("FOUNDRY_PROFILE=%s", opts.Profile))
 	}
 
-	fmt.Print(string(output))
-	return nil
+	if opts.Debug {
+		env = append(env, "QUIET=true")
+	}
+
+	return env
+}
+
+// saveDebugOutput saves raw output for debugging
+func (f *ForgeAdapter) saveDebugOutput(output []byte) {
+	runUUID := fmt.Sprintf("%d", time.Now().Unix())
+	debugDir := filepath.Join(f.projectRoot, "out", ".treb-debug", runUUID)
+
+	if err := os.MkdirAll(debugDir, 0755); err != nil {
+		fmt.Printf("Warning: failed to create debug directory: %v\n", err)
+		return
+	}
+
+	// Save raw output
+	rawPath := filepath.Join(debugDir, "raw-output.json")
+	if err := os.WriteFile(rawPath, output, 0644); err != nil {
+		fmt.Printf("Warning: failed to write raw output: %v\n", err)
+	} else {
+		fmt.Printf("Debug output saved to: %s\n", debugDir)
+	}
 }

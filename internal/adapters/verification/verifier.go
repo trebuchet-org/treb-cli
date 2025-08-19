@@ -6,6 +6,7 @@ import (
 
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -28,15 +29,14 @@ func NewVerifierAdapter(cfg *config.RuntimeConfig) (*VerifierAdapter, error) {
 }
 
 // Verify performs contract verification on multiple verifiers
-func (v *VerifierAdapter) Verify(ctx context.Context, deployment *domain.Deployment, network *domain.Network) error {
+func (v *VerifierAdapter) Verify(ctx context.Context, deployment *models.Deployment, network *domain.Network) error {
 	return v.verifier.Verify(ctx, deployment, network)
 }
 
 // GetVerificationStatus retrieves the current verification status
-func (v *VerifierAdapter) GetVerificationStatus(ctx context.Context, deployment *domain.Deployment) (*domain.VerificationInfo, error) {
+func (v *VerifierAdapter) GetVerificationStatus(ctx context.Context, deployment *models.Deployment) (*models.VerificationInfo, error) {
 	return v.verifier.GetVerificationStatus(ctx, deployment)
 }
 
 // Ensure the adapter implements the interface
 var _ usecase.ContractVerifier = (*VerifierAdapter)(nil)
-

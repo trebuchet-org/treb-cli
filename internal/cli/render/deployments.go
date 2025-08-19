@@ -10,7 +10,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
-	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -61,13 +61,13 @@ func (r *DeploymentsRenderer) RenderDeploymentList(result *usecase.DeploymentLis
 }
 
 // displayTableFormat shows deployments in table format
-func (r *DeploymentsRenderer) displayTableFormat(deployments []*domain.Deployment) {
+func (r *DeploymentsRenderer) displayTableFormat(deployments []*models.Deployment) {
 	// Group by namespace and chain
-	namespaceChainGroups := make(map[string]map[uint64][]*domain.Deployment)
+	namespaceChainGroups := make(map[string]map[uint64][]*models.Deployment)
 
 	for _, dep := range deployments {
 		if namespaceChainGroups[dep.Namespace] == nil {
-			namespaceChainGroups[dep.Namespace] = make(map[uint64][]*domain.Deployment)
+			namespaceChainGroups[dep.Namespace] = make(map[uint64][]*models.Deployment)
 		}
 		namespaceChainGroups[dep.Namespace][dep.ChainID] = append(namespaceChainGroups[dep.Namespace][dep.ChainID], dep)
 	}
@@ -93,11 +93,11 @@ func (r *DeploymentsRenderer) displayTableFormat(deployments []*domain.Deploymen
 			chainDeployments := chains[chainID]
 
 			// Separate proxies and singletons
-			proxies := make([]*domain.Deployment, 0)
-			singletons := make([]*domain.Deployment, 0)
+			proxies := make([]*models.Deployment, 0)
+			singletons := make([]*models.Deployment, 0)
 
 			for _, dep := range chainDeployments {
-				if dep.Type == domain.ProxyDeployment {
+				if dep.Type == models.ProxyDeployment {
 					proxies = append(proxies, dep)
 				} else {
 					singletons = append(singletons, dep)
@@ -157,11 +157,11 @@ func (r *DeploymentsRenderer) displayTableFormat(deployments []*domain.Deploymen
 			fmt.Fprintln(r.out, continuationPrefix)
 
 			// Separate proxies and singletons
-			proxies := make([]*domain.Deployment, 0)
-			singletons := make([]*domain.Deployment, 0)
+			proxies := make([]*models.Deployment, 0)
+			singletons := make([]*models.Deployment, 0)
 
 			for _, dep := range chainDeployments {
-				if dep.Type == domain.ProxyDeployment {
+				if dep.Type == models.ProxyDeployment {
 					proxies = append(proxies, dep)
 				} else {
 					singletons = append(singletons, dep)
@@ -199,7 +199,7 @@ func (r *DeploymentsRenderer) displayTableFormat(deployments []*domain.Deploymen
 }
 
 // buildDeploymentTable creates a TableData for a list of deployments
-func (r *DeploymentsRenderer) buildDeploymentTable(deployments []*domain.Deployment) TableData {
+func (r *DeploymentsRenderer) buildDeploymentTable(deployments []*models.Deployment) TableData {
 	tableData := make(TableData, 0)
 
 	// Sort deployments by timestamp (newest first)
@@ -220,9 +220,9 @@ func (r *DeploymentsRenderer) buildDeploymentTable(deployments []*domain.Deploym
 		// For domain types, we check verification status differently
 		if deployment.Transaction != nil {
 			switch deployment.Transaction.Status {
-			case domain.TransactionStatusQueued:
+			case models.TransactionStatusQueued:
 				verifiedCell = pendingStyle.Sprint("⏳ queued")
-			case domain.TransactionStatusSimulated:
+			case models.TransactionStatusSimulated:
 				verifiedCell = pendingStyle.Sprint("⏳ simulated")
 			default:
 				// Show verifier statuses
@@ -245,7 +245,7 @@ func (r *DeploymentsRenderer) buildDeploymentTable(deployments []*domain.Deploym
 		// If this is a proxy, add implementation row
 		if deployment.ProxyInfo != nil {
 			implDisplayName := deployment.ProxyInfo.Implementation[:10] + "..." // fallback short address
-			
+
 			// If we have the implementation deployment loaded, use its name
 			if deployment.Implementation != nil {
 				implDisplayName = deployment.Implementation.ContractDisplayName()
@@ -267,7 +267,7 @@ func (r *DeploymentsRenderer) buildDeploymentTable(deployments []*domain.Deploym
 }
 
 // getVerifierStatuses returns the formatted verifier status string
-func (r *DeploymentsRenderer) getVerifierStatuses(deployment *domain.Deployment) string {
+func (r *DeploymentsRenderer) getVerifierStatuses(deployment *models.Deployment) string {
 	verifierStatuses := []string{}
 
 	// Check Etherscan status
@@ -310,13 +310,13 @@ func (r *DeploymentsRenderer) getVerifierStatuses(deployment *domain.Deployment)
 }
 
 // getColoredDisplayName returns a colored display name for deployment
-func (r *DeploymentsRenderer) getColoredDisplayName(dep *domain.Deployment) string {
+func (r *DeploymentsRenderer) getColoredDisplayName(dep *models.Deployment) string {
 	name := dep.ContractDisplayName()
 
 	switch dep.Type {
-	case domain.ProxyDeployment:
+	case models.ProxyDeployment:
 		return color.New(color.FgMagenta, color.Bold).Sprint(name)
-	case domain.LibraryDeployment:
+	case models.LibraryDeployment:
 		return color.New(color.FgBlue, color.Bold).Sprint(name)
 	default:
 		return color.New(color.FgGreen, color.Bold).Sprint(name)
@@ -413,3 +413,4 @@ func calculateTableColumnWidths(tables []TableData) []int {
 
 	return widths
 }
+

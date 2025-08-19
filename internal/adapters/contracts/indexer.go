@@ -12,15 +12,16 @@ import (
 	"sync"
 
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
 // Indexer discovers and indexes contracts and their artifacts
 type Indexer struct {
 	projectRoot       string
-	contracts         map[string]*domain.ContractInfo   // key: "path:contractName" or "contractName" if unique
-	contractNames     map[string][]*domain.ContractInfo // key: contract name, value: all contracts with that name
-	bytecodeHashIndex map[string]*domain.ContractInfo   // key: bytecodeHash -> ContractInfo
+	contracts         map[string]*models.Contract   // key: "path:contractName" or "contractName" if unique
+	contractNames     map[string][]*models.Contract // key: contract name, value: all contracts with that name
+	bytecodeHashIndex map[string]*models.Contract   // key: bytecodeHash -> Contract
 	mu                sync.RWMutex
 	indexed           bool
 }
@@ -29,9 +30,9 @@ type Indexer struct {
 func NewIndexer(projectRoot string) *Indexer {
 	return &Indexer{
 		projectRoot:       projectRoot,
-		contracts:         make(map[string]*domain.ContractInfo),
-		contractNames:     make(map[string][]*domain.ContractInfo),
-		bytecodeHashIndex: make(map[string]*domain.ContractInfo),
+		contracts:         make(map[string]*models.Contract),
+		contractNames:     make(map[string][]*models.Contract),
+		bytecodeHashIndex: make(map[string]*models.Contract),
 	}
 }
 
@@ -45,9 +46,9 @@ func (i *Indexer) Index() error {
 	}
 
 	// Reset indexes
-	i.contracts = make(map[string]*domain.ContractInfo)
-	i.contractNames = make(map[string][]*domain.ContractInfo)
-	i.bytecodeHashIndex = make(map[string]*domain.ContractInfo)
+	i.contracts = make(map[string]*models.Contract)
+	i.contractNames = make(map[string][]*models.Contract)
+	i.bytecodeHashIndex = make(map[string]*models.Contract)
 
 	// Always run forge build to ensure new scripts are compiled
 	if err := i.runForgeBuild(); err != nil {
@@ -96,7 +97,7 @@ func (i *Indexer) processArtifact(artifactPath string) error {
 	}
 
 	// Parse Foundry artifact structure
-	var artifact domain.Artifact
+	var artifact models.Artifact
 	if err := json.Unmarshal(data, &artifact); err != nil {
 		// Skip invalid artifacts
 		return nil
@@ -123,7 +124,7 @@ func (i *Indexer) processArtifact(artifactPath string) error {
 	relArtifactPath, _ := filepath.Rel(i.projectRoot, artifactPath)
 
 	// Create contract info
-	info := &domain.ContractInfo{
+	info := &models.Contract{
 		Name:         contractName,
 		Path:         sourceName,
 		ArtifactPath: relArtifactPath,
@@ -142,14 +143,14 @@ func (i *Indexer) processArtifact(artifactPath string) error {
 		// Remove simple key if it exists
 	} else {
 		// First contract with this name
-		i.contractNames[info.Name] = []*domain.ContractInfo{info}
+		i.contractNames[info.Name] = []*models.Contract{info}
 	}
 
 	return nil
 }
 
 // GetContract retrieves a contract by key (name or path:name)
-func (i *Indexer) GetContract(ctx context.Context, key string) (*domain.ContractInfo, error) {
+func (i *Indexer) GetContract(ctx context.Context, key string) (*models.Contract, error) {
 	if err := i.Index(); err != nil {
 		return nil, err
 	}
@@ -164,14 +165,14 @@ func (i *Indexer) GetContract(ctx context.Context, key string) (*domain.Contract
 }
 
 // SearchContracts searches for contracts matching a pattern
-func (i *Indexer) SearchContracts(ctx context.Context, query domain.ContractQuery) []*domain.ContractInfo {
+func (i *Indexer) SearchContracts(ctx context.Context, query domain.ContractQuery) []*models.Contract {
 	if err := i.Index(); err != nil {
 		panic(err)
 	}
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 
-	var results []*domain.ContractInfo
+	var results []*models.Contract
 	var artifactQuery string = ""
 	var pathRegex *regexp.Regexp
 	if query.Query != nil {
@@ -201,7 +202,7 @@ func (i *Indexer) SearchContracts(ctx context.Context, query domain.ContractQuer
 }
 
 // GetContractByArtifact finds a contract by its artifact path
-func (i *Indexer) GetContractByArtifact(ctx context.Context, artifactPath string) *domain.ContractInfo {
+func (i *Indexer) GetContractByArtifact(ctx context.Context, artifactPath string) *models.Contract {
 	if err := i.Index(); err != nil {
 		panic(err)
 	}
@@ -217,14 +218,14 @@ func (i *Indexer) GetContractByArtifact(ctx context.Context, artifactPath string
 }
 
 // GetScriptContracts returns all script contracts
-func (i *Indexer) GetScriptContracts() []*domain.ContractInfo {
+func (i *Indexer) GetScriptContracts() []*models.Contract {
 	if err := i.Index(); err != nil {
 		panic(err)
 	}
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 
-	var scripts []*domain.ContractInfo
+	var scripts []*models.Contract
 	seen := make(map[string]bool)
 
 	for _, info := range i.contracts {
@@ -245,7 +246,7 @@ func (i *Indexer) GetScriptContracts() []*domain.ContractInfo {
 }
 
 // GetAllContracts returns all indexed contracts (for debugging)
-func (i *Indexer) GetAllContracts() map[string]*domain.ContractInfo {
+func (i *Indexer) GetAllContracts() map[string]*models.Contract {
 	if err := i.Index(); err != nil {
 		panic(err)
 	}
@@ -253,7 +254,7 @@ func (i *Indexer) GetAllContracts() map[string]*domain.ContractInfo {
 	defer i.mu.RUnlock()
 
 	// Return a copy to avoid race conditions
-	result := make(map[string]*domain.ContractInfo)
+	result := make(map[string]*models.Contract)
 	for k, v := range i.contracts {
 		result[k] = v
 	}

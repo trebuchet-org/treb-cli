@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/trebuchet-org/treb-cli/internal/domain"
 )
 
 // FoundryConfig represents the full foundry.toml configuration
@@ -27,8 +28,8 @@ type EtherscanConfig struct {
 
 // ProfileFoundryConfig represents a profile's foundry configuration
 type ProfileConfig struct {
-	Sender    SenderConfig `toml:"sender,omitempty"`
-	Libraries []string     `toml:"libraries,omitempty"`
+	Sender    domain.SenderConfig `toml:"sender,omitempty"`
+	Libraries []string            `toml:"libraries,omitempty"`
 	// Other foundry settings
 	SrcPath       string   `toml:"src,omitempty"`
 	OutPath       string   `toml:"out,omitempty"`
@@ -39,16 +40,6 @@ type ProfileConfig struct {
 	SolcVersion   string   `toml:"solc_version,omitempty"`
 	Optimizer     bool     `toml:"optimizer,omitempty"`
 	OptimizerRuns int      `toml:"optimizer_runs,omitempty"`
-}
-
-// SenderConfig represents a sender configuration
-type SenderConfig struct {
-	Type           string `toml:"type"`
-	Address        string `toml:"address,omitempty"`
-	PrivateKey     string `toml:"private_key,omitempty"`
-	Safe           string `toml:"safe,omitempty"`
-	Signer         string `toml:"signer,omitempty"`          // For Safe senders
-	DerivationPath string `toml:"derivation_path,omitempty"` // For Ledger senders
 }
 
 // FoundryManager handles foundry.toml file operations

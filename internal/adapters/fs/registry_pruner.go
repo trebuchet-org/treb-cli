@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -48,7 +49,7 @@ func (s *RegistryStoreAdapter) CollectPrunableItems(
 		}
 
 		// Skip pending transactions unless includePending is set
-		if !includePending && (tx.Status == domain.TransactionStatusSimulated || tx.Status == domain.TransactionStatusQueued) {
+		if !includePending && (tx.Status == models.TransactionStatusSimulated || tx.Status == models.TransactionStatusQueued) {
 			continue
 		}
 
@@ -57,7 +58,7 @@ func (s *RegistryStoreAdapter) CollectPrunableItems(
 			items.Transactions = append(items.Transactions, domain.PruneItem{
 				ID:     tx.ID,
 				Hash:   tx.Hash,
-				Status: domain.TransactionStatus(tx.Status),
+				Status: models.TransactionStatus(tx.Status),
 				Reason: reason,
 			})
 		}
@@ -72,7 +73,7 @@ func (s *RegistryStoreAdapter) CollectPrunableItems(
 		}
 
 		// Skip pending safe transactions unless includePending is set
-		if !includePending && safeTx.Status == domain.SafeTxStatusQueued {
+		if !includePending && safeTx.Status == models.SafeTxStatusQueued {
 			continue
 		}
 
@@ -81,7 +82,7 @@ func (s *RegistryStoreAdapter) CollectPrunableItems(
 			items.SafeTransactions = append(items.SafeTransactions, domain.SafePruneItem{
 				SafeTxHash:  safeTx.SafeTxHash,
 				SafeAddress: safeTx.SafeAddress,
-				Status:      domain.TransactionStatus(safeTx.Status),
+				Status:      models.TransactionStatus(safeTx.Status),
 				Reason:      reason,
 			})
 		}
@@ -93,7 +94,7 @@ func (s *RegistryStoreAdapter) CollectPrunableItems(
 // shouldPruneDeployment checks if a deployment should be pruned
 func (s *RegistryStoreAdapter) shouldPruneDeployment(
 	ctx context.Context,
-	deployment *domain.Deployment,
+	deployment *models.Deployment,
 	checker usecase.BlockchainChecker,
 ) (string, bool) {
 	// Check if contract exists at address
@@ -125,12 +126,12 @@ func (s *RegistryStoreAdapter) shouldPruneDeployment(
 // shouldPruneTransaction checks if a transaction should be pruned
 func (s *RegistryStoreAdapter) shouldPruneTransaction(
 	ctx context.Context,
-	tx *domain.Transaction,
+	tx *models.Transaction,
 	checker usecase.BlockchainChecker,
 ) (string, bool) {
 	// If transaction has no hash, it was never broadcast
 	if tx.Hash == "" {
-		if tx.Status == domain.TransactionStatusExecuted {
+		if tx.Status == models.TransactionStatusExecuted {
 			return "executed transaction has no hash", true
 		}
 		// For simulated/queued transactions without hash, don't prune unless includePending
@@ -159,7 +160,7 @@ func (s *RegistryStoreAdapter) shouldPruneTransaction(
 // shouldPruneSafeTransaction checks if a safe transaction should be pruned
 func (s *RegistryStoreAdapter) shouldPruneSafeTransaction(
 	ctx context.Context,
-	safeTx *domain.SafeTransaction,
+	safeTx *models.SafeTransaction,
 	checker usecase.BlockchainChecker,
 ) (string, bool) {
 	// First check if the Safe contract exists
@@ -174,7 +175,7 @@ func (s *RegistryStoreAdapter) shouldPruneSafeTransaction(
 	}
 
 	// For executed safe transactions, check if the execution transaction exists
-	if safeTx.Status == domain.SafeTxStatusExecuted && safeTx.ExecutionTxHash != "" {
+	if safeTx.Status == models.SafeTxStatusExecuted && safeTx.ExecutionTxHash != "" {
 		txExists, _, txReason, err := checker.CheckTransactionExists(ctx, safeTx.ExecutionTxHash)
 		if err != nil {
 			// Be conservative on errors - don't prune
@@ -196,23 +197,24 @@ func (s *RegistryStoreAdapter) ExecutePrune(ctx context.Context, items *domain.I
 			return fmt.Errorf("failed to remove deployment %s: %w", item.ID, err)
 		}
 	}
-	
+
 	// Remove transactions
 	for _, item := range items.Transactions {
 		if err := s.manager.RemoveTransaction(item.ID); err != nil {
 			return fmt.Errorf("failed to remove transaction %s: %w", item.ID, err)
 		}
 	}
-	
+
 	// Remove safe transactions
 	for _, item := range items.SafeTransactions {
 		if err := s.manager.RemoveSafeTransaction(item.SafeTxHash); err != nil {
 			return fmt.Errorf("failed to remove safe transaction %s: %w", item.SafeTxHash, err)
 		}
 	}
-	
+
 	return nil
 }
 
 // Ensure RegistryStoreAdapter implements RegistryPruner
 var _ usecase.RegistryPruner = (*RegistryStoreAdapter)(nil)
+

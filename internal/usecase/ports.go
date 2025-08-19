@@ -4,42 +4,40 @@ import (
 	"context"
 	"io"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/forge"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
 // DeploymentStore handles persistence of deployments
 type DeploymentStore interface {
-	GetDeployment(ctx context.Context, id string) (*domain.Deployment, error)
-	GetDeploymentByAddress(ctx context.Context, chainID uint64, address string) (*domain.Deployment, error)
-	ListDeployments(ctx context.Context, filter domain.DeploymentFilter) ([]*domain.Deployment, error)
-	SaveDeployment(ctx context.Context, deployment *domain.Deployment) error
+	GetDeployment(ctx context.Context, id string) (*models.Deployment, error)
+	GetDeploymentByAddress(ctx context.Context, chainID uint64, address string) (*models.Deployment, error)
+	ListDeployments(ctx context.Context, filter domain.DeploymentFilter) ([]*models.Deployment, error)
+	SaveDeployment(ctx context.Context, deployment *models.Deployment) error
 	DeleteDeployment(ctx context.Context, id string) error
 }
 
 // TransactionStore handles persistence of transactions
 type TransactionStore interface {
-	GetTransaction(ctx context.Context, id string) (*domain.Transaction, error)
-	ListTransactions(ctx context.Context, filter domain.TransactionFilter) ([]*domain.Transaction, error)
-	SaveTransaction(ctx context.Context, transaction *domain.Transaction) error
+	GetTransaction(ctx context.Context, id string) (*models.Transaction, error)
+	ListTransactions(ctx context.Context, filter domain.TransactionFilter) ([]*models.Transaction, error)
+	SaveTransaction(ctx context.Context, transaction *models.Transaction) error
 }
 
 // ContractIndexer provides access to compiled contracts
 type ContractIndexer interface {
-	GetContract(ctx context.Context, key string) (*domain.ContractInfo, error)
-	SearchContracts(ctx context.Context, query domain.ContractQuery) []*domain.ContractInfo
-	GetContractByArtifact(ctx context.Context, artifact string) *domain.ContractInfo
-}
-
-// ForgeExecutor handles forge command execution
-type ForgeExecutor interface {
-	Build(ctx context.Context) error
-	RunScript(ctx context.Context, config domain.ForgeRunConfig) (*domain.ForgeRunResult, error)
+	GetContract(ctx context.Context, key string) (*models.Contract, error)
+	SearchContracts(ctx context.Context, query domain.ContractQuery) []*models.Contract
+	GetContractByArtifact(ctx context.Context, artifact string) *models.Contract
 }
 
 // ContractVerifier handles contract verification
 type ContractVerifier interface {
-	Verify(ctx context.Context, deployment *domain.Deployment, network *domain.Network) error
-	GetVerificationStatus(ctx context.Context, deployment *domain.Deployment) (*domain.VerificationInfo, error)
+	Verify(ctx context.Context, deployment *models.Deployment, network *domain.Network) error
+	GetVerificationStatus(ctx context.Context, deployment *models.Deployment) (*models.VerificationInfo, error)
 }
 
 // Progress tracking interfaces
@@ -72,7 +70,7 @@ func (NopProgress) Error(string)                              {}
 
 // DeploymentListResult contains the result of listing deployments
 type DeploymentListResult struct {
-	Deployments []*domain.Deployment
+	Deployments []*models.Deployment
 	Summary     DeploymentSummary
 }
 
@@ -81,14 +79,14 @@ type DeploymentSummary struct {
 	Total       int
 	ByNamespace map[string]int
 	ByChain     map[uint64]int
-	ByType      map[domain.DeploymentType]int
+	ByType      map[models.DeploymentType]int
 }
 
 // ScriptExecutionResult contains the result of script execution
 type ScriptExecutionResult struct {
 	Success      bool
-	Deployments  []*domain.Deployment
-	Transactions []*domain.Transaction
+	Deployments  []*models.Deployment
+	Transactions []*models.Transaction
 	Logs         []string
 	GasUsed      uint64
 	Error        error
@@ -96,10 +94,18 @@ type ScriptExecutionResult struct {
 
 // ABIParser parses contract ABIs to extract constructor/initializer info
 type ABIParser interface {
-	ParseContractABI(ctx context.Context, contractName string) (*domain.ContractABI, error)
-	FindInitializeMethod(abi *domain.ContractABI) *domain.Method
-	GenerateConstructorArgs(abi *domain.ContractABI) (vars string, encode string)
-	GenerateInitializerArgs(method *domain.Method) (vars string, encode string)
+	FindInitializeMethod(abi *abi.ABI) *abi.Method
+	GenerateConstructorArgs(abi *abi.ABI) (vars string, encode string)
+	GenerateInitializerArgs(method *abi.Method) (vars string, encode string)
+	ParseEvent(rawLog *forge.EventLog) (any, error)
+	ParseEvents(rawLog *forge.ScriptOutput) ([]any, error)
+}
+
+// ABI Resolver looks-up ABIs in different sources and by different input values.
+type ABIResolver interface {
+	Get(ctx context.Context, artifact *models.Artifact) (*abi.ABI, error)
+	FindByRef(ctx context.Context, contractRef string) (*abi.ABI, error)
+	FindByAddress(ctx context.Context, address common.Address) (*abi.ABI, error)
 }
 
 // ScriptGenerator generates deployment scripts from templates
@@ -116,12 +122,12 @@ type FileWriter interface {
 
 // DeploymentSelector handles interactive selection of contracts
 type ContractSelector interface {
-	SelectContract(ctx context.Context, contracts []*domain.ContractInfo, prompt string) (*domain.ContractInfo, error)
+	SelectContract(ctx context.Context, contracts []*models.Contract, prompt string) (*models.Contract, error)
 }
 
 // DeploymentSelector handles interactive selection of deployments
 type DeploymentSelector interface {
-	SelectDeployment(ctx context.Context, deployments []*domain.Deployment, prompt string) (*domain.Deployment, error)
+	SelectDeployment(ctx context.Context, deployments []*models.Deployment, prompt string) (*models.Deployment, error)
 }
 
 // AnvilManager manages local anvil node instances
@@ -134,10 +140,10 @@ type AnvilManager interface {
 
 // ContractResolver resolves contract references to actual contracts
 type ContractResolver interface {
-	ResolveContract(ctx context.Context, query domain.ContractQuery) (*domain.ContractInfo, error)
-	GetProxyContracts(ctx context.Context) ([]*domain.ContractInfo, error)
-	SelectProxyContract(ctx context.Context) (*domain.ContractInfo, error)
-	IsLibrary(ctx context.Context, contract *domain.ContractInfo) (bool, error)
+	ResolveContract(ctx context.Context, query domain.ContractQuery) (*models.Contract, error)
+	GetProxyContracts(ctx context.Context) ([]*models.Contract, error)
+	SelectProxyContract(ctx context.Context) (*models.Contract, error)
+	IsLibrary(ctx context.Context, contract *models.Contract) (bool, error)
 }
 
 // NetworkResolver handles network configuration resolution
@@ -170,25 +176,25 @@ type LocalConfigStore interface {
 
 // SafeTransactionStore handles persistence of Safe transactions
 type SafeTransactionStore interface {
-	GetSafeTransaction(ctx context.Context, safeTxHash string) (*domain.SafeTransaction, error)
-	ListSafeTransactions(ctx context.Context, filter domain.SafeTransactionFilter) ([]*domain.SafeTransaction, error)
-	SaveSafeTransaction(ctx context.Context, safeTx *domain.SafeTransaction) error
-	UpdateSafeTransaction(ctx context.Context, safeTx *domain.SafeTransaction) error
+	GetSafeTransaction(ctx context.Context, safeTxHash string) (*models.SafeTransaction, error)
+	ListSafeTransactions(ctx context.Context, filter domain.SafeTransactionFilter) ([]*models.SafeTransaction, error)
+	SaveSafeTransaction(ctx context.Context, safeTx *models.SafeTransaction) error
+	UpdateSafeTransaction(ctx context.Context, safeTx *models.SafeTransaction) error
 }
 
 // SafeClient handles interactions with Safe multisig contracts
 type SafeClient interface {
 	SetChain(ctx context.Context, chainID uint64) error
-	GetTransactionExecutionInfo(ctx context.Context, safeTxHash string) (*domain.SafeExecutionInfo, error)
-	GetTransactionDetails(ctx context.Context, safeTxHash string) (*domain.SafeTransaction, error)
+	GetTransactionExecutionInfo(ctx context.Context, safeTxHash string) (*models.SafeExecutionInfo, error)
+	GetTransactionDetails(ctx context.Context, safeTxHash string) (*models.SafeTransaction, error)
 }
 
 // ScriptResolver resolves script paths to script information
 type ScriptResolver interface {
 	// ResolveScript resolves a script path or name to script info
-	ResolveScript(ctx context.Context, scriptRef string) (*domain.ContractInfo, error)
+	ResolveScript(ctx context.Context, scriptRef string) (*models.Contract, error)
 	// GetScriptParameters extracts parameters from a script's artifact
-	GetScriptParameters(ctx context.Context, script *domain.ContractInfo) ([]domain.ScriptParameter, error)
+	GetScriptParameters(ctx context.Context, script *models.Contract) ([]domain.ScriptParameter, error)
 }
 
 // Parameter Handling Ports
@@ -210,41 +216,29 @@ type ParameterPrompter interface {
 // Script Execution Ports
 
 // ScriptExecutor executes Foundry scripts
-type ScriptExecutor interface {
+type ForgeScriptRunner interface {
 	// Execute runs a script and returns the raw output
-	Execute(ctx context.Context, config ScriptExecutionConfig) (*ScriptExecutionOutput, error)
+	RunScript(ctx context.Context, config RunScriptConfig) (*forge.RunResult, error)
 }
 
 // ScriptExecutionConfig contains configuration for script execution
-type ScriptExecutionConfig struct {
-	Script      *domain.ContractInfo
-	Network     *domain.Network
-	Namespace   string
-	Environment map[string]string // Includes resolved parameters and sender configs
-	DryRun      bool
-	Debug       bool
-	DebugJSON   bool
-	Progress    ProgressSink
+type RunScriptConfig struct {
+	Script     *models.Contract
+	Network    *domain.Network
+	Namespace  string
+	Parameters map[string]string // Includes resolved parameters and sender configs
+	DryRun     bool
+	Debug      bool
+	DebugJSON  bool
+	Libraries  []string
+	Senders    map[string]domain.SenderConfig
+	Progress   ProgressSink
 }
 
-// ScriptExecutionOutput contains the raw output from script execution
-type ScriptExecutionOutput struct {
-	Success        bool
-	RawOutput      []byte
-	ParsedOutput   any // Forge-specific parsed output (legacy)
-	JSONOutput     any // Raw JSON output from forge --json (legacy)
-	ForgeOutput    *domain.ForgeScriptOutput // Structured forge output
-	BroadcastPath  string
-}
-
-// Execution Parsing Ports
-
-// ExecutionParser parses script execution output into domain models
-type ExecutionParser interface {
+// RunResultHydrator hydrated RunResults with domain models.
+type RunResultHydrator interface {
 	// ParseExecution parses the script output into a structured execution result
-	ParseExecution(ctx context.Context, output *ScriptExecutionOutput) (*domain.ScriptExecution, error)
-	// EnrichFromBroadcast enriches execution data from broadcast files
-	EnrichFromBroadcast(ctx context.Context, execution *domain.ScriptExecution, broadcastPath string) error
+	Hydrate(ctx context.Context, output *forge.RunResult) (*forge.HydratedRunResult, error)
 }
 
 // Registry Update Ports
@@ -252,7 +246,7 @@ type ExecutionParser interface {
 // RegistryUpdater updates the deployment registry based on script execution
 type RegistryUpdater interface {
 	// PrepareUpdates analyzes the execution and prepares registry updates
-	PrepareUpdates(ctx context.Context, execution *domain.ScriptExecution) (*RegistryChanges, error)
+	PrepareUpdates(ctx context.Context, execution *forge.HydratedRunResult) (*RegistryChanges, error)
 	// ApplyUpdates applies the prepared changes to the registry
 	ApplyUpdates(ctx context.Context, changes *RegistryChanges) error
 	// HasChanges returns true if there are any changes to apply
@@ -261,8 +255,8 @@ type RegistryUpdater interface {
 
 // RegistryChanges represents changes to be made to the registry
 type RegistryChanges struct {
-	Deployments  []*domain.Deployment
-	Transactions []*domain.Transaction
+	Deployments  []*models.Deployment
+	Transactions []*models.Transaction
 	AddedCount   int
 	UpdatedCount int
 	HasChanges   bool

@@ -9,7 +9,7 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/sahilm/fuzzy"
 	"github.com/trebuchet-org/treb-cli/internal/config"
-	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -24,7 +24,7 @@ func NewSelectorAdapter(cfg *config.RuntimeConfig) (*SelectorAdapter, error) {
 }
 
 // SelectContract selects a contract from a list
-func (s *SelectorAdapter) SelectContract(ctx context.Context, contracts []*domain.ContractInfo, prompt string) (*domain.ContractInfo, error) {
+func (s *SelectorAdapter) SelectContract(ctx context.Context, contracts []*models.Contract, prompt string) (*models.Contract, error) {
 	// In non-interactive mode, we can't select
 	if s.config.NonInteractive {
 		return nil, fmt.Errorf("interactive selection not available in non-interactive mode")
@@ -68,7 +68,7 @@ func (s *SelectorAdapter) SelectContract(ctx context.Context, contracts []*domai
 }
 
 // formatContractOptions creates display strings for contract selection
-func formatContractOptions(contracts []*domain.ContractInfo) []string {
+func formatContractOptions(contracts []*models.Contract) []string {
 	options := make([]string, len(contracts))
 	for i, contract := range contracts {
 		// Format as "ContractName (path/to/file.sol)"
@@ -107,7 +107,7 @@ func createFuzzySearchFunc(items []string) func(input string, index int) bool {
 }
 
 // SelectDeployment selects a deployment from a list
-func (s *SelectorAdapter) SelectDeployment(ctx context.Context, deployments []*domain.Deployment, prompt string) (*domain.Deployment, error) {
+func (s *SelectorAdapter) SelectDeployment(ctx context.Context, deployments []*models.Deployment, prompt string) (*models.Deployment, error) {
 	// In non-interactive mode, we can't select
 	if s.config.NonInteractive {
 		return nil, fmt.Errorf("interactive selection not available in non-interactive mode")
@@ -151,7 +151,7 @@ func (s *SelectorAdapter) SelectDeployment(ctx context.Context, deployments []*d
 }
 
 // formatDeploymentOptions creates display strings for deployment selection
-func formatDeploymentOptions(deployments []*domain.Deployment) []string {
+func formatDeploymentOptions(deployments []*models.Deployment) []string {
 	options := make([]string, len(deployments))
 	for i, dep := range deployments {
 		// Format as "ContractName:Label (namespace/chainID) - 0xAddress"
@@ -170,7 +170,7 @@ func formatDeploymentOptions(deployments []*domain.Deployment) []string {
 
 		// Add deployment type if not singleton
 		typeStr := ""
-		if dep.Type != domain.SingletonDeployment {
+		if dep.Type != models.SingletonDeployment {
 			typeStr = color.New(color.FgYellow).Sprintf(" [%s]", dep.Type)
 		}
 

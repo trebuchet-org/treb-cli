@@ -7,6 +7,7 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/adapters/registry"
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
 // RegistryStoreAdapter wraps the internal registry.Manager to implement DeploymentStore
@@ -24,7 +25,7 @@ func NewRegistryStoreAdapter(cfg *config.RuntimeConfig) (*RegistryStoreAdapter, 
 }
 
 // GetDeployment retrieves a deployment by ID
-func (r *RegistryStoreAdapter) GetDeployment(ctx context.Context, id string) (*domain.Deployment, error) {
+func (r *RegistryStoreAdapter) GetDeployment(ctx context.Context, id string) (*models.Deployment, error) {
 	dep, err := r.manager.GetDeployment(id)
 	if err != nil {
 		return nil, domain.ErrNotFound
@@ -33,7 +34,7 @@ func (r *RegistryStoreAdapter) GetDeployment(ctx context.Context, id string) (*d
 }
 
 // GetDeploymentByAddress retrieves a deployment by chain ID and address
-func (r *RegistryStoreAdapter) GetDeploymentByAddress(ctx context.Context, chainID uint64, address string) (*domain.Deployment, error) {
+func (r *RegistryStoreAdapter) GetDeploymentByAddress(ctx context.Context, chainID uint64, address string) (*models.Deployment, error) {
 	dep, err := r.manager.GetDeploymentByAddress(chainID, address)
 	if err != nil {
 		return nil, domain.ErrNotFound
@@ -42,11 +43,11 @@ func (r *RegistryStoreAdapter) GetDeploymentByAddress(ctx context.Context, chain
 }
 
 // ListDeployments retrieves deployments matching the filter
-func (r *RegistryStoreAdapter) ListDeployments(ctx context.Context, filter domain.DeploymentFilter) ([]*domain.Deployment, error) {
+func (r *RegistryStoreAdapter) ListDeployments(ctx context.Context, filter domain.DeploymentFilter) ([]*models.Deployment, error) {
 	// Get all deployments and filter them
 	allDeps := r.manager.GetAllDeploymentsHydrated()
 
-	var result []*domain.Deployment
+	var result []*models.Deployment
 	for _, dep := range allDeps {
 		// Apply filters
 		if filter.Namespace != "" && dep.Namespace != filter.Namespace {
@@ -72,7 +73,7 @@ func (r *RegistryStoreAdapter) ListDeployments(ctx context.Context, filter domai
 }
 
 // SaveDeployment saves a deployment
-func (r *RegistryStoreAdapter) SaveDeployment(ctx context.Context, deployment *domain.Deployment) error {
+func (r *RegistryStoreAdapter) SaveDeployment(ctx context.Context, deployment *models.Deployment) error {
 	return r.manager.SaveDeployment(deployment)
 }
 
@@ -82,7 +83,7 @@ func (r *RegistryStoreAdapter) DeleteDeployment(ctx context.Context, id string) 
 }
 
 // UpdateDeploymentVerification updates the verification status of a deployment
-func (r *RegistryStoreAdapter) UpdateDeploymentVerification(ctx context.Context, id string, status domain.VerificationStatus) error {
+func (r *RegistryStoreAdapter) UpdateDeploymentVerification(ctx context.Context, id string, status models.VerificationStatus) error {
 	return r.manager.UpdateDeploymentVerification(id, status, nil)
 }
 
@@ -92,7 +93,7 @@ func (r *RegistryStoreAdapter) TagDeployment(ctx context.Context, id string, tag
 }
 
 // GetTransaction retrieves a transaction by ID
-func (r *RegistryStoreAdapter) GetTransaction(ctx context.Context, id string) (*domain.Transaction, error) {
+func (r *RegistryStoreAdapter) GetTransaction(ctx context.Context, id string) (*models.Transaction, error) {
 	tx, err := r.manager.GetTransaction(id)
 	if err != nil {
 		return nil, domain.ErrNotFound
@@ -101,7 +102,7 @@ func (r *RegistryStoreAdapter) GetTransaction(ctx context.Context, id string) (*
 }
 
 // SaveTransaction saves a transaction
-func (r *RegistryStoreAdapter) SaveTransaction(ctx context.Context, tx *domain.Transaction) error {
+func (r *RegistryStoreAdapter) SaveTransaction(ctx context.Context, tx *models.Transaction) error {
 	return r.manager.SaveTransaction(tx)
 }
 
@@ -128,7 +129,7 @@ func (r *RegistryStoreAdapter) RemoveSafeTransactions(ctx context.Context, safeT
 }
 
 // GetSafeTransaction retrieves a safe transaction by ID
-func (r *RegistryStoreAdapter) GetSafeTransaction(ctx context.Context, id string) (*domain.SafeTransaction, error) {
+func (r *RegistryStoreAdapter) GetSafeTransaction(ctx context.Context, id string) (*models.SafeTransaction, error) {
 	tx, err := r.manager.GetSafeTransaction(id)
 	if err != nil {
 		return nil, domain.ErrNotFound
@@ -137,17 +138,17 @@ func (r *RegistryStoreAdapter) GetSafeTransaction(ctx context.Context, id string
 }
 
 // SaveSafeTransaction saves a safe transaction
-func (r *RegistryStoreAdapter) SaveSafeTransaction(ctx context.Context, tx *domain.SafeTransaction) error {
+func (r *RegistryStoreAdapter) SaveSafeTransaction(ctx context.Context, tx *models.SafeTransaction) error {
 	return r.manager.SaveSafeTransaction(tx)
 }
 
 // GetPendingSafeTransactions returns all pending safe transactions
-func (r *RegistryStoreAdapter) GetPendingSafeTransactions(ctx context.Context) ([]*domain.SafeTransaction, error) {
+func (r *RegistryStoreAdapter) GetPendingSafeTransactions(ctx context.Context) ([]*models.SafeTransaction, error) {
 	return r.manager.GetPendingSafeTransactions()
 }
 
 // UpdateVerification updates verification info for a deployment
-func (r *RegistryStoreAdapter) UpdateVerification(ctx context.Context, deploymentID string, info domain.VerificationInfo) error {
+func (r *RegistryStoreAdapter) UpdateVerification(ctx context.Context, deploymentID string, info models.VerificationInfo) error {
 	dep, err := r.manager.GetDeployment(deploymentID)
 	if err != nil {
 		return err
@@ -161,14 +162,14 @@ func (r *RegistryStoreAdapter) UpdateVerification(ctx context.Context, deploymen
 }
 
 // UpdateSafeTransaction updates a safe transaction
-func (r *RegistryStoreAdapter) UpdateSafeTransaction(ctx context.Context, safeTx *domain.SafeTransaction) error {
+func (r *RegistryStoreAdapter) UpdateSafeTransaction(ctx context.Context, safeTx *models.SafeTransaction) error {
 	return r.manager.UpdateSafeTransaction(safeTx)
 }
 
 // ListTransactions lists transactions based on filter criteria
-func (r *RegistryStoreAdapter) ListTransactions(ctx context.Context, filter domain.TransactionFilter) ([]*domain.Transaction, error) {
+func (r *RegistryStoreAdapter) ListTransactions(ctx context.Context, filter domain.TransactionFilter) ([]*models.Transaction, error) {
 	all := r.manager.GetAllTransactions()
-	var result []*domain.Transaction
+	var result []*models.Transaction
 
 	for _, tx := range all {
 		// Apply filters
@@ -189,9 +190,9 @@ func (r *RegistryStoreAdapter) ListTransactions(ctx context.Context, filter doma
 }
 
 // ListSafeTransactions lists safe transactions based on filter criteria
-func (r *RegistryStoreAdapter) ListSafeTransactions(ctx context.Context, filter domain.SafeTransactionFilter) ([]*domain.SafeTransaction, error) {
+func (r *RegistryStoreAdapter) ListSafeTransactions(ctx context.Context, filter domain.SafeTransactionFilter) ([]*models.SafeTransaction, error) {
 	all := r.manager.GetAllSafeTransactions()
-	var result []*domain.SafeTransaction
+	var result []*models.SafeTransaction
 
 	for _, tx := range all {
 		// Apply filters
@@ -210,4 +211,3 @@ func (r *RegistryStoreAdapter) ListSafeTransactions(ctx context.Context, filter 
 
 	return result, nil
 }
-

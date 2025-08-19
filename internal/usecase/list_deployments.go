@@ -6,6 +6,7 @@ import (
 
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
 // ListDeploymentsParams contains parameters for listing deployments
@@ -13,7 +14,7 @@ type ListDeploymentsParams struct {
 	// Filter parameters (namespace and chainID come from RuntimeConfig)
 	ContractName string
 	Label        string
-	Type         domain.DeploymentType
+	Type         models.DeploymentType
 }
 
 // ListDeployments is the use case for listing deployments
@@ -80,7 +81,7 @@ func (uc *ListDeployments) Run(ctx context.Context, params ListDeploymentsParams
 }
 
 // sortDeployments sorts deployments by namespace, chain, contract name, and label
-func sortDeployments(deployments []*domain.Deployment) {
+func sortDeployments(deployments []*models.Deployment) {
 	sort.Slice(deployments, func(i, j int) bool {
 		// Sort by namespace
 		if deployments[i].Namespace != deployments[j].Namespace {
@@ -103,12 +104,12 @@ func sortDeployments(deployments []*domain.Deployment) {
 }
 
 // calculateSummary calculates summary statistics for deployments
-func calculateSummary(deployments []*domain.Deployment) DeploymentSummary {
+func calculateSummary(deployments []*models.Deployment) DeploymentSummary {
 	summary := DeploymentSummary{
 		Total:       len(deployments),
 		ByNamespace: make(map[string]int),
 		ByChain:     make(map[uint64]int),
-		ByType:      make(map[domain.DeploymentType]int),
+		ByType:      make(map[models.DeploymentType]int),
 	}
 
 	for _, dep := range deployments {

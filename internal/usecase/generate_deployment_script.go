@@ -7,6 +7,7 @@ import (
 
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
 // GenerateScriptParams contains parameters for generating a deployment script
@@ -30,6 +31,7 @@ type GenerateDeploymentScript struct {
 	config           *config.RuntimeConfig
 	contractResolver ContractResolver
 	abiParser        ABIParser
+	abiResolver      ABIResolver
 	scriptGenerator  ScriptGenerator
 	fileWriter       FileWriter
 	sink             ProgressSink
@@ -40,6 +42,7 @@ func NewGenerateDeploymentScript(
 	cfg *config.RuntimeConfig,
 	contractResolver ContractResolver,
 	abiParser ABIParser,
+	abiResolver ABIResolver,
 	scriptGenerator ScriptGenerator,
 	fileWriter FileWriter,
 	sink ProgressSink,
@@ -48,6 +51,7 @@ func NewGenerateDeploymentScript(
 		config:           cfg,
 		contractResolver: contractResolver,
 		abiParser:        abiParser,
+		abiResolver:      abiResolver,
 		scriptGenerator:  scriptGenerator,
 		fileWriter:       fileWriter,
 		sink:             sink,
@@ -57,14 +61,14 @@ func NewGenerateDeploymentScript(
 // Run executes the generate deployment script use case
 func (uc *GenerateDeploymentScript) Run(ctx context.Context, params GenerateScriptParams) (*GenerateScriptResult, error) {
 	// Resolve the main artifact
-	contractInfo, err := uc.contractResolver.ResolveContract(ctx, domain.ContractQuery{Query: &params.ArtifactRef})
+	contract, err := uc.contractResolver.ResolveContract(ctx, domain.ContractQuery{Query: &params.ArtifactRef})
 	if err != nil {
 		return nil, err
 	}
 
 	// Determine script type
 	scriptType := domain.ScriptTypeContract
-	if ok, err := uc.contractResolver.IsLibrary(ctx, contractInfo); err != nil {
+	if ok, err := uc.contractResolver.IsLibrary(ctx, contract); err != nil {
 		return nil, err
 	} else if ok {
 		scriptType = domain.ScriptTypeLibrary
@@ -83,20 +87,13 @@ func (uc *GenerateDeploymentScript) Run(ctx context.Context, params GenerateScri
 		Spinner: true,
 	})
 
-	contractABI, err := uc.abiParser.ParseContractABI(ctx, contractInfo.Name)
-	if err != nil {
-		// Non-fatal: assume no constructor
-		contractABI = &domain.ContractABI{
-			Name:           contractInfo.Name,
-			HasConstructor: false,
-		}
-	}
+	abi, err := uc.abiResolver.Get(ctx, contract.Artifact)
 
 	// Build artifact path if not already specified
-	artifactPath := fmt.Sprintf("%s:%s", contractInfo.Path, contractInfo.Name)
+	artifactPath := fmt.Sprintf("%s:%s", contract.Path, contract.Name)
 
 	// Determine script path
-	scriptPath := uc.determineScriptPath(contractInfo.Name, scriptType, params.CustomPath)
+	scriptPath := uc.determineScriptPath(contract.Name, scriptType, params.CustomPath)
 
 	// Ensure directory exists
 	if err := uc.fileWriter.EnsureDirectory(ctx, filepath.Dir(scriptPath)); err != nil {
@@ -115,23 +112,16 @@ func (uc *GenerateDeploymentScript) Run(ctx context.Context, params GenerateScri
 	// Build script template
 	template := &domain.ScriptTemplate{
 		Type:         scriptType,
-		ContractName: contractInfo.Name,
+		ContractName: contract.Name,
 		ArtifactPath: artifactPath,
 		Strategy:     params.Strategy,
 		ScriptPath:   scriptPath,
-	}
-
-	// Add constructor info
-	if contractABI.HasConstructor && contractABI.Constructor != nil {
-		template.ConstructorInfo = &domain.ConstructorInfo{
-			HasConstructor: true,
-			Parameters:     contractABI.Constructor.Inputs,
-		}
+		ABI:          abi,
 	}
 
 	// Handle proxy-specific logic
 	if params.UseProxy {
-		proxyInfo, err := uc.resolveProxyInfo(ctx, params.ProxyContract, contractABI)
+		proxyInfo, err := uc.resolveProxyInfo(ctx, params.ProxyContract)
 		if err != nil {
 			return nil, err
 		}
@@ -171,42 +161,31 @@ func (uc *GenerateDeploymentScript) Run(ctx context.Context, params GenerateScri
 }
 
 // resolveProxyInfo resolves proxy deployment information
-func (uc *GenerateDeploymentScript) resolveProxyInfo(ctx context.Context, proxyContract string, implABI *domain.ContractABI) (*domain.ScriptProxyInfo, error) {
-	var proxyInfo *domain.ContractInfo
+func (uc *GenerateDeploymentScript) resolveProxyInfo(ctx context.Context, proxyContract string) (*domain.ScriptProxyInfo, error) {
+	var proxy *models.Contract
 	var err error
 
 	if proxyContract != "" {
 		// Specific proxy provided
-		proxyInfo, err = uc.contractResolver.ResolveContract(ctx, domain.ContractQuery{Query: &proxyContract})
+		proxy, err = uc.contractResolver.ResolveContract(ctx, domain.ContractQuery{Query: &proxyContract})
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve proxy contract: %w", err)
 		}
 	} else {
 		// Use the contract resolver's interactive selection
-		proxyInfo, err = uc.contractResolver.SelectProxyContract(ctx)
+		proxy, err = uc.contractResolver.SelectProxyContract(ctx)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	// Build proxy artifact path
-	proxyArtifact := fmt.Sprintf("%s:%s", proxyInfo.Path, proxyInfo.Name)
+	proxyArtifact := fmt.Sprintf("%s:%s", proxy.Path, proxy.Name)
 
 	result := &domain.ScriptProxyInfo{
-		ProxyName:     proxyInfo.Name,
-		ProxyPath:     proxyInfo.Path,
+		ProxyName:     proxy.Name,
+		ProxyPath:     proxy.Path,
 		ProxyArtifact: proxyArtifact,
-	}
-
-	// Check for initializer method
-	if implABI != nil {
-		initMethod := uc.abiParser.FindInitializeMethod(implABI)
-		if initMethod != nil {
-			result.InitializerInfo = &domain.InitializerInfo{
-				MethodName: initMethod.Name,
-				Parameters: initMethod.Inputs,
-			}
-		}
 	}
 
 	return result, nil

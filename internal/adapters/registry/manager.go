@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
 const (
@@ -23,12 +23,12 @@ const (
 // Manager handles all registry operations for the new data model
 type Manager struct {
 	rootDir          string
+	lookups          *LookupIndexes
 	mu               sync.RWMutex
-	deployments      map[string]*domain.Deployment
-	transactions     map[string]*domain.Transaction
-	safeTransactions map[string]*domain.SafeTransaction
-	lookups          *domain.LookupIndexes
-	solidityRegistry domain.SolidityRegistry
+	deployments      map[string]*models.Deployment
+	transactions     map[string]*models.Transaction
+	safeTransactions map[string]*models.SafeTransaction
+	solidityRegistry SolidityRegistry
 }
 
 // NewManager creates a new registry manager
@@ -42,23 +42,23 @@ func NewManager(rootDir string) (*Manager, error) {
 
 	m := &Manager{
 		rootDir:          rootDir,
-		deployments:      make(map[string]*domain.Deployment),
-		transactions:     make(map[string]*domain.Transaction),
-		safeTransactions: make(map[string]*domain.SafeTransaction),
-		lookups: &domain.LookupIndexes{
+		deployments:      make(map[string]*models.Deployment),
+		transactions:     make(map[string]*models.Transaction),
+		safeTransactions: make(map[string]*models.SafeTransaction),
+		lookups: &LookupIndexes{
 			Version:     "1.0.0",
 			ByAddress:   make(map[uint64]map[string]string),
 			ByNamespace: make(map[string]map[uint64][]string),
 			ByContract:  make(map[string][]string),
-			Proxies: domain.ProxyIndexes{
+			Proxies: ProxyIndexes{
 				Implementations: make(map[string][]string),
 				ProxyToImpl:     make(map[string]string),
 			},
-			Pending: domain.PendingItems{
+			Pending: PendingItems{
 				SafeTxs: []string{},
 			},
 		},
-		solidityRegistry: make(domain.SolidityRegistry),
+		solidityRegistry: make(SolidityRegistry),
 	}
 
 	// Load existing data
@@ -103,7 +103,7 @@ func (m *Manager) load() error {
 // loadFile loads a JSON file from the .treb directory
 func (m *Manager) loadFile(filename string, v interface{}) error {
 	path := filepath.Join(m.rootDir, TrebDir, filename)
-	
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
@@ -140,7 +140,7 @@ func (m *Manager) save() error {
 // saveFile saves data to a JSON file in the .treb directory
 func (m *Manager) saveFile(filename string, v interface{}) error {
 	path := filepath.Join(m.rootDir, TrebDir, filename)
-	
+
 	data, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return err
@@ -183,7 +183,7 @@ func (m *Manager) rebuildLookups() {
 		m.lookups.ByContract[dep.ContractName] = append(m.lookups.ByContract[dep.ContractName], id)
 
 		// Proxy indexes
-		if dep.Type == domain.ProxyDeployment && dep.ProxyInfo != nil {
+		if dep.Type == models.ProxyDeployment && dep.ProxyInfo != nil {
 			implAddr := strings.ToLower(dep.ProxyInfo.Implementation)
 			m.lookups.Proxies.Implementations[implAddr] = append(
 				m.lookups.Proxies.Implementations[implAddr], id,
@@ -195,14 +195,14 @@ func (m *Manager) rebuildLookups() {
 	// Rebuild pending items
 	m.lookups.Pending.SafeTxs = []string{}
 	for id, tx := range m.safeTransactions {
-		if tx.Status == domain.SafeTxStatusQueued {
+		if tx.Status == models.SafeTxStatusQueued {
 			m.lookups.Pending.SafeTxs = append(m.lookups.Pending.SafeTxs, id)
 		}
 	}
 }
 
 // GetDeployment retrieves a deployment by ID
-func (m *Manager) GetDeployment(id string) (*domain.Deployment, error) {
+func (m *Manager) GetDeployment(id string) (*models.Deployment, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -217,7 +217,7 @@ func (m *Manager) GetDeployment(id string) (*domain.Deployment, error) {
 }
 
 // GetDeploymentByAddress retrieves a deployment by chain ID and address
-func (m *Manager) GetDeploymentByAddress(chainID uint64, address string) (*domain.Deployment, error) {
+func (m *Manager) GetDeploymentByAddress(chainID uint64, address string) (*models.Deployment, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -235,12 +235,12 @@ func (m *Manager) GetDeploymentByAddress(chainID uint64, address string) (*domai
 }
 
 // GetAllDeployments returns all deployments
-func (m *Manager) GetAllDeployments() map[string]*domain.Deployment {
+func (m *Manager) GetAllDeployments() map[string]*models.Deployment {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	// Return a copy to avoid mutations
-	result := make(map[string]*domain.Deployment)
+	result := make(map[string]*models.Deployment)
 	for k, v := range m.deployments {
 		clone := *v
 		result[k] = &clone
@@ -249,14 +249,14 @@ func (m *Manager) GetAllDeployments() map[string]*domain.Deployment {
 }
 
 // GetAllDeploymentsHydrated returns all deployments with linked data
-func (m *Manager) GetAllDeploymentsHydrated() []*domain.Deployment {
+func (m *Manager) GetAllDeploymentsHydrated() []*models.Deployment {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	var result []*domain.Deployment
+	var result []*models.Deployment
 	for _, dep := range m.deployments {
 		clone := *dep
-		
+
 		// Link transaction if available
 		if dep.TransactionID != "" {
 			if tx, exists := m.transactions[dep.TransactionID]; exists {
@@ -266,7 +266,7 @@ func (m *Manager) GetAllDeploymentsHydrated() []*domain.Deployment {
 		}
 
 		// Link implementation for proxies
-		if dep.Type == domain.ProxyDeployment && dep.ProxyInfo != nil {
+		if dep.Type == models.ProxyDeployment && dep.ProxyInfo != nil {
 			implID, err := m.findImplementationID(dep.ChainID, dep.ProxyInfo.Implementation)
 			if err == nil && implID != "" {
 				if impl, exists := m.deployments[implID]; exists {
@@ -298,7 +298,7 @@ func (m *Manager) findImplementationID(chainID uint64, address string) (string, 
 }
 
 // SaveDeployment saves or updates a deployment
-func (m *Manager) SaveDeployment(deployment *domain.Deployment) error {
+func (m *Manager) SaveDeployment(deployment *models.Deployment) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -319,7 +319,7 @@ func (m *Manager) SaveDeployment(deployment *domain.Deployment) error {
 }
 
 // SaveTransaction saves or updates a transaction
-func (m *Manager) SaveTransaction(tx *domain.Transaction) error {
+func (m *Manager) SaveTransaction(tx *models.Transaction) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -354,7 +354,7 @@ func (m *Manager) DeleteDeployment(id string) error {
 }
 
 // UpdateDeploymentVerification updates the verification status of a deployment
-func (m *Manager) UpdateDeploymentVerification(id string, status domain.VerificationStatus, verifiers map[string]domain.VerifierStatus) error {
+func (m *Manager) UpdateDeploymentVerification(id string, status models.VerificationStatus, verifiers map[string]models.VerifierStatus) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -364,7 +364,7 @@ func (m *Manager) UpdateDeploymentVerification(id string, status domain.Verifica
 	}
 
 	dep.Verification.Status = status
-	if status == domain.VerificationStatusVerified {
+	if status == models.VerificationStatusVerified {
 		now := time.Now()
 		dep.Verification.VerifiedAt = &now
 	}
@@ -402,7 +402,7 @@ func (m *Manager) TagDeployment(id string, tag string) error {
 }
 
 // GetTransaction retrieves a transaction by ID
-func (m *Manager) GetTransaction(id string) (*domain.Transaction, error) {
+func (m *Manager) GetTransaction(id string) (*models.Transaction, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -417,7 +417,7 @@ func (m *Manager) GetTransaction(id string) (*domain.Transaction, error) {
 }
 
 // GetSafeTransaction retrieves a safe transaction by ID
-func (m *Manager) GetSafeTransaction(id string) (*domain.SafeTransaction, error) {
+func (m *Manager) GetSafeTransaction(id string) (*models.SafeTransaction, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -432,7 +432,7 @@ func (m *Manager) GetSafeTransaction(id string) (*domain.SafeTransaction, error)
 }
 
 // SaveSafeTransaction saves or updates a safe transaction
-func (m *Manager) SaveSafeTransaction(tx *domain.SafeTransaction) error {
+func (m *Manager) SaveSafeTransaction(tx *models.SafeTransaction) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -452,11 +452,11 @@ func (m *Manager) SaveSafeTransaction(tx *domain.SafeTransaction) error {
 }
 
 // GetPendingSafeTransactions returns all pending safe transactions
-func (m *Manager) GetPendingSafeTransactions() ([]*domain.SafeTransaction, error) {
+func (m *Manager) GetPendingSafeTransactions() ([]*models.SafeTransaction, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	var result []*domain.SafeTransaction
+	var result []*models.SafeTransaction
 	for _, id := range m.lookups.Pending.SafeTxs {
 		if tx, exists := m.safeTransactions[id]; exists {
 			clone := *tx
@@ -468,11 +468,11 @@ func (m *Manager) GetPendingSafeTransactions() ([]*domain.SafeTransaction, error
 }
 
 // GetAllTransactions returns all transactions
-func (m *Manager) GetAllTransactions() map[string]*domain.Transaction {
+func (m *Manager) GetAllTransactions() map[string]*models.Transaction {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	transactions := make(map[string]*domain.Transaction)
+	transactions := make(map[string]*models.Transaction)
 	for k, v := range m.transactions {
 		transactions[k] = v
 	}
@@ -480,11 +480,11 @@ func (m *Manager) GetAllTransactions() map[string]*domain.Transaction {
 }
 
 // GetAllSafeTransactions returns all safe transactions
-func (m *Manager) GetAllSafeTransactions() map[string]*domain.SafeTransaction {
+func (m *Manager) GetAllSafeTransactions() map[string]*models.SafeTransaction {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	safeTransactions := make(map[string]*domain.SafeTransaction)
+	safeTransactions := make(map[string]*models.SafeTransaction)
 	for k, v := range m.safeTransactions {
 		safeTransactions[k] = v
 	}
@@ -539,7 +539,7 @@ func (m *Manager) RemoveSafeTransaction(safeTxHash string) error {
 }
 
 // UpdateSafeTransaction updates an existing safe transaction
-func (m *Manager) UpdateSafeTransaction(tx *domain.SafeTransaction) error {
+func (m *Manager) UpdateSafeTransaction(tx *models.SafeTransaction) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

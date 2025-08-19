@@ -439,7 +439,7 @@ func (r *ScriptRenderer) PrintDeploymentBanner(config *usecase.ScriptExecutionCo
 	fmt.Fprintf(r.out, "%s", bold.Sprintf("🚀 Running Deployment Script\n"))
 	fmt.Fprintf(r.out, "%s\n", gray.Sprint(strings.Repeat("─", 50)))
 	fmt.Fprintf(r.out, "  Script:    %s\n", cyan.Sprint(config.Script.Name))
-	fmt.Fprintf(r.out, "  Network:   %s\n", blue.Sprint(config.Network))
+	fmt.Fprintf(r.out, "  Network:   %s %s\n", blue.Sprint(config.Network.Name), gray.Sprintf("(%s)", config.Network.ChainID))
 	fmt.Fprintf(r.out, "  Namespace: %s\n", purple.Sprint(config.Namespace))
 
 	if config.DryRun {

@@ -1,30 +1,88 @@
 package domain
 
-// EventType represents the type of deployment event
+import (
+	"fmt"
+
+	"github.com/ethereum/go-ethereum/common"
+)
+
 type EventType string
 
 const (
-	// EventContractDeployed is emitted when a contract is deployed
-	EventContractDeployed EventType = "ContractDeployed"
-	
-	// EventProxyDeployed is emitted when a proxy contract is deployed
-	EventProxyDeployed EventType = "ProxyDeployed"
-	
-	// EventCreateXContractCreation is emitted by CreateX when creating a contract
-	EventCreateXContractCreation EventType = "CreateXContractCreation"
+	// Proxy events only - Treb events now come from generated bindings
+	EventTypeAdminChanged   EventType = "AdminChanged"
+	EventTypeBeaconUpgraded EventType = "BeaconUpgraded"
+	EventTypeUpgraded       EventType = "Upgraded"
+	EventTypeUnknown        EventType = "Unknown"
 )
 
-// DeploymentEvent represents a deployment-related event from the blockchain
-type DeploymentEvent struct {
-	EventType      EventType
-	Address        string
-	Implementation string // For proxy deployments
-	ContractName   string
-	Namespace      string
-	ChainID        uint64
-	Deployer       string
-	TxHash         string
-	Label          string
-	Salt           [32]byte
-	TransactionID  [32]byte // Internal transaction ID from script
+// ParsedEvent is the interface for all parsed events
+type ParsedEvent interface {
+	Type() EventType
+	String() string
+}
+
+// AdminChangedEvent represents a proxy admin change
+type AdminChangedEvent struct {
+	ProxyAddress  common.Address
+	PreviousAdmin common.Address
+	NewAdmin      common.Address
+	TransactionID common.Hash
+}
+
+func (e *AdminChangedEvent) Type() EventType {
+	return EventTypeAdminChanged
+}
+
+func (e *AdminChangedEvent) String() string {
+	return fmt.Sprintf("Admin changed: proxy=%s, old=%s, new=%s",
+		e.ProxyAddress.Hex()[:10]+"...", e.PreviousAdmin.Hex()[:10]+"...", e.NewAdmin.Hex()[:10]+"...")
+}
+
+// BeaconUpgradedEvent represents a beacon upgrade
+type BeaconUpgradedEvent struct {
+	ProxyAddress  common.Address
+	Beacon        common.Address
+	TransactionID common.Hash
+}
+
+func (e *BeaconUpgradedEvent) Type() EventType {
+	return EventTypeBeaconUpgraded
+}
+
+func (e *BeaconUpgradedEvent) String() string {
+	return fmt.Sprintf("Beacon upgraded: proxy=%s, beacon=%s",
+		e.ProxyAddress.Hex()[:10]+"...", e.Beacon.Hex()[:10]+"...")
+}
+
+// UpgradedEvent represents a proxy implementation upgrade
+type UpgradedEvent struct {
+	ProxyAddress          common.Address
+	ImplementationAddress common.Address
+	TransactionID         common.Hash
+}
+
+func (e *UpgradedEvent) Type() EventType {
+	return EventTypeUpgraded
+}
+
+func (e *UpgradedEvent) String() string {
+	return fmt.Sprintf("Implementation upgraded: proxy=%s, impl=%s",
+		e.ProxyAddress.Hex()[:10]+"...", e.ImplementationAddress.Hex()[:10]+"...")
+}
+
+// UnknownEvent represents an unknown event type
+type UnknownEvent struct {
+	Address       common.Address
+	Topics        []common.Hash
+	Data          string
+	TransactionID common.Hash
+}
+
+func (e *UnknownEvent) Type() EventType {
+	return EventTypeUnknown
+}
+
+func (e *UnknownEvent) String() string {
+	return fmt.Sprintf("Unknown event: %s", e.Address.Hex()[:10]+"...")
 }

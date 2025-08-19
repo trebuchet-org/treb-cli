@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
 // Sentinel errors for domain operations
@@ -44,12 +47,12 @@ func (e NoContractsMatchErr) Error() string {
 
 type AmbiguousFilterErr struct {
 	Query   ContractQuery
-	Matches []*ContractInfo
+	Matches []*models.Contract
 }
 
 func (e AmbiguousFilterErr) Error() string {
 	// Sort contracts by artifact path for consistent output
-	sortedContracts := make([]*ContractInfo, len(e.Matches))
+	sortedContracts := make([]*models.Contract, len(e.Matches))
 	copy(sortedContracts, e.Matches)
 
 	sort.Slice(sortedContracts, func(i, j int) bool {
@@ -67,4 +70,22 @@ func (e AmbiguousFilterErr) Error() string {
 
 	return fmt.Sprintf("multiple contracts found matching %v - use full path:contract format to disambiguate:\n%s",
 		e.Query, strings.Join(suggestions, "\n"))
+}
+
+type MissingArtifactErr struct {
+	Contract *models.Contract
+}
+
+func (e MissingArtifactErr) Error() string {
+	return fmt.Sprintf("Missing Artifact for contract: %s:s", e.Contract.Path, e.Contract.Name)
+
+}
+
+type NoDeploymentErr struct {
+	ChainID uint64
+	Address common.Address
+}
+
+func (e NoDeploymentErr) Error() string {
+	return fmt.Sprintf("No deployment registered at %s on chain %d", e.Address.String(), e.ChainID)
 }

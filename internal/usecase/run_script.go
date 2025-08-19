@@ -3,10 +3,10 @@ package usecase
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/forge"
 )
 
 // RunScriptParams contains parameters for running a script
@@ -23,7 +23,7 @@ type RunScriptParams struct {
 
 // RunScriptResult contains the result of running a script
 type RunScriptResult struct {
-	Execution       *domain.ScriptExecution
+	RunResult       *forge.HydratedRunResult
 	RegistryChanges *RegistryChanges
 	Success         bool
 	Error           error
@@ -35,12 +35,12 @@ type RunScript struct {
 	scriptResolver ScriptResolver
 	paramResolver  ParameterResolver
 	// paramPrompter   ParameterPrompter
-	scriptExecutor  ScriptExecutor
-	executionParser ExecutionParser
-	registryUpdater RegistryUpdater
-	envBuilder      EnvironmentBuilder
-	libraryResolver LibraryResolver
-	progress        ProgressSink
+	forgeScriptRunner ForgeScriptRunner
+	runResultHydrator RunResultHydrator
+	registryUpdater   RegistryUpdater
+	envBuilder        EnvironmentBuilder
+	libraryResolver   LibraryResolver
+	progress          ProgressSink
 }
 
 // NewRunScript creates a new RunScript use case
@@ -49,8 +49,8 @@ func NewRunScript(
 	scriptResolver ScriptResolver,
 	paramResolver ParameterResolver,
 	// paramPrompter ParameterPrompter,
-	scriptExecutor ScriptExecutor,
-	executionParser ExecutionParser,
+	forgeScriptRunner ForgeScriptRunner,
+	runResultHydrator RunResultHydrator,
 	registryUpdater RegistryUpdater,
 	envBuilder EnvironmentBuilder,
 	libraryResolver LibraryResolver,
@@ -61,19 +61,19 @@ func NewRunScript(
 		scriptResolver: scriptResolver,
 		paramResolver:  paramResolver,
 		// paramPrompter:   paramPrompter,
-		scriptExecutor:  scriptExecutor,
-		executionParser: executionParser,
-		registryUpdater: registryUpdater,
-		envBuilder:      envBuilder,
-		libraryResolver: libraryResolver,
-		progress:        progress,
+		forgeScriptRunner: forgeScriptRunner,
+		runResultHydrator: runResultHydrator,
+		registryUpdater:   registryUpdater,
+		envBuilder:        envBuilder,
+		libraryResolver:   libraryResolver,
+		progress:          progress,
 	}
 }
 
 // Run executes the script with the given parameters
 func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScriptResult, error) {
 	progress := params.Progress
-	startTime := time.Now()
+	// startTime := time.Now()
 
 	// Initialize result
 	result := &RunScriptResult{
@@ -127,32 +127,6 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 		return result, nil
 	}
 
-	// Convert config.TrebConfig to domain.TrebConfig
-	var trebConfig *domain.TrebConfig
-	if uc.config.TrebConfig != nil {
-		trebConfig = &domain.TrebConfig{
-			Senders: make(map[string]domain.SenderConfig),
-		}
-		for name, sender := range uc.config.TrebConfig.Senders {
-			domainSender := domain.SenderConfig{
-				Type:           sender.Type,
-				Account:        sender.Account,
-				PrivateKey:     sender.PrivateKey,
-				Safe:           sender.Safe,
-				DerivationPath: sender.DerivationPath,
-				Signer:         sender.Signer, // Map legacy v1 field
-			}
-			if sender.Proposer != nil {
-				domainSender.Proposer = &domain.ProposerConfig{
-					Type:           sender.Proposer.Type,
-					PrivateKey:     sender.Proposer.PrivateKey,
-					DerivationPath: sender.Proposer.DerivationPath,
-				}
-			}
-			trebConfig.Senders[name] = domainSender
-		}
-	}
-
 	// Get deployed libraries
 	libraries, err := uc.libraryResolver.GetDeployedLibraries(
 		ctx,
@@ -164,47 +138,56 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 		uc.progress.Info(fmt.Sprintf("Warning: Failed to load deployed libraries: %v", err))
 		libraries = []LibraryReference{}
 	}
+	libraryStrings := make([]string, len(libraries))
+	for i, library := range libraries {
+		libraryStrings[i] = fmt.Sprintf(
+			"%s:%s:%s",
+			library.Path,
+			library.Name,
+			library.Address,
+		)
+	}
 
 	// Build environment
-	envParams := BuildEnvironmentParams{
-		Network:           uc.config.Network.Name,
-		Namespace:         uc.config.Namespace,
-		TrebConfig:        uc.config.TrebConfig,
-		Parameters:        resolvedParams,
-		DryRun:            params.DryRun,
-		DeployedLibraries: libraries,
-	}
-	environment, err := uc.envBuilder.BuildEnvironment(ctx, envParams)
-	if err != nil {
-		result.Error = fmt.Errorf("failed to build environment: %w", err)
-		return result, nil
-	}
-
-	execConfig := ScriptExecutionConfig{
-		Network:     uc.config.Network,
-		Namespace:   uc.config.Namespace,
-		Script:      script,
-		Environment: environment,
-		DryRun:      params.DryRun,
-		Debug:       params.Debug,
-		DebugJSON:   params.DebugJSON,
-		Progress:    progress,
-	}
+	// envParams := BuildEnvironmentParams{
+	// 	Network:           uc.config.Network.Name,
+	// 	Namespace:         uc.config.Namespace,
+	// 	TrebConfig:        uc.config.TrebConfig,
+	// 	Parameters:        resolvedParams,
+	// 	DryRun:            params.DryRun,
+	// 	DeployedLibraries: libraries,
+	// }
+	// environment, err := uc.envBuilder.BuildEnvironment(ctx, envParams)
+	// if err != nil {
+	// 	result.Error = fmt.Errorf("failed to build environment: %w", err)
+	// 	return result, nil
+	// }
 
 	// Stage 3: Execute script
-	progress.OnProgress(ctx, ProgressEvent{
-		Stage:    string(StageSimulating),
-		Message:  "Simulating",
-		Metadata: &execConfig,
+	// progress.OnProgress(ctx, ProgressEvent{
+	// 	Stage:    string(StageSimulating),
+	// 	Message:  "Simulating",
+	// 	Metadata: &execConfig,
+	// })
+
+	runResult, err := uc.forgeScriptRunner.RunScript(ctx, RunScriptConfig{
+		Network:    uc.config.Network,
+		Namespace:  uc.config.Namespace,
+		Script:     script,
+		Parameters: resolvedParams,
+		Libraries:  libraryStrings,
+		DryRun:     params.DryRun,
+		Debug:      params.Debug,
+		DebugJSON:  params.DebugJSON,
+		Progress:   progress,
 	})
 
-	output, err := uc.scriptExecutor.Execute(ctx, execConfig)
 	if err != nil {
 		result.Error = fmt.Errorf("script execution failed: %w", err)
 		return result, nil
 	}
 
-	if !output.Success {
+	if !runResult.Success {
 		result.Error = fmt.Errorf("script execution failed")
 		return result, nil
 	}
@@ -214,42 +197,45 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 		Stage:   string(StageParsing),
 		Message: "Parsing",
 	})
-	execution, err := uc.executionParser.ParseExecution(ctx, output)
 
+	hydratedRunResult, err := uc.runResultHydrator.Hydrate(ctx, runResult)
 	if err != nil {
 		result.Error = fmt.Errorf("failed to parse execution: %w", err)
 		return result, nil
 	}
 
 	// Set execution metadata
-	execution.ScriptPath = script.Path
-	execution.ScriptName = script.Name
-	execution.Network = *uc.config.Network
-	execution.Namespace = uc.config.Namespace
-	execution.DryRun = params.DryRun
-	execution.ExecutedAt = startTime
-	execution.ExecutionTime = time.Since(startTime)
+	// execution.Script = script
+	// execution.Network = uc.config.Network.Name
+	// execution.ChainID = uc.config.Network.ChainID
+	// These fields don't exist in the current ScriptExecution struct
+	// execution.ScriptPath = script.Path
+	// execution.ScriptName = script.Name
+	// execution.Namespace = uc.config.Namespace
+	// execution.DryRun = params.DryRun
+	// execution.ExecutedAt = startTime
+	// execution.ExecutionTime = time.Since(startTime)
 
 	// Enrich from broadcast if available
-	if output.BroadcastPath != "" && !params.DryRun {
-		if err := uc.executionParser.EnrichFromBroadcast(ctx, execution, output.BroadcastPath); err != nil {
-			// Log warning but continue
-			progress.OnProgress(ctx, ProgressEvent{
-				Stage:   string(StageParsing),
-				Message: fmt.Sprintf("Warning: Failed to enrich from broadcast: %v", err),
-			})
-		}
-	}
+	// if runResult.BroadcastPath != "" && !params.DryRun {
+	// 	if err := uc.runResultHydrator.EnrichFromBroadcast(ctx, execution, output.BroadcastPath); err != nil {
+	// 		// Log warning but continue
+	// 		progress.OnProgress(ctx, ProgressEvent{
+	// 			Stage:   string(StageParsing),
+	// 			Message: fmt.Sprintf("Warning: Failed to enrich from broadcast: %v", err),
+	// 		})
+	// 	}
+	// }
 
-	result.Execution = execution
+	result.RunResult = hydratedRunResult
 
 	// Stage 5: Update registry (if not dry run)
-	if !params.DryRun && len(execution.Deployments) > 0 {
+	if !params.DryRun && len(result.RunResult.Deployments) > 0 {
 		progress.OnProgress(ctx, ProgressEvent{
 			Stage: string(StageParsing),
 		})
 
-		changes, err := uc.registryUpdater.PrepareUpdates(ctx, execution)
+		changes, err := uc.registryUpdater.PrepareUpdates(ctx, result.RunResult)
 		if err != nil {
 			result.Error = fmt.Errorf("failed to prepare registry updates: %w", err)
 			return result, nil

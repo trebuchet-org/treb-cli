@@ -6,7 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/trebuchet-org/treb-cli/internal/config"
-	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -44,7 +44,7 @@ func (c *ClientAdapter) SetChain(ctx context.Context, chainID uint64) error {
 }
 
 // GetTransactionExecutionInfo checks if a Safe transaction is executed
-func (c *ClientAdapter) GetTransactionExecutionInfo(ctx context.Context, safeTxHash string) (*domain.SafeExecutionInfo, error) {
+func (c *ClientAdapter) GetTransactionExecutionInfo(ctx context.Context, safeTxHash string) (*models.SafeExecutionInfo, error) {
 	// Convert hex string to hash
 	hash := common.HexToHash(safeTxHash)
 
@@ -54,7 +54,7 @@ func (c *ClientAdapter) GetTransactionExecutionInfo(ctx context.Context, safeTxH
 		return nil, fmt.Errorf("failed to check transaction execution: %w", err)
 	}
 
-	info := &domain.SafeExecutionInfo{
+	info := &models.SafeExecutionInfo{
 		IsExecuted: isExecuted,
 	}
 
@@ -70,7 +70,7 @@ func (c *ClientAdapter) GetTransactionExecutionInfo(ctx context.Context, safeTxH
 
 		// Convert confirmations
 		for _, conf := range tx.Confirmations {
-			info.ConfirmationDetails = append(info.ConfirmationDetails, domain.Confirmation{
+			info.ConfirmationDetails = append(info.ConfirmationDetails, models.Confirmation{
 				Signer:    conf.Owner,
 				Signature: conf.Signature,
 				// Note: Safe API doesn't provide confirmation time
@@ -82,7 +82,7 @@ func (c *ClientAdapter) GetTransactionExecutionInfo(ctx context.Context, safeTxH
 }
 
 // GetTransactionDetails retrieves full Safe transaction details
-func (c *ClientAdapter) GetTransactionDetails(ctx context.Context, safeTxHash string) (*domain.SafeTransaction, error) {
+func (c *ClientAdapter) GetTransactionDetails(ctx context.Context, safeTxHash string) (*models.SafeTransaction, error) {
 	// Convert hex string to hash
 	hash := common.HexToHash(safeTxHash)
 
@@ -93,7 +93,7 @@ func (c *ClientAdapter) GetTransactionDetails(ctx context.Context, safeTxHash st
 	}
 
 	// Convert to domain type
-	safeTx := &domain.SafeTransaction{
+	safeTx := &models.SafeTransaction{
 		SafeTxHash:            safeTxHash,
 		ChainID:               c.chainID,
 		SafeAddress:           tx.Safe,
@@ -107,7 +107,7 @@ func (c *ClientAdapter) GetTransactionDetails(ctx context.Context, safeTxHash st
 
 	// Add confirmations
 	for _, conf := range tx.Confirmations {
-		safeTx.Confirmations = append(safeTx.Confirmations, domain.Confirmation{
+		safeTx.Confirmations = append(safeTx.Confirmations, models.Confirmation{
 			Signer:    conf.Owner,
 			Signature: conf.Signature,
 		})
@@ -117,12 +117,12 @@ func (c *ClientAdapter) GetTransactionDetails(ctx context.Context, safeTxHash st
 
 	// Check execution status
 	if tx.IsExecuted {
-		safeTx.Status = domain.SafeTxStatusExecuted
+		safeTx.Status = models.SafeTxStatusExecuted
 		if tx.TransactionHash != nil && *tx.TransactionHash != "" {
 			safeTx.ExecutionTxHash = *tx.TransactionHash
 		}
 	} else {
-		safeTx.Status = domain.SafeTxStatusQueued
+		safeTx.Status = models.SafeTxStatusQueued
 	}
 
 	return safeTx, nil
@@ -130,4 +130,3 @@ func (c *ClientAdapter) GetTransactionDetails(ctx context.Context, safeTxHash st
 
 // Ensure the adapter implements the interface
 var _ usecase.SafeClient = (*ClientAdapter)(nil)
-

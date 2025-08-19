@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -40,7 +41,7 @@ func (r *LibraryResolver) GetDeployedLibraries(
 	// Filter for library deployments
 	for _, deployment := range deployments {
 		// Check if this is a library deployment
-		if deployment.Type == domain.LibraryDeployment {
+		if deployment.Type == models.LibraryDeployment {
 			// Format the library reference
 			if deployment.Artifact.Path != "" {
 				lib := usecase.LibraryReference{
@@ -55,4 +56,3 @@ func (r *LibraryResolver) GetDeployedLibraries(
 
 	return libraries, nil
 }
-

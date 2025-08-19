@@ -82,3 +82,4 @@ func (b *BuilderAdapter) encodeLibraries(libraries []usecase.LibraryReference) s
 	}
 	return strings.Join(encoded, " ")
 }
+

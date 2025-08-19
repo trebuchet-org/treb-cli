@@ -3,7 +3,9 @@ package config
 import (
 	"crypto/ecdsa"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -11,22 +13,28 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
 // SenderInitConfig represents a single sender configuration for the new Senders library
 // This matches the Solidity SenderInitConfig struct in Senders.sol
 type SenderInitConfig struct {
+	BaseConfig   domain.SenderConfig
 	Name         string
 	Account      common.Address
 	SenderType   [8]byte // bytes8 magic constant
 	CanBroadcast bool
 	Config       []byte // ABI-encoded config data
-	BaseConfig   domain.SenderConfig
 }
 
-// SenderConfigs represents the complete array of sender configurations
-type SenderConfigs struct {
-	Configs []SenderInitConfig
+type SenderHWConfig struct {
+	UseLedger       bool
+	UseTrezor       bool
+	DerivationPaths []string
+}
+
+type SendersManager struct {
+	config *domain.TrebConfig
 }
 
 // Magic constants for sender types - these match the constants in Senders.sol
@@ -44,57 +52,150 @@ var (
 	SENDER_TYPE_TREZOR      = bitwiseOr(calculateBytes8("trezor"), SENDER_TYPE_HARDWARE_WALLET)
 )
 
-// BuildSenderConfigs builds sender configurations from the treb config
-func BuildSenderConfigs(trebConfig *TrebConfig) (*SenderConfigs, error) {
-	configs := &SenderConfigs{
-		Configs: []SenderInitConfig{},
+func NewSendersManager(config *domain.TrebConfig) *SendersManager {
+	return &SendersManager{
+		config: config,
+	}
+}
+
+func (m *SendersManager) BuildSenderScriptConfig(
+	script *models.Artifact,
+) (*domain.SenderScriptConfig, error) {
+	var err error
+	var senders []string
+	if senders, err = m.getSendersFromScript(script); err != nil {
+		return nil, err
+
+	}
+	if len(senders) == 0 {
+		return &domain.SenderScriptConfig{}, nil
 	}
 
-	// Debug: check if senders exist
-	if len(trebConfig.Senders) == 0 {
-		return nil, fmt.Errorf("no senders configured in profile")
+	executionHWConfig := m.getSendersHWConfig(senders)
+	if executionHWConfig.UseLedger && executionHWConfig.UseTrezor {
+		return nil, fmt.Errorf("can not use ledger and trezor senders in the same script, configure @custom:senders")
 	}
 
-	// Get sorted sender IDs for consistent ordering
-	var senderIDs []string
-	for id := range trebConfig.Senders {
-		senderIDs = append(senderIDs, id)
+	var safeSigners []string
+	for _, sender := range senders {
+		if m.config.Senders[sender].Type == domain.SenderTypeSafe {
+			safeSigners = append(safeSigners, m.config.Senders[sender].Signer)
+		}
 	}
-	sort.Strings(senderIDs)
+	signersHWConfig := m.getSendersHWConfig(safeSigners)
 
-	// First pass: Build all non-Safe senders
-	var safeSenders []string
-	for _, id := range senderIDs {
-		sender := trebConfig.Senders[id]
-		if sender.Type == "safe" {
-			safeSenders = append(safeSenders, id)
+	if signersHWConfig.UseLedger && executionHWConfig.UseLedger {
+		return nil, fmt.Errorf("can not use ledger in both main sender and safe signer, configure @custom:senders")
+	}
+
+	if signersHWConfig.UseTrezor && executionHWConfig.UseTrezor {
+		return nil, fmt.Errorf("can not use ledger in both main sender and safe signer, configure @custom:senders")
+	}
+
+	senders = append(senders, safeSigners...)
+	sort.Strings(senders)
+
+	var senderInitConfigs []SenderInitConfig
+	if senderInitConfigs, err = m.buildSenderInitConfigs(senders); err != nil {
+		return nil, err
+	}
+	var encodedSenderInitConfigs string
+	if encodedSenderInitConfigs, err = m.encodeSenderInitConfigs(senderInitConfigs); err != nil {
+		return nil, err
+	}
+
+	return &domain.SenderScriptConfig{
+		UseLedger:       executionHWConfig.UseLedger,
+		UseTrezor:       executionHWConfig.UseTrezor,
+		DerivationPaths: executionHWConfig.DerivationPaths,
+		EncodedConfig:   encodedSenderInitConfigs,
+	}, nil
+}
+
+func (m *SendersManager) getSendersFromScript(script *models.Artifact) ([]string, error) {
+	// Extract devdoc from metadata
+	var devdoc struct {
+		Methods map[string]map[string]interface{} `json:"methods"`
+	}
+
+	if err := json.Unmarshal(script.Metadata.Output.DevDoc, &devdoc); err != nil {
+		return nil, fmt.Errorf("failed to parse devdoc: %w", err)
+	}
+
+	// Look for run() method
+	runMethod, exists := devdoc.Methods["run()"]
+	if !exists {
+		return nil, nil // No run() method found
+	}
+
+	// Look for custom:senders tag
+	customSenders, exists := runMethod["custom:senders"]
+	if !exists {
+		return nil, nil // No custom:senders tag found
+	}
+
+	sendersStr, ok := customSenders.(string)
+	if !ok {
+		return nil, fmt.Errorf("custom:senders is not a string")
+	}
+
+	var senders []string
+
+	// Split by comma and trim spaces
+	parts := strings.Split(sendersStr, ",")
+
+	for _, part := range parts {
+		name := strings.TrimSpace(part)
+		if name == "" {
 			continue
 		}
 
-		senderConfig, err := buildSenderInitConfig(id, sender, trebConfig.Senders)
-		if err != nil {
-			return nil, fmt.Errorf("failed to build sender %s: %w", id, err)
+		// Validate name (alphanumeric and underscore)
+		if !regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`).MatchString(name) {
+			return nil, fmt.Errorf("invalid sender name: %s", name)
 		}
 
-		configs.Configs = append(configs.Configs, *senderConfig)
+		senders = append(senders, name)
 	}
 
-	// Second pass: Build Safe senders (after their signers are built)
-	for _, id := range safeSenders {
-		sender := trebConfig.Senders[id]
-		senderConfig, err := buildSenderInitConfig(id, sender, trebConfig.Senders)
-		if err != nil {
-			return nil, fmt.Errorf("failed to build sender %s: %w", id, err)
+	return senders, nil
+}
+
+func (m *SendersManager) getSendersHWConfig(senders []string) SenderHWConfig {
+	hwConfig := SenderHWConfig{
+		UseLedger:       false,
+		UseTrezor:       false,
+		DerivationPaths: []string{},
+	}
+	for _, senderKey := range senders {
+		sender := m.config.Senders[senderKey]
+		hwConfig.UseTrezor = hwConfig.UseTrezor || sender.Type == domain.SenderTypeTrezor
+		hwConfig.UseLedger = hwConfig.UseLedger || sender.Type == domain.SenderTypeLedger
+
+		if sender.Type == domain.SenderTypeTrezor || sender.Type == domain.SenderTypeLedger {
+			hwConfig.DerivationPaths = append(hwConfig.DerivationPaths, sender.DerivationPath)
 		}
 
-		configs.Configs = append(configs.Configs, *senderConfig)
 	}
+	return hwConfig
+}
 
+func (m *SendersManager) buildSenderInitConfigs(senders []string) ([]SenderInitConfig, error) {
+	configs := []SenderInitConfig{}
+	for _, sender := range senders {
+		var config *SenderInitConfig
+		var err error
+		if config, err = m.buildSenderInitConfig(sender); err != nil {
+			return nil, err
+		}
+
+		configs = append(configs, *config)
+	}
 	return configs, nil
 }
 
-// buildSenderInitConfig builds a single sender configuration using the new format
-func buildSenderInitConfig(id string, sender SenderConfig, allSenders map[string]SenderConfig) (*SenderInitConfig, error) {
+func (m *SendersManager) buildSenderInitConfig(senderKey string) (*SenderInitConfig, error) {
+	sender := m.config.Senders[senderKey]
 	switch sender.Type {
 	case "private_key":
 		// Parse private key to get address
@@ -112,7 +213,7 @@ func buildSenderInitConfig(id string, sender SenderConfig, allSenders map[string
 		}
 
 		return &SenderInitConfig{
-			Name:         id,
+			Name:         senderKey,
 			Account:      key.Address,
 			SenderType:   SENDER_TYPE_IN_MEMORY, // Use in-memory for private key senders
 			CanBroadcast: true,
@@ -133,7 +234,7 @@ func buildSenderInitConfig(id string, sender SenderConfig, allSenders map[string
 		}
 
 		// Validate that the signer exists in the sender configs
-		_, exists := allSenders[sender.Signer]
+		_, exists := m.config.Senders[sender.Signer]
 		if !exists {
 			return nil, fmt.Errorf("safe signer '%s' not found in sender configurations", sender.Signer)
 		}
@@ -147,7 +248,7 @@ func buildSenderInitConfig(id string, sender SenderConfig, allSenders map[string
 		}
 
 		return &SenderInitConfig{
-			Name:         id,
+			Name:         senderKey,
 			Account:      safe,
 			SenderType:   SENDER_TYPE_GNOSIS_SAFE,
 			CanBroadcast: true,
@@ -175,7 +276,7 @@ func buildSenderInitConfig(id string, sender SenderConfig, allSenders map[string
 		}
 
 		return &SenderInitConfig{
-			Name:         id,
+			Name:         senderKey,
 			Account:      address,
 			SenderType:   SENDER_TYPE_LEDGER,
 			CanBroadcast: true,
@@ -196,7 +297,7 @@ func buildSenderInitConfig(id string, sender SenderConfig, allSenders map[string
 		}
 
 		return &SenderInitConfig{
-			Name:         id,
+			Name:         senderKey,
 			Account:      common.HexToAddress(sender.Address),
 			SenderType:   SENDER_TYPE_LEDGER,
 			CanBroadcast: true,
@@ -207,9 +308,7 @@ func buildSenderInitConfig(id string, sender SenderConfig, allSenders map[string
 	}
 }
 
-// EncodeSenderConfigs encodes the sender configs for passing as environment variable
-func EncodeSenderConfigs(configs *SenderConfigs) (string, error) {
-
+func (m *SendersManager) encodeSenderInitConfigs(senderInitConfigs []SenderInitConfig) (string, error) {
 	// Use standard ABI encoding for array of structs - this is much more reliable than manual encoding
 	tupleType, err := abi.NewType("tuple[]", "", []abi.ArgumentMarshaling{
 		{Name: "name", Type: "string"},
@@ -223,7 +322,7 @@ func EncodeSenderConfigs(configs *SenderConfigs) (string, error) {
 	}
 
 	arrayArgs := abi.Arguments{{Type: tupleType}}
-	encoded, err := arrayArgs.Pack(configs.Configs)
+	encoded, err := arrayArgs.Pack(senderInitConfigs)
 	if err != nil {
 		return "", fmt.Errorf("failed to encode sender configs: %w", err)
 	}
@@ -249,8 +348,6 @@ func bitwiseOr(a, b [8]byte) [8]byte {
 	}
 	return result
 }
-
-// Helper functions for encoding constructor arguments
 
 // parsePrivateKey parses a private key string and returns the address
 func parsePrivateKey(privateKeyHex string) (*struct {

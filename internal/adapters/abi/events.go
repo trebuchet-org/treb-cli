@@ -1,4 +1,4 @@
-package events
+package abi
 
 import (
 	"encoding/hex"
@@ -8,36 +8,25 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/abi/bindings"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/forge"
+	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/bindings"
+	"github.com/trebuchet-org/treb-cli/internal/domain/forge"
 )
 
-// EventParser parses events from forge script output
-type EventParser struct {
-	trebContract *bindings.Treb
-}
-
-// NewEventParser creates a new event parser
-func NewEventParser() *EventParser {
-	return &EventParser{
-		trebContract: bindings.NewTreb(),
-	}
-}
-
 // ParseEvents parses all events from script output
-func (ep *EventParser) ParseEvents(output *forge.ScriptOutput) ([]interface{}, error) {
+func (p *Parser) ParseEvents(output *forge.ScriptOutput) ([]any, error) {
 	if output == nil || output.RawLogs == nil {
 		return nil, nil
 	}
 
-	var parsedEvents []interface{}
+	var parsedEvents []any
 
 	for _, rawLog := range output.RawLogs {
 		if len(rawLog.Topics) == 0 {
 			continue
 		}
 
-		event, err := ep.ParseEvent(rawLog)
+		event, err := p.ParseEvent(rawLog)
 		if err != nil {
 			// Skip unknown events silently
 			if !strings.Contains(err.Error(), "unknown event signature") {
@@ -54,13 +43,13 @@ func (ep *EventParser) ParseEvents(output *forge.ScriptOutput) ([]interface{}, e
 }
 
 // ParseEvent parses a single event log
-func (ep *EventParser) ParseEvent(rawLog forge.EventLog) (interface{}, error) {
+func (p *Parser) ParseEvent(rawLog forge.EventLog) (any, error) {
 	if len(rawLog.Topics) == 0 {
 		return nil, fmt.Errorf("log has no topics")
 	}
 
 	// Convert to types.Log for the generated unpacker
-	typesLog, err := ep.convertToTypesLog(rawLog)
+	typesLog, err := p.convertToTypesLog(rawLog)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert log: %w", err)
 	}
@@ -79,20 +68,20 @@ func (ep *EventParser) ParseEvent(rawLog forge.EventLog) (interface{}, error) {
 		eventSig common.Hash
 		parser   func(*types.Log) (interface{}, error)
 	}{
-		{must(ep.trebContract.GetEventID("ContractDeployed")), func(log *types.Log) (interface{}, error) {
-			return ep.trebContract.UnpackContractDeployedEvent(log)
+		{must(p.trebContract.GetEventID("ContractDeployed")), func(log *types.Log) (interface{}, error) {
+			return p.trebContract.UnpackContractDeployedEvent(log)
 		}},
-		{must(ep.trebContract.GetEventID("DeploymentCollision")), func(log *types.Log) (interface{}, error) {
-			return ep.trebContract.UnpackDeploymentCollisionEvent(log)
+		{must(p.trebContract.GetEventID("DeploymentCollision")), func(log *types.Log) (interface{}, error) {
+			return p.trebContract.UnpackDeploymentCollisionEvent(log)
 		}},
-		{must(ep.trebContract.GetEventID("SafeTransactionQueued")), func(log *types.Log) (interface{}, error) {
-			return ep.trebContract.UnpackSafeTransactionQueuedEvent(log)
+		{must(p.trebContract.GetEventID("SafeTransactionQueued")), func(log *types.Log) (interface{}, error) {
+			return p.trebContract.UnpackSafeTransactionQueuedEvent(log)
 		}},
-		{must(ep.trebContract.GetEventID("SafeTransactionExecuted")), func(log *types.Log) (interface{}, error) {
-			return ep.trebContract.UnpackSafeTransactionExecutedEvent(log)
+		{must(p.trebContract.GetEventID("SafeTransactionExecuted")), func(log *types.Log) (interface{}, error) {
+			return p.trebContract.UnpackSafeTransactionExecutedEvent(log)
 		}},
-		{must(ep.trebContract.GetEventID("TransactionSimulated")), func(log *types.Log) (interface{}, error) {
-			return ep.trebContract.UnpackTransactionSimulatedEvent(log)
+		{must(p.trebContract.GetEventID("TransactionSimulated")), func(log *types.Log) (interface{}, error) {
+			return p.trebContract.UnpackTransactionSimulatedEvent(log)
 		}},
 	}
 
@@ -104,7 +93,7 @@ func (ep *EventParser) ParseEvent(rawLog forge.EventLog) (interface{}, error) {
 	}
 
 	// Try proxy events (not in ABI)
-	proxyEvent, err := ep.parseProxyEvent(rawLog)
+	proxyEvent, err := p.parseProxyEvent(rawLog)
 	if err == nil {
 		return proxyEvent, nil
 	}
@@ -113,7 +102,7 @@ func (ep *EventParser) ParseEvent(rawLog forge.EventLog) (interface{}, error) {
 }
 
 // convertToTypesLog converts EventLog to types.Log
-func (ep *EventParser) convertToTypesLog(rawLog forge.EventLog) (*types.Log, error) {
+func (p *Parser) convertToTypesLog(rawLog forge.EventLog) (*types.Log, error) {
 	// Decode hex data
 	data, err := hex.DecodeString(strings.TrimPrefix(rawLog.Data, "0x"))
 	if err != nil {
@@ -128,7 +117,7 @@ func (ep *EventParser) convertToTypesLog(rawLog forge.EventLog) (*types.Log, err
 }
 
 // parseProxyEvent attempts to parse proxy-related events
-func (ep *EventParser) parseProxyEvent(rawLog forge.EventLog) (interface{}, error) {
+func (p *Parser) parseProxyEvent(rawLog forge.EventLog) (interface{}, error) {
 	if len(rawLog.Topics) == 0 {
 		return nil, fmt.Errorf("no topics")
 	}
@@ -144,35 +133,35 @@ func (ep *EventParser) parseProxyEvent(rawLog forge.EventLog) (interface{}, erro
 
 	switch eventSig {
 	case upgradedTopic:
-		return ep.parseUpgradedEvent(rawLog)
+		return p.parseUpgradedEvent(rawLog)
 	case adminChangedTopic:
-		return ep.parseAdminChangedEvent(rawLog)
+		return p.parseAdminChangedEvent(rawLog)
 	case beaconUpgradedTopic:
-		return ep.parseBeaconUpgradedEvent(rawLog)
+		return p.parseBeaconUpgradedEvent(rawLog)
 	}
 
 	return nil, fmt.Errorf("not a proxy event")
 }
 
 // parseUpgradedEvent parses an Upgraded event
-func (ep *EventParser) parseUpgradedEvent(log forge.EventLog) (*UpgradedEvent, error) {
+func (p *Parser) parseUpgradedEvent(log forge.EventLog) (*domain.UpgradedEvent, error) {
 	if len(log.Topics) < 2 {
 		return nil, fmt.Errorf("invalid Upgraded event: not enough topics")
 	}
 
-	return &UpgradedEvent{
+	return &domain.UpgradedEvent{
 		ProxyAddress:          log.Address,
 		ImplementationAddress: common.HexToAddress(log.Topics[1].Hex()),
 	}, nil
 }
 
 // parseAdminChangedEvent parses an AdminChanged event
-func (ep *EventParser) parseAdminChangedEvent(log forge.EventLog) (*AdminChangedEvent, error) {
+func (p *Parser) parseAdminChangedEvent(log forge.EventLog) (*domain.AdminChangedEvent, error) {
 	if len(log.Topics) < 3 {
 		return nil, fmt.Errorf("invalid AdminChanged event: not enough topics")
 	}
 
-	return &AdminChangedEvent{
+	return &domain.AdminChangedEvent{
 		ProxyAddress:  log.Address,
 		PreviousAdmin: common.HexToAddress(log.Topics[1].Hex()),
 		NewAdmin:      common.HexToAddress(log.Topics[2].Hex()),
@@ -180,19 +169,19 @@ func (ep *EventParser) parseAdminChangedEvent(log forge.EventLog) (*AdminChanged
 }
 
 // parseBeaconUpgradedEvent parses a BeaconUpgraded event
-func (ep *EventParser) parseBeaconUpgradedEvent(log forge.EventLog) (*BeaconUpgradedEvent, error) {
+func (p *Parser) parseBeaconUpgradedEvent(log forge.EventLog) (*domain.BeaconUpgradedEvent, error) {
 	if len(log.Topics) < 2 {
 		return nil, fmt.Errorf("invalid BeaconUpgraded event: not enough topics")
 	}
 
-	return &BeaconUpgradedEvent{
+	return &domain.BeaconUpgradedEvent{
 		ProxyAddress: log.Address,
 		Beacon:       common.HexToAddress(log.Topics[1].Hex()),
 	}, nil
 }
 
 // ExtractDeploymentEvents filters deployment events from all events
-func ExtractDeploymentEvents(allEvents []interface{}) []*bindings.TrebContractDeployed {
+func ExtractDeploymentEvents(allEvents []any) []*bindings.TrebContractDeployed {
 	var deploymentEvents []*bindings.TrebContractDeployed
 
 	for _, event := range allEvents {
@@ -205,7 +194,7 @@ func ExtractDeploymentEvents(allEvents []interface{}) []*bindings.TrebContractDe
 }
 
 // ExtractCollisionEvents filters deployment collision events from all events
-func ExtractCollisionEvents(allEvents []interface{}) []*bindings.TrebDeploymentCollision {
+func ExtractCollisionEvents(allEvents []any) []*bindings.TrebDeploymentCollision {
 	var collisionEvents []*bindings.TrebDeploymentCollision
 
 	for _, event := range allEvents {

@@ -9,6 +9,7 @@ import (
 
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -25,10 +26,10 @@ func NewInternalVerifier(cfg *config.RuntimeConfig) (*InternalVerifier, error) {
 }
 
 // Verify performs contract verification
-func (v *InternalVerifier) Verify(ctx context.Context, deployment *domain.Deployment, network *domain.Network) error {
+func (v *InternalVerifier) Verify(ctx context.Context, deployment *models.Deployment, network *domain.Network) error {
 	// Initialize verification status
 	if deployment.Verification.Verifiers == nil {
-		deployment.Verification.Verifiers = make(map[string]domain.VerifierStatus)
+		deployment.Verification.Verifiers = make(map[string]models.VerifierStatus)
 	}
 
 	// Track verification errors
@@ -37,13 +38,13 @@ func (v *InternalVerifier) Verify(ctx context.Context, deployment *domain.Deploy
 	// Verify on Etherscan
 	etherscanErr := v.verifyOnEtherscan(deployment, network)
 	if etherscanErr != nil {
-		deployment.Verification.Verifiers["etherscan"] = domain.VerifierStatus{
+		deployment.Verification.Verifiers["etherscan"] = models.VerifierStatus{
 			Status: "failed",
 			Reason: etherscanErr.Error(),
 		}
 		verificationErrors = append(verificationErrors, fmt.Sprintf("etherscan: %v", etherscanErr))
 	} else {
-		deployment.Verification.Verifiers["etherscan"] = domain.VerifierStatus{
+		deployment.Verification.Verifiers["etherscan"] = models.VerifierStatus{
 			Status: "verified",
 			URL:    v.buildEtherscanURL(network, deployment.Address),
 		}
@@ -52,13 +53,13 @@ func (v *InternalVerifier) Verify(ctx context.Context, deployment *domain.Deploy
 	// Verify on Sourcify
 	sourcifyErr := v.verifyOnSourceify(deployment, network)
 	if sourcifyErr != nil {
-		deployment.Verification.Verifiers["sourcify"] = domain.VerifierStatus{
+		deployment.Verification.Verifiers["sourcify"] = models.VerifierStatus{
 			Status: "failed",
 			Reason: sourcifyErr.Error(),
 		}
 		verificationErrors = append(verificationErrors, fmt.Sprintf("sourcify: %v", sourcifyErr))
 	} else {
-		deployment.Verification.Verifiers["sourcify"] = domain.VerifierStatus{
+		deployment.Verification.Verifiers["sourcify"] = models.VerifierStatus{
 			Status: "verified",
 			URL:    v.buildSourceifyURL(network, deployment.Address),
 		}
@@ -68,7 +69,7 @@ func (v *InternalVerifier) Verify(ctx context.Context, deployment *domain.Deploy
 	v.updateOverallStatus(deployment)
 
 	// Return error if all verifications failed
-	if deployment.Verification.Status == domain.VerificationStatusFailed {
+	if deployment.Verification.Status == models.VerificationStatusFailed {
 		return fmt.Errorf("all verifications failed: %s", strings.Join(verificationErrors, "; "))
 	}
 
@@ -76,7 +77,7 @@ func (v *InternalVerifier) Verify(ctx context.Context, deployment *domain.Deploy
 }
 
 // verifyOnEtherscan performs verification on Etherscan
-func (v *InternalVerifier) verifyOnEtherscan(deployment *domain.Deployment, network *domain.Network) error {
+func (v *InternalVerifier) verifyOnEtherscan(deployment *models.Deployment, network *domain.Network) error {
 	// Get constructor args from deployment strategy
 	constructorArgs := deployment.DeploymentStrategy.ConstructorArgs
 	if constructorArgs != "" && strings.HasPrefix(constructorArgs, "0x") {
@@ -120,7 +121,7 @@ func (v *InternalVerifier) verifyOnEtherscan(deployment *domain.Deployment, netw
 }
 
 // verifyOnSourceify performs verification on Sourcify
-func (v *InternalVerifier) verifyOnSourceify(deployment *domain.Deployment, network *domain.Network) error {
+func (v *InternalVerifier) verifyOnSourceify(deployment *models.Deployment, network *domain.Network) error {
 	// Get contract path from artifact
 	contractPath := fmt.Sprintf("%s:%s", deployment.Artifact.Path, deployment.ContractName)
 
@@ -196,9 +197,9 @@ func (v *InternalVerifier) buildSourceifyURL(network *domain.Network, address st
 }
 
 // updateOverallStatus updates the overall verification status based on individual verifiers
-func (v *InternalVerifier) updateOverallStatus(deployment *domain.Deployment) {
+func (v *InternalVerifier) updateOverallStatus(deployment *models.Deployment) {
 	if deployment.Verification.Verifiers == nil {
-		deployment.Verification.Status = domain.VerificationStatusUnverified
+		deployment.Verification.Status = models.VerificationStatusUnverified
 		return
 	}
 
@@ -216,7 +217,7 @@ func (v *InternalVerifier) updateOverallStatus(deployment *domain.Deployment) {
 	}
 
 	if verifiedCount == totalCount {
-		deployment.Verification.Status = domain.VerificationStatusVerified
+		deployment.Verification.Status = models.VerificationStatusVerified
 		// Set the explorer URL to the first verified one
 		for _, status := range deployment.Verification.Verifiers {
 			if status.Status == "verified" && status.URL != "" {
@@ -225,9 +226,9 @@ func (v *InternalVerifier) updateOverallStatus(deployment *domain.Deployment) {
 			}
 		}
 	} else if verifiedCount > 0 {
-		deployment.Verification.Status = domain.VerificationStatusPartial
+		deployment.Verification.Status = models.VerificationStatusPartial
 	} else if failedCount == totalCount {
-		deployment.Verification.Status = domain.VerificationStatusFailed
+		deployment.Verification.Status = models.VerificationStatusFailed
 		// Combine all failure reasons
 		var reasons []string
 		for verifier, status := range deployment.Verification.Verifiers {
@@ -237,12 +238,12 @@ func (v *InternalVerifier) updateOverallStatus(deployment *domain.Deployment) {
 		}
 		deployment.Verification.Reason = strings.Join(reasons, "; ")
 	} else {
-		deployment.Verification.Status = domain.VerificationStatusUnverified
+		deployment.Verification.Status = models.VerificationStatusUnverified
 	}
 }
 
 // GetVerificationStatus checks the verification status of a contract
-func (v *InternalVerifier) GetVerificationStatus(ctx context.Context, deployment *domain.Deployment) (*domain.VerificationInfo, error) {
+func (v *InternalVerifier) GetVerificationStatus(ctx context.Context, deployment *models.Deployment) (*models.VerificationInfo, error) {
 	// This would check the explorer API for verification status
 	// For now, return the stored status
 	return &deployment.Verification, nil
@@ -250,4 +251,3 @@ func (v *InternalVerifier) GetVerificationStatus(ctx context.Context, deployment
 
 // Ensure it implements the interface
 var _ usecase.ContractVerifier = (*InternalVerifier)(nil)
-

@@ -47,3 +47,42 @@ func NormalizeConfigKey(key string) ConfigKey {
 	}
 	return ConfigKey(key)
 }
+
+// Network represents network configuration
+type Network struct {
+	ChainID     uint64 `json:"chainId"`
+	Name        string `json:"name"`
+	RPCURL      string `json:"rpcUrl"`
+	ExplorerURL string `json:"explorerUrl,omitempty"`
+}
+
+// TrebConfig represents treb-specific configuration
+type TrebConfig struct {
+	Senders map[string]SenderConfig `json:"senders" toml:"senders"`
+}
+
+type SenderType string
+
+var (
+	SenderTypeLedger     SenderType = "ledger"
+	SenderTypeTrezor     SenderType = "trezor"
+	SenderTypeSafe       SenderType = "safe"
+	SenderTypePrivateKey SenderType = "private_key"
+)
+
+// SenderConfig represents a sender configuration
+type SenderConfig struct {
+	Type           SenderType `toml:"type"`
+	Address        string     `toml:"address,omitempty"`
+	PrivateKey     string     `toml:"private_key,omitempty"`
+	Safe           string     `toml:"safe,omitempty"`
+	Signer         string     `toml:"signer,omitempty"`          // For Safe senders
+	DerivationPath string     `toml:"derivation_path,omitempty"` // For Ledger senders
+}
+
+type SenderScriptConfig struct {
+	UseLedger       bool
+	UseTrezor       bool
+	DerivationPaths []string
+	EncodedConfig   string
+}

@@ -13,18 +13,23 @@ import (
 
 // ScriptGeneratorAdapter generates deployment scripts using Go templates
 type ScriptGeneratorAdapter struct {
-	abiParser usecase.ABIParser
+	abiResolver usecase.ABIResolver
+	abiParser   usecase.ABIParser
 }
 
 // NewScriptGeneratorAdapter creates a new script generator adapter
-func NewScriptGeneratorAdapter(cfg *config.RuntimeConfig, abiParser usecase.ABIParser) (*ScriptGeneratorAdapter, error) {
+func NewScriptGeneratorAdapter(cfg *config.RuntimeConfig, abiParser usecase.ABIParser, abiResolver usecase.ABIResolver) (*ScriptGeneratorAdapter, error) {
 	return &ScriptGeneratorAdapter{
-		abiParser: abiParser,
+		abiParser:   abiParser,
+		abiResolver: abiResolver,
 	}, nil
 }
 
 // GenerateScript generates a deployment script from a template
 func (g *ScriptGeneratorAdapter) GenerateScript(ctx context.Context, tmpl *domain.ScriptTemplate) (string, error) {
+	if tmpl.ABI == nil {
+		return "", fmt.Errorf("ABI is nil")
+	}
 	switch tmpl.Type {
 	case domain.ScriptTypeLibrary:
 		return g.generateLibraryScript(tmpl)
@@ -86,7 +91,7 @@ func (g *ScriptGeneratorAdapter) generateContractScript(tmpl *domain.ScriptTempl
             .setLabel(vm.envOr("LABEL", string("")))
             .deploy`, strategyMethod, tmpl.ArtifactPath)
 
-	hasConstructor := tmpl.ConstructorInfo != nil && tmpl.ConstructorInfo.HasConstructor && len(tmpl.ConstructorInfo.Parameters) > 0
+	hasConstructor := tmpl.ABI.Constructor.Name != ""
 	if hasConstructor {
 		deployCall += "(_getConstructorArgs());"
 	} else {
@@ -96,13 +101,7 @@ func (g *ScriptGeneratorAdapter) generateContractScript(tmpl *domain.ScriptTempl
 	// Generate constructor args if needed
 	constructorSection := ""
 	if hasConstructor {
-		abi := &domain.ContractABI{
-			HasConstructor: true,
-			Constructor: &domain.Constructor{
-				Inputs: tmpl.ConstructorInfo.Parameters,
-			},
-		}
-		vars, encode := g.abiParser.GenerateConstructorArgs(abi)
+		vars, encode := g.abiParser.GenerateConstructorArgs(tmpl.ABI)
 		constructorSection = fmt.Sprintf(`
 
     /// @notice Get constructor arguments
@@ -172,12 +171,9 @@ func (g *ScriptGeneratorAdapter) generateProxyScript(tmpl *domain.ScriptTemplate
 
 	// Generate initializer content
 	initializerContent := ""
-	if tmpl.ProxyInfo.InitializerInfo != nil && len(tmpl.ProxyInfo.InitializerInfo.Parameters) > 0 {
-		method := &domain.Method{
-			Name:   tmpl.ProxyInfo.InitializerInfo.MethodName,
-			Inputs: tmpl.ProxyInfo.InitializerInfo.Parameters,
-		}
-		vars, encode := g.abiParser.GenerateInitializerArgs(method)
+	initialize := g.abiParser.FindInitializeMethod(tmpl.ABI)
+	if initialize != nil {
+		vars, encode := g.abiParser.GenerateInitializerArgs(initialize)
 		initializerContent = fmt.Sprintf(`
         // TODO: Update these initializer arguments
 %s
@@ -263,3 +259,4 @@ contract Deploy{{.ContractName}}Proxy is TrebScript {
 
 // Ensure the adapter implements the interface
 var _ usecase.ScriptGenerator = (*ScriptGeneratorAdapter)(nil)
+

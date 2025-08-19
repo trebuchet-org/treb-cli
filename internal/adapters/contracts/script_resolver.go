@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -27,7 +28,7 @@ func NewScriptResolver(projectRoot string, resolver usecase.ContractResolver) *S
 }
 
 // ResolveScript resolves a script path or name to script info
-func (r *ScriptResolver) ResolveScript(ctx context.Context, pathOrName string) (*domain.ContractInfo, error) {
+func (r *ScriptResolver) ResolveScript(ctx context.Context, pathOrName string) (*models.Contract, error) {
 	script := "^script"
 	return r.resolver.ResolveContract(ctx, domain.ContractQuery{
 		Query:       &pathOrName,
@@ -36,7 +37,7 @@ func (r *ScriptResolver) ResolveScript(ctx context.Context, pathOrName string) (
 }
 
 // GetScriptParameters extracts parameters from a script's artifact
-func (r *ScriptResolver) GetScriptParameters(ctx context.Context, script *domain.ContractInfo) ([]domain.ScriptParameter, error) {
+func (r *ScriptResolver) GetScriptParameters(ctx context.Context, script *models.Contract) ([]domain.ScriptParameter, error) {
 	// The script already has the artifact path from when it was resolved
 	if script.ArtifactPath == "" {
 		return nil, fmt.Errorf("script artifact path not set")
@@ -53,7 +54,7 @@ func (r *ScriptResolver) GetScriptParameters(ctx context.Context, script *domain
 }
 
 // loadArtifact loads an artifact from disk
-func (r *ScriptResolver) loadArtifact(artifactPath string) (*domain.Artifact, error) {
+func (r *ScriptResolver) loadArtifact(artifactPath string) (*models.Artifact, error) {
 	// Handle relative paths
 	fullPath := artifactPath
 	if !filepath.IsAbs(artifactPath) {
@@ -65,7 +66,7 @@ func (r *ScriptResolver) loadArtifact(artifactPath string) (*domain.Artifact, er
 		return nil, fmt.Errorf("failed to read artifact at %s: %w", fullPath, err)
 	}
 
-	var artifact domain.Artifact
+	var artifact models.Artifact
 	if err := json.Unmarshal(data, &artifact); err != nil {
 		return nil, fmt.Errorf("failed to parse artifact: %w", err)
 	}
@@ -74,7 +75,7 @@ func (r *ScriptResolver) loadArtifact(artifactPath string) (*domain.Artifact, er
 }
 
 // parseParametersFromArtifact extracts parameters from artifact metadata
-func (r *ScriptResolver) parseParametersFromArtifact(artifact *domain.Artifact) ([]domain.ScriptParameter, error) {
+func (r *ScriptResolver) parseParametersFromArtifact(artifact *models.Artifact) ([]domain.ScriptParameter, error) {
 	// DevDoc is already parsed in the artifact metadata
 	if len(artifact.Metadata.Output.DevDoc) == 0 {
 		return nil, nil

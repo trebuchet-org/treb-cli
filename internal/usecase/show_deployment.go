@@ -7,6 +7,7 @@ import (
 
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
 // ShowDeploymentParams contains parameters for showing a deployment
@@ -35,7 +36,7 @@ func NewShowDeployment(cfg *config.RuntimeConfig, store DeploymentStore, sink Pr
 }
 
 // Run executes the show deployment use case
-func (uc *ShowDeployment) Run(ctx context.Context, params ShowDeploymentParams) (*domain.Deployment, error) {
+func (uc *ShowDeployment) Run(ctx context.Context, params ShowDeploymentParams) (*models.Deployment, error) {
 	// Report progress
 	uc.sink.OnProgress(ctx, ProgressEvent{
 		Stage:   "loading",
@@ -49,7 +50,7 @@ func (uc *ShowDeployment) Run(ctx context.Context, params ShowDeploymentParams) 
 	}
 
 	// If it's a proxy and we should resolve implementation
-	if params.ResolveProxy && deployment.Type == domain.ProxyDeployment && deployment.ProxyInfo != nil {
+	if params.ResolveProxy && deployment.Type == models.ProxyDeployment && deployment.ProxyInfo != nil {
 		uc.sink.OnProgress(ctx, ProgressEvent{
 			Stage:   "resolving",
 			Message: "Resolving proxy implementation",
@@ -77,7 +78,7 @@ func (uc *ShowDeployment) Run(ctx context.Context, params ShowDeploymentParams) 
 }
 
 // resolveDeployment resolves a deployment reference to a deployment
-func (uc *ShowDeployment) resolveDeployment(ctx context.Context, params ShowDeploymentParams) (*domain.Deployment, error) {
+func (uc *ShowDeployment) resolveDeployment(ctx context.Context, params ShowDeploymentParams) (*models.Deployment, error) {
 	ref := params.DeploymentRef
 
 	// Get namespace and chainID from runtime config
