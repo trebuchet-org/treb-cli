@@ -26,7 +26,7 @@ func (p *Parser) ParseEvents(output *forge.ScriptOutput) ([]any, error) {
 			continue
 		}
 
-		event, err := p.ParseEvent(rawLog)
+		event, err := p.ParseEvent(&rawLog)
 		if err != nil {
 			// Skip unknown events silently
 			if !strings.Contains(err.Error(), "unknown event signature") {
@@ -43,13 +43,13 @@ func (p *Parser) ParseEvents(output *forge.ScriptOutput) ([]any, error) {
 }
 
 // ParseEvent parses a single event log
-func (p *Parser) ParseEvent(rawLog forge.EventLog) (any, error) {
+func (p *Parser) ParseEvent(rawLog *forge.EventLog) (any, error) {
 	if len(rawLog.Topics) == 0 {
 		return nil, fmt.Errorf("log has no topics")
 	}
 
 	// Convert to types.Log for the generated unpacker
-	typesLog, err := p.convertToTypesLog(rawLog)
+	typesLog, err := p.convertToTypesLog(*rawLog)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert log: %w", err)
 	}

@@ -94,7 +94,7 @@ func BuildSenderConfigs(trebConfig *TrebConfig) (*SenderConfigs, error) {
 }
 
 // buildSenderInitConfig builds a single sender configuration using the new format
-func buildSenderInitConfig(id string, sender SenderConfig, allSenders map[string]SenderConfig) (*SenderInitConfig, error) {
+func buildSenderInitConfig(id string, sender domain.SenderConfig, allSenders map[string]domain.SenderConfig) (*SenderInitConfig, error) {
 	switch sender.Type {
 	case "private_key":
 		// Parse private key to get address

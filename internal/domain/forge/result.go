@@ -2,7 +2,7 @@ package forge
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/trebuchet-org/treb-cli/internal/adapters/abi/bindings"
+	"github.com/trebuchet-org/treb-cli/internal/domain/bindings"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 

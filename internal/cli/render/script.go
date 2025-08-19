@@ -7,7 +7,8 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/forge"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -98,7 +99,7 @@ func (r *ScriptRenderer) RenderExecution(result *usecase.RunScriptResult) error 
 // Removed renderWithV1Display - now using internal display
 
 // renderTransactions displays the transaction list
-func (r *ScriptRenderer) renderTransactions(exec *domain.ScriptExecution) error {
+func (r *ScriptRenderer) renderTransactions(exec *forge.HydratedRunResult) error {
 	fmt.Fprintf(r.out, "\n%s🔄 Transactions:%s\n", r.colorBold, r.colorReset)
 	fmt.Fprintf(r.out, "%s%s%s\n", r.colorGray, strings.Repeat("─", 50), r.colorReset)
 

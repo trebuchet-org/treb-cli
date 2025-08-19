@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/broadcast"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/events"
-	"github.com/trebuchet-org/treb-cli/internal/adapters/abi/bindings"
+	"github.com/trebuchet-org/treb-cli/internal/domain/bindings"
 	"github.com/trebuchet-org/treb-cli/internal/domain/forge"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"

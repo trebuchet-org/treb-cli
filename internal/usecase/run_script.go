@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/trebuchet-org/treb-cli/internal/config"
-	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"github.com/trebuchet-org/treb-cli/internal/domain/forge"
 )
 

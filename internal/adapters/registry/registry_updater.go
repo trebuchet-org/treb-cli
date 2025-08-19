@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/forge"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -29,7 +29,7 @@ func NewRegistryUpdater(
 // PrepareUpdates analyzes the execution and prepares registry updates
 func (u *RegistryUpdater) PrepareUpdates(
 	ctx context.Context,
-	execution *domain.ScriptExecution,
+	execution *forge.HydratedRunResult,
 ) (*usecase.RegistryChanges, error) {
 	changes := &usecase.RegistryChanges{
 		Deployments:  []*models.Deployment{},

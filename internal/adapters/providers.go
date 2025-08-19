@@ -2,6 +2,7 @@ package adapters
 
 import (
 	"github.com/google/wire"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/abi"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/anvil"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/blockchain"
 	internalconfig "github.com/trebuchet-org/treb-cli/internal/adapters/config"
@@ -11,7 +12,6 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/adapters/fs"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/interactive"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/parameters"
-	"github.com/trebuchet-org/treb-cli/internal/adapters/parser"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/registry"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/safe"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/template"
@@ -97,6 +97,13 @@ var ScriptAdapters = wire.NewSet(
 	contracts.NewScriptResolver,
 	wire.Bind(new(usecase.ScriptResolver), new(*contracts.ScriptResolver)),
 
+	// ABI handling
+	abi.NewParser,
+	wire.Bind(new(usecase.ABIParser), new(*abi.Parser)),
+
+	abi.NewABIResolver,
+	wire.Bind(new(usecase.ABIResolver), new(*abi.ABIResolver)),
+
 	// Parameter handling
 	parameters.NewParameterResolver,
 	wire.Bind(new(usecase.ParameterResolver), new(*parameters.ParameterResolver)),
@@ -106,12 +113,12 @@ var ScriptAdapters = wire.NewSet(
 	// wire.Bind(new(usecase.ParameterPrompter), new(*parameters.ParameterPrompterAdapter)),
 
 	// Script execution
-	forge.NewScriptExecutorAdapter,
-	wire.Bind(new(usecase.ScriptExecutor), new(*forge.ScriptExecutorAdapter)),
+	forge.NewForgeAdapter,
+	wire.Bind(new(usecase.ForgeScriptRunner), new(*forge.ForgeAdapter)),
 
-	// Execution parsing
-	parser.NewExecutionParser,
-	wire.Bind(new(usecase.ExecutionParser), new(*parser.ExecutionParser)),
+	// Result hydration
+	forge.NewRunResultHydrator,
+	wire.Bind(new(usecase.RunResultHydrator), new(*forge.RunResultHydrator)),
 
 	// Registry updates
 	registry.NewRegistryUpdater,

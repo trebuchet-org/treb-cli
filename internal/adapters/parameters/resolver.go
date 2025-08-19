@@ -124,8 +124,8 @@ func (r *ParameterResolver) resolveSender(ctx context.Context, name string) (str
 	if r.cfg.TrebConfig != nil {
 		if sender, ok := r.cfg.TrebConfig.Senders[name]; ok {
 			// Return the account address for the sender
-			if sender.Account != "" {
-				return sender.Account, nil
+			if sender.Address != "" {
+				return sender.Address, nil
 			}
 			// For private key senders, we might need to derive the address
 			// This would require eth crypto utilities
@@ -134,8 +134,8 @@ func (r *ParameterResolver) resolveSender(ctx context.Context, name string) (str
 		// Try default sender names
 		defaultNames := []string{"default", "deployer", r.cfg.Namespace}
 		for _, defaultName := range defaultNames {
-			if sender, ok := r.cfg.TrebConfig.Senders[defaultName]; ok && sender.Account != "" {
-				return sender.Account, nil
+			if sender, ok := r.cfg.TrebConfig.Senders[defaultName]; ok && sender.Address != "" {
+				return sender.Address, nil
 			}
 		}
 	}

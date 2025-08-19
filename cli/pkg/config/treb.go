@@ -6,11 +6,12 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/trebuchet-org/treb-cli/internal/domain"
 )
 
 // TrebConfig represents the treb-specific configuration within a profile
 type TrebConfig struct {
-	Senders         map[string]SenderConfig `toml:"senders"`
+	Senders         map[string]domain.SenderConfig `toml:"senders"`
 	LibraryDeployer string                  `toml:"library_deployer,omitempty"`
 }
 

@@ -78,7 +78,7 @@ func (m *SendersManager) BuildSenderScriptConfig(
 
 	var safeSigners []string
 	for _, sender := range senders {
-		if m.config.Senders[sender].Type == domain.SenderTypeSafe {
+		if m.config.Senders[sender].Type == "safe" {
 			safeSigners = append(safeSigners, m.config.Senders[sender].Signer)
 		}
 	}
@@ -169,10 +169,10 @@ func (m *SendersManager) getSendersHWConfig(senders []string) SenderHWConfig {
 	}
 	for _, senderKey := range senders {
 		sender := m.config.Senders[senderKey]
-		hwConfig.UseTrezor = hwConfig.UseTrezor || sender.Type == domain.SenderTypeTrezor
-		hwConfig.UseLedger = hwConfig.UseLedger || sender.Type == domain.SenderTypeLedger
+		hwConfig.UseTrezor = hwConfig.UseTrezor || sender.Type == "trezor"
+		hwConfig.UseLedger = hwConfig.UseLedger || sender.Type == "ledger"
 
-		if sender.Type == domain.SenderTypeTrezor || sender.Type == domain.SenderTypeLedger {
+		if sender.Type == "trezor" || sender.Type == "ledger" {
 			hwConfig.DerivationPaths = append(hwConfig.DerivationPaths, sender.DerivationPath)
 		}
 
