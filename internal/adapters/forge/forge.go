@@ -204,7 +204,7 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 
 // buildArgs builds the forge script command arguments
 func (f *ForgeAdapter) buildArgs(config usecase.RunScriptConfig) []string {
-	args := []string{"script", config.Script.ArtifactPath, "--ffi"}
+	args := []string{"script", config.Script.Path, "--ffi"}
 
 	// // Add function signature if specified
 	// if opts.FunctionName != "" {
@@ -252,7 +252,7 @@ func (f *ForgeAdapter) buildArgs(config usecase.RunScriptConfig) []string {
 
 // buildEnv builds environment variable array
 func (f *ForgeAdapter) buildEnv(config usecase.RunScriptConfig) []string {
-	var env map[string]string
+	env := make(map[string]string)
 	for k, v := range config.Parameters {
 		env[k] = v
 	}

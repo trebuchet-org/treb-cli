@@ -8,6 +8,7 @@ import (
 
 	"github.com/trebuchet-org/treb-cli/cli/pkg/config"
 	"github.com/trebuchet-org/treb-cli/cli/pkg/contracts"
+	"github.com/trebuchet-org/treb-cli/internal/domain"
 )
 
 // ParseSenderDependencies extracts sender dependencies from a contract artifact's natspec
@@ -69,7 +70,7 @@ func parseSendersList(sendersStr string) ([]string, error) {
 func FilterSenderConfigs(
 	allConfigs *config.SenderConfigs,
 	requiredSenders []string,
-	allSenders map[string]config.SenderConfig,
+	allSenders map[string]domain.SenderConfig,
 ) (*config.SenderConfigs, error) {
 	// If no dependencies specified, return all configs
 	if len(requiredSenders) == 0 {

@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/internal/cli/render"
-	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -40,15 +40,15 @@ The list can be filtered by namespace, chain ID, contract name, label, or deploy
 			}
 
 			// Convert string type to domain type
-			var deploymentType domain.DeploymentType
+			var deploymentType models.DeploymentType
 			if deployType != "" {
 				switch deployType {
 				case "singleton":
-					deploymentType = domain.SingletonDeployment
+					deploymentType = models.SingletonDeployment
 				case "proxy":
-					deploymentType = domain.ProxyDeployment
+					deploymentType = models.ProxyDeployment
 				case "library":
-					deploymentType = domain.LibraryDeployment
+					deploymentType = models.LibraryDeployment
 				default:
 					return fmt.Errorf("invalid deployment type: %s (valid: singleton, proxy, library)", deployType)
 				}
