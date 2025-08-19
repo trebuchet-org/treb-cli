@@ -2,7 +2,6 @@ package forge
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"regexp"
 	"strings"

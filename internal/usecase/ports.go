@@ -229,11 +229,12 @@ type ScriptExecutionConfig struct {
 
 // ScriptExecutionOutput contains the raw output from script execution
 type ScriptExecutionOutput struct {
-	Success       bool
-	RawOutput     []byte
-	ParsedOutput  any // Forge-specific parsed output
-	JSONOutput    any // Parsed JSON output from forge --json
-	BroadcastPath string
+	Success        bool
+	RawOutput      []byte
+	ParsedOutput   any // Forge-specific parsed output (legacy)
+	JSONOutput     any // Raw JSON output from forge --json (legacy)
+	ForgeOutput    *domain.ForgeScriptOutput // Structured forge output
+	BroadcastPath  string
 }
 
 // Execution Parsing Ports

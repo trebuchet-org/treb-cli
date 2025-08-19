@@ -223,26 +223,26 @@ type Network struct {
 
 // TrebConfig represents treb-specific configuration
 type TrebConfig struct {
-	Senders         map[string]SenderConfig `json:"senders"`
-	LibraryDeployer string                  `json:"libraryDeployer,omitempty"`
+	Senders         map[string]SenderConfig `json:"senders" toml:"senders"`
+	LibraryDeployer string                  `json:"libraryDeployer,omitempty" toml:"library_deployer,omitempty"`
 }
 
 // SenderConfig represents a sender configuration
 type SenderConfig struct {
-	Type           string          `json:"type"`
-	Account        string          `json:"account,omitempty"`
-	PrivateKey     string          `json:"privateKey,omitempty"`
-	Safe           string          `json:"safe,omitempty"`
-	DerivationPath string          `json:"derivationPath,omitempty"`
-	Proposer       *ProposerConfig `json:"proposer,omitempty"`
-	Signer         string          `json:"signer,omitempty"` // Legacy v1 field for Safe senders
+	Type           string          `json:"type" toml:"type"`
+	Account        string          `json:"account,omitempty" toml:"account,omitempty"`
+	PrivateKey     string          `json:"privateKey,omitempty" toml:"private_key,omitempty"`
+	Safe           string          `json:"safe,omitempty" toml:"safe,omitempty"`
+	DerivationPath string          `json:"derivationPath,omitempty" toml:"derivation_path,omitempty"`
+	Proposer       *ProposerConfig `json:"proposer,omitempty" toml:"proposer,omitempty"`
+	Signer         string          `json:"signer,omitempty" toml:"signer,omitempty"` // Legacy v1 field for Safe senders
 }
 
 // ProposerConfig represents proposer configuration for Safe transactions
 type ProposerConfig struct {
-	Type           string `json:"type"`
-	PrivateKey     string `json:"privateKey,omitempty"`
-	DerivationPath string `json:"derivationPath,omitempty"`
+	Type           string `json:"type" toml:"type"`
+	PrivateKey     string `json:"privateKey,omitempty" toml:"private_key,omitempty"`
+	DerivationPath string `json:"derivationPath,omitempty" toml:"derivation_path,omitempty"`
 }
 
 // ContractInfo represents information about a discovered contract

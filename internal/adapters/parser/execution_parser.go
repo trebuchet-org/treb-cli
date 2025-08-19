@@ -60,8 +60,44 @@ func (p *ExecutionParser) ParseExecution(
 		Logs:    p.extractLogs(output.RawOutput),
 	}
 
-	// If we have JSON output, extract events from it
-	if output.JSONOutput != nil {
+	// Use ForgeOutput if available (preferred)
+	if output.ForgeOutput != nil {
+		// Extract console logs
+		execution.Logs = output.ForgeOutput.ConsoleLogs
+		
+		// Extract stages
+		execution.Stages = p.convertForgeStages(output.ForgeOutput.Stages)
+		
+		// Extract gas used
+		if output.ForgeOutput.ScriptOutput != nil {
+			execution.GasUsed = output.ForgeOutput.ScriptOutput.GasUsed
+		}
+		
+		// Extract events from forge logs
+		if output.ForgeOutput.ScriptOutput != nil && output.ForgeOutput.ScriptOutput.RawLogs != nil {
+			for _, forgeLog := range output.ForgeOutput.ScriptOutput.RawLogs {
+				ethLog, err := p.convertForgeLog(forgeLog)
+				if err != nil {
+					continue
+				}
+				
+				execution.EventLogs = append(execution.EventLogs, *ethLog)
+				
+				// Try to decode the event
+				event, err := p.eventDecoder.DecodeLog(*ethLog)
+				if err != nil {
+					continue
+				}
+				
+				// Store decoded events
+				if execution.Events == nil {
+					execution.Events = []domain.DeploymentEvent{}
+				}
+				execution.Events = append(execution.Events, *event)
+			}
+		}
+	} else if output.JSONOutput != nil {
+		// Fallback to legacy JSON parsing
 		if err := p.parseJSONOutput(output.JSONOutput, execution); err != nil {
 			// Log error but continue - we can still get data from broadcast
 			fmt.Printf("Warning: Failed to parse JSON output: %v\n", err)
@@ -81,10 +117,12 @@ func (p *ExecutionParser) ParseExecution(
 		// Extract deployments
 		execution.Deployments = p.extractDeployments(broadcast, execution.Transactions, execution)
 
-		// Calculate total gas used
-		for _, tx := range execution.Transactions {
-			if tx.GasUsed != nil {
-				execution.GasUsed += *tx.GasUsed
+		// Calculate total gas used if not already set
+		if execution.GasUsed == 0 {
+			for _, tx := range execution.Transactions {
+				if tx.GasUsed != nil {
+					execution.GasUsed += *tx.GasUsed
+				}
 			}
 		}
 
@@ -368,6 +406,31 @@ func (p *ExecutionParser) convertBroadcastLog(log domain.BroadcastLog) (*types.L
 	return ethLog, nil
 }
 
+// convertForgeStages converts forge execution stages to domain stages
+func (p *ExecutionParser) convertForgeStages(forgeStages []domain.ForgeExecutionStage) []domain.ExecutionStage {
+	stages := make([]domain.ExecutionStage, len(forgeStages))
+	for i, fs := range forgeStages {
+		var status domain.StageStatus
+		if fs.Skipped {
+			status = domain.StageStatusSkipped
+		} else if fs.Completed {
+			status = domain.StageStatusCompleted
+		} else {
+			status = domain.StageStatusRunning
+		}
+		
+		stages[i] = domain.ExecutionStage{
+			Name:      fs.Name,
+			StartTime: fs.StartTime,
+			EndTime:   fs.EndTime,
+			Status:    status,
+			Skipped:   fs.Skipped,
+			Duration:  fs.Duration,
+		}
+	}
+	return stages
+}
+
 // extractLogs extracts console.log outputs from raw script output
 func (p *ExecutionParser) extractLogs(output []byte) []string {
 	var logs []string
@@ -480,7 +543,27 @@ func (p *ExecutionParser) parseJSONOutput(jsonOutput interface{}, execution *dom
 
 // convertForgeLog converts a forge log to an Ethereum types.Log
 func (p *ExecutionParser) convertForgeLog(forgeLog any) (*types.Log, error) {
-	// Handle the ForgeEventLog type
+	// Handle domain.ForgeEventLog type
+	if fLog, ok := forgeLog.(domain.ForgeEventLog); ok {
+		// Convert directly from domain type
+		var topics []common.Hash
+		for _, topic := range fLog.Topics {
+			topics = append(topics, topic)
+		}
+		
+		data, err := hex.DecodeString(strings.TrimPrefix(fLog.Data, "0x"))
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode log data: %w", err)
+		}
+		
+		return &types.Log{
+			Address: fLog.Address,
+			Topics:  topics,
+			Data:    data,
+		}, nil
+	}
+
+	// Handle the ForgeEventLog type from JSON
 	type ForgeEventLog struct {
 		Address string   `json:"address"`
 		Topics  []string `json:"topics"`

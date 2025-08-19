@@ -43,7 +43,26 @@ func Provider(v *viper.Viper) (*RuntimeConfig, error) {
 	cfg.FoundryConfig = foundryConfig
 
 	// Load profile-specific treb config (namespace = profile)
-	cfg.TrebConfig = foundryConfig.Profile[cfg.Namespace].Treb
+	profile, ok := foundryConfig.Profile[cfg.Namespace]
+	if ok {
+		cfg.TrebConfig = profile.Treb
+		if os.Getenv("TREB_TEST_DEBUG") != "" {
+			fmt.Printf("DEBUG: Loaded TrebConfig for profile %s\n", cfg.Namespace)
+			if cfg.TrebConfig != nil && cfg.TrebConfig.Senders != nil {
+				fmt.Printf("DEBUG: Found %d senders\n", len(cfg.TrebConfig.Senders))
+				for name, sender := range cfg.TrebConfig.Senders {
+					fmt.Printf("DEBUG: Sender %s: type=%s\n", name, sender.Type)
+				}
+			} else {
+				fmt.Printf("DEBUG: TrebConfig or Senders is nil\n")
+			}
+		}
+	} else {
+		if os.Getenv("TREB_TEST_DEBUG") != "" {
+			fmt.Printf("DEBUG: Profile %s not found in foundry config\n", cfg.Namespace)
+			fmt.Printf("DEBUG: Available profiles: %v\n", getMapKeys(foundryConfig.Profile))
+		}
+	}
 
 	// Resolve network if specified
 	if networkName := v.GetString("network"); networkName != "" {
@@ -132,4 +151,13 @@ func SetupViper(projectRoot string, cmd *cobra.Command) *viper.Viper {
 // ProvideNetworkResolver creates a NetworkResolver for Wire dependency injection
 func ProvideNetworkResolver(cfg *RuntimeConfig) *NetworkResolver {
 	return NewNetworkResolver(cfg.ProjectRoot, cfg.FoundryConfig)
+}
+
+// getMapKeys returns the keys of a map as a slice
+func getMapKeys[K comparable, V any](m map[K]V) []K {
+	keys := make([]K, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
 }

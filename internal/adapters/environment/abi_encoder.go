@@ -2,7 +2,9 @@ package environment
 
 import (
 	"crypto/ecdsa"
+	"encoding/hex"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -140,11 +142,34 @@ func ABIEncodeSenderConfigs(trebConfig *domain.TrebConfig) (string, error) {
 func buildSenderInitConfig(name string, sender domain.SenderConfig, allSenders map[string]domain.SenderConfig) (*SenderInitConfig, error) {
 	switch sender.Type {
 	case "private_key":
-		// Parse private key
-		privateKey := strings.TrimPrefix(sender.PrivateKey, "0x")
-		key, err := crypto.HexToECDSA(privateKey)
+		// Debug logging
+		if os.Getenv("TREB_TEST_DEBUG") != "" {
+			fmt.Printf("DEBUG: buildSenderInitConfig for %s - PrivateKey: %q (len=%d)\n", name, sender.PrivateKey, len(sender.PrivateKey))
+		}
+		
+		// Parse private key - follow v1 approach
+		privateKeyHex := strings.TrimPrefix(sender.PrivateKey, "0x")
+		
+		// More debug
+		if os.Getenv("TREB_TEST_DEBUG") != "" {
+			fmt.Printf("DEBUG: After trimming 0x - privateKeyHex: %q (len=%d)\n", privateKeyHex, len(privateKeyHex))
+		}
+		
+		// Decode hex string to bytes
+		privateKeyBytes, err := hex.DecodeString(privateKeyHex)
 		if err != nil {
-			return nil, fmt.Errorf("invalid private key: %w", err)
+			return nil, fmt.Errorf("failed to decode private key: %w", err)
+		}
+		
+		// More debug
+		if os.Getenv("TREB_TEST_DEBUG") != "" {
+			fmt.Printf("DEBUG: Decoded bytes length: %d\n", len(privateKeyBytes))
+		}
+		
+		// Create private key from bytes
+		key, err := crypto.ToECDSA(privateKeyBytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create private key: %w", err)
 		}
 
 		address := crypto.PubkeyToAddress(key.PublicKey)
