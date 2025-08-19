@@ -6,7 +6,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/trebuchet-org/treb-cli/internal/config"
-	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -45,7 +45,7 @@ func (r *TagRenderer) Render(result *usecase.TagDeploymentResult) error {
 }
 
 // renderShowTags displays current tags for a deployment
-func (r *TagRenderer) renderShowTags(deployment *domain.Deployment, displayName string) error {
+func (r *TagRenderer) renderShowTags(deployment *models.Deployment, displayName string) error {
 	// Color styles
 	titleStyle := color.New(color.FgCyan, color.Bold)
 	labelStyle := color.New(color.FgWhite, color.Bold)
@@ -81,7 +81,7 @@ func (r *TagRenderer) renderShowTags(deployment *domain.Deployment, displayName 
 }
 
 // renderAddTag displays the result of adding a tag
-func (r *TagRenderer) renderAddTag(deployment *domain.Deployment, displayName, tag string, currentTags []string) error {
+func (r *TagRenderer) renderAddTag(deployment *models.Deployment, displayName, tag string, currentTags []string) error {
 
 	// Show success
 	color.New(color.FgGreen).Printf("✅ Added tag '%s' to %s/%d/%s\n",
@@ -111,7 +111,7 @@ func (r *TagRenderer) renderAddTag(deployment *domain.Deployment, displayName, t
 }
 
 // renderRemoveTag displays the result of removing a tag
-func (r *TagRenderer) renderRemoveTag(deployment *domain.Deployment, displayName, tag string, currentTags []string) error {
+func (r *TagRenderer) renderRemoveTag(deployment *models.Deployment, displayName, tag string, currentTags []string) error {
 
 	// Show success
 	color.New(color.FgGreen).Printf("✅ Removed tag '%s' from %s/%d/%s\n",

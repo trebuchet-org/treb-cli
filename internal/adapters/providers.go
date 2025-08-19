@@ -7,7 +7,6 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/adapters/blockchain"
 	internalconfig "github.com/trebuchet-org/treb-cli/internal/adapters/config"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/contracts"
-	"github.com/trebuchet-org/treb-cli/internal/adapters/environment"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/forge"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/fs"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/interactive"
@@ -123,10 +122,6 @@ var ScriptAdapters = wire.NewSet(
 	// Registry updates
 	registry.NewRegistryUpdater,
 	wire.Bind(new(usecase.RegistryUpdater), new(*registry.RegistryUpdater)),
-
-	// Environment building
-	environment.NewBuilderAdapter,
-	wire.Bind(new(usecase.EnvironmentBuilder), new(*environment.BuilderAdapter)),
 
 	// Library resolution
 	registry.NewLibraryResolver,

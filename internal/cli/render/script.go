@@ -3,7 +3,6 @@ package render
 import (
 	"fmt"
 	"io"
-	"slices"
 	"strings"
 
 	"github.com/fatih/color"
@@ -52,11 +51,11 @@ func (r *ScriptRenderer) GetWriter() io.Writer {
 
 // RenderExecution renders the complete script execution result
 func (r *ScriptRenderer) RenderExecution(result *usecase.RunScriptResult) error {
-	if result.Execution == nil {
+	if result.RunResult == nil {
 		return fmt.Errorf("no execution data to render")
 	}
 
-	exec := result.Execution
+	exec := result.RunResult
 
 	// Display deployment banner (already shown during execution)
 	// The banner is displayed by the script runner before execution
@@ -79,7 +78,7 @@ func (r *ScriptRenderer) RenderExecution(result *usecase.RunScriptResult) error 
 	}
 
 	// Registry update summary
-	if !exec.DryRun {
+	if result.Success && !result.RunResult.DryRun {
 		if len(exec.Deployments) > 0 {
 			// Show registry update message
 			if result.RegistryChanges != nil && (result.RegistryChanges.AddedCount > 0 || result.RegistryChanges.UpdatedCount > 0) {
@@ -118,17 +117,17 @@ func (r *ScriptRenderer) renderTransactions(exec *forge.HydratedRunResult) error
 }
 
 // renderTransactionTree displays a transaction in tree format
-func (r *ScriptRenderer) renderTransactionTree(tx domain.ScriptTransaction, exec *domain.ScriptExecution) {
+func (r *ScriptRenderer) renderTransactionTree(tx *forge.Transaction, exec *forge.HydratedRunResult) {
 	// Build status text
 	var statusText string
 	switch tx.Status {
-	case domain.TransactionStatusSimulated:
+	case models.TransactionStatusSimulated:
 		statusText = "simulated"
-	case domain.TransactionStatusQueued:
+	case models.TransactionStatusQueued:
 		statusText = "queued   "
-	case domain.TransactionStatusExecuted:
+	case models.TransactionStatusExecuted:
 		statusText = "executed "
-	case domain.TransactionStatusFailed:
+	case models.TransactionStatusFailed:
 		statusText = "failed   "
 	default:
 		statusText = "unknown  "
@@ -138,21 +137,22 @@ func (r *ScriptRenderer) renderTransactionTree(tx domain.ScriptTransaction, exec
 	var methodCall string
 
 	// Check if this is a CreateX deployment
-	if strings.HasSuffix(strings.ToLower(tx.To), "ba5ed099633d3b313e4d5f7bdc1305d3c28ba5ed") || strings.ToLower(tx.To) == "0xba5ed099633d3b313e4d5f7bdc1305d3c28ba5ed" {
+	toAddr := strings.ToLower(tx.Transaction.To.Hex())
+	if strings.HasSuffix(toAddr, "ba5ed099633d3b313e4d5f7bdc1305d3c28ba5ed") || toAddr == "0xba5ed099633d3b313e4d5f7bdc1305d3c28ba5ed" {
 		// This is a CreateX call, try to decode it
 		methodCall = r.decodeCreateXCall(tx, exec)
-	} else if len(tx.Data) >= 4 {
+	} else if len(tx.Transaction.Data) >= 4 {
 		// Generic transaction with data
-		methodCall = fmt.Sprintf("0x%x", tx.Data[:4]) // Show selector
+		methodCall = fmt.Sprintf("0x%x", tx.Transaction.Data[:4]) // Show selector
 	} else {
 		// Transaction with no data
-		methodCall = tx.To
+		methodCall = tx.Transaction.To.Hex()
 	}
 
 	// Display transaction header
 	fmt.Fprintf(r.out, "\n%s%s%s %s%s%s → %s\n",
 		r.getStatusColor(tx.Status), statusText, r.colorReset,
-		r.colorGreen, r.getKnownAddress(tx.Sender), r.colorReset,
+		r.colorGreen, r.getKnownAddress(tx.Sender.Hex()), r.colorReset,
 		methodCall)
 
 	// Find deployments for this transaction
@@ -163,7 +163,15 @@ func (r *ScriptRenderer) renderTransactionTree(tx domain.ScriptTransaction, exec
 		isLast := i == len(deployments)-1
 
 		// Show CREATE operation
-		if dep.IsProxy && dep.ProxyInfo != nil {
+		// Check if this is a proxy deployment by looking for proxy relationships
+		isProxy := false
+		if exec.ProxyRelationships != nil {
+			if _, hasProxy := exec.ProxyRelationships[dep.Address]; hasProxy {
+				isProxy = true
+			}
+		}
+
+		if isProxy {
 			// Proxy deployment - show both implementation and proxy
 			r.renderProxyDeployment(dep, isLast, exec)
 		} else {
@@ -173,11 +181,11 @@ func (r *ScriptRenderer) renderTransactionTree(tx domain.ScriptTransaction, exec
 	}
 
 	// Display transaction footer with gas and block info
-	if tx.Hash != "" || tx.BlockNumber != nil || tx.GasUsed != nil {
+	if tx.TxHash != nil || tx.BlockNumber != nil || tx.GasUsed != nil {
 		var details []string
-		if tx.Hash != "" {
+		if tx.TxHash != nil {
 			// Shorten the hash to match v1 output
-			details = append(details, fmt.Sprintf("Tx: %s", tx.Hash))
+			details = append(details, fmt.Sprintf("Tx: %s", tx.TxHash.Hex()))
 		}
 		if tx.BlockNumber != nil {
 			details = append(details, fmt.Sprintf("Block: %d", *tx.BlockNumber))
@@ -190,13 +198,13 @@ func (r *ScriptRenderer) renderTransactionTree(tx domain.ScriptTransaction, exec
 }
 
 // decodeCreateXCall tries to decode a CreateX call
-func (r *ScriptRenderer) decodeCreateXCall(tx domain.ScriptTransaction, exec *domain.ScriptExecution) string {
+func (r *ScriptRenderer) decodeCreateXCall(tx *forge.Transaction, exec *forge.HydratedRunResult) string {
 	// Check method selector (first 4 bytes)
-	if len(tx.Data) < 4 {
+	if len(tx.Transaction.Data) < 4 {
 		return "unknown()"
 	}
 
-	selector := fmt.Sprintf("0x%x", tx.Data[:4])
+	selector := fmt.Sprintf("0x%x", tx.Transaction.Data[:4])
 
 	// Common CreateX selectors
 	switch selector {
@@ -223,15 +231,15 @@ func (r *ScriptRenderer) getKnownAddress(addr string) string {
 }
 
 // getStatusColor returns the color function for a transaction status
-func (r *ScriptRenderer) getStatusColor(status domain.TransactionStatus) string {
+func (r *ScriptRenderer) getStatusColor(status models.TransactionStatus) string {
 	switch status {
-	case domain.TransactionStatusSimulated:
+	case models.TransactionStatusSimulated:
 		return r.colorGray
-	case domain.TransactionStatusQueued:
+	case models.TransactionStatusQueued:
 		return r.colorYellow
-	case domain.TransactionStatusExecuted:
+	case models.TransactionStatusExecuted:
 		return r.colorGreen
-	case domain.TransactionStatusFailed:
+	case models.TransactionStatusFailed:
 		return r.colorRed
 	default:
 		return ""
@@ -239,10 +247,10 @@ func (r *ScriptRenderer) getStatusColor(status domain.TransactionStatus) string 
 }
 
 // findDeploymentsForTransaction finds deployments created in a transaction
-func (r *ScriptRenderer) findDeploymentsForTransaction(tx domain.ScriptTransaction, exec *domain.ScriptExecution) []domain.ScriptDeployment {
-	var deployments []domain.ScriptDeployment
+func (r *ScriptRenderer) findDeploymentsForTransaction(tx *forge.Transaction, exec *forge.HydratedRunResult) []*forge.Deployment {
+	var deployments []*forge.Deployment
 	for _, dep := range exec.Deployments {
-		if dep.TransactionID == tx.TransactionID {
+		if dep.TransactionID == tx.TransactionId {
 			deployments = append(deployments, dep)
 		}
 	}
@@ -250,7 +258,7 @@ func (r *ScriptRenderer) findDeploymentsForTransaction(tx domain.ScriptTransacti
 }
 
 // renderRegularDeployment renders a regular contract deployment
-func (r *ScriptRenderer) renderRegularDeployment(dep domain.ScriptDeployment, isLast bool) {
+func (r *ScriptRenderer) renderRegularDeployment(dep *forge.Deployment, isLast bool) {
 	prefix := "├─"
 	if isLast {
 		prefix = "└─"
@@ -258,37 +266,42 @@ func (r *ScriptRenderer) renderRegularDeployment(dep domain.ScriptDeployment, is
 
 	// Show intermediate steps (simplified without full trace)
 	fmt.Fprintf(r.out, "├─ %screate2(16 bytes)%s\n", r.colorGreen, r.colorReset)
-	fmt.Fprintf(r.out, "│  └─ %s[return]%s %s\n", r.colorGray, r.colorReset, r.shortenAddress(dep.Address))
+	fmt.Fprintf(r.out, "│  └─ %s[return]%s %s\n", r.colorGray, r.colorReset, r.shortenAddress(dep.Address.Hex()))
 	fmt.Fprintf(r.out, "├─ %sCreate3ProxyContractCreation%s(newContract: %s, salt: 0x%x...)\n",
-		r.colorCyan, r.colorReset, r.shortenAddress(dep.Address), dep.Salt[:4])
-	fmt.Fprintf(r.out, "├─ %s::%s0x60806040...%s\n", r.shortenAddress(dep.Address), r.colorYellow, r.colorReset)
+		r.colorCyan, r.colorReset, r.shortenAddress(dep.Address.Hex()), dep.Event.Salt[:4])
+	fmt.Fprintf(r.out, "├─ %s::%s0x60806040...%s\n", r.shortenAddress(dep.Address.Hex()), r.colorYellow, r.colorReset)
 
 	// Show the actual deployment
 	constructorArgs := ""
-	if len(dep.ConstructorArgs) > 0 {
+	if len(dep.Event.ConstructorArgs) > 0 {
 		// TODO: Decode constructor args if we have ABI
 		constructorArgs = "()"
 	} else {
 		constructorArgs = "()"
 	}
 
+	contractName := dep.Event.Artifact
+	if dep.Contract != nil && dep.Contract.Name != "" {
+		contractName = dep.Contract.Name
+	}
 	fmt.Fprintf(r.out, "│  └─ 🚀 %snew %s%s%s\n",
-		r.colorGreen, dep.ContractName, constructorArgs, r.colorReset)
-	fmt.Fprintf(r.out, "│     └─ %s[return]%s %s\n", r.colorGray, r.colorReset, dep.Address)
+		r.colorGreen, contractName, constructorArgs, r.colorReset)
+	fmt.Fprintf(r.out, "│     └─ %s[return]%s %s\n", r.colorGray, r.colorReset, dep.Address.Hex())
 
 	// Show final event
-	displayName := dep.ContractName
-	if dep.Label != "" {
-		displayName = fmt.Sprintf("%s:%s", dep.ContractName, dep.Label)
+	displayName := contractName
+	if dep.Event.Label != "" {
+		displayName = fmt.Sprintf("%s:%s", contractName, dep.Event.Label)
 	}
 	fmt.Fprintf(r.out, "%s %sContractCreation%s(newContract: %s: [%s...)\n",
-		prefix, r.colorCyan, r.colorReset, displayName, dep.Address[:10])
+		prefix, r.colorCyan, r.colorReset, displayName, dep.Address.Hex()[:10])
 }
 
 // renderProxyDeployment renders a proxy contract deployment
-func (r *ScriptRenderer) renderProxyDeployment(dep domain.ScriptDeployment, isLast bool, exec *domain.ScriptExecution) {
-	// For proxy deployments, we typically have the implementation address in ProxyInfo
-	if dep.ProxyInfo == nil {
+func (r *ScriptRenderer) renderProxyDeployment(dep *forge.Deployment, isLast bool, exec *forge.HydratedRunResult) {
+	// Get proxy info from exec.ProxyRelationships
+	proxyRel, hasProxy := exec.ProxyRelationships[dep.Address]
+	if !hasProxy {
 		r.renderRegularDeployment(dep, isLast)
 		return
 	}
@@ -300,48 +313,56 @@ func (r *ScriptRenderer) renderProxyDeployment(dep domain.ScriptDeployment, isLa
 
 	// Show intermediate steps
 	fmt.Fprintf(r.out, "├─ create2(16 bytes)\n")
-	fmt.Fprintf(r.out, "│  └─ [return] %s\n", r.shortenAddress(dep.Address))
+	fmt.Fprintf(r.out, "│  └─ [return] %s\n", r.shortenAddress(dep.Address.Hex()))
 	fmt.Fprintf(r.out, "├─ Create3ProxyContractCreation(newContract: %s, salt: 0x%x...)\n",
-		r.shortenAddress(dep.Address), dep.Salt[:4])
-	fmt.Fprintf(r.out, "├─ %s::0x60806040...\n", r.shortenAddress(dep.Address))
+		r.shortenAddress(dep.Address.Hex()), dep.Event.Salt[:4])
+	fmt.Fprintf(r.out, "├─ %s::0x60806040...\n", r.shortenAddress(dep.Address.Hex()))
 
 	// Show proxy deployment with constructor args
+	contractName := dep.Event.Artifact
+	if dep.Contract != nil && dep.Contract.Name != "" {
+		contractName = dep.Contract.Name
+	}
 	fmt.Fprintf(r.out, "│  └─ 🚀 %snew %s(%s\n",
-		r.colorGreen, dep.ContractName, r.colorReset)
-	fmt.Fprintf(r.out, "│     │    implementation: %s,\n", dep.ProxyInfo.Implementation)
+		r.colorGreen, contractName, r.colorReset)
+	fmt.Fprintf(r.out, "│     │    implementation: %s,\n", proxyRel.ImplementationAddress.Hex())
 	fmt.Fprintf(r.out, "│     │    _data: 0xc4d66de8000000000000000000000000...(36 bytes)\n")
 	fmt.Fprintf(r.out, "│     │  )\n")
 
 	// Show events
 	fmt.Fprintf(r.out, "│     ├─ Upgraded(implementation: %s: [%s...)\n",
-		r.getImplementationName(dep.ProxyInfo.Implementation, exec),
-		dep.ProxyInfo.Implementation[:10])
+		r.getImplementationName(proxyRel.ImplementationAddress.Hex(), exec),
+		proxyRel.ImplementationAddress.Hex()[:10])
 	fmt.Fprintf(r.out, "│     ├─ %s::initialize(0x0000...0000) (delegate)\n",
-		r.getImplementationName(dep.ProxyInfo.Implementation, exec))
-	fmt.Fprintf(r.out, "│     └─ [return] %s\n", dep.Address)
+		r.getImplementationName(proxyRel.ImplementationAddress.Hex(), exec))
+	fmt.Fprintf(r.out, "│     └─ [return] %s\n", dep.Address.Hex())
 
 	// Show final event
-	displayName := dep.ContractName
-	if dep.Label != "" {
-		displayName = fmt.Sprintf("%s:%s", dep.ContractName, dep.Label)
+	displayName := contractName
+	if dep.Event.Label != "" {
+		displayName = fmt.Sprintf("%s:%s", contractName, dep.Event.Label)
 	}
 	fmt.Fprintf(r.out, "%s ContractCreation(newContract: %s: [%s...)\n",
-		prefix, displayName, dep.Address[:10])
+		prefix, displayName, dep.Address.Hex()[:10])
 }
 
 // getImplementationName tries to find the name of an implementation contract
-func (r *ScriptRenderer) getImplementationName(implAddr string, exec *domain.ScriptExecution) string {
+func (r *ScriptRenderer) getImplementationName(implAddr string, exec *forge.HydratedRunResult) string {
 	// Look for implementation in deployments
 	for _, dep := range exec.Deployments {
-		if strings.EqualFold(dep.Address, implAddr) {
-			return dep.ContractName
+		if strings.EqualFold(dep.Address.Hex(), implAddr) {
+			contractName := dep.Event.Artifact
+			if dep.Contract != nil && dep.Contract.Name != "" {
+				contractName = dep.Contract.Name
+			}
+			return contractName
 		}
 	}
 	return "Implementation"
 }
 
 // renderDeploymentSummary displays the deployment summary
-func (r *ScriptRenderer) renderDeploymentSummary(exec *domain.ScriptExecution) error {
+func (r *ScriptRenderer) renderDeploymentSummary(exec *forge.HydratedRunResult) error {
 	if len(exec.Deployments) == 0 {
 		return nil
 	}
@@ -351,19 +372,26 @@ func (r *ScriptRenderer) renderDeploymentSummary(exec *domain.ScriptExecution) e
 
 	for _, dep := range exec.Deployments {
 		// Build deployment name
-		name := dep.ContractName
-		if dep.Label != "" {
-			name = fmt.Sprintf("%s:%s", dep.ContractName, dep.Label)
+		contractName := dep.Event.Artifact
+		if dep.Contract != nil && dep.Contract.Name != "" {
+			contractName = dep.Contract.Name
 		}
-		if dep.IsProxy && dep.ProxyInfo != nil {
+
+		name := contractName
+		if dep.Event.Label != "" {
+			name = fmt.Sprintf("%s:%s", contractName, dep.Event.Label)
+		}
+
+		// Check if this is a proxy deployment
+		if proxyRel, hasProxy := exec.ProxyRelationships[dep.Address]; hasProxy {
 			// Get implementation name if available
-			implName := r.shortenAddress(dep.ProxyInfo.Implementation)
+			implName := r.getImplementationName(proxyRel.ImplementationAddress.Hex(), exec)
 			name = fmt.Sprintf("%s[%s]", name, implName)
 		}
 
 		fmt.Fprintf(r.out, "%s%s%s at %s%s%s\n",
 			r.colorCyan, name, r.colorReset,
-			r.colorGreen, dep.Address, r.colorReset)
+			r.colorGreen, dep.Address.Hex(), r.colorReset)
 	}
 
 	fmt.Fprintln(r.out) // Empty line after deployments
@@ -403,15 +431,15 @@ func (r *ScriptRenderer) renderRegistryUpdate(changes *usecase.RegistryChanges, 
 }
 
 // getStatusDisplay returns a formatted status string
-func (r *ScriptRenderer) getStatusDisplay(status domain.TransactionStatus) string {
+func (r *ScriptRenderer) getStatusDisplay(status models.TransactionStatus) string {
 	switch status {
-	case domain.TransactionStatusSimulated:
+	case models.TransactionStatusSimulated:
 		return fmt.Sprintf("%sSimulated%s", r.colorYellow, r.colorReset)
-	case domain.TransactionStatusQueued:
+	case models.TransactionStatusQueued:
 		return fmt.Sprintf("%sQueued%s", r.colorPurple, r.colorReset)
-	case domain.TransactionStatusExecuted:
+	case models.TransactionStatusExecuted:
 		return fmt.Sprintf("%sExecuted%s", r.colorGreen, r.colorReset)
-	case domain.TransactionStatusFailed:
+	case models.TransactionStatusFailed:
 		return fmt.Sprintf("%sFailed%s", r.colorRed, r.colorReset)
 	default:
 		return string(status)
@@ -427,7 +455,7 @@ func (r *ScriptRenderer) shortenAddress(addr string) string {
 }
 
 // PrintDeploymentBanner prints the deployment banner (called before execution)
-func (r *ScriptRenderer) PrintDeploymentBanner(config *usecase.ScriptExecutionConfig) {
+func (r *ScriptRenderer) PrintDeploymentBanner(config *usecase.RunScriptConfig) {
 	bold := color.New(color.Bold)
 	gray := color.New(color.FgHiBlack)
 	cyan := color.New(color.FgCyan)
@@ -449,26 +477,18 @@ func (r *ScriptRenderer) PrintDeploymentBanner(config *usecase.ScriptExecutionCo
 		fmt.Fprintf(r.out, "  Mode:      %s\n", green.Sprint("LIVE"))
 	}
 
-	// Display environment variables if any
-	var keysToShow []string
-	systemKeys := []string{"NETWORK", "NAMESPACE", "DRYRUN", "SENDER_CONFIGS", "FOUNDRY_PROFILE"}
-	for k := range config.Environment {
-		if slices.Contains(systemKeys, k) {
-			continue
-		}
-		keysToShow = append(keysToShow, k)
-	}
-
-	if len(keysToShow) > 0 {
+	if len(config.Parameters) > 0 {
 		fmt.Fprintf(r.out, "  Env Vars:  ")
-		for i, key := range keysToShow {
-			value := config.Environment[key]
+		var i = 0
+		for k, v := range config.Parameters {
 			if i > 0 {
 				fmt.Fprintf(r.out, "             ")
 			}
-			fmt.Fprintf(r.out, "%s=%s\n", yellow.Sprint(key), green.Sprint(value))
+			fmt.Fprintf(r.out, "%s=%s\n", yellow.Sprint(k), green.Sprint(v))
+			i++
 		}
 	}
 
+	fmt.Fprintf(r.out, "  Senders:      %s", gray.Sprintf("%v", config.SenderScriptConfig.Senders))
 	fmt.Fprintf(r.out, "%s\n", gray.Sprint(strings.Repeat("─", 50)))
 }

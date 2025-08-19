@@ -7,7 +7,7 @@ import (
 
 	"github.com/briandowns/spinner"
 	"github.com/fatih/color"
-	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -134,7 +134,7 @@ func (r *VerifyRenderer) RenderVerifyResult(result *usecase.VerifyResult, option
 }
 
 // getDisplayName returns the display name for a deployment
-func (r *VerifyRenderer) getDisplayName(deployment *domain.Deployment) string {
+func (r *VerifyRenderer) getDisplayName(deployment *models.Deployment) string {
 	if deployment.Label != "" {
 		return fmt.Sprintf("%s:%s", deployment.ContractName, deployment.Label)
 	}
@@ -142,15 +142,15 @@ func (r *VerifyRenderer) getDisplayName(deployment *domain.Deployment) string {
 }
 
 // getStatusIcon returns the appropriate status icon for a verification status
-func (r *VerifyRenderer) getStatusIcon(status domain.VerificationStatus) string {
+func (r *VerifyRenderer) getStatusIcon(status models.VerificationStatus) string {
 	switch status {
-	case domain.VerificationStatusVerified:
+	case models.VerificationStatusVerified:
 		return "🔄" // Re-verifying
-	case domain.VerificationStatusFailed:
+	case models.VerificationStatusFailed:
 		return "⚠️" // Retrying failed
-	case domain.VerificationStatusPartial:
+	case models.VerificationStatusPartial:
 		return "🔁" // Retrying partial
-	case domain.VerificationStatusUnverified:
+	case models.VerificationStatusUnverified:
 		return "⏳" // First attempt
 	default:
 		return "🆕" // New verification
@@ -167,7 +167,7 @@ func (r *VerifyRenderer) createSpinner(message string) *spinner.Spinner {
 }
 
 // showVerificationStatus displays the verification status details
-func (r *VerifyRenderer) showVerificationStatus(deployment *domain.Deployment) {
+func (r *VerifyRenderer) showVerificationStatus(deployment *models.Deployment) {
 	if deployment.Verification.Verifiers == nil {
 		return
 	}

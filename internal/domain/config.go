@@ -85,4 +85,5 @@ type SenderScriptConfig struct {
 	UseTrezor       bool
 	DerivationPaths []string
 	EncodedConfig   string
+	Senders         []string
 }

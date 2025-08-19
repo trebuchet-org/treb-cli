@@ -3,6 +3,7 @@ package forge
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/trebuchet-org/treb-cli/internal/domain/forge"
+	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
 type HydratedRunResult forge.HydratedRunResult

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -92,11 +93,11 @@ func (m *SendersManager) BuildSenderScriptConfig(
 		return nil, fmt.Errorf("can not use ledger in both main sender and safe signer, configure @custom:senders")
 	}
 
-	senders = append(senders, safeSigners...)
-	sort.Strings(senders)
+	allSenders := append(slices.Clone(senders), safeSigners...)
+	sort.Strings(allSenders)
 
 	var senderInitConfigs []SenderInitConfig
-	if senderInitConfigs, err = m.buildSenderInitConfigs(senders); err != nil {
+	if senderInitConfigs, err = m.buildSenderInitConfigs(allSenders); err != nil {
 		return nil, err
 	}
 	var encodedSenderInitConfigs string
@@ -109,6 +110,7 @@ func (m *SendersManager) BuildSenderScriptConfig(
 		UseTrezor:       executionHWConfig.UseTrezor,
 		DerivationPaths: executionHWConfig.DerivationPaths,
 		EncodedConfig:   encodedSenderInitConfigs,
+		Senders:         senders,
 	}, nil
 }
 

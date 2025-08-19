@@ -223,16 +223,16 @@ type ForgeScriptRunner interface {
 
 // ScriptExecutionConfig contains configuration for script execution
 type RunScriptConfig struct {
-	Script     *models.Contract
-	Network    *domain.Network
-	Namespace  string
-	Parameters map[string]string // Includes resolved parameters and sender configs
-	DryRun     bool
-	Debug      bool
-	DebugJSON  bool
-	Libraries  []string
-	Senders    map[string]domain.SenderConfig
-	Progress   ProgressSink
+	Script             *models.Contract
+	Network            *domain.Network
+	Namespace          string
+	Parameters         map[string]string // Includes resolved parameters and sender configs
+	DryRun             bool
+	Debug              bool
+	DebugJSON          bool
+	Libraries          []string
+	SenderScriptConfig domain.SenderScriptConfig
+	Progress           ProgressSink
 }
 
 // RunResultHydrator hydrated RunResults with domain models.
@@ -275,22 +275,10 @@ const (
 	StageCompleted    ExecutionStage = "Completed"
 )
 
-// Environment Building Ports
-
-// EnvironmentBuilder builds environment variables for script execution
-type EnvironmentBuilder interface {
-	// BuildEnvironment builds the complete environment for script execution
-	BuildEnvironment(ctx context.Context, params BuildEnvironmentParams) (map[string]string, error)
-}
-
-// BuildEnvironmentParams contains parameters for building the environment
-type BuildEnvironmentParams struct {
-	Network           string
-	Namespace         string
-	Parameters        map[string]string
-	TrebConfig        *domain.TrebConfig // From RuntimeConfig
-	DryRun            bool
-	DeployedLibraries []LibraryReference
+// LibraryResolver resolves deployed libraries for a namespace/network
+type LibraryResolver interface {
+	// GetDeployedLibraries gets all deployed libraries for the given context
+	GetDeployedLibraries(ctx context.Context, namespace string, chainID uint64) ([]LibraryReference, error)
 }
 
 // LibraryReference represents a deployed library
@@ -298,10 +286,4 @@ type LibraryReference struct {
 	Path    string
 	Name    string
 	Address string
-}
-
-// LibraryResolver resolves deployed libraries for a namespace/network
-type LibraryResolver interface {
-	// GetDeployedLibraries gets all deployed libraries for the given context
-	GetDeployedLibraries(ctx context.Context, namespace string, chainID uint64) ([]LibraryReference, error)
 }

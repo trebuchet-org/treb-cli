@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
@@ -161,4 +160,3 @@ func (r *DeploymentRenderer) RenderDeployment(deployment *models.Deployment) err
 
 	return nil
 }
-

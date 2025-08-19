@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain/forge"
@@ -37,7 +38,6 @@ type RunScript struct {
 	forgeScriptRunner ForgeScriptRunner
 	runResultHydrator RunResultHydrator
 	registryUpdater   RegistryUpdater
-	envBuilder        EnvironmentBuilder
 	libraryResolver   LibraryResolver
 	progress          ProgressSink
 }
@@ -51,7 +51,6 @@ func NewRunScript(
 	forgeScriptRunner ForgeScriptRunner,
 	runResultHydrator RunResultHydrator,
 	registryUpdater RegistryUpdater,
-	envBuilder EnvironmentBuilder,
 	libraryResolver LibraryResolver,
 	progress ProgressSink,
 ) *RunScript {
@@ -63,7 +62,6 @@ func NewRunScript(
 		forgeScriptRunner: forgeScriptRunner,
 		runResultHydrator: runResultHydrator,
 		registryUpdater:   registryUpdater,
-		envBuilder:        envBuilder,
 		libraryResolver:   libraryResolver,
 		progress:          progress,
 	}
@@ -72,7 +70,7 @@ func NewRunScript(
 // Run executes the script with the given parameters
 func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScriptResult, error) {
 	progress := params.Progress
-	// startTime := time.Now()
+	startTime := time.Now()
 
 	// Initialize result
 	result := &RunScriptResult{
@@ -82,21 +80,20 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 	// Stage 1: Resolve script
 	script, err := uc.scriptResolver.ResolveScript(ctx, params.ScriptRef)
 	if err != nil {
-		result.Error = fmt.Errorf("failed to resolve script: %w", err)
-		return result, nil
+		return result, fmt.Errorf("failed to resolve script: %w", err)
+
 	}
 
 	// Stage 2: Resolve parameters
 	scriptParams, err := uc.scriptResolver.GetScriptParameters(ctx, script)
 	if err != nil {
-		result.Error = fmt.Errorf("failed to get script parameters: %w", err)
-		return result, nil
+		return result, fmt.Errorf("failed to get script parameters: %w", err)
 	}
 
 	// Resolve parameter values
 	resolvedParams, err := uc.paramResolver.ResolveParameters(ctx, scriptParams, params.Parameters)
 	if err != nil {
-		return nil, err
+		return result, err
 		// TODO: fix this after fixing parameters
 		// if !params.NonInteractive {
 		// 	// Try prompting for missing parameters
@@ -114,16 +111,12 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 
 	// Validate all required parameters have values
 	if err := uc.paramResolver.ValidateParameters(ctx, scriptParams, resolvedParams); err != nil {
-		result.Error = fmt.Errorf("parameter validation failed: %w", err)
-		return result, nil
+		return result, fmt.Errorf("parameter validation failed: %w", err)
 	}
 
 	// Use network info from RuntimeConfig if available
 	if uc.config.Network == nil {
-		// If network not in config, we need to resolve it
-		// This would require a NetworkResolver port
-		result.Error = fmt.Errorf("could not resolve network")
-		return result, nil
+		return result, fmt.Errorf("could not resolve network")
 	}
 
 	// Get deployed libraries
@@ -169,17 +162,26 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 	// 	Metadata: &execConfig,
 	// })
 
+	senderManager := config.NewSendersManager(uc.config.TrebConfig)
+	senderScriptConfig, err := senderManager.BuildSenderScriptConfig(script.Artifact)
+	if err != nil {
+		return result, err
+	}
+
 	runResult, err := uc.forgeScriptRunner.RunScript(ctx, RunScriptConfig{
-		Network:    uc.config.Network,
-		Namespace:  uc.config.Namespace,
-		Script:     script,
-		Parameters: resolvedParams,
-		Libraries:  libraryStrings,
-		DryRun:     params.DryRun,
-		Debug:      params.Debug,
-		DebugJSON:  params.DebugJSON,
-		Progress:   progress,
+		Network:            uc.config.Network,
+		Namespace:          uc.config.Namespace,
+		Script:             script,
+		Parameters:         resolvedParams,
+		Libraries:          libraryStrings,
+		DryRun:             params.DryRun,
+		Debug:              params.Debug,
+		DebugJSON:          params.DebugJSON,
+		Progress:           progress,
+		SenderScriptConfig: *senderScriptConfig,
 	})
+
+	result.RunResult = &forge.HydratedRunResult{RunResult: *runResult}
 
 	if err != nil {
 		result.Error = fmt.Errorf("script execution failed: %w", err)
@@ -199,32 +201,13 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 
 	hydratedRunResult, err := uc.runResultHydrator.Hydrate(ctx, runResult)
 	if err != nil {
-		result.Error = fmt.Errorf("failed to parse execution: %w", err)
+		result.Error = fmt.Errorf("failed to hydrate run result: %w", err)
 		return result, nil
 	}
 
 	// Set execution metadata
-	// execution.Script = script
-	// execution.Network = uc.config.Network.Name
-	// execution.ChainID = uc.config.Network.ChainID
-	// These fields don't exist in the current ScriptExecution struct
-	// execution.ScriptPath = script.Path
-	// execution.ScriptName = script.Name
-	// execution.Namespace = uc.config.Namespace
-	// execution.DryRun = params.DryRun
-	// execution.ExecutedAt = startTime
-	// execution.ExecutionTime = time.Since(startTime)
-
-	// Enrich from broadcast if available
-	// if runResult.BroadcastPath != "" && !params.DryRun {
-	// 	if err := uc.runResultHydrator.EnrichFromBroadcast(ctx, execution, output.BroadcastPath); err != nil {
-	// 		// Log warning but continue
-	// 		progress.OnProgress(ctx, ProgressEvent{
-	// 			Stage:   string(StageParsing),
-	// 			Message: fmt.Sprintf("Warning: Failed to enrich from broadcast: %v", err),
-	// 		})
-	// 	}
-	// }
+	hydratedRunResult.ExecutedAt = startTime
+	hydratedRunResult.ExecutionTime = time.Since(startTime)
 
 	result.RunResult = hydratedRunResult
 

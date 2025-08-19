@@ -22,7 +22,7 @@ func NewRunProgress(renderer *render.ScriptRenderer) *RunProgress {
 // OnProgress does nothing with progress events
 func (n *RunProgress) OnProgress(ctx context.Context, event usecase.ProgressEvent) {
 	if event.Stage == string(usecase.StageSimulating) {
-		if config, ok := event.Metadata.(*usecase.ScriptExecutionConfig); ok {
+		if config, ok := event.Metadata.(*usecase.RunScriptConfig); ok {
 			n.renderer.PrintDeploymentBanner(config)
 		} else {
 			n.spinner.Info("Warning: wrong data-type in execution config")

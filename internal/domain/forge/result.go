@@ -1,6 +1,8 @@
 package forge
 
 import (
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/trebuchet-org/treb-cli/internal/domain/bindings"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
@@ -8,6 +10,7 @@ import (
 
 // ScriptResult contains the parsed result of running a script
 type RunResult struct {
+	DryRun        bool
 	Script        *models.Contract
 	Success       bool
 	RawOutput     []byte
@@ -29,6 +32,8 @@ type HydratedRunResult struct {
 	ProxyRelationships map[common.Address]*ProxyRelationship                // Proxy relationships
 	Collisions         map[common.Address]*bindings.TrebDeploymentCollision // Deployment collisions (contracts already deployed)
 	Events             []any                                                // All parsed events
+	ExecutionTime      time.Duration
+	ExecutedAt         time.Time
 }
 
 // DeploymentRecord represents a contract deployment

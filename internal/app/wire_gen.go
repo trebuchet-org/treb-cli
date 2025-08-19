@@ -14,7 +14,6 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/adapters/blockchain"
 	config2 "github.com/trebuchet-org/treb-cli/internal/adapters/config"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/contracts"
-	"github.com/trebuchet-org/treb-cli/internal/adapters/environment"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/forge"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/fs"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/interactive"
@@ -78,9 +77,8 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 		return nil, err
 	}
 	registryUpdater := registry.NewRegistryUpdater(registryStoreAdapter, registryStoreAdapter)
-	builderAdapter := environment.NewBuilderAdapter(string2)
 	libraryResolver := registry.NewLibraryResolver(registryStoreAdapter)
-	runScript := usecase.NewRunScript(runtimeConfig, scriptResolver, parameterResolver, forgeAdapter, runResultHydrator, registryUpdater, builderAdapter, libraryResolver, sink)
+	runScript := usecase.NewRunScript(runtimeConfig, scriptResolver, parameterResolver, forgeAdapter, runResultHydrator, registryUpdater, libraryResolver, sink)
 	verifierAdapter, err := verification.NewVerifierAdapter(runtimeConfig)
 	if err != nil {
 		return nil, err

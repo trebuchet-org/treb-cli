@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -71,6 +72,7 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 	defer ptyFile.Close()
 
 	result := &forge.RunResult{
+		DryRun:  config.DryRun,
 		Script:  config.Script,
 		Success: true, // Will be updated based on command exit
 	}
@@ -201,7 +203,7 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 }
 
 // buildArgs builds the forge script command arguments
-func (f *ForgeAdapter) buildArgs(config usecase.RunScriptConfig, senders SendersConfig) []string {
+func (f *ForgeAdapter) buildArgs(config usecase.RunScriptConfig) []string {
 	args := []string{"script", config.Script.ArtifactPath, "--ffi"}
 
 	// // Add function signature if specified
@@ -221,20 +223,20 @@ func (f *ForgeAdapter) buildArgs(config usecase.RunScriptConfig, senders Senders
 	}
 
 	// Ledger flag if required
-	if senders.HasLedger {
+	if config.SenderScriptConfig.UseLedger {
 		args = append(args, "--ledger")
 	}
 
-	if senders.HasTrezor {
+	if config.SenderScriptConfig.UseTrezor {
 		args = append(args, "--trezor")
 	}
 
-	if len(senders.DerivationPaths) > 0 {
-		args = append(args, "--mnemonic-derivation-paths", strings.Join(sender.DerivationPaths, ","))
+	if len(config.SenderScriptConfig.DerivationPaths) > 0 {
+		args = append(args, "--mnemonic-derivation-paths", strings.Join(config.SenderScriptConfig.DerivationPaths, ","))
 	}
 
 	// Libraries for linking
-	for _, lib := range opts.Libraries {
+	for _, lib := range config.Libraries {
 		args = append(args, "--libraries", lib)
 	}
 
@@ -245,29 +247,29 @@ func (f *ForgeAdapter) buildArgs(config usecase.RunScriptConfig, senders Senders
 
 	args = append(args, "-vvvv")
 
-	// Additional arguments
-	args = append(args, opts.AdditionalArgs...)
-
 	return args
 }
 
 // buildEnv builds environment variable array
-func (f *ForgeAdapter) buildEnv(opts ScriptOptions) []string {
-	var env []string
-	for k, v := range opts.EnvVars {
-		env = append(env, fmt.Sprintf("%s=%s", k, v))
+func (f *ForgeAdapter) buildEnv(config usecase.RunScriptConfig) []string {
+	var env map[string]string
+	for k, v := range config.Parameters {
+		env[k] = v
 	}
 
 	// Profile
-	if opts.Profile != "" {
-		env = append(env, fmt.Sprintf("FOUNDRY_PROFILE=%s", opts.Profile))
+	env["FOUNDRY_PROFILE"] = config.Namespace
+	env["NAMESPACE"] = config.Namespace
+	env["DRYRUN"] = strconv.FormatBool(config.DryRun || config.Debug || config.DebugJSON)
+	env["SENDER_CONFIGS"] = config.SenderScriptConfig.EncodedConfig
+
+	var envStrings []string
+	for k, v := range env {
+		envStrings = append(envStrings, fmt.Sprintf("%s=%s", k, v))
+
 	}
 
-	if opts.Debug {
-		env = append(env, "QUIET=true")
-	}
-
-	return env
+	return envStrings
 }
 
 // saveDebugOutput saves raw output for debugging

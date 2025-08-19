@@ -93,7 +93,7 @@ func (p *Parser) ParseEvent(rawLog *forge.EventLog) (any, error) {
 	}
 
 	// Try proxy events (not in ABI)
-	proxyEvent, err := p.parseProxyEvent(rawLog)
+	proxyEvent, err := p.parseProxyEvent(*rawLog)
 	if err == nil {
 		return proxyEvent, nil
 	}
