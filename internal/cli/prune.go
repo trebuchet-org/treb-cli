@@ -88,14 +88,14 @@ are preserved. Use --include-pending to also prune these items.`,
 			}
 
 			fmt.Fprintln(cmd.OutOrStdout(), "\n🔧 Pruning registry entries...")
-			
+
 			_, err = app.PruneRegistry.Run(cmd.Context(), executeParams)
 			if err != nil {
 				return err
 			}
 
 			fmt.Fprintf(cmd.OutOrStdout(), "✅ Successfully pruned %d items from the registry.\n", result.TotalItems)
-			
+
 			return nil
 		},
 	}
@@ -103,7 +103,7 @@ are preserved. Use --include-pending to also prune these items.`,
 	// Add flags
 	cmd.Flags().BoolVar(&includePending, "include-pending", false, "Also prune pending items (queued safe txs, simulated txs)")
 	cmd.Flags().StringVar(&network, "network", "", "Network to verify against (required)")
-	
+
 	// Mark network as required
 	if err := cmd.MarkFlagRequired("network"); err != nil {
 		// This should not happen, but handle it gracefully

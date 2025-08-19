@@ -13,6 +13,8 @@ func TestRunCommandCompatibility(t *testing.T) {
 			},
 			TestCmds: [][]string{
 				{"run", "script/deploy/DeployCounter.s.sol"},
+				{"ls"},
+				{"show", "Counter"},
 			},
 		},
 	}

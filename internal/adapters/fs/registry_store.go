@@ -7,7 +7,6 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/adapters/registry"
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
-	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
 // RegistryStoreAdapter wraps the internal registry.Manager to implement DeploymentStore
@@ -43,10 +42,10 @@ func (r *RegistryStoreAdapter) GetDeploymentByAddress(ctx context.Context, chain
 }
 
 // ListDeployments retrieves deployments matching the filter
-func (r *RegistryStoreAdapter) ListDeployments(ctx context.Context, filter usecase.DeploymentFilter) ([]*domain.Deployment, error) {
+func (r *RegistryStoreAdapter) ListDeployments(ctx context.Context, filter domain.DeploymentFilter) ([]*domain.Deployment, error) {
 	// Get all deployments and filter them
 	allDeps := r.manager.GetAllDeploymentsHydrated()
-	
+
 	var result []*domain.Deployment
 	for _, dep := range allDeps {
 		// Apply filters
@@ -65,10 +64,10 @@ func (r *RegistryStoreAdapter) ListDeployments(ctx context.Context, filter useca
 		if filter.Type != "" && dep.Type != filter.Type {
 			continue
 		}
-		
+
 		result = append(result, dep)
 	}
-	
+
 	return result, nil
 }
 
@@ -153,10 +152,10 @@ func (r *RegistryStoreAdapter) UpdateVerification(ctx context.Context, deploymen
 	if err != nil {
 		return err
 	}
-	
+
 	// Update verification info
 	dep.Verification = info
-	
+
 	// Save the updated deployment
 	return r.manager.SaveDeployment(dep)
 }
@@ -167,10 +166,10 @@ func (r *RegistryStoreAdapter) UpdateSafeTransaction(ctx context.Context, safeTx
 }
 
 // ListTransactions lists transactions based on filter criteria
-func (r *RegistryStoreAdapter) ListTransactions(ctx context.Context, filter usecase.TransactionFilter) ([]*domain.Transaction, error) {
+func (r *RegistryStoreAdapter) ListTransactions(ctx context.Context, filter domain.TransactionFilter) ([]*domain.Transaction, error) {
 	all := r.manager.GetAllTransactions()
 	var result []*domain.Transaction
-	
+
 	for _, tx := range all {
 		// Apply filters
 		if filter.ChainID != 0 && tx.ChainID != filter.ChainID {
@@ -182,18 +181,18 @@ func (r *RegistryStoreAdapter) ListTransactions(ctx context.Context, filter usec
 		if filter.Namespace != "" && tx.Environment != filter.Namespace {
 			continue
 		}
-		
+
 		result = append(result, tx)
 	}
-	
+
 	return result, nil
 }
 
 // ListSafeTransactions lists safe transactions based on filter criteria
-func (r *RegistryStoreAdapter) ListSafeTransactions(ctx context.Context, filter usecase.SafeTransactionFilter) ([]*domain.SafeTransaction, error) {
+func (r *RegistryStoreAdapter) ListSafeTransactions(ctx context.Context, filter domain.SafeTransactionFilter) ([]*domain.SafeTransaction, error) {
 	all := r.manager.GetAllSafeTransactions()
 	var result []*domain.SafeTransaction
-	
+
 	for _, tx := range all {
 		// Apply filters
 		if filter.ChainID != 0 && tx.ChainID != filter.ChainID {
@@ -205,9 +204,10 @@ func (r *RegistryStoreAdapter) ListSafeTransactions(ctx context.Context, filter 
 		if filter.Status != "" && !matchSafeTransactionStatus(tx.Status, filter.Status) {
 			continue
 		}
-		
+
 		result = append(result, tx)
 	}
-	
+
 	return result, nil
 }
+

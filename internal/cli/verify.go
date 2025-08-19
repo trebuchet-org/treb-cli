@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/internal/cli/render"
+	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -52,7 +53,7 @@ Examples:
 			}
 
 			// Create filter
-			filter := usecase.DeploymentFilter{
+			filter := domain.DeploymentFilter{
 				ChainID:   chainID,
 				Namespace: namespace,
 			}

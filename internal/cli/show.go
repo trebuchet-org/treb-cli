@@ -11,6 +11,8 @@ import (
 
 // NewShowCmd creates the show command using the new architecture
 func NewShowCmd() *cobra.Command {
+	var namespace string
+	var network string
 
 	cmd := &cobra.Command{
 		Use:   "show <deployment>",
@@ -40,6 +42,14 @@ Examples:
 			app, err := getApp(cmd)
 			if err != nil {
 				return err
+			}
+
+			// Override config if flags are provided
+			if namespace != "" {
+				app.Config.Namespace = namespace
+			}
+			if network != "" {
+				app.Config.Network.Name = network
 			}
 
 			// Run use case
@@ -76,7 +86,9 @@ Examples:
 		},
 	}
 
-	// No command-specific flags - all configuration comes from runtime config
+	// Add flags for network and namespace
+	cmd.Flags().StringVar(&network, "network", "", "Network to use for deployment lookup")
+	cmd.Flags().StringVar(&namespace, "namespace", "", "Namespace to use for deployment lookup")
 
 	return cmd
 }

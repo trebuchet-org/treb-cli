@@ -7,11 +7,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 
-	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
 // Indexer discovers and indexes contracts and their artifacts
@@ -21,6 +22,7 @@ type Indexer struct {
 	contractNames     map[string][]*domain.ContractInfo // key: contract name, value: all contracts with that name
 	bytecodeHashIndex map[string]*domain.ContractInfo   // key: bytecodeHash -> ContractInfo
 	mu                sync.RWMutex
+	indexed           bool
 }
 
 // NewIndexer creates a new contract indexer
@@ -33,30 +35,30 @@ func NewIndexer(projectRoot string) *Indexer {
 	}
 }
 
-
 // Index discovers all contracts and artifacts
 func (i *Indexer) Index() error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
-	
+
+	if i.indexed {
+		return nil
+	}
 
 	// Reset indexes
 	i.contracts = make(map[string]*domain.ContractInfo)
 	i.contractNames = make(map[string][]*domain.ContractInfo)
 	i.bytecodeHashIndex = make(map[string]*domain.ContractInfo)
 
-
 	// Always run forge build to ensure new scripts are compiled
 	if err := i.runForgeBuild(); err != nil {
 		return fmt.Errorf("failed to build contracts: %w", err)
 	}
-	
+
 	// Find the 'out' directory
 	outDir := filepath.Join(i.projectRoot, "out")
 	if _, err := os.Stat(outDir); os.IsNotExist(err) {
 		return fmt.Errorf("out directory not found after forge build")
 	}
-
 
 	// Walk through all artifact directories
 	err := filepath.Walk(outDir, func(path string, info os.FileInfo, err error) error {
@@ -74,7 +76,6 @@ func (i *Indexer) Index() error {
 			return nil
 		}
 
-
 		// Process the artifact
 		if procErr := i.processArtifact(path); procErr != nil {
 			return procErr
@@ -82,9 +83,9 @@ func (i *Indexer) Index() error {
 		return nil
 	})
 
+	i.indexed = true
 	return err
 }
-
 
 // processArtifact processes a single artifact file
 func (i *Indexer) processArtifact(artifactPath string) error {
@@ -95,20 +96,7 @@ func (i *Indexer) processArtifact(artifactPath string) error {
 	}
 
 	// Parse Foundry artifact structure
-	var artifact struct {
-		Bytecode struct {
-			Object string `json:"object"`
-		} `json:"bytecode"`
-		DeployedBytecode struct {
-			Object string `json:"object"`
-		} `json:"deployedBytecode"`
-		Metadata struct {
-			Settings struct {
-				CompilationTarget map[string]string `json:"compilationTarget"`
-			} `json:"settings"`
-		} `json:"metadata"`
-	}
-	
+	var artifact domain.Artifact
 	if err := json.Unmarshal(data, &artifact); err != nil {
 		// Skip invalid artifacts
 		return nil
@@ -139,13 +127,7 @@ func (i *Indexer) processArtifact(artifactPath string) error {
 		Name:         contractName,
 		Path:         sourceName,
 		ArtifactPath: relArtifactPath,
-	}
-
-	// Determine if it's a library (simple heuristic)
-	if strings.Contains(strings.ToLower(contractName), "lib") || 
-	   strings.Contains(sourceName, "/libraries/") ||
-	   strings.Contains(sourceName, "/lib/") {
-		info.IsLibrary = true
+		Artifact:     &artifact,
 	}
 
 	// Add to indexes
@@ -158,20 +140,19 @@ func (i *Indexer) processArtifact(artifactPath string) error {
 		// Multiple contracts with same name
 		i.contractNames[info.Name] = append(existingList, info)
 		// Remove simple key if it exists
-		delete(i.contracts, info.Name)
 	} else {
 		// First contract with this name
 		i.contractNames[info.Name] = []*domain.ContractInfo{info}
-		// Also add simple key
-		i.contracts[info.Name] = info
 	}
 
 	return nil
 }
 
-
 // GetContract retrieves a contract by key (name or path:name)
-func (i *Indexer) GetContract(key string) (*domain.ContractInfo, error) {
+func (i *Indexer) GetContract(ctx context.Context, key string) (*domain.ContractInfo, error) {
+	if err := i.Index(); err != nil {
+		return nil, err
+	}
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 
@@ -183,35 +164,47 @@ func (i *Indexer) GetContract(key string) (*domain.ContractInfo, error) {
 }
 
 // SearchContracts searches for contracts matching a pattern
-func (i *Indexer) SearchContracts(pattern string) []*domain.ContractInfo {
+func (i *Indexer) SearchContracts(ctx context.Context, query domain.ContractQuery) []*domain.ContractInfo {
+	if err := i.Index(); err != nil {
+		panic(err)
+	}
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 
 	var results []*domain.ContractInfo
-	lowPattern := strings.ToLower(pattern)
+	var artifactQuery string = ""
+	var pathRegex *regexp.Regexp
+	if query.Query != nil {
+		artifactQuery = strings.ToLower(*query.Query)
+	}
+	if query.PathPattern != nil {
+		pathRegex = regexp.MustCompile(*query.PathPattern)
+	}
 
 	// Search through all contracts
-	seen := make(map[string]bool)
-	for _, info := range i.contracts {
-		// Skip duplicates
-		key := fmt.Sprintf("%s:%s", info.Path, info.Name)
-		if seen[key] {
-			continue
-		}
-		seen[key] = true
-
+	for key, contract := range i.contracts {
 		// Match on name or path
-		if strings.Contains(strings.ToLower(info.Name), lowPattern) ||
-		   strings.Contains(strings.ToLower(info.Path), lowPattern) {
-			results = append(results, info)
+		if artifactQuery != "" {
+			if !strings.Contains(strings.ToLower(key), artifactQuery) {
+				continue
+			}
 		}
+		if pathRegex != nil {
+			if !pathRegex.MatchString(contract.Path) {
+				continue
+			}
+		}
+		results = append(results, contract)
 	}
 
 	return results
 }
 
 // GetContractByArtifact finds a contract by its artifact path
-func (i *Indexer) GetContractByArtifact(artifactPath string) *domain.ContractInfo {
+func (i *Indexer) GetContractByArtifact(ctx context.Context, artifactPath string) *domain.ContractInfo {
+	if err := i.Index(); err != nil {
+		panic(err)
+	}
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 
@@ -225,6 +218,9 @@ func (i *Indexer) GetContractByArtifact(artifactPath string) *domain.ContractInf
 
 // GetScriptContracts returns all script contracts
 func (i *Indexer) GetScriptContracts() []*domain.ContractInfo {
+	if err := i.Index(); err != nil {
+		panic(err)
+	}
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 
@@ -250,9 +246,12 @@ func (i *Indexer) GetScriptContracts() []*domain.ContractInfo {
 
 // GetAllContracts returns all indexed contracts (for debugging)
 func (i *Indexer) GetAllContracts() map[string]*domain.ContractInfo {
+	if err := i.Index(); err != nil {
+		panic(err)
+	}
 	i.mu.RLock()
 	defer i.mu.RUnlock()
-	
+
 	// Return a copy to avoid race conditions
 	result := make(map[string]*domain.ContractInfo)
 	for k, v := range i.contracts {
@@ -268,50 +267,14 @@ func (i *Indexer) runForgeBuild() error {
 	// The --force flag was causing significant slowdowns
 	cmd := exec.Command("forge", "build")
 	cmd.Dir = i.projectRoot
-	
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("forge build failed: %w\nOutput: %s", err, string(output))
 	}
-	
+
 	return nil
 }
 
-// IndexerAdapter adapts the internal indexer to the ContractIndexer interface
-type IndexerAdapter struct {
-	indexer *Indexer
-}
-
-// NewIndexerAdapter creates a new contract indexer adapter
-func NewIndexerAdapter(cfg *config.RuntimeConfig) (*IndexerAdapter, error) {
-	indexer := NewIndexer(cfg.ProjectRoot)
-	
-	// Index contracts
-	if err := indexer.Index(); err != nil {
-		return nil, fmt.Errorf("failed to index contracts: %w", err)
-	}
-
-	return &IndexerAdapter{
-		indexer: indexer,
-	}, nil
-}
-
-// GetContract retrieves a contract by key
-func (a *IndexerAdapter) GetContract(ctx context.Context, key string) (*domain.ContractInfo, error) {
-	return a.indexer.GetContract(key)
-}
-
-// SearchContracts searches for contracts matching a pattern
-func (a *IndexerAdapter) SearchContracts(ctx context.Context, pattern string) []*domain.ContractInfo {
-	return a.indexer.SearchContracts(pattern)
-}
-
-// GetContractByArtifact retrieves a contract by its artifact path
-func (a *IndexerAdapter) GetContractByArtifact(ctx context.Context, artifact string) *domain.ContractInfo {
-	return a.indexer.GetContractByArtifact(artifact)
-}
-
-// RefreshIndex refreshes the contract index
-func (a *IndexerAdapter) RefreshIndex(ctx context.Context) error {
-	return a.indexer.Index()
-}
+// Ensure the adapter implements both interfaces
+var _ usecase.ContractIndexer = (*Indexer)(nil)

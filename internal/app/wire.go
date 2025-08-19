@@ -54,4 +54,3 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	)
 	return nil, nil
 }
-

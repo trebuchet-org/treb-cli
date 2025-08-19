@@ -3,9 +3,8 @@ package contracts
 import (
 	"context"
 	"fmt"
-	"sort"
+	"os"
 	"strings"
-	"sync"
 
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
@@ -14,13 +13,13 @@ import (
 
 // ContractResolver handles contract resolution and selection
 type ContractResolver struct {
-	config          *config.RuntimeConfig
-	indexer         *Indexer
-	selector        usecase.InteractiveSelector
+	config   *config.RuntimeConfig
+	indexer  *Indexer
+	selector usecase.ContractSelector
 }
 
 // NewContractResolver creates a new contract resolver
-func NewContractResolver(cfg *config.RuntimeConfig, indexer *Indexer, selector usecase.InteractiveSelector) *ContractResolver {
+func NewContractResolver(cfg *config.RuntimeConfig, indexer *Indexer, selector usecase.ContractSelector) *ContractResolver {
 	return &ContractResolver{
 		config:   cfg,
 		indexer:  indexer,
@@ -28,50 +27,23 @@ func NewContractResolver(cfg *config.RuntimeConfig, indexer *Indexer, selector u
 	}
 }
 
-// ResolveContract resolves a contract reference to a contract
-func (r *ContractResolver) ResolveContract(ctx context.Context, contractRef string) (*domain.ContractInfo, error) {
-	// Use default filter (all contracts)
-	filter := usecase.ContractFilter{
-		IncludeLibraries: true,
-		IncludeInterface: true,
-		IncludeAbstract:  true,
-	}
-	return r.ResolveContractWithFilter(ctx, contractRef, filter)
-}
-
 // ResolveContractWithFilter resolves a contract reference with filtering
-func (r *ContractResolver) ResolveContractWithFilter(ctx context.Context, contractRef string, filter usecase.ContractFilter) (*domain.ContractInfo, error) {
+func (r *ContractResolver) ResolveContract(ctx context.Context, query domain.ContractQuery) (*domain.ContractInfo, error) {
 	// First try exact match (could be "Counter" or "src/Counter.sol:Counter")
-	contract, err := r.indexer.GetContract(contractRef)
-	if err == nil && contract != nil {
-		// Check if it matches the filter
-		if err := r.validateContractAgainstFilter(contract, filter, contractRef); err != nil {
-			return nil, err
-		}
-		return contract, nil
-	}
+	contracts := r.indexer.SearchContracts(ctx, query)
 
-	// Search for contracts
-	contracts := r.indexer.SearchContracts(contractRef)
-	
-	// Filter contracts based on criteria
-	filtered := r.filterContracts(contracts, filter)
-	
-	if len(filtered) == 0 {
+	if len(contracts) == 0 {
 		// Provide helpful error message based on what was filtered out
-		if len(contracts) > 0 {
-			return nil, r.buildFilterErrorMessage(contractRef, contracts, filter)
-		}
-		return nil, fmt.Errorf("contract '%s' not found", contractRef)
+		return nil, domain.NoContractsMatchErr{Query: query}
 	}
 
-	if len(filtered) == 1 {
-		return filtered[0], nil
+	if len(contracts) == 1 {
+		return contracts[0], nil
 	}
 
 	// Multiple matches - use interactive selector if available
 	if r.selector != nil && !r.config.NonInteractive {
-		selected, err := r.selector.SelectContract(ctx, filtered, fmt.Sprintf("Multiple contracts found for '%s'. Select one:", contractRef))
+		selected, err := r.selector.SelectContract(ctx, contracts, fmt.Sprintf("Multiple contracts found for '%v'. Select one:", query))
 		if err != nil {
 			return nil, fmt.Errorf("contract selection failed: %w", err)
 		}
@@ -79,42 +51,16 @@ func (r *ContractResolver) ResolveContractWithFilter(ctx context.Context, contra
 	}
 
 	// Non-interactive mode with multiple matches
-	return nil, r.buildAmbiguousErrorMessage(contractRef, filtered)
+	return nil, domain.AmbiguousFilterErr{Query: query, Matches: contracts}
 }
 
 // GetProxyContracts returns all available proxy contracts
 func (r *ContractResolver) GetProxyContracts(ctx context.Context) ([]*domain.ContractInfo, error) {
-	// Common proxy contract patterns
-	proxyPatterns := []string{
-		"Proxy",
-		"UpgradeableProxy",
-		"TransparentUpgradeableProxy",
-		"UUPSProxy",
-		"ERC1967Proxy",
-		"BeaconProxy",
-	}
-
-	var proxies []*domain.ContractInfo
-	seen := make(map[string]bool)
-
-	for _, pattern := range proxyPatterns {
-		contracts := r.indexer.SearchContracts(pattern)
-		for _, contract := range contracts {
-			// Filter to only include actual proxy contracts
-			if r.isProxyContract(contract) {
-				key := fmt.Sprintf("%s:%s", contract.Path, contract.Name)
-				if !seen[key] {
-					seen[key] = true
-					proxies = append(proxies, contract)
-				}
-			}
-		}
-	}
-
+	var proxy = "Proxy"
+	proxies := r.indexer.SearchContracts(ctx, domain.ContractQuery{Query: &proxy})
 	if len(proxies) == 0 {
 		return nil, fmt.Errorf("no proxy contracts found in project")
 	}
-
 	return proxies, nil
 }
 
@@ -144,234 +90,15 @@ func (r *ContractResolver) SelectProxyContract(ctx context.Context) (*domain.Con
 	return nil, fmt.Errorf("multiple proxy contracts found. Please specify --proxy-contract or run in interactive mode")
 }
 
-// filterContracts filters contracts based on the provided filter
-func (r *ContractResolver) filterContracts(contracts []*domain.ContractInfo, filter usecase.ContractFilter) []*domain.ContractInfo {
-	var filtered []*domain.ContractInfo
-	for _, contract := range contracts {
-		if r.matchesFilter(contract, filter) {
-			filtered = append(filtered, contract)
-		}
-	}
-	return filtered
-}
-
-// matchesFilter checks if a contract matches the filter criteria
-func (r *ContractResolver) matchesFilter(contract *domain.ContractInfo, filter usecase.ContractFilter) bool {
-	if contract.IsLibrary && !filter.IncludeLibraries {
-		return false
-	}
-	if contract.IsInterface && !filter.IncludeInterface {
-		return false
-	}
-	if contract.IsAbstract && !filter.IncludeAbstract {
-		return false
-	}
-	return true
-}
-
-// validateContractAgainstFilter validates a single contract against the filter
-func (r *ContractResolver) validateContractAgainstFilter(contract *domain.ContractInfo, filter usecase.ContractFilter, ref string) error {
-	if contract.IsLibrary && !filter.IncludeLibraries {
-		return fmt.Errorf("contract '%s' is a library, but libraries are not included in the filter", ref)
-	}
-	if contract.IsInterface && !filter.IncludeInterface {
-		return fmt.Errorf("contract '%s' is an interface, but interfaces are not included in the filter", ref)
-	}
-	if contract.IsAbstract && !filter.IncludeAbstract {
-		return fmt.Errorf("contract '%s' is abstract, but abstract contracts are not included in the filter", ref)
-	}
-	return nil
-}
-
-// isProxyContract determines if a contract is likely a proxy contract
-func (r *ContractResolver) isProxyContract(contract *domain.ContractInfo) bool {
-	// Check if the contract name contains "Proxy"
-	if !strings.Contains(contract.Name, "Proxy") {
-		return false
-	}
-	
-	// Exclude test contracts
-	if strings.Contains(contract.Path, "test/") || strings.Contains(contract.Path, "Test") {
-		return false
-	}
-	
-	// Exclude mock contracts
-	if strings.Contains(contract.Name, "Mock") || strings.Contains(contract.Path, "mock/") {
-		return false
-	}
-	
-	return true
-}
-
-// buildFilterErrorMessage builds an error message when contracts were filtered out
-func (r *ContractResolver) buildFilterErrorMessage(ref string, contracts []*domain.ContractInfo, filter usecase.ContractFilter) error {
-	var filteredTypes []string
-	hasLibrary := false
-	hasInterface := false
-	hasAbstract := false
-
-	for _, contract := range contracts {
-		if contract.IsLibrary {
-			hasLibrary = true
-		}
-		if contract.IsInterface {
-			hasInterface = true
-		}
-		if contract.IsAbstract {
-			hasAbstract = true
-		}
+// A bit of a heuristic, could do better using solidity ASTs, but should work for 99% of cases.
+func (r *ContractResolver) IsLibrary(ctx context.Context, contract *domain.ContractInfo) (bool, error) {
+	content, err := os.ReadFile(contract.Path)
+	if err != nil {
+		return false, err
 	}
 
-	if hasLibrary && !filter.IncludeLibraries {
-		filteredTypes = append(filteredTypes, "libraries")
-	}
-	if hasInterface && !filter.IncludeInterface {
-		filteredTypes = append(filteredTypes, "interfaces")
-	}
-	if hasAbstract && !filter.IncludeAbstract {
-		filteredTypes = append(filteredTypes, "abstract contracts")
-	}
-
-	if len(filteredTypes) > 0 {
-		return fmt.Errorf("found contracts matching '%s', but they are %s which are excluded by the current filter", 
-			ref, strings.Join(filteredTypes, " or "))
-	}
-
-	return fmt.Errorf("no contracts matching '%s' meet the filter criteria", ref)
-}
-
-// buildAmbiguousErrorMessage builds an error message for ambiguous matches
-func (r *ContractResolver) buildAmbiguousErrorMessage(ref string, contracts []*domain.ContractInfo) error {
-	// Sort contracts by artifact path for consistent output
-	sortedContracts := make([]*domain.ContractInfo, len(contracts))
-	copy(sortedContracts, contracts)
-	
-	sort.Slice(sortedContracts, func(i, j int) bool {
-		// Sort by full artifact path (path:name)
-		artifactI := fmt.Sprintf("%s:%s", sortedContracts[i].Path, sortedContracts[i].Name)
-		artifactJ := fmt.Sprintf("%s:%s", sortedContracts[j].Path, sortedContracts[j].Name)
-		return artifactI < artifactJ
-	})
-
-	var suggestions []string
-	for _, contract := range sortedContracts {
-		suggestion := fmt.Sprintf("  - %s (%s)", contract.Name, contract.Path)
-		suggestions = append(suggestions, suggestion)
-	}
-
-	return fmt.Errorf("multiple contracts found matching '%s' - use full path:contract format to disambiguate:\n%s",
-		ref, strings.Join(suggestions, "\n"))
-}
-
-// ContractResolverAdapter adapts the contract resolver for the usecase layer
-type ContractResolverAdapter struct {
-	indexer  *Indexer
-	resolver *ContractResolver
-	indexed  bool
-	mu       sync.Mutex
-}
-
-// NewContractResolverAdapter creates a new contract resolver adapter
-func NewContractResolverAdapter(cfg *config.RuntimeConfig, selector usecase.InteractiveSelector) (*ContractResolverAdapter, error) {
-	indexer := NewIndexer(cfg.ProjectRoot)
-	
-	// Don't index immediately - wait until first use
-	resolver := NewContractResolver(cfg, indexer, selector)
-	
-	return &ContractResolverAdapter{
-		indexer:  indexer,
-		resolver: resolver,
-		indexed:  false,
-	}, nil
-}
-
-// ensureIndexed ensures the contracts are indexed (lazy initialization)
-func (a *ContractResolverAdapter) ensureIndexed() error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	
-	if !a.indexed {
-		if err := a.indexer.Index(); err != nil {
-			return fmt.Errorf("failed to index contracts: %w", err)
-		}
-		a.indexed = true
-	}
-	return nil
-}
-
-// ResolveContract resolves a contract reference to a contract
-func (a *ContractResolverAdapter) ResolveContract(ctx context.Context, contractRef string) (*domain.ContractInfo, error) {
-	if err := a.ensureIndexed(); err != nil {
-		return nil, err
-	}
-	return a.resolver.ResolveContract(ctx, contractRef)
-}
-
-// ResolveContractWithFilter resolves a contract reference with filtering
-func (a *ContractResolverAdapter) ResolveContractWithFilter(ctx context.Context, contractRef string, filter usecase.ContractFilter) (*domain.ContractInfo, error) {
-	if err := a.ensureIndexed(); err != nil {
-		return nil, err
-	}
-	return a.resolver.ResolveContractWithFilter(ctx, contractRef, filter)
-}
-
-// GetProxyContracts returns all available proxy contracts
-func (a *ContractResolverAdapter) GetProxyContracts(ctx context.Context) ([]*domain.ContractInfo, error) {
-	if err := a.ensureIndexed(); err != nil {
-		return nil, err
-	}
-	return a.resolver.GetProxyContracts(ctx)
-}
-
-// SelectProxyContract interactively selects a proxy contract
-func (a *ContractResolverAdapter) SelectProxyContract(ctx context.Context) (*domain.ContractInfo, error) {
-	if err := a.ensureIndexed(); err != nil {
-		return nil, err
-	}
-	return a.resolver.SelectProxyContract(ctx)
-}
-
-// GetContract retrieves a contract by key (delegated to indexer for compatibility)
-func (a *ContractResolverAdapter) GetContract(ctx context.Context, key string) (*domain.ContractInfo, error) {
-	if err := a.ensureIndexed(); err != nil {
-		return nil, err
-	}
-	return a.indexer.GetContract(key)
-}
-
-// SearchContracts searches for contracts matching a pattern (delegated to indexer for compatibility)
-func (a *ContractResolverAdapter) SearchContracts(ctx context.Context, pattern string) []*domain.ContractInfo {
-	// Ignore error for search - return empty if indexing fails
-	_ = a.ensureIndexed()
-	return a.indexer.SearchContracts(pattern)
-}
-
-// GetContractByArtifact retrieves a contract by its artifact path (delegated to indexer for compatibility)
-func (a *ContractResolverAdapter) GetContractByArtifact(ctx context.Context, artifact string) *domain.ContractInfo {
-	// Ignore error for search - return nil if indexing fails
-	_ = a.ensureIndexed()
-	return a.indexer.GetContractByArtifact(artifact)
-}
-
-// RefreshIndex refreshes the contract index (delegated to indexer for compatibility)
-func (a *ContractResolverAdapter) RefreshIndex(ctx context.Context) error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	
-	// Reset indexed flag and re-index
-	a.indexed = false
-	if err := a.indexer.Index(); err != nil {
-		return err
-	}
-	a.indexed = true
-	return nil
-}
-
-// GetIndexer returns the internal indexer (for sharing with script resolver)
-func (a *ContractResolverAdapter) GetIndexer() *Indexer {
-	return a.indexer
+	return strings.Contains(string(content), fmt.Sprintf("library %s", contract.Name)), nil
 }
 
 // Ensure the adapter implements both interfaces
-var _ usecase.ContractResolver = (*ContractResolverAdapter)(nil)
-var _ usecase.ContractIndexer = (*ContractResolverAdapter)(nil)
+var _ usecase.ContractResolver = (*ContractResolver)(nil)

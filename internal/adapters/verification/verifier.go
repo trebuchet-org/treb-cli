@@ -28,7 +28,7 @@ func NewVerifierAdapter(cfg *config.RuntimeConfig) (*VerifierAdapter, error) {
 }
 
 // Verify performs contract verification on multiple verifiers
-func (v *VerifierAdapter) Verify(ctx context.Context, deployment *domain.Deployment, network *domain.NetworkInfo) error {
+func (v *VerifierAdapter) Verify(ctx context.Context, deployment *domain.Deployment, network *domain.Network) error {
 	return v.verifier.Verify(ctx, deployment, network)
 }
 
@@ -39,3 +39,4 @@ func (v *VerifierAdapter) GetVerificationStatus(ctx context.Context, deployment 
 
 // Ensure the adapter implements the interface
 var _ usecase.ContractVerifier = (*VerifierAdapter)(nil)
+

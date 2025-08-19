@@ -210,4 +210,3 @@ func (r *SpinnerProgressReporter) Error(message string) {
 
 // Ensure SpinnerProgressReporter implements ProgressSink
 var _ usecase.ProgressSink = (*SpinnerProgressReporter)(nil)
-

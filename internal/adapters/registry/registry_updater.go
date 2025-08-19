@@ -11,29 +11,27 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
-// InternalUpdater handles registry updates without pkg dependencies
-type InternalUpdater struct {
-	deploymentStore usecase.DeploymentStore
+// RegistryUpdater handles registry updates without pkg dependencies
+type RegistryUpdater struct {
+	deploymentStore  usecase.DeploymentStore
 	transactionStore usecase.TransactionStore
 }
 
-// NewInternalUpdater creates a new internal registry updater
-func NewInternalUpdater(
+// NewRegistryUpdater creates a new internal registry updater
+func NewRegistryUpdater(
 	deploymentStore usecase.DeploymentStore,
 	transactionStore usecase.TransactionStore,
-) *InternalUpdater {
-	return &InternalUpdater{
-		deploymentStore: deploymentStore,
+) *RegistryUpdater {
+	return &RegistryUpdater{
+		deploymentStore:  deploymentStore,
 		transactionStore: transactionStore,
 	}
 }
 
 // PrepareUpdates analyzes the execution and prepares registry updates
-func (u *InternalUpdater) PrepareUpdates(
+func (u *RegistryUpdater) PrepareUpdates(
 	ctx context.Context,
 	execution *domain.ScriptExecution,
-	namespace string,
-	network string,
 ) (*usecase.RegistryChanges, error) {
 	changes := &usecase.RegistryChanges{
 		Deployments:  []*domain.Deployment{},
@@ -42,7 +40,7 @@ func (u *InternalUpdater) PrepareUpdates(
 
 	// Get current timestamp
 	now := time.Now()
-	
+
 	// Get git commit hash
 	commitHash := getGitCommit()
 
@@ -51,13 +49,13 @@ func (u *InternalUpdater) PrepareUpdates(
 
 	// Process deployments from the execution
 	for _, dep := range execution.Deployments {
-		deployment, err := u.createDeploymentFromScriptDeployment(dep, execution, namespace, commitHash, now)
+		deployment, err := u.createDeploymentFromScriptDeployment(dep, execution, commitHash, now)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create deployment: %w", err)
 		}
 
 		changes.Deployments = append(changes.Deployments, deployment)
-		
+
 		// Track which transaction this deployment belongs to
 		if dep.TransactionID != [32]byte{} {
 			txID := fmt.Sprintf("%x", dep.TransactionID)
@@ -67,7 +65,7 @@ func (u *InternalUpdater) PrepareUpdates(
 
 	// Process transactions
 	for _, tx := range execution.Transactions {
-		transaction := u.createTransactionFromScriptTransaction(&tx, execution.ChainID, namespace, now)
+		transaction := u.createTransactionFromScriptTransaction(&tx, execution.Network.ChainID, execution.Namespace, now)
 
 		// Link deployments to transaction
 		txID := fmt.Sprintf("%x", tx.TransactionID)
@@ -95,7 +93,7 @@ func (u *InternalUpdater) PrepareUpdates(
 }
 
 // ApplyUpdates applies the prepared changes to the registry
-func (u *InternalUpdater) ApplyUpdates(ctx context.Context, changes *usecase.RegistryChanges) error {
+func (u *RegistryUpdater) ApplyUpdates(ctx context.Context, changes *usecase.RegistryChanges) error {
 	// Save deployments
 	for _, deployment := range changes.Deployments {
 		if err := u.deploymentStore.SaveDeployment(ctx, deployment); err != nil {
@@ -114,28 +112,27 @@ func (u *InternalUpdater) ApplyUpdates(ctx context.Context, changes *usecase.Reg
 }
 
 // HasChanges returns true if there are any changes to apply
-func (u *InternalUpdater) HasChanges(changes *usecase.RegistryChanges) bool {
+func (u *RegistryUpdater) HasChanges(changes *usecase.RegistryChanges) bool {
 	return changes != nil && changes.HasChanges
 }
 
 // createDeploymentFromScriptDeployment creates a deployment from a ScriptDeployment
-func (u *InternalUpdater) createDeploymentFromScriptDeployment(
+func (u *RegistryUpdater) createDeploymentFromScriptDeployment(
 	dep domain.ScriptDeployment,
 	execution *domain.ScriptExecution,
-	namespace string,
 	commitHash string,
 	timestamp time.Time,
 ) (*domain.Deployment, error) {
 	// Generate deployment ID
-	id := fmt.Sprintf("%s/%d/%s", namespace, execution.ChainID, dep.ContractName)
+	id := fmt.Sprintf("%s/%d/%s", execution.Namespace, execution.Network.ChainID, dep.ContractName)
 	if dep.Label != "" {
 		id = fmt.Sprintf("%s:%s", id, dep.Label)
 	}
 
 	deployment := &domain.Deployment{
 		ID:           id,
-		Namespace:    namespace,
-		ChainID:      execution.ChainID,
+		Namespace:    execution.Namespace,
+		ChainID:      execution.Network.ChainID,
 		ContractName: dep.ContractName,
 		Label:        dep.Label,
 		Address:      dep.Address,
@@ -168,7 +165,7 @@ func (u *InternalUpdater) createDeploymentFromScriptDeployment(
 }
 
 // createTransactionFromScriptTransaction creates a transaction record
-func (u *InternalUpdater) createTransactionFromScriptTransaction(
+func (u *RegistryUpdater) createTransactionFromScriptTransaction(
 	tx *domain.ScriptTransaction,
 	chainID uint64,
 	namespace string,
@@ -194,12 +191,12 @@ func (u *InternalUpdater) createTransactionFromScriptTransaction(
 		Environment: namespace,
 		CreatedAt:   timestamp,
 	}
-	
+
 	// Set block number if available
 	if tx.BlockNumber != nil {
 		transaction.BlockNumber = *tx.BlockNumber
 	}
-	
+
 	return transaction
 }
 
@@ -241,3 +238,5 @@ func mapTransactionStatus(status domain.TransactionStatus) domain.TransactionSta
 	// Already a domain type, just return it
 	return status
 }
+
+var _ usecase.RegistryUpdater = (&RegistryUpdater{})

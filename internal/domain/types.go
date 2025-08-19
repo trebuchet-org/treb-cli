@@ -177,29 +177,29 @@ type SafeContext struct {
 // SafeTransaction represents a Safe multisig transaction record
 type SafeTransaction struct {
 	// Identification
-	ID            string       `json:"id"`            // e.g., "safe-tx-0x1234abcd..."
-	SafeTxHash    string       `json:"safeTxHash"`    // Safe transaction hash
-	ChainID       uint64       `json:"chainId"`       // Chain ID
-	SafeAddress   string       `json:"safeAddress"`   // Safe contract address
-	Nonce         uint64       `json:"nonce"`         // Safe nonce
-	Status        SafeTxStatus `json:"status"`        // QUEUED, EXECUTED, FAILED
+	ID          string       `json:"id"`          // e.g., "safe-tx-0x1234abcd..."
+	SafeTxHash  string       `json:"safeTxHash"`  // Safe transaction hash
+	ChainID     uint64       `json:"chainId"`     // Chain ID
+	SafeAddress string       `json:"safeAddress"` // Safe contract address
+	Nonce       uint64       `json:"nonce"`       // Safe nonce
+	Status      SafeTxStatus `json:"status"`      // QUEUED, EXECUTED, FAILED
 
 	// Transaction details
-	To              string   `json:"to"`               // Target address
-	Value           string   `json:"value"`            // Value in wei
-	Data            string   `json:"data"`             // Transaction data
-	Operation       int      `json:"operation"`        // 0 = Call, 1 = DelegateCall
-	ProposedBy      string   `json:"proposedBy"`       // Address that proposed the tx
-	TransactionIDs  []string `json:"transactionIds"`   // Related transaction IDs
+	To             string   `json:"to"`             // Target address
+	Value          string   `json:"value"`          // Value in wei
+	Data           string   `json:"data"`           // Transaction data
+	Operation      int      `json:"operation"`      // 0 = Call, 1 = DelegateCall
+	ProposedBy     string   `json:"proposedBy"`     // Address that proposed the tx
+	TransactionIDs []string `json:"transactionIds"` // Related transaction IDs
 
 	// Execution details
 	ExecutionTxHash string     `json:"executionTxHash,omitempty"` // Ethereum tx hash when executed
 	ExecutedAt      *time.Time `json:"executedAt,omitempty"`      // When executed
 
 	// Confirmation details
-	ConfirmationCount    int             `json:"confirmationCount"`
-	ConfirmationsRequired int             `json:"confirmationsRequired"`
-	Confirmations        []Confirmation  `json:"confirmations"`
+	ConfirmationCount     int            `json:"confirmationCount"`
+	ConfirmationsRequired int            `json:"confirmationsRequired"`
+	Confirmations         []Confirmation `json:"confirmations"`
 
 	// Metadata
 	CreatedAt time.Time `json:"createdAt"`
@@ -213,11 +213,11 @@ type Confirmation struct {
 	ConfirmedAt time.Time `json:"confirmedAt"`
 }
 
-// NetworkInfo represents network configuration
-type NetworkInfo struct {
-	ChainID    uint64 `json:"chainId"`
-	Name       string `json:"name"`
-	RPCURL     string `json:"rpcUrl"`
+// Network represents network configuration
+type Network struct {
+	ChainID     uint64 `json:"chainId"`
+	Name        string `json:"name"`
+	RPCURL      string `json:"rpcUrl"`
 	ExplorerURL string `json:"explorerUrl,omitempty"`
 }
 
@@ -229,13 +229,13 @@ type TrebConfig struct {
 
 // SenderConfig represents a sender configuration
 type SenderConfig struct {
-	Type           string            `json:"type"`
-	Account        string            `json:"account,omitempty"`
-	PrivateKey     string            `json:"privateKey,omitempty"`
-	Safe           string            `json:"safe,omitempty"`
-	DerivationPath string            `json:"derivationPath,omitempty"`
-	Proposer       *ProposerConfig   `json:"proposer,omitempty"`
-	Signer         string            `json:"signer,omitempty"` // Legacy v1 field for Safe senders
+	Type           string          `json:"type"`
+	Account        string          `json:"account,omitempty"`
+	PrivateKey     string          `json:"privateKey,omitempty"`
+	Safe           string          `json:"safe,omitempty"`
+	DerivationPath string          `json:"derivationPath,omitempty"`
+	Proposer       *ProposerConfig `json:"proposer,omitempty"`
+	Signer         string          `json:"signer,omitempty"` // Legacy v1 field for Safe senders
 }
 
 // ProposerConfig represents proposer configuration for Safe transactions
@@ -247,13 +247,11 @@ type ProposerConfig struct {
 
 // ContractInfo represents information about a discovered contract
 type ContractInfo struct {
-	Name         string `json:"name"`
-	Path         string `json:"path"`
-	ArtifactPath string `json:"artifactPath,omitempty"`
-	Version      string `json:"version,omitempty"`
-	IsLibrary    bool   `json:"isLibrary"`
-	IsInterface  bool   `json:"isInterface"`
-	IsAbstract   bool   `json:"isAbstract"`
+	Name         string    `json:"name"`
+	Path         string    `json:"path"`
+	ArtifactPath string    `json:"artifactPath,omitempty"`
+	Version      string    `json:"version,omitempty"`
+	Artifact     *Artifact `json:"artifact,omitempty"`
 }
 
 // GetDisplayName returns a human-friendly name for the deployment
@@ -401,4 +399,53 @@ type Artifact struct {
 	MethodIdentifiers map[string]string `json:"methodIdentifiers"`
 	RawMetadata       string            `json:"rawMetadata"`
 	Metadata          ArtifactMetadata  `json:"metadata"`
+}
+
+// TransactionFilter defines filtering options for transactions
+type TransactionFilter struct {
+	ChainID   uint64
+	Status    TransactionStatus
+	Namespace string
+}
+
+// DeploymentFilter defines filtering options for deployments
+type DeploymentFilter struct {
+	Namespace    string
+	ChainID      uint64
+	ContractName string
+	Label        string
+	Type         DeploymentType
+}
+
+type ContractQuery struct {
+	Query       *string
+	PathPattern *string
+}
+
+func (cq ContractQuery) String() string {
+	if cq.Query == nil && cq.PathPattern == nil {
+		return "<all contracts>"
+	} else if cq.Query != nil && cq.PathPattern == nil {
+		return *cq.Query
+	} else if cq.Query == nil && cq.PathPattern != nil {
+		return *cq.PathPattern
+	} else {
+		return fmt.Sprintf("%s and %s)", *cq.Query, *cq.PathPattern)
+	}
+}
+
+// SafeTransactionFilter defines filtering options for Safe transactions
+type SafeTransactionFilter struct {
+	ChainID     uint64
+	Status      TransactionStatus
+	SafeAddress string
+}
+
+// SafeExecutionInfo contains execution information for a Safe transaction
+type SafeExecutionInfo struct {
+	IsExecuted            bool
+	TxHash                string
+	Confirmations         int
+	ConfirmationsRequired int
+	ConfirmationDetails   []Confirmation
 }

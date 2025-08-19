@@ -78,26 +78,26 @@ type Method struct {
 
 // ScriptExecution represents the complete result of running a script
 type ScriptExecution struct {
-	ID              string
-	Script          string // Script path or name
-	ScriptPath      string
-	ScriptName      string
-	Network         string
-	Namespace       string
-	ChainID         uint64
-	Success         bool
-	DryRun          bool
-	Error           string
-	GasUsed         uint64
-	Metadata        map[string]string
-	Transactions    []ScriptTransaction
-	Deployments     []ScriptDeployment
-	Events          []ScriptEvent
-	Logs            []string
-	BroadcastPath   string
-	ExecutedAt      time.Time
-	ExecutionTime   time.Duration
-	Stages          []ExecutionStage
+	ID            string
+	Script        string // Script path or name
+	ScriptPath    string
+	ScriptName    string
+	Network       Network
+	Namespace     string
+	Success       bool
+	DryRun        bool
+	Error         string
+	GasUsed       uint64
+	Metadata      map[string]string
+	Transactions  []ScriptTransaction
+	Deployments   []ScriptDeployment
+	Events        []DeploymentEvent
+	EventLogs     []interface{} // Raw ethereum logs
+	Logs          []string
+	BroadcastPath string
+	ExecutedAt    time.Time
+	ExecutionTime time.Duration
+	Stages        []ExecutionStage
 }
 
 // ScriptTransaction represents a transaction executed by a script
@@ -112,7 +112,7 @@ type ScriptTransaction struct {
 	Nonce           uint64
 	Status          TransactionStatus
 	TxHash          *string
-	Hash            string   // Transaction hash
+	Hash            string // Transaction hash
 	BlockNumber     *uint64
 	GasUsed         *uint64
 	DeploymentIDs   []string // IDs of deployments created by this transaction
@@ -224,23 +224,6 @@ type ScriptParameterValue struct {
 	Value string
 }
 
-// ScriptInfo represents information about a resolved script
-type ScriptInfo struct {
-	Path         string
-	Name         string
-	ContractName string
-	ArtifactPath string
-	Artifact     *ContractArtifact
-}
-
-// ContractArtifact represents compiled contract artifact data
-type ContractArtifact struct {
-	ABI          []byte
-	Bytecode     []byte
-	DeployedCode []byte
-	Metadata     []byte
-}
-
 // ScriptExecutionEvent represents an event emitted during script execution
 type ScriptExecutionEvent struct {
 	Type string
@@ -249,22 +232,22 @@ type ScriptExecutionEvent struct {
 
 // BroadcastFile represents a Foundry broadcast file
 type BroadcastFile struct {
-	Chain        uint64                  `json:"chain"`
-	Transactions []BroadcastTransaction  `json:"transactions"`
-	Receipts     []BroadcastReceipt      `json:"receipts"`
-	Timestamp    uint64                  `json:"timestamp"`
-	Commit       string                  `json:"commit"`
+	Chain        uint64                 `json:"chain"`
+	Transactions []BroadcastTransaction `json:"transactions"`
+	Receipts     []BroadcastReceipt     `json:"receipts"`
+	Timestamp    uint64                 `json:"timestamp"`
+	Commit       string                 `json:"commit"`
 }
 
 // BroadcastTransaction represents a transaction in a broadcast file
 type BroadcastTransaction struct {
-	Hash                string                  `json:"hash"`
-	Transaction         map[string]interface{}  `json:"transaction"`
-	ContractName        string                  `json:"contractName"`
-	ContractAddr        string                  `json:"contractAddress"`
-	Function            string                  `json:"function"`
-	Arguments           []interface{}           `json:"arguments"`
-	AdditionalContracts []AdditionalContract    `json:"additionalContracts,omitempty"`
+	Hash                string                 `json:"hash"`
+	Transaction         map[string]interface{} `json:"transaction"`
+	ContractName        string                 `json:"contractName"`
+	ContractAddr        string                 `json:"contractAddress"`
+	Function            string                 `json:"function"`
+	Arguments           []interface{}          `json:"arguments"`
+	AdditionalContracts []AdditionalContract   `json:"additionalContracts,omitempty"`
 }
 
 // AdditionalContract represents additional contracts deployed in a transaction
@@ -315,16 +298,34 @@ type SafeTransactionContext struct {
 
 // DeploymentResult represents the result of a deployment
 type DeploymentResult struct {
-	ID                string
-	TransactionID     string
-	Address           string
-	ContractName      string
-	ArtifactPath      string
-	Deployer          string
-	DeploymentMethod  string
-	Salt              [32]byte
-	BytecodeHash      [32]byte
-	ConstructorArgs   []byte
-	Label             string
-	Namespace         string
+	ID               string
+	TransactionID    string
+	Address          string
+	ContractName     string
+	ArtifactPath     string
+	Deployer         string
+	DeploymentMethod string
+	Salt             [32]byte
+	BytecodeHash     [32]byte
+	ConstructorArgs  []byte
+	Label            string
+	Namespace        string
+}
+
+// ScriptConfig contains configuration for script execution
+type ForgeRunConfig struct {
+	Path        string
+	Network     string
+	Environment map[string]string
+	DryRun      bool
+	Debug       bool
+	Args        []string
+}
+
+// ScriptResult contains the result of script execution
+type ForgeRunResult struct {
+	Success    bool
+	Output     string
+	Broadcasts []string
+	Error      error
 }

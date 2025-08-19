@@ -3,6 +3,7 @@ package abi
 import (
 	"fmt"
 	"math/big"
+	"os"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -39,6 +40,11 @@ func NewEventDecoder() (*EventDecoder, error) {
 
 // DecodeLog decodes a log entry into a domain event
 func (d *EventDecoder) DecodeLog(log types.Log) (*domain.DeploymentEvent, error) {
+	// Debug logging
+	if os.Getenv("TREB_TEST_DEBUG") != "" && len(log.Topics) > 0 {
+		fmt.Printf("DEBUG: DecodeLog - trying to decode event with signature: %s\n", log.Topics[0].Hex())
+	}
+	
 	// Try to decode as Treb event first
 	if event, err := d.decodeTrebEvent(log); err == nil {
 		return event, nil
@@ -62,40 +68,69 @@ func (d *EventDecoder) decodeTrebEvent(log types.Log) (*domain.DeploymentEvent, 
 
 	// Check for ContractDeployed event
 	contractDeployedSig := d.trebABI.Events["ContractDeployed"].ID
+	if os.Getenv("TREB_TEST_DEBUG") != "" {
+		fmt.Printf("DEBUG: ContractDeployed signature: %s, checking against: %s\n", contractDeployedSig.Hex(), eventSig.Hex())
+	}
 	if eventSig == contractDeployedSig {
-		var event struct {
-			Deployment  common.Address
-			Contract    string
-			Namespace   string
-			ChainId     *big.Int
-			Deployer    common.Address
-			DeployTxHash common.Hash
-			Label       string
+		// Use the same structure as v1 bindings
+		type DeploymentDetails struct {
+			Artifact        string
+			Label           string
+			Entropy         string
+			Salt            [32]byte
+			BytecodeHash    [32]byte
+			InitCodeHash    [32]byte
+			ConstructorArgs []byte
+			CreateStrategy  string
 		}
-
-		err := d.trebABI.UnpackIntoInterface(&event, "ContractDeployed", log.Data)
+		
+		// Indexed parameters are in Topics
+		// Topics[0] = event signature
+		// Topics[1] = deployer (indexed)
+		// Topics[2] = location (indexed)
+		// Topics[3] = transactionId (indexed)
+		if len(log.Topics) < 4 {
+			return nil, fmt.Errorf("ContractDeployed event missing topics")
+		}
+		
+		deployer := common.BytesToAddress(log.Topics[1].Bytes())
+		location := common.BytesToAddress(log.Topics[2].Bytes())
+		transactionId := log.Topics[3]
+		
+		// Non-indexed parameters are in Data
+		var deployment DeploymentDetails
+		err := d.trebABI.UnpackIntoInterface(&deployment, "ContractDeployed", log.Data)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unpack ContractDeployed event: %w", err)
 		}
 
-		// Unpack indexed parameters
-		if len(log.Topics) > 1 {
-			event.Deployment = common.BytesToAddress(log.Topics[1].Bytes())
+		// Extract contract name from artifact
+		// Format is usually "path/to/Contract.sol:ContractName"
+		contractName := deployment.Artifact
+		if idx := strings.LastIndex(contractName, ":"); idx != -1 {
+			contractName = contractName[idx+1:]
 		}
-		if len(log.Topics) > 2 {
-			event.Namespace = log.Topics[2].Hex()
-		}
+		
+		// Convert transactionId hash to [32]byte
+		var txID [32]byte
+		copy(txID[:], transactionId.Bytes())
 
-		return &domain.DeploymentEvent{
-			EventType:    domain.EventContractDeployed,
-			Address:      event.Deployment.Hex(),
-			ContractName: event.Contract,
-			Namespace:    event.Namespace,
-			ChainID:      event.ChainId.Uint64(),
-			Deployer:     event.Deployer.Hex(),
-			TxHash:       event.DeployTxHash.Hex(),
-			Label:        event.Label,
-		}, nil
+		result := &domain.DeploymentEvent{
+			EventType:     domain.EventContractDeployed,
+			Address:       location.Hex(),
+			ContractName:  contractName,
+			Label:         deployment.Label,
+			Deployer:      deployer.Hex(),
+			Salt:          deployment.Salt,
+			TransactionID: txID,
+		}
+		
+		if os.Getenv("TREB_TEST_DEBUG") != "" {
+			fmt.Printf("DEBUG: Decoded ContractDeployed - Address: %s, Contract: %s, Deployer: %s\n", 
+				result.Address, result.ContractName, result.Deployer)
+		}
+		
+		return result, nil
 	}
 
 	// Check for ProxyDeployed event

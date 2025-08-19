@@ -78,6 +78,13 @@ func (f *Forge) RunScriptWithArgs(scriptPath string, flags []string, envVars map
 	}
 
 	output, err := cmd.CombinedOutput()
+	fmt.Println("Here?")
+	if _, debug := envVars["DEBUG"]; debug || os.Getenv("TREB_DEBUG") != "" {
+		fmt.Printf("Forge output: %s\n", string(output))
+	} else if os.Getenv("TREB_DEBUG") != "" {
+		fmt.Printf("Forge output: %s\n", string(output))
+	}
+
 	if err != nil {
 		return string(output), parseForgeError(err, string(output))
 	}

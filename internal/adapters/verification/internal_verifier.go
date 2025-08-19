@@ -25,7 +25,7 @@ func NewInternalVerifier(cfg *config.RuntimeConfig) (*InternalVerifier, error) {
 }
 
 // Verify performs contract verification
-func (v *InternalVerifier) Verify(ctx context.Context, deployment *domain.Deployment, network *domain.NetworkInfo) error {
+func (v *InternalVerifier) Verify(ctx context.Context, deployment *domain.Deployment, network *domain.Network) error {
 	// Initialize verification status
 	if deployment.Verification.Verifiers == nil {
 		deployment.Verification.Verifiers = make(map[string]domain.VerifierStatus)
@@ -76,7 +76,7 @@ func (v *InternalVerifier) Verify(ctx context.Context, deployment *domain.Deploy
 }
 
 // verifyOnEtherscan performs verification on Etherscan
-func (v *InternalVerifier) verifyOnEtherscan(deployment *domain.Deployment, network *domain.NetworkInfo) error {
+func (v *InternalVerifier) verifyOnEtherscan(deployment *domain.Deployment, network *domain.Network) error {
 	// Get constructor args from deployment strategy
 	constructorArgs := deployment.DeploymentStrategy.ConstructorArgs
 	if constructorArgs != "" && strings.HasPrefix(constructorArgs, "0x") {
@@ -85,7 +85,7 @@ func (v *InternalVerifier) verifyOnEtherscan(deployment *domain.Deployment, netw
 
 	// Get contract path from artifact
 	contractPath := fmt.Sprintf("%s:%s", deployment.Artifact.Path, deployment.ContractName)
-	
+
 	// Build the forge verify-contract command
 	args := []string{
 		"verify-contract",
@@ -120,7 +120,7 @@ func (v *InternalVerifier) verifyOnEtherscan(deployment *domain.Deployment, netw
 }
 
 // verifyOnSourceify performs verification on Sourcify
-func (v *InternalVerifier) verifyOnSourceify(deployment *domain.Deployment, network *domain.NetworkInfo) error {
+func (v *InternalVerifier) verifyOnSourceify(deployment *domain.Deployment, network *domain.Network) error {
 	// Get contract path from artifact
 	contractPath := fmt.Sprintf("%s:%s", deployment.Artifact.Path, deployment.ContractName)
 
@@ -161,9 +161,9 @@ func (v *InternalVerifier) executeForgeVerify(args []string) error {
 	if err != nil {
 		// Parse the output for specific error messages
 		outputStr := string(output)
-		if strings.Contains(outputStr, "Already Verified") || 
-		   strings.Contains(outputStr, "is already verified") ||
-		   strings.Contains(outputStr, "already verified") {
+		if strings.Contains(outputStr, "Already Verified") ||
+			strings.Contains(outputStr, "is already verified") ||
+			strings.Contains(outputStr, "already verified") {
 			// Contract is already verified, not an error
 			return nil
 		}
@@ -183,7 +183,7 @@ func (v *InternalVerifier) executeForgeVerify(args []string) error {
 }
 
 // buildEtherscanURL builds the Etherscan URL for a contract
-func (v *InternalVerifier) buildEtherscanURL(network *domain.NetworkInfo, address string) string {
+func (v *InternalVerifier) buildEtherscanURL(network *domain.Network, address string) string {
 	if network.ExplorerURL == "" {
 		return ""
 	}
@@ -191,7 +191,7 @@ func (v *InternalVerifier) buildEtherscanURL(network *domain.NetworkInfo, addres
 }
 
 // buildSourceifyURL builds the Sourcify URL for a contract
-func (v *InternalVerifier) buildSourceifyURL(network *domain.NetworkInfo, address string) string {
+func (v *InternalVerifier) buildSourceifyURL(network *domain.Network, address string) string {
 	return fmt.Sprintf("https://sourcify.dev/#/lookup/%s", address)
 }
 
@@ -250,3 +250,4 @@ func (v *InternalVerifier) GetVerificationStatus(ctx context.Context, deployment
 
 // Ensure it implements the interface
 var _ usecase.ContractVerifier = (*InternalVerifier)(nil)
+

@@ -19,7 +19,6 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/adapters/interactive"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/parameters"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/parser"
-	"github.com/trebuchet-org/treb-cli/internal/adapters/progress"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/registry"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/safe"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/template"
@@ -48,10 +47,9 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	}
 	listDeployments := usecase.NewListDeployments(runtimeConfig, registryStoreAdapter, sink)
 	showDeployment := usecase.NewShowDeployment(runtimeConfig, registryStoreAdapter, sink)
-	contractResolverAdapter, err := contracts.NewContractResolverAdapter(runtimeConfig, selectorAdapter)
-	if err != nil {
-		return nil, err
-	}
+	string2 := adapters.ProvideProjectPath(runtimeConfig)
+	indexer := contracts.NewIndexer(string2)
+	contractResolver := contracts.NewContractResolver(runtimeConfig, indexer, selectorAdapter)
 	abiParserAdapter, err := forge.NewABIParserAdapter(runtimeConfig)
 	if err != nil {
 		return nil, err
@@ -64,7 +62,7 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	generateDeploymentScript := usecase.NewGenerateDeploymentScript(runtimeConfig, contractResolverAdapter, abiParserAdapter, scriptGeneratorAdapter, fileWriterAdapter, sink)
+	generateDeploymentScript := usecase.NewGenerateDeploymentScript(runtimeConfig, contractResolver, abiParserAdapter, scriptGeneratorAdapter, fileWriterAdapter, sink)
 	networkResolver := config.ProvideNetworkResolver(runtimeConfig)
 	networkResolverAdapter := config2.NewNetworkResolverAdapter(networkResolver)
 	listNetworks := usecase.NewListNetworks(networkResolverAdapter)
@@ -74,23 +72,17 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	showConfig := usecase.NewShowConfig(localConfigStoreAdapter)
 	setConfig := usecase.NewSetConfig(localConfigStoreAdapter)
 	removeConfig := usecase.NewRemoveConfig(localConfigStoreAdapter)
-	scriptResolverAdapter, err := contracts.NewScriptResolverAdapter(runtimeConfig, contractResolverAdapter)
-	if err != nil {
-		return nil, err
-	}
-	parameterResolverAdapter := parameters.NewParameterResolverAdapter(runtimeConfig, registryStoreAdapter, contractResolverAdapter)
-	parameterPrompterAdapter := parameters.NewParameterPrompterAdapter(runtimeConfig, registryStoreAdapter, contractResolverAdapter)
+	scriptResolver := contracts.NewScriptResolver(string2, contractResolver)
+	parameterResolver := parameters.NewParameterResolver(runtimeConfig, registryStoreAdapter, indexer)
 	scriptExecutorAdapter := forge.NewScriptExecutorAdapter(runtimeConfig)
-	string2 := adapters.ProvideProjectPath(runtimeConfig)
-	executionParserAdapter, err := parser.NewExecutionParserAdapter(string2)
+	executionParser, err := parser.NewExecutionParser(string2)
 	if err != nil {
 		return nil, err
 	}
-	updaterAdapter := registry.NewUpdaterAdapter(registryStoreAdapter, registryStoreAdapter)
+	registryUpdater := registry.NewRegistryUpdater(registryStoreAdapter, registryStoreAdapter)
 	builderAdapter := environment.NewBuilderAdapter(string2)
-	libraryResolverAdapter := registry.NewLibraryResolverAdapter(registryStoreAdapter)
-	spinnerProgressReporter := progress.NewSpinnerProgressReporter()
-	runScript := usecase.NewRunScript(runtimeConfig, scriptResolverAdapter, parameterResolverAdapter, parameterPrompterAdapter, scriptExecutorAdapter, executionParserAdapter, updaterAdapter, builderAdapter, libraryResolverAdapter, spinnerProgressReporter)
+	libraryResolver := registry.NewLibraryResolver(registryStoreAdapter)
+	runScript := usecase.NewRunScript(runtimeConfig, scriptResolver, parameterResolver, scriptExecutorAdapter, executionParser, registryUpdater, builderAdapter, libraryResolver, sink)
 	verifierAdapter, err := verification.NewVerifierAdapter(runtimeConfig)
 	if err != nil {
 		return nil, err

@@ -37,37 +37,37 @@ func (c *ClientAdapter) SetChain(ctx context.Context, chainID uint64) error {
 	if err != nil {
 		return fmt.Errorf("failed to create Safe client for chain %d: %w", chainID, err)
 	}
-	
+
 	c.client = client
 	c.chainID = chainID
 	return nil
 }
 
 // GetTransactionExecutionInfo checks if a Safe transaction is executed
-func (c *ClientAdapter) GetTransactionExecutionInfo(ctx context.Context, safeTxHash string) (*usecase.SafeExecutionInfo, error) {
+func (c *ClientAdapter) GetTransactionExecutionInfo(ctx context.Context, safeTxHash string) (*domain.SafeExecutionInfo, error) {
 	// Convert hex string to hash
 	hash := common.HexToHash(safeTxHash)
-	
+
 	// Check if transaction is executed
 	isExecuted, ethTxHash, err := c.client.IsTransactionExecuted(hash)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check transaction execution: %w", err)
 	}
-	
-	info := &usecase.SafeExecutionInfo{
+
+	info := &domain.SafeExecutionInfo{
 		IsExecuted: isExecuted,
 	}
-	
+
 	if isExecuted && ethTxHash != nil {
 		info.TxHash = ethTxHash.Hex()
 	}
-	
+
 	// Get transaction details for confirmation info
 	tx, err := c.client.GetTransaction(hash)
 	if err == nil && tx != nil {
 		info.Confirmations = len(tx.Confirmations)
 		info.ConfirmationsRequired = tx.ConfirmationsRequired
-		
+
 		// Convert confirmations
 		for _, conf := range tx.Confirmations {
 			info.ConfirmationDetails = append(info.ConfirmationDetails, domain.Confirmation{
@@ -77,7 +77,7 @@ func (c *ClientAdapter) GetTransactionExecutionInfo(ctx context.Context, safeTxH
 			})
 		}
 	}
-	
+
 	return info, nil
 }
 
@@ -85,13 +85,13 @@ func (c *ClientAdapter) GetTransactionExecutionInfo(ctx context.Context, safeTxH
 func (c *ClientAdapter) GetTransactionDetails(ctx context.Context, safeTxHash string) (*domain.SafeTransaction, error) {
 	// Convert hex string to hash
 	hash := common.HexToHash(safeTxHash)
-	
+
 	// Get transaction from Safe API
 	tx, err := c.client.GetTransaction(hash)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get transaction details: %w", err)
 	}
-	
+
 	// Convert to domain type
 	safeTx := &domain.SafeTransaction{
 		SafeTxHash:            safeTxHash,
@@ -104,7 +104,7 @@ func (c *ClientAdapter) GetTransactionDetails(ctx context.Context, safeTxHash st
 		Operation:             tx.Operation,
 		ConfirmationsRequired: tx.ConfirmationsRequired,
 	}
-	
+
 	// Add confirmations
 	for _, conf := range tx.Confirmations {
 		safeTx.Confirmations = append(safeTx.Confirmations, domain.Confirmation{
@@ -112,9 +112,9 @@ func (c *ClientAdapter) GetTransactionDetails(ctx context.Context, safeTxHash st
 			Signature: conf.Signature,
 		})
 	}
-	
+
 	safeTx.ConfirmationCount = len(safeTx.Confirmations)
-	
+
 	// Check execution status
 	if tx.IsExecuted {
 		safeTx.Status = domain.SafeTxStatusExecuted
@@ -124,9 +124,10 @@ func (c *ClientAdapter) GetTransactionDetails(ctx context.Context, safeTxHash st
 	} else {
 		safeTx.Status = domain.SafeTxStatusQueued
 	}
-	
+
 	return safeTx, nil
 }
 
 // Ensure the adapter implements the interface
 var _ usecase.SafeClient = (*ClientAdapter)(nil)
+

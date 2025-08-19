@@ -151,8 +151,6 @@ func (o *OrchestrateDeployment) executeStep(ctx context.Context, step *Execution
 	// Prepare parameters for run script
 	scriptParams := RunScriptParams{
 		ScriptRef:      step.Script,
-		Network:        params.Network,
-		Namespace:      params.Namespace,
 		Parameters:     step.Env,
 		DryRun:         params.DryRun,
 		Debug:          params.Debug,
@@ -335,4 +333,3 @@ func (g *DependencyGraph) TopologicalSort() ([]*ExecutionStep, error) {
 
 	return result, nil
 }
-

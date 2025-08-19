@@ -27,21 +27,11 @@ func (a *NetworkResolverAdapter) GetNetworks(ctx context.Context) []string {
 }
 
 // ResolveNetwork resolves a network name to its configuration
-func (a *NetworkResolverAdapter) ResolveNetwork(ctx context.Context, networkName string) (*domain.NetworkInfo, error) {
+func (a *NetworkResolverAdapter) ResolveNetwork(ctx context.Context, networkName string) (*domain.Network, error) {
 	// Call the underlying resolver
-	networkConfig, err := a.resolver.Resolve(networkName)
-	if err != nil {
-		return nil, err
-	}
-
-	// Convert from config.NetworkConfig to domain.NetworkInfo
-	return &domain.NetworkInfo{
-		Name:        networkConfig.Name,
-		ChainID:     networkConfig.ChainID,
-		RPCURL:      networkConfig.RpcUrl,
-		ExplorerURL: networkConfig.Explorer,
-	}, nil
+	return a.resolver.Resolve(networkName)
 }
 
 // Ensure the adapter implements the interface
 var _ usecase.NetworkResolver = (*NetworkResolverAdapter)(nil)
+

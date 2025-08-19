@@ -2,6 +2,8 @@ package config
 
 import (
 	"time"
+
+	"github.com/trebuchet-org/treb-cli/internal/domain"
 )
 
 // RuntimeConfig represents the complete runtime configuration
@@ -12,8 +14,8 @@ type RuntimeConfig struct {
 	DataDir     string
 
 	// Context settings
-	Namespace string         // Maps to foundry profile
-	Network   *NetworkConfig // nil if not specified
+	Namespace string          // Maps to foundry profile
+	Network   *domain.Network // nil if not specified
 
 	// Execution settings
 	Debug          bool
@@ -26,22 +28,7 @@ type RuntimeConfig struct {
 
 	// Resolved configurations
 	FoundryConfig *FoundryConfig
-	TrebConfig    *TrebConfig // Profile-specific treb config
-}
-
-// NetworkConfig contains resolved network information
-type NetworkConfig struct {
-	Name       string
-	RpcUrl     string
-	ChainID    uint64
-	Explorer   string
-	Configured bool // Whether network was explicitly configured
-}
-
-// TrebConfig from foundry.toml [profile.*.treb] section
-type TrebConfig struct {
-	Senders         map[string]SenderConfig
-	LibraryDeployer string `toml:"library_deployer,omitempty"`
+	TrebConfig    *domain.TrebConfig // Profile-specific treb config
 }
 
 // FoundryConfig represents the full foundry.toml configuration
@@ -60,35 +47,16 @@ type EtherscanConfig struct {
 
 // ProfileFoundryConfig represents a profile's foundry configuration
 type ProfileConfig struct {
-	Sender    SenderConfig `toml:"sender,omitempty"`
-	Libraries []string     `toml:"libraries,omitempty"`
+	Libraries []string `toml:"libraries,omitempty"`
 	// Other foundry settings
-	SrcPath       string      `toml:"src,omitempty"`
-	OutPath       string      `toml:"out,omitempty"`
-	LibPaths      []string    `toml:"libs,omitempty"`
-	TestPath      string      `toml:"test,omitempty"`
-	ScriptPath    string      `toml:"script,omitempty"`
-	Remappings    []string    `toml:"remappings,omitempty"`
-	SolcVersion   string      `toml:"solc_version,omitempty"`
-	Optimizer     bool        `toml:"optimizer,omitempty"`
-	OptimizerRuns int         `toml:"optimizer_runs,omitempty"`
-	Treb          *TrebConfig `toml:"treb,omitempty"`
-}
-
-// SenderConfig represents a sender configuration
-type SenderConfig struct {
-	Type           string         `toml:"type"`
-	Account        string         `toml:"account,omitempty"`
-	PrivateKey     string         `toml:"private_key,omitempty"`
-	Safe           string         `toml:"safe,omitempty"`
-	DerivationPath string         `toml:"derivation_path,omitempty"` // For hardware wallets
-	Proposer       *ProposerConfig `toml:"proposer,omitempty"`       // For Safe senders
-	Signer         string         `toml:"signer,omitempty"`           // Legacy v1 field for Safe senders
-}
-
-// ProposerConfig represents proposer configuration for Safe transactions  
-type ProposerConfig struct {
-	Type           string `toml:"type"`
-	PrivateKey     string `toml:"private_key,omitempty"`
-	DerivationPath string `toml:"derivation_path,omitempty"`
+	SrcPath       string             `toml:"src,omitempty"`
+	OutPath       string             `toml:"out,omitempty"`
+	LibPaths      []string           `toml:"libs,omitempty"`
+	TestPath      string             `toml:"test,omitempty"`
+	ScriptPath    string             `toml:"script,omitempty"`
+	Remappings    []string           `toml:"remappings,omitempty"`
+	SolcVersion   string             `toml:"solc_version,omitempty"`
+	Optimizer     bool               `toml:"optimizer,omitempty"`
+	OptimizerRuns int                `toml:"optimizer_runs,omitempty"`
+	Treb          *domain.TrebConfig `toml:"treb,omitempty"`
 }

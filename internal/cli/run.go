@@ -1,11 +1,11 @@
 package cli
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/progress"
 	"github.com/trebuchet-org/treb-cli/internal/cli/render"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -93,15 +93,14 @@ Examples:
 				namespace = "default"
 			}
 
-			// Banner
 			renderer := render.NewScriptRenderer(cmd.OutOrStdout(), verbose)
-			progress := &RunProgress{renderer}
+			progress := progress.NewRunProgress(renderer)
 
-			// Run v2 usecase
+			// Print deployment banner like v1
+			// render.PrintDeploymentBanner(cmd.OutOrStdout(), scriptName, app.Config.Network.Name, namespace, dryRun, parsedEnvVars)
+
 			params := usecase.RunScriptParams{
 				ScriptRef:  deploymentScriptRef,
-				Network:    app.Config.Network.Name,
-				Namespace:  namespace,
 				Parameters: parsedEnvVars,
 				DryRun:     dryRun,
 				Debug:      debug,
@@ -139,20 +138,4 @@ Examples:
 	cmd.Flags().BoolP("verbose", "v", false, "Show extra detailed information for events and transactions")
 
 	return cmd
-}
-
-type RunProgress struct {
-	renderer *render.ScriptRenderer
-}
-
-func (rp *RunProgress) OnProgress(ctx context.Context, event usecase.ProgressEvent) {
-
-}
-
-func (rp *RunProgress) Info(message string) {
-
-}
-
-func (rp *RunProgress) Error(message string) {
-
 }

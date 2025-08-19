@@ -13,7 +13,7 @@ import (
 type ShowDeploymentParams struct {
 	// Deployment reference (can be ID, address, contract name, etc.)
 	DeploymentRef string
-	
+
 	// Optional: resolve proxy implementation
 	ResolveProxy bool
 }
@@ -42,12 +42,12 @@ func (uc *ShowDeployment) Run(ctx context.Context, params ShowDeploymentParams) 
 		Message: "Loading deployment details",
 		Spinner: true,
 	})
-	
+
 	deployment, err := uc.resolveDeployment(ctx, params)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// If it's a proxy and we should resolve implementation
 	if params.ResolveProxy && deployment.Type == domain.ProxyDeployment && deployment.ProxyInfo != nil {
 		uc.sink.OnProgress(ctx, ProgressEvent{
@@ -55,7 +55,7 @@ func (uc *ShowDeployment) Run(ctx context.Context, params ShowDeploymentParams) 
 			Message: "Resolving proxy implementation",
 			Spinner: true,
 		})
-		
+
 		// Try to load the implementation deployment
 		if deployment.ProxyInfo.Implementation != "" {
 			// First try by address
@@ -66,33 +66,33 @@ func (uc *ShowDeployment) Run(ctx context.Context, params ShowDeploymentParams) 
 			// If not found by address, it's OK - the implementation might not be tracked
 		}
 	}
-	
+
 	// Report completion
 	uc.sink.OnProgress(ctx, ProgressEvent{
 		Stage:   "complete",
 		Message: "Deployment loaded",
 	})
-	
+
 	return deployment, nil
 }
 
 // resolveDeployment resolves a deployment reference to a deployment
 func (uc *ShowDeployment) resolveDeployment(ctx context.Context, params ShowDeploymentParams) (*domain.Deployment, error) {
 	ref := params.DeploymentRef
-	
+
 	// Get namespace and chainID from runtime config
 	namespace := uc.config.Namespace
 	var chainID uint64
 	if uc.config.Network != nil {
 		chainID = uc.config.Network.ChainID
 	}
-	
+
 	// 1. Try as deployment ID
 	deployment, err := uc.store.GetDeployment(ctx, ref)
 	if err == nil {
 		return deployment, nil
 	}
-	
+
 	// 2. Try as address (starts with 0x and is 42 chars)
 	if strings.HasPrefix(ref, "0x") && len(ref) == 42 {
 		if chainID != 0 {
@@ -103,11 +103,11 @@ func (uc *ShowDeployment) resolveDeployment(ctx context.Context, params ShowDepl
 			}
 		} else {
 			// Search all deployments for this address
-			deployments, err := uc.store.ListDeployments(ctx, DeploymentFilter{})
+			deployments, err := uc.store.ListDeployments(ctx, domain.DeploymentFilter{})
 			if err != nil {
 				return nil, fmt.Errorf("failed to list deployments: %w", err)
 			}
-			
+
 			for _, dep := range deployments {
 				if strings.EqualFold(dep.Address, ref) {
 					return dep, nil
@@ -115,7 +115,7 @@ func (uc *ShowDeployment) resolveDeployment(ctx context.Context, params ShowDepl
 			}
 		}
 	}
-	
+
 	// 3. Try as contract name (with optional label)
 	parts := strings.Split(ref, ":")
 	contractName := parts[0]
@@ -123,14 +123,14 @@ func (uc *ShowDeployment) resolveDeployment(ctx context.Context, params ShowDepl
 	if len(parts) > 1 {
 		label = parts[1]
 	}
-	
+
 	// 4. Check if it contains namespace or chain ID prefixes
 	// Format: namespace/contract or chainID/contract
 	if strings.Contains(contractName, "/") {
 		prefixParts := strings.SplitN(contractName, "/", 2)
 		prefix := prefixParts[0]
 		contractName = prefixParts[1]
-		
+
 		// Try to parse as chain ID
 		if parsedChainID := parseChainID(prefix); parsedChainID != 0 {
 			chainID = parsedChainID
@@ -139,30 +139,30 @@ func (uc *ShowDeployment) resolveDeployment(ctx context.Context, params ShowDepl
 			namespace = prefix
 		}
 	}
-	
+
 	// Apply filters
-	filter := DeploymentFilter{
+	filter := domain.DeploymentFilter{
 		ContractName: contractName,
 		Label:        label,
 		ChainID:      chainID,
 		Namespace:    namespace,
 	}
-	
+
 	deployments, err := uc.store.ListDeployments(ctx, filter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list deployments: %w", err)
 	}
-	
+
 	if len(deployments) == 0 {
 		return nil, fmt.Errorf("no deployments found matching '%s'", ref)
 	}
-	
+
 	// If multiple deployments found, return an error
 	// In the future, this could support interactive mode with a picker
 	if len(deployments) > 1 {
 		return nil, fmt.Errorf("multiple deployments found matching '%s', please specify a unique identifier", ref)
 	}
-	
+
 	return deployments[0], nil
 }
 
@@ -175,3 +175,4 @@ func parseChainID(s string) uint64 {
 	}
 	return chainID
 }
+

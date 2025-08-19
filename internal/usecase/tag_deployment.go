@@ -94,7 +94,7 @@ func (t *TagDeployment) findDeployment(ctx context.Context, params TagDeployment
 	}
 
 	// Try to find by contract name
-	filter := DeploymentFilter{
+	filter := domain.DeploymentFilter{
 		ContractName: params.Identifier,
 		Namespace:    params.Namespace,
 		ChainID:      params.ChainID,
@@ -205,7 +205,7 @@ func (t *TagDeployment) FindDeploymentInteractive(ctx context.Context, identifie
 	// If multiple matches, use selector
 	if err.Error() == fmt.Sprintf("multiple deployments found matching '%s', please be more specific", identifier) {
 		// Get all matching deployments for selection
-		filter := DeploymentFilter{
+		filter := domain.DeploymentFilter{
 			ContractName: identifier,
 			Namespace:    namespace,
 			ChainID:      chainID,
@@ -221,3 +221,4 @@ func (t *TagDeployment) FindDeploymentInteractive(ctx context.Context, identifie
 
 	return nil, err
 }
+

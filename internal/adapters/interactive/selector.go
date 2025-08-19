@@ -76,26 +76,9 @@ func formatContractOptions(contracts []*domain.ContractInfo) []string {
 		relPath = strings.TrimPrefix(relPath, "src/")
 
 		// Add library/interface/abstract indicators
-		var indicators []string
-		if contract.IsLibrary {
-			indicators = append(indicators, "library")
-		}
-		if contract.IsInterface {
-			indicators = append(indicators, "interface")
-		}
-		if contract.IsAbstract {
-			indicators = append(indicators, "abstract")
-		}
-
 		contractName := color.New(color.FgWhite, color.Bold).Sprint(contract.Name)
 		pathStr := color.New(color.FgBlue).Sprint(relPath)
-
-		if len(indicators) > 0 {
-			indicatorStr := color.New(color.FgYellow).Sprintf("[%s]", strings.Join(indicators, ", "))
-			options[i] = fmt.Sprintf("%s %s (%s)", contractName, indicatorStr, pathStr)
-		} else {
-			options[i] = fmt.Sprintf("%s (%s)", contractName, pathStr)
-		}
+		options[i] = fmt.Sprintf("%s (%s)", contractName, pathStr)
 	}
 	return options
 }
@@ -173,29 +156,29 @@ func formatDeploymentOptions(deployments []*domain.Deployment) []string {
 	for i, dep := range deployments {
 		// Format as "ContractName:Label (namespace/chainID) - 0xAddress"
 		contractName := color.New(color.FgWhite, color.Bold).Sprint(dep.ContractName)
-		
+
 		// Add label if present
 		if dep.Label != "" {
 			contractName += color.New(color.FgMagenta).Sprintf(":%s", dep.Label)
 		}
-		
+
 		// Add namespace and chain
 		location := color.New(color.FgBlue).Sprintf("(%s/%d)", dep.Namespace, dep.ChainID)
-		
+
 		// Add address
 		address := color.New(color.FgGreen).Sprint(dep.Address)
-		
+
 		// Add deployment type if not singleton
 		typeStr := ""
 		if dep.Type != domain.SingletonDeployment {
 			typeStr = color.New(color.FgYellow).Sprintf(" [%s]", dep.Type)
 		}
-		
+
 		options[i] = fmt.Sprintf("%s %s - %s%s", contractName, location, address, typeStr)
 	}
 	return options
 }
 
 // Ensure the adapter implements the interfaces
-var _ usecase.InteractiveSelector = (*SelectorAdapter)(nil)
+var _ usecase.ContractSelector = (*SelectorAdapter)(nil)
 var _ usecase.DeploymentSelector = (*SelectorAdapter)(nil)

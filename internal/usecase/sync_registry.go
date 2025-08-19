@@ -10,11 +10,11 @@ import (
 
 // SyncRegistry handles syncing the registry with on-chain state
 type SyncRegistry struct {
-	deploymentStore     DeploymentStore
-	transactionStore    TransactionStore
+	deploymentStore      DeploymentStore
+	transactionStore     TransactionStore
 	safeTransactionStore SafeTransactionStore
-	safeClient          SafeClient
-	progress            ProgressSink
+	safeClient           SafeClient
+	progress             ProgressSink
 }
 
 // NewSyncRegistry creates a new sync registry use case
@@ -42,12 +42,12 @@ type SyncOptions struct {
 
 // SyncResult contains the result of syncing
 type SyncResult struct {
-	PendingSafeTxsChecked   int
-	SafeTxsExecuted         int
-	TransactionsUpdated     int
-	DeploymentsUpdated      int
-	InvalidEntriesRemoved   int
-	Errors                  []string
+	PendingSafeTxsChecked int
+	SafeTxsExecuted       int
+	TransactionsUpdated   int
+	DeploymentsUpdated    int
+	InvalidEntriesRemoved int
+	Errors                []string
 }
 
 // Sync performs the registry sync operation
@@ -81,7 +81,7 @@ func (s *SyncRegistry) Sync(ctx context.Context, options SyncOptions) (*SyncResu
 			Message: "Cleaning invalid entries...",
 			Spinner: true,
 		})
-		
+
 		cleanResult, err := s.cleanInvalidEntries(ctx)
 		if err != nil {
 			result.Errors = append(result.Errors, fmt.Sprintf("Failed to clean invalid entries: %v", err))
@@ -102,10 +102,10 @@ func (s *SyncRegistry) Sync(ctx context.Context, options SyncOptions) (*SyncResu
 
 // SafeSyncResult contains results from syncing Safe transactions
 type SafeSyncResult struct {
-	Checked              int
-	Executed             int
-	TransactionsUpdated  int
-	DeploymentsUpdated   int
+	Checked             int
+	Executed            int
+	TransactionsUpdated int
+	DeploymentsUpdated  int
 }
 
 // syncPendingSafeTransactions checks pending Safe transactions and updates their status
@@ -113,7 +113,7 @@ func (s *SyncRegistry) syncPendingSafeTransactions(ctx context.Context, debug bo
 	result := &SafeSyncResult{}
 
 	// Get all Safe transactions
-	safeTxs, err := s.safeTransactionStore.ListSafeTransactions(ctx, SafeTransactionFilter{
+	safeTxs, err := s.safeTransactionStore.ListSafeTransactions(ctx, domain.SafeTransactionFilter{
 		Status: domain.TransactionStatusQueued,
 	})
 	if err != nil {
@@ -224,7 +224,7 @@ func (s *SyncRegistry) updateDeploymentsForSafeTx(ctx context.Context, safeTx *d
 	// Get all deployments and check if they reference any of the transactions
 	for _, txID := range safeTx.TransactionIDs {
 		// Find deployments that reference this transaction
-		deployments, err := s.deploymentStore.ListDeployments(ctx, DeploymentFilter{})
+		deployments, err := s.deploymentStore.ListDeployments(ctx, domain.DeploymentFilter{})
 		if err != nil {
 			continue
 		}
@@ -257,3 +257,4 @@ func (s *SyncRegistry) cleanInvalidEntries(ctx context.Context) (int, error) {
 
 	return removed, nil
 }
+

@@ -33,9 +33,9 @@ func NewVerifyDeployment(
 
 // VerifyOptions contains options for verification
 type VerifyOptions struct {
-	Force         bool   // Re-verify even if already verified
-	ContractPath  string // Override contract path
-	Debug         bool   // Show debug information
+	Force        bool   // Re-verify even if already verified
+	ContractPath string // Override contract path
+	Debug        bool   // Show debug information
 }
 
 // VerifyResult contains the result of verification
@@ -48,7 +48,7 @@ type VerifyResult struct {
 // VerifyAll verifies all unverified deployments
 func (v *VerifyDeployment) VerifyAll(ctx context.Context, options VerifyOptions) (*VerifyAllResult, error) {
 	// Get all deployments
-	deployments, err := v.deploymentStore.ListDeployments(ctx, DeploymentFilter{})
+	deployments, err := v.deploymentStore.ListDeployments(ctx, domain.DeploymentFilter{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list deployments: %w", err)
 	}
@@ -121,7 +121,7 @@ func (v *VerifyDeployment) VerifyAll(ctx context.Context, options VerifyOptions)
 }
 
 // VerifySpecific verifies a specific deployment
-func (v *VerifyDeployment) VerifySpecific(ctx context.Context, identifier string, filter DeploymentFilter, options VerifyOptions) (*VerifyResult, error) {
+func (v *VerifyDeployment) VerifySpecific(ctx context.Context, identifier string, filter domain.DeploymentFilter, options VerifyOptions) (*VerifyResult, error) {
 	var deployment *domain.Deployment
 	var err error
 
@@ -207,7 +207,7 @@ func (v *VerifyDeployment) verifyDeployment(ctx context.Context, deployment *dom
 }
 
 // findDeploymentByIdentifier finds a deployment by various identifier formats
-func (v *VerifyDeployment) findDeploymentByIdentifier(ctx context.Context, identifier string, filter DeploymentFilter) (*domain.Deployment, error) {
+func (v *VerifyDeployment) findDeploymentByIdentifier(ctx context.Context, identifier string, filter domain.DeploymentFilter) (*domain.Deployment, error) {
 	// Get all deployments with filter
 	deployments, err := v.deploymentStore.ListDeployments(ctx, filter)
 	if err != nil {
@@ -292,16 +292,22 @@ func getNetworkName(chainID uint64) string {
 	// This is a simplified version - the actual implementation
 	// would use the network resolver
 	switch chainID {
-		case 1: return "mainnet"
-		case 11155111: return "sepolia"
-		case 137: return "polygon"
-		case 10: return "optimism"
-		case 42161: return "arbitrum"
-		case 8453: return "base"
-		default: return fmt.Sprintf("chain-%d", chainID)
+	case 1:
+		return "mainnet"
+	case 11155111:
+		return "sepolia"
+	case 137:
+		return "polygon"
+	case 10:
+		return "optimism"
+	case 42161:
+		return "arbitrum"
+	case 8453:
+		return "base"
+	default:
+		return fmt.Sprintf("chain-%d", chainID)
 	}
 }
-
 
 // Result types
 
@@ -318,3 +324,4 @@ type SkippedDeployment struct {
 	Deployment *domain.Deployment
 	Reason     string
 }
+

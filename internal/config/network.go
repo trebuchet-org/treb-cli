@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/trebuchet-org/treb-cli/internal/domain"
 )
 
 // NetworkResolver resolves network names to configurations with caching
@@ -25,10 +27,10 @@ type NetworkResolver struct {
 
 // NetworkCache caches chain ID lookups
 type NetworkCache struct {
-	Networks    map[string]uint64   `json:"networks"`    // name -> chainID
-	RPCs        map[string]uint64   `json:"rpcs"`        // rpcURL -> chainID
-	ChainNames  map[uint64][]string `json:"chainNames"`  // chainID -> names
-	UpdatedAt   time.Time          `json:"updatedAt"`
+	Networks   map[string]uint64   `json:"networks"`   // name -> chainID
+	RPCs       map[string]uint64   `json:"rpcs"`       // rpcURL -> chainID
+	ChainNames map[uint64][]string `json:"chainNames"` // chainID -> names
+	UpdatedAt  time.Time           `json:"updatedAt"`
 }
 
 // NewNetworkResolver creates a new network resolver
@@ -40,10 +42,10 @@ func NewNetworkResolver(projectRoot string, foundryConfig *FoundryConfig) *Netwo
 			Timeout: 10 * time.Second,
 		},
 	}
-	
+
 	// Load cache
 	r.loadCache()
-	
+
 	return r
 }
 
@@ -59,7 +61,7 @@ func (r *NetworkResolver) GetNetworks() []string {
 }
 
 // Resolve resolves a network name to its configuration
-func (r *NetworkResolver) Resolve(networkName string) (*NetworkConfig, error) {
+func (r *NetworkResolver) Resolve(networkName string) (*domain.Network, error) {
 	// Check if network exists in foundry.toml
 	rpcURL, exists := r.foundryConfig.RpcEndpoints[networkName]
 	if !exists {
@@ -86,12 +88,11 @@ func (r *NetworkResolver) Resolve(networkName string) (*NetworkConfig, error) {
 	// Get explorer URL
 	explorer := r.getExplorerURL(networkName, chainID)
 
-	return &NetworkConfig{
-		Name:       networkName,
-		RpcUrl:     rpcURL,
-		ChainID:    chainID,
-		Explorer:   explorer,
-		Configured: true,
+	return &domain.Network{
+		Name:        networkName,
+		RPCURL:      rpcURL,
+		ChainID:     chainID,
+		ExplorerURL: explorer,
 	}, nil
 }
 
@@ -208,7 +209,7 @@ func (r *NetworkResolver) loadCache() {
 	// Try to load from file
 	cacheDir := filepath.Join(r.projectRoot, "cache")
 	cachePath := filepath.Join(cacheDir, "chainIds.json")
-	
+
 	data, err := os.ReadFile(cachePath)
 	if err != nil {
 		// Cache doesn't exist yet, that's fine

@@ -42,7 +42,7 @@ func (uc *ListDeployments) Run(ctx context.Context, params ListDeploymentsParams
 	})
 
 	// Create filter from params and runtime config
-	filter := DeploymentFilter{
+	filter := domain.DeploymentFilter{
 		Namespace:    uc.config.Namespace,
 		ContractName: params.ContractName,
 		Label:        params.Label,

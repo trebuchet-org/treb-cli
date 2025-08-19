@@ -8,99 +8,35 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
 // ScriptResolver handles script resolution without pkg dependencies
 type ScriptResolver struct {
-	indexer     *Indexer
+	resolver    usecase.ContractResolver
 	projectRoot string
 }
 
 // NewScriptResolver creates a new internal script resolver
-func NewScriptResolver(projectRoot string, indexer *Indexer) *ScriptResolver {
+func NewScriptResolver(projectRoot string, resolver usecase.ContractResolver) *ScriptResolver {
 	return &ScriptResolver{
-		indexer:     indexer,
+		resolver:    resolver,
 		projectRoot: projectRoot,
 	}
 }
 
 // ResolveScript resolves a script path or name to script info
-func (r *ScriptResolver) ResolveScript(ctx context.Context, pathOrName string) (*domain.ScriptInfo, error) {
-	// Don't automatically rebuild the index here - let the caller control when to rebuild
-	// This prevents unnecessary builds and allows the run command to build once
-
-	// Debug output
-	if os.Getenv("TREB_TEST_DEBUG") == "true" {
-		fmt.Fprintf(os.Stderr, "DEBUG: Resolving script: %s\n", pathOrName)
-		allContracts := r.indexer.GetAllContracts()
-		fmt.Fprintf(os.Stderr, "DEBUG: Total contracts in index: %d\n", len(allContracts))
-		scripts := r.indexer.GetScriptContracts()
-		fmt.Fprintf(os.Stderr, "DEBUG: Script contracts found: %d\n", len(scripts))
-		for _, s := range scripts {
-			fmt.Fprintf(os.Stderr, "  - %s (path: %s)\n", s.Name, s.Path)
-		}
-	}
-
-	// Try direct lookup first
-	contract, err := r.indexer.GetContract(pathOrName)
-	if err == nil && (strings.HasPrefix(contract.Path, "script/") || strings.Contains(contract.Path, "/script/")) {
-		return r.contractToScriptInfo(contract)
-	}
-
-	// If that fails, search for scripts
-	scripts := r.indexer.GetScriptContracts()
-
-	// Look for exact name match
-	for _, script := range scripts {
-		if script.Name == pathOrName {
-			return r.contractToScriptInfo(script)
-		}
-	}
-
-	// Look for path match
-	for _, script := range scripts {
-		if script.Path == pathOrName {
-			return r.contractToScriptInfo(script)
-		}
-	}
-
-	// If a .sol file path is provided, try to match by path
-	if strings.HasSuffix(pathOrName, ".sol") {
-		for _, script := range scripts {
-			if script.Path == pathOrName {
-				return r.contractToScriptInfo(script)
-			}
-		}
-	}
-
-	// Partial match on name
-	var matches []*domain.ContractInfo
-	lowName := strings.ToLower(pathOrName)
-	for _, script := range scripts {
-		if strings.Contains(strings.ToLower(script.Name), lowName) {
-			matches = append(matches, script)
-		}
-	}
-
-	if len(matches) == 1 {
-		return r.contractToScriptInfo(matches[0])
-	} else if len(matches) > 1 {
-		// Ambiguous match
-		var names []string
-		for _, m := range matches {
-			names = append(names, fmt.Sprintf("%s (%s)", m.Name, m.Path))
-		}
-		return nil, fmt.Errorf("multiple scripts match '%s': %s", pathOrName, strings.Join(names, ", "))
-	}
-
-	return nil, fmt.Errorf("no script found matching '%s'", pathOrName)
+func (r *ScriptResolver) ResolveScript(ctx context.Context, pathOrName string) (*domain.ContractInfo, error) {
+	script := "^script"
+	return r.resolver.ResolveContract(ctx, domain.ContractQuery{
+		Query:       &pathOrName,
+		PathPattern: &script,
+	})
 }
 
 // GetScriptParameters extracts parameters from a script's artifact
-func (r *ScriptResolver) GetScriptParameters(ctx context.Context, script *domain.ScriptInfo) ([]domain.ScriptParameter, error) {
+func (r *ScriptResolver) GetScriptParameters(ctx context.Context, script *domain.ContractInfo) ([]domain.ScriptParameter, error) {
 	// The script already has the artifact path from when it was resolved
 	if script.ArtifactPath == "" {
 		return nil, fmt.Errorf("script artifact path not set")
@@ -116,16 +52,6 @@ func (r *ScriptResolver) GetScriptParameters(ctx context.Context, script *domain
 	return r.parseParametersFromArtifact(artifact)
 }
 
-// contractToScriptInfo converts a contract info to script info
-func (r *ScriptResolver) contractToScriptInfo(contract *domain.ContractInfo) (*domain.ScriptInfo, error) {
-	return &domain.ScriptInfo{
-		Path:         contract.Path,
-		Name:         contract.Name,
-		ContractName: contract.Name,
-		ArtifactPath: contract.ArtifactPath,
-	}, nil
-}
-
 // loadArtifact loads an artifact from disk
 func (r *ScriptResolver) loadArtifact(artifactPath string) (*domain.Artifact, error) {
 	// Handle relative paths
@@ -133,7 +59,7 @@ func (r *ScriptResolver) loadArtifact(artifactPath string) (*domain.Artifact, er
 	if !filepath.IsAbs(artifactPath) {
 		fullPath = filepath.Join(r.projectRoot, artifactPath)
 	}
-	
+
 	data, err := os.ReadFile(fullPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read artifact at %s: %w", fullPath, err)
@@ -264,43 +190,4 @@ func mapStringToParamType(typeStr string) domain.ParameterType {
 	default:
 		return domain.ParamTypeString
 	}
-}
-
-// ScriptResolverAdapter adapts the script resolver for the usecase layer
-type ScriptResolverAdapter struct {
-	resolver        *ScriptResolver
-	contractIndexer usecase.ContractIndexer
-}
-
-// NewScriptResolverAdapter creates a new script resolver adapter
-func NewScriptResolverAdapter(cfg *config.RuntimeConfig, contractIndexer usecase.ContractIndexer) (*ScriptResolverAdapter, error) {
-	// Get the indexer from the contract resolver adapter
-	contractResolverAdapter, ok := contractIndexer.(*ContractResolverAdapter)
-	if !ok {
-		return nil, fmt.Errorf("expected ContractResolverAdapter, got %T", contractIndexer)
-	}
-	
-	resolver := NewScriptResolver(cfg.ProjectRoot, contractResolverAdapter.GetIndexer())
-
-	return &ScriptResolverAdapter{
-		resolver: resolver,
-		contractIndexer: contractIndexer,
-	}, nil
-}
-
-// ResolveScript resolves a script path or name to script info
-func (a *ScriptResolverAdapter) ResolveScript(ctx context.Context, pathOrName string) (*domain.ScriptInfo, error) {
-	if os.Getenv("TREB_TEST_DEBUG") == "true" {
-		fmt.Fprintf(os.Stderr, "DEBUG: ScriptResolverAdapter.ResolveScript called for: %s\n", pathOrName)
-	}
-	// Refresh the index to pick up any newly generated scripts
-	if err := a.contractIndexer.RefreshIndex(ctx); err != nil {
-		return nil, fmt.Errorf("failed to refresh index: %w", err)
-	}
-	return a.resolver.ResolveScript(ctx, pathOrName)
-}
-
-// GetScriptParameters extracts parameters from a script's artifact
-func (a *ScriptResolverAdapter) GetScriptParameters(ctx context.Context, script *domain.ScriptInfo) ([]domain.ScriptParameter, error) {
-	return a.resolver.GetScriptParameters(ctx, script)
 }

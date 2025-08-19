@@ -57,22 +57,23 @@ func NewGenerateDeploymentScript(
 // Run executes the generate deployment script use case
 func (uc *GenerateDeploymentScript) Run(ctx context.Context, params GenerateScriptParams) (*GenerateScriptResult, error) {
 	// Resolve the main artifact
-	contractInfo, err := uc.contractResolver.ResolveContract(ctx, params.ArtifactRef)
+	contractInfo, err := uc.contractResolver.ResolveContract(ctx, domain.ContractQuery{Query: &params.ArtifactRef})
 	if err != nil {
 		return nil, err
 	}
 
 	// Determine script type
 	scriptType := domain.ScriptTypeContract
-	if contractInfo.IsLibrary {
+	if ok, err := uc.contractResolver.IsLibrary(ctx, contractInfo); err != nil {
+		return nil, err
+	} else if ok {
 		scriptType = domain.ScriptTypeLibrary
+		// Validate proxy usage
+		if params.UseProxy {
+			return nil, fmt.Errorf("libraries cannot be deployed with proxies")
+		}
 	} else if params.UseProxy {
 		scriptType = domain.ScriptTypeProxy
-	}
-
-	// Validate proxy usage
-	if contractInfo.IsLibrary && params.UseProxy {
-		return nil, fmt.Errorf("libraries cannot be deployed with proxies")
 	}
 
 	// Parse ABI
@@ -176,7 +177,7 @@ func (uc *GenerateDeploymentScript) resolveProxyInfo(ctx context.Context, proxyC
 
 	if proxyContract != "" {
 		// Specific proxy provided
-		proxyInfo, err = uc.contractResolver.ResolveContract(ctx, proxyContract)
+		proxyInfo, err = uc.contractResolver.ResolveContract(ctx, domain.ContractQuery{Query: &proxyContract})
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve proxy contract: %w", err)
 		}
@@ -229,7 +230,7 @@ func (uc *GenerateDeploymentScript) determineScriptPath(contractName string, scr
 }
 
 // buildInstructions builds deployment instructions for the user
-func (uc *GenerateDeploymentScript) buildInstructions(scriptType domain.ScriptType, scriptPath string, network *config.NetworkConfig) []string {
+func (uc *GenerateDeploymentScript) buildInstructions(scriptType domain.ScriptType, scriptPath string, network *domain.Network) []string {
 	var instructions []string
 
 	switch scriptType {

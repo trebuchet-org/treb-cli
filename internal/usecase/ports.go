@@ -11,7 +11,7 @@ import (
 type DeploymentStore interface {
 	GetDeployment(ctx context.Context, id string) (*domain.Deployment, error)
 	GetDeploymentByAddress(ctx context.Context, chainID uint64, address string) (*domain.Deployment, error)
-	ListDeployments(ctx context.Context, filter DeploymentFilter) ([]*domain.Deployment, error)
+	ListDeployments(ctx context.Context, filter domain.DeploymentFilter) ([]*domain.Deployment, error)
 	SaveDeployment(ctx context.Context, deployment *domain.Deployment) error
 	DeleteDeployment(ctx context.Context, id string) error
 }
@@ -19,81 +19,39 @@ type DeploymentStore interface {
 // TransactionStore handles persistence of transactions
 type TransactionStore interface {
 	GetTransaction(ctx context.Context, id string) (*domain.Transaction, error)
-	ListTransactions(ctx context.Context, filter TransactionFilter) ([]*domain.Transaction, error)
+	ListTransactions(ctx context.Context, filter domain.TransactionFilter) ([]*domain.Transaction, error)
 	SaveTransaction(ctx context.Context, transaction *domain.Transaction) error
-}
-
-// TransactionFilter defines filtering options for transactions
-type TransactionFilter struct {
-	ChainID   uint64
-	Status    domain.TransactionStatus
-	Namespace string
-}
-
-// DeploymentFilter defines filtering options for deployments
-type DeploymentFilter struct {
-	Namespace    string
-	ChainID      uint64
-	ContractName string
-	Label        string
-	Type         domain.DeploymentType
 }
 
 // ContractIndexer provides access to compiled contracts
 type ContractIndexer interface {
 	GetContract(ctx context.Context, key string) (*domain.ContractInfo, error)
-	SearchContracts(ctx context.Context, pattern string) []*domain.ContractInfo
+	SearchContracts(ctx context.Context, query domain.ContractQuery) []*domain.ContractInfo
 	GetContractByArtifact(ctx context.Context, artifact string) *domain.ContractInfo
-	RefreshIndex(ctx context.Context) error
 }
 
 // ForgeExecutor handles forge command execution
 type ForgeExecutor interface {
 	Build(ctx context.Context) error
-	RunScript(ctx context.Context, config ScriptConfig) (*ScriptResult, error)
-}
-
-// ScriptConfig contains configuration for script execution
-type ScriptConfig struct {
-	Path        string
-	Network     string
-	Environment map[string]string
-	DryRun      bool
-	Debug       bool
-	Sender      string
-	Args        []string
-}
-
-// ScriptResult contains the result of script execution
-type ScriptResult struct {
-	Success    bool
-	Output     string
-	Broadcasts []string
-	Error      error
+	RunScript(ctx context.Context, config domain.ForgeRunConfig) (*domain.ForgeRunResult, error)
 }
 
 // ContractVerifier handles contract verification
 type ContractVerifier interface {
-	Verify(ctx context.Context, deployment *domain.Deployment, network *domain.NetworkInfo) error
+	Verify(ctx context.Context, deployment *domain.Deployment, network *domain.Network) error
 	GetVerificationStatus(ctx context.Context, deployment *domain.Deployment) (*domain.VerificationInfo, error)
-}
-
-// ConfigManager handles configuration management
-type ConfigManager interface {
-	Get(ctx context.Context, key string) (string, error)
-	Set(ctx context.Context, key, value string) error
-	GetAll(ctx context.Context) (map[string]string, error)
 }
 
 // Progress tracking interfaces
 
 // ProgressEvent represents a progress update
 type ProgressEvent struct {
-	Stage   string
-	Current int
-	Total   int
-	Message string
-	Spinner bool
+	Stage    string
+	Current  int
+	Total    int
+	Message  string
+	Spinner  bool
+	Metadata interface{}
 }
 
 // ProgressSink receives progress events
@@ -156,8 +114,8 @@ type FileWriter interface {
 	EnsureDirectory(ctx context.Context, path string) error
 }
 
-// InteractiveSelector handles interactive selection of options
-type InteractiveSelector interface {
+// DeploymentSelector handles interactive selection of contracts
+type ContractSelector interface {
 	SelectContract(ctx context.Context, contracts []*domain.ContractInfo, prompt string) (*domain.ContractInfo, error)
 }
 
@@ -176,23 +134,16 @@ type AnvilManager interface {
 
 // ContractResolver resolves contract references to actual contracts
 type ContractResolver interface {
-	ResolveContract(ctx context.Context, contractRef string) (*domain.ContractInfo, error)
-	ResolveContractWithFilter(ctx context.Context, contractRef string, filter ContractFilter) (*domain.ContractInfo, error)
+	ResolveContract(ctx context.Context, query domain.ContractQuery) (*domain.ContractInfo, error)
 	GetProxyContracts(ctx context.Context) ([]*domain.ContractInfo, error)
 	SelectProxyContract(ctx context.Context) (*domain.ContractInfo, error)
-}
-
-// ContractFilter defines filtering options for contract resolution
-type ContractFilter struct {
-	IncludeLibraries bool
-	IncludeInterface bool
-	IncludeAbstract  bool
+	IsLibrary(ctx context.Context, contract *domain.ContractInfo) (bool, error)
 }
 
 // NetworkResolver handles network configuration resolution
 type NetworkResolver interface {
 	GetNetworks(ctx context.Context) []string
-	ResolveNetwork(ctx context.Context, networkName string) (*domain.NetworkInfo, error)
+	ResolveNetwork(ctx context.Context, networkName string) (*domain.Network, error)
 }
 
 // BlockchainChecker checks on-chain state of contracts and transactions
@@ -220,31 +171,142 @@ type LocalConfigStore interface {
 // SafeTransactionStore handles persistence of Safe transactions
 type SafeTransactionStore interface {
 	GetSafeTransaction(ctx context.Context, safeTxHash string) (*domain.SafeTransaction, error)
-	ListSafeTransactions(ctx context.Context, filter SafeTransactionFilter) ([]*domain.SafeTransaction, error)
+	ListSafeTransactions(ctx context.Context, filter domain.SafeTransactionFilter) ([]*domain.SafeTransaction, error)
 	SaveSafeTransaction(ctx context.Context, safeTx *domain.SafeTransaction) error
 	UpdateSafeTransaction(ctx context.Context, safeTx *domain.SafeTransaction) error
-}
-
-// SafeTransactionFilter defines filtering options for Safe transactions
-type SafeTransactionFilter struct {
-	ChainID     uint64
-	Status      domain.TransactionStatus
-	SafeAddress string
 }
 
 // SafeClient handles interactions with Safe multisig contracts
 type SafeClient interface {
 	SetChain(ctx context.Context, chainID uint64) error
-	GetTransactionExecutionInfo(ctx context.Context, safeTxHash string) (*SafeExecutionInfo, error)
+	GetTransactionExecutionInfo(ctx context.Context, safeTxHash string) (*domain.SafeExecutionInfo, error)
 	GetTransactionDetails(ctx context.Context, safeTxHash string) (*domain.SafeTransaction, error)
 }
 
-// SafeExecutionInfo contains execution information for a Safe transaction
-type SafeExecutionInfo struct {
-	IsExecuted            bool
-	TxHash                string
-	Confirmations         int
-	ConfirmationsRequired int
-	ConfirmationDetails   []domain.Confirmation
+// ScriptResolver resolves script paths to script information
+type ScriptResolver interface {
+	// ResolveScript resolves a script path or name to script info
+	ResolveScript(ctx context.Context, scriptRef string) (*domain.ContractInfo, error)
+	// GetScriptParameters extracts parameters from a script's artifact
+	GetScriptParameters(ctx context.Context, script *domain.ContractInfo) ([]domain.ScriptParameter, error)
 }
 
+// Parameter Handling Ports
+
+// ParameterResolver resolves script parameter values
+type ParameterResolver interface {
+	// ResolveParameters resolves parameter values from various sources
+	ResolveParameters(ctx context.Context, params []domain.ScriptParameter, values map[string]string) (map[string]string, error)
+	// ValidateParameters validates that all required parameters have values
+	ValidateParameters(ctx context.Context, params []domain.ScriptParameter, values map[string]string) error
+}
+
+// ParameterPrompter prompts for missing parameter values in interactive mode
+type ParameterPrompter interface {
+	// PromptForParameters prompts the user for missing parameter values
+	PromptForParameters(ctx context.Context, params []domain.ScriptParameter, existing map[string]string) (map[string]string, error)
+}
+
+// Script Execution Ports
+
+// ScriptExecutor executes Foundry scripts
+type ScriptExecutor interface {
+	// Execute runs a script and returns the raw output
+	Execute(ctx context.Context, config ScriptExecutionConfig) (*ScriptExecutionOutput, error)
+}
+
+// ScriptExecutionConfig contains configuration for script execution
+type ScriptExecutionConfig struct {
+	Script      *domain.ContractInfo
+	Network     *domain.Network
+	Namespace   string
+	Environment map[string]string // Includes resolved parameters and sender configs
+	DryRun      bool
+	Debug       bool
+	DebugJSON   bool
+	Progress    ProgressSink
+}
+
+// ScriptExecutionOutput contains the raw output from script execution
+type ScriptExecutionOutput struct {
+	Success       bool
+	RawOutput     []byte
+	ParsedOutput  any // Forge-specific parsed output
+	JSONOutput    any // Parsed JSON output from forge --json
+	BroadcastPath string
+}
+
+// Execution Parsing Ports
+
+// ExecutionParser parses script execution output into domain models
+type ExecutionParser interface {
+	// ParseExecution parses the script output into a structured execution result
+	ParseExecution(ctx context.Context, output *ScriptExecutionOutput) (*domain.ScriptExecution, error)
+	// EnrichFromBroadcast enriches execution data from broadcast files
+	EnrichFromBroadcast(ctx context.Context, execution *domain.ScriptExecution, broadcastPath string) error
+}
+
+// Registry Update Ports
+
+// RegistryUpdater updates the deployment registry based on script execution
+type RegistryUpdater interface {
+	// PrepareUpdates analyzes the execution and prepares registry updates
+	PrepareUpdates(ctx context.Context, execution *domain.ScriptExecution) (*RegistryChanges, error)
+	// ApplyUpdates applies the prepared changes to the registry
+	ApplyUpdates(ctx context.Context, changes *RegistryChanges) error
+	// HasChanges returns true if there are any changes to apply
+	HasChanges(changes *RegistryChanges) bool
+}
+
+// RegistryChanges represents changes to be made to the registry
+type RegistryChanges struct {
+	Deployments  []*domain.Deployment
+	Transactions []*domain.Transaction
+	AddedCount   int
+	UpdatedCount int
+	HasChanges   bool
+}
+
+// ExecutionStage represents a stage in the execution process
+type ExecutionStage string
+
+const (
+	StageResolving    ExecutionStage = "Resolving"
+	StageParameters   ExecutionStage = "Parameters"
+	StageSimulating   ExecutionStage = "Simulating"
+	StageBroadcasting ExecutionStage = "Broadcasting"
+	StageParsing      ExecutionStage = "Parsing"
+	StageUpdating     ExecutionStage = "Updating"
+	StageCompleted    ExecutionStage = "Completed"
+)
+
+// Environment Building Ports
+
+// EnvironmentBuilder builds environment variables for script execution
+type EnvironmentBuilder interface {
+	// BuildEnvironment builds the complete environment for script execution
+	BuildEnvironment(ctx context.Context, params BuildEnvironmentParams) (map[string]string, error)
+}
+
+// BuildEnvironmentParams contains parameters for building the environment
+type BuildEnvironmentParams struct {
+	Network           string
+	Namespace         string
+	Parameters        map[string]string
+	TrebConfig        *domain.TrebConfig // From RuntimeConfig
+	DryRun            bool
+	DeployedLibraries []LibraryReference
+}
+
+// LibraryReference represents a deployed library
+type LibraryReference struct {
+	Path    string
+	Name    string
+	Address string
+}
+
+// LibraryResolver resolves deployed libraries for a namespace/network
+type LibraryResolver interface {
+	// GetDeployedLibraries gets all deployed libraries for the given context
+	GetDeployedLibraries(ctx context.Context, namespace string, chainID uint64) ([]LibraryReference, error)
+}

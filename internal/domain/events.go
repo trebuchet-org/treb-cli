@@ -26,4 +26,5 @@ type DeploymentEvent struct {
 	TxHash         string
 	Label          string
 	Salt           [32]byte
+	TransactionID  [32]byte // Internal transaction ID from script
 }

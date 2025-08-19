@@ -12,8 +12,6 @@ import (
 // RunScriptParams contains parameters for running a script
 type RunScriptParams struct {
 	ScriptRef      string
-	Network        string
-	Namespace      string
 	Parameters     map[string]string
 	DryRun         bool
 	Debug          bool
@@ -33,16 +31,16 @@ type RunScriptResult struct {
 
 // RunScript is the main use case for running deployment scripts
 type RunScript struct {
-	config          *config.RuntimeConfig
-	scriptResolver  ScriptResolver
-	paramResolver   ParameterResolver
-	paramPrompter   ParameterPrompter
+	config         *config.RuntimeConfig
+	scriptResolver ScriptResolver
+	paramResolver  ParameterResolver
+	// paramPrompter   ParameterPrompter
 	scriptExecutor  ScriptExecutor
 	executionParser ExecutionParser
 	registryUpdater RegistryUpdater
 	envBuilder      EnvironmentBuilder
 	libraryResolver LibraryResolver
-	progress        ProgressReporter
+	progress        ProgressSink
 }
 
 // NewRunScript creates a new RunScript use case
@@ -50,19 +48,19 @@ func NewRunScript(
 	cfg *config.RuntimeConfig,
 	scriptResolver ScriptResolver,
 	paramResolver ParameterResolver,
-	paramPrompter ParameterPrompter,
+	// paramPrompter ParameterPrompter,
 	scriptExecutor ScriptExecutor,
 	executionParser ExecutionParser,
 	registryUpdater RegistryUpdater,
 	envBuilder EnvironmentBuilder,
 	libraryResolver LibraryResolver,
-	progress ProgressReporter,
+	progress ProgressSink,
 ) *RunScript {
 	return &RunScript{
-		config:          cfg,
-		scriptResolver:  scriptResolver,
-		paramResolver:   paramResolver,
-		paramPrompter:   paramPrompter,
+		config:         cfg,
+		scriptResolver: scriptResolver,
+		paramResolver:  paramResolver,
+		// paramPrompter:   paramPrompter,
 		scriptExecutor:  scriptExecutor,
 		executionParser: executionParser,
 		registryUpdater: registryUpdater,
@@ -74,6 +72,7 @@ func NewRunScript(
 
 // Run executes the script with the given parameters
 func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScriptResult, error) {
+	progress := params.Progress
 	startTime := time.Now()
 
 	// Initialize result
@@ -98,18 +97,20 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 	// Resolve parameter values
 	resolvedParams, err := uc.paramResolver.ResolveParameters(ctx, scriptParams, params.Parameters)
 	if err != nil {
-		if !params.NonInteractive {
-			// Try prompting for missing parameters
-			prompted, promptErr := uc.paramPrompter.PromptForParameters(ctx, scriptParams, resolvedParams)
-			if promptErr != nil {
-				result.Error = fmt.Errorf("failed to prompt for parameters: %w", promptErr)
-				return result, nil
-			}
-			resolvedParams = prompted
-		} else {
-			result.Error = fmt.Errorf("parameter resolution failed: %w", err)
-			return result, nil
-		}
+		return nil, err
+		// TODO: fix this after fixing parameters
+		// if !params.NonInteractive {
+		// 	// Try prompting for missing parameters
+		// 	prompted, promptErr := uc.paramPrompter.PromptForParameters(ctx, scriptParams, resolvedParams)
+		// 	if promptErr != nil {
+		// 		result.Error = fmt.Errorf("failed to prompt for parameters: %w", promptErr)
+		// 		return result, nil
+		// 	}
+		// 	resolvedParams = prompted
+		// } else {
+		// 	result.Error = fmt.Errorf("parameter resolution failed: %w", err)
+		// 	return result, nil
+		// }
 	}
 
 	// Validate all required parameters have values
@@ -119,18 +120,10 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 	}
 
 	// Use network info from RuntimeConfig if available
-	var networkInfo *domain.NetworkInfo
-	if uc.config.Network != nil {
-		networkInfo = &domain.NetworkInfo{
-			ChainID:     uc.config.Network.ChainID,
-			Name:        uc.config.Network.Name,
-			RPCURL:      uc.config.Network.RpcUrl,
-			ExplorerURL: uc.config.Network.Explorer,
-		}
-	} else {
+	if uc.config.Network == nil {
 		// If network not in config, we need to resolve it
 		// This would require a NetworkResolver port
-		result.Error = fmt.Errorf("network %s not configured", params.Network)
+		result.Error = fmt.Errorf("could not resolve network")
 		return result, nil
 	}
 
@@ -138,8 +131,7 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 	var trebConfig *domain.TrebConfig
 	if uc.config.TrebConfig != nil {
 		trebConfig = &domain.TrebConfig{
-			Senders:         make(map[string]domain.SenderConfig),
-			LibraryDeployer: uc.config.TrebConfig.LibraryDeployer,
+			Senders: make(map[string]domain.SenderConfig),
 		}
 		for name, sender := range uc.config.TrebConfig.Senders {
 			domainSender := domain.SenderConfig{
@@ -162,22 +154,23 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 	}
 
 	// Get deployed libraries
-	libraries, err := uc.libraryResolver.GetDeployedLibraries(ctx, params.Namespace, networkInfo.ChainID)
+	libraries, err := uc.libraryResolver.GetDeployedLibraries(
+		ctx,
+		uc.config.Namespace,
+		uc.config.Network.ChainID,
+	)
 	if err != nil {
 		// Log warning but continue
-		uc.progress.ReportProgress(ctx, ProgressEvent{
-			Stage:   string(StageParameters),
-			Message: fmt.Sprintf("Warning: Failed to load deployed libraries: %v", err),
-		})
+		uc.progress.Info(fmt.Sprintf("Warning: Failed to load deployed libraries: %v", err))
 		libraries = []LibraryReference{}
 	}
 
 	// Build environment
 	envParams := BuildEnvironmentParams{
-		Network:           params.Network,
-		Namespace:         params.Namespace,
+		Network:           uc.config.Network.Name,
+		Namespace:         uc.config.Namespace,
+		TrebConfig:        uc.config.TrebConfig,
 		Parameters:        resolvedParams,
-		TrebConfig:        trebConfig,
 		DryRun:            params.DryRun,
 		DeployedLibraries: libraries,
 	}
@@ -187,18 +180,23 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 		return result, nil
 	}
 
-	// Stage 3: Execute script
-	uc.progress.ReportStage(ctx, StageSimulating)
 	execConfig := ScriptExecutionConfig{
+		Network:     uc.config.Network,
+		Namespace:   uc.config.Namespace,
 		Script:      script,
-		Network:     params.Network,
-		NetworkInfo: networkInfo,
-		Namespace:   params.Namespace,
 		Environment: environment,
 		DryRun:      params.DryRun,
 		Debug:       params.Debug,
 		DebugJSON:   params.DebugJSON,
+		Progress:    progress,
 	}
+
+	// Stage 3: Execute script
+	progress.OnProgress(ctx, ProgressEvent{
+		Stage:    string(StageSimulating),
+		Message:  "Simulating",
+		Metadata: &execConfig,
+	})
 
 	output, err := uc.scriptExecutor.Execute(ctx, execConfig)
 	if err != nil {
@@ -212,8 +210,12 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 	}
 
 	// Stage 4: Parse execution
-	uc.progress.ReportStage(ctx, StageParsing)
-	execution, err := uc.executionParser.ParseExecution(ctx, output, params.Network, networkInfo.ChainID)
+	progress.OnProgress(ctx, ProgressEvent{
+		Stage:   string(StageParsing),
+		Message: "Parsing",
+	})
+	execution, err := uc.executionParser.ParseExecution(ctx, output)
+
 	if err != nil {
 		result.Error = fmt.Errorf("failed to parse execution: %w", err)
 		return result, nil
@@ -222,9 +224,8 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 	// Set execution metadata
 	execution.ScriptPath = script.Path
 	execution.ScriptName = script.Name
-	execution.Network = params.Network
-	execution.Namespace = params.Namespace
-	execution.ChainID = networkInfo.ChainID
+	execution.Network = *uc.config.Network
+	execution.Namespace = uc.config.Namespace
 	execution.DryRun = params.DryRun
 	execution.ExecutedAt = startTime
 	execution.ExecutionTime = time.Since(startTime)
@@ -233,7 +234,7 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 	if output.BroadcastPath != "" && !params.DryRun {
 		if err := uc.executionParser.EnrichFromBroadcast(ctx, execution, output.BroadcastPath); err != nil {
 			// Log warning but continue
-			uc.progress.ReportProgress(ctx, ProgressEvent{
+			progress.OnProgress(ctx, ProgressEvent{
 				Stage:   string(StageParsing),
 				Message: fmt.Sprintf("Warning: Failed to enrich from broadcast: %v", err),
 			})
@@ -244,9 +245,11 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 
 	// Stage 5: Update registry (if not dry run)
 	if !params.DryRun && len(execution.Deployments) > 0 {
-		uc.progress.ReportStage(ctx, StageUpdating)
+		progress.OnProgress(ctx, ProgressEvent{
+			Stage: string(StageParsing),
+		})
 
-		changes, err := uc.registryUpdater.PrepareUpdates(ctx, execution, params.Namespace, params.Network)
+		changes, err := uc.registryUpdater.PrepareUpdates(ctx, execution)
 		if err != nil {
 			result.Error = fmt.Errorf("failed to prepare registry updates: %w", err)
 			return result, nil
@@ -262,9 +265,10 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 	}
 
 	// Stage 6: Complete
-	uc.progress.ReportStage(ctx, StageCompleted)
+	progress.OnProgress(ctx, ProgressEvent{
+		Stage: string(StageCompleted),
+	})
 
 	result.Success = true
 	return result, nil
 }
-

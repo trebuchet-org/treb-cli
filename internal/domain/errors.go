@@ -1,6 +1,11 @@
 package domain
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+	"sort"
+	"strings"
+)
 
 // Sentinel errors for domain operations
 var (
@@ -28,3 +33,38 @@ var (
 	// ErrVerificationFailed is returned when contract verification fails
 	ErrVerificationFailed = errors.New("verification failed")
 )
+
+type NoContractsMatchErr struct {
+	Query ContractQuery
+}
+
+func (e NoContractsMatchErr) Error() string {
+	return fmt.Sprintf("No contracts match query: %v", e.Query)
+}
+
+type AmbiguousFilterErr struct {
+	Query   ContractQuery
+	Matches []*ContractInfo
+}
+
+func (e AmbiguousFilterErr) Error() string {
+	// Sort contracts by artifact path for consistent output
+	sortedContracts := make([]*ContractInfo, len(e.Matches))
+	copy(sortedContracts, e.Matches)
+
+	sort.Slice(sortedContracts, func(i, j int) bool {
+		// Sort by full artifact path (path:name)
+		artifactI := fmt.Sprintf("%s:%s", sortedContracts[i].Path, sortedContracts[i].Name)
+		artifactJ := fmt.Sprintf("%s:%s", sortedContracts[j].Path, sortedContracts[j].Name)
+		return artifactI < artifactJ
+	})
+
+	var suggestions []string
+	for _, contract := range sortedContracts {
+		suggestion := fmt.Sprintf("  - %s (%s)", contract.Name, contract.Path)
+		suggestions = append(suggestions, suggestion)
+	}
+
+	return fmt.Sprintf("multiple contracts found matching %v - use full path:contract format to disambiguate:\n%s",
+		e.Query, strings.Join(suggestions, "\n"))
+}
