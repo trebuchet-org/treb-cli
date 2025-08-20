@@ -2,8 +2,6 @@ package usecase
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
 	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"github.com/trebuchet-org/treb-cli/internal/domain/config"
@@ -21,17 +19,24 @@ type ShowDeploymentParams struct {
 
 // ShowDeployment is the use case for showing deployment details
 type ShowDeployment struct {
-	config *config.RuntimeConfig
-	repo   DeploymentRepository
-	sink   ProgressSink
+	config   *config.RuntimeConfig
+	repo     DeploymentRepository
+	resolver DeploymentResolver
+	sink     ProgressSink
 }
 
 // NewShowDeployment creates a new ShowDeployment use case
-func NewShowDeployment(cfg *config.RuntimeConfig, repo DeploymentRepository, sink ProgressSink) *ShowDeployment {
+func NewShowDeployment(
+	cfg *config.RuntimeConfig,
+	repo DeploymentRepository,
+	resolver DeploymentResolver,
+	sink ProgressSink,
+) *ShowDeployment {
 	return &ShowDeployment{
-		config: cfg,
-		repo:   repo,
-		sink:   sink,
+		config:   cfg,
+		repo:     repo,
+		resolver: resolver,
+		sink:     sink,
 	}
 }
 
@@ -44,7 +49,13 @@ func (uc *ShowDeployment) Run(ctx context.Context, params ShowDeploymentParams) 
 		Spinner: true,
 	})
 
-	deployment, err := uc.resolveDeployment(ctx, params)
+	// Use the deployment resolver
+	query := domain.DeploymentQuery{
+		Reference: params.DeploymentRef,
+		ChainID:   0, // Will use runtime config
+		Namespace: "", // Will use runtime config
+	}
+	deployment, err := uc.resolver.ResolveDeployment(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -77,102 +88,3 @@ func (uc *ShowDeployment) Run(ctx context.Context, params ShowDeploymentParams) 
 	return deployment, nil
 }
 
-// resolveDeployment resolves a deployment reference to a deployment
-func (uc *ShowDeployment) resolveDeployment(ctx context.Context, params ShowDeploymentParams) (*models.Deployment, error) {
-	ref := params.DeploymentRef
-
-	// Get namespace and chainID from runtime config
-	namespace := uc.config.Namespace
-	var chainID uint64
-	if uc.config.Network != nil {
-		chainID = uc.config.Network.ChainID
-	}
-
-	// 1. Try as deployment ID
-	deployment, err := uc.repo.GetDeployment(ctx, ref)
-	if err == nil {
-		return deployment, nil
-	}
-
-	// 2. Try as address (starts with 0x and is 42 chars)
-	if strings.HasPrefix(ref, "0x") && len(ref) == 42 {
-		if chainID != 0 {
-			// If chain ID is specified, try direct lookup
-			deployment, err = uc.repo.GetDeploymentByAddress(ctx, chainID, ref)
-			if err == nil {
-				return deployment, nil
-			}
-		} else {
-			// Search all deployments for this address
-			deployments, err := uc.repo.ListDeployments(ctx, domain.DeploymentFilter{})
-			if err != nil {
-				return nil, fmt.Errorf("failed to list deployments: %w", err)
-			}
-
-			for _, dep := range deployments {
-				if strings.EqualFold(dep.Address, ref) {
-					return dep, nil
-				}
-			}
-		}
-	}
-
-	// 3. Try as contract name (with optional label)
-	parts := strings.Split(ref, ":")
-	contractName := parts[0]
-	var label string
-	if len(parts) > 1 {
-		label = parts[1]
-	}
-
-	// 4. Check if it contains namespace or chain ID prefixes
-	// Format: namespace/contract or chainID/contract
-	if strings.Contains(contractName, "/") {
-		prefixParts := strings.SplitN(contractName, "/", 2)
-		prefix := prefixParts[0]
-		contractName = prefixParts[1]
-
-		// Try to parse as chain ID
-		if parsedChainID := parseChainID(prefix); parsedChainID != 0 {
-			chainID = parsedChainID
-		} else {
-			// Otherwise treat as namespace
-			namespace = prefix
-		}
-	}
-
-	// Apply filters
-	filter := domain.DeploymentFilter{
-		ContractName: contractName,
-		Label:        label,
-		ChainID:      chainID,
-		Namespace:    namespace,
-	}
-
-	deployments, err := uc.repo.ListDeployments(ctx, filter)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list deployments: %w", err)
-	}
-
-	if len(deployments) == 0 {
-		return nil, fmt.Errorf("no deployments found matching '%s'", ref)
-	}
-
-	// If multiple deployments found, return an error
-	// In the future, this could support interactive mode with a picker
-	if len(deployments) > 1 {
-		return nil, fmt.Errorf("multiple deployments found matching '%s', please specify a unique identifier", ref)
-	}
-
-	return deployments[0], nil
-}
-
-// parseChainID tries to parse a string as a chain ID
-func parseChainID(s string) uint64 {
-	var chainID uint64
-	_, err := fmt.Sscanf(s, "%d", &chainID)
-	if err != nil {
-		return 0
-	}
-	return chainID
-}

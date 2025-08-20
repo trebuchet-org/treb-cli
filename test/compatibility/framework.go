@@ -184,7 +184,7 @@ func compareOutput(t *testing.T, test CompatibilityTest, v1Output, v2Output, dis
 				}
 			}
 		} else {
-			t.Errorf("Diff on %s (-want +got):\n%s", displayName, diff)
+			t.Errorf("Diff on %s (-v1 +v2):\n%s", displayName, diff)
 		}
 	}
 }

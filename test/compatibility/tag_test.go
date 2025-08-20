@@ -83,7 +83,7 @@ func TestTagCommand(t *testing.T) {
 				// Tag by contract name first, then by address
 				// Using predictable anvil deployment address
 				{"tag", "Counter", "--add", "v1.0.0"},
-				{"tag", "0x5FbDB2315678afecb367f032d93F642f64180aa3", "--network", "anvil-31337"},
+				{"tag", "0x74148047D6bDf624C94eFc07F60cEE7b6052FB29", "--network", "anvil-31337"},
 			},
 		},
 		{
@@ -98,9 +98,10 @@ func TestTagCommand(t *testing.T) {
 			},
 		},
 		{
-			Name:      "tag_non_existing_deployment",
-			TestCmds:  [][]string{{"tag", "NonExisting"}},
-			ExpectErr: true,
+			Name:       "tag_non_existing_deployment",
+			TestCmds:   [][]string{{"tag", "NonExisting"}},
+			ExpectErr:  true,
+			ExpectDiff: true,
 		},
 		{
 			Name: "tag_add_and_remove_both",
@@ -129,14 +130,15 @@ func TestTagCommand(t *testing.T) {
 			SetupCmds: [][]string{
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
-				{"run", "script/deploy/DeployCounter.s.sol", "--namespace", "production"},
+				{"run", "script/deploy/DeployCounter.s.sol", "--network", "anvil-31338"},
 			},
 			TestCmds: [][]string{
 				// This should trigger interactive selection in v1,
 				// but in test mode it should fail with multiple matches
 				{"tag", "Counter", "--add", "v1.0.0", "--non-interactive"},
 			},
-			ExpectErr: true,
+			ExpectErr:  true,
+			ExpectDiff: true,
 		},
 	}
 

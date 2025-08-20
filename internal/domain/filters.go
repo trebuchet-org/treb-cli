@@ -1,8 +1,6 @@
 package domain
 
 import (
-	"fmt"
-
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
@@ -22,22 +20,6 @@ type DeploymentFilter struct {
 	Type         models.DeploymentType
 }
 
-type ContractQuery struct {
-	Query       *string
-	PathPattern *string
-}
-
-func (cq ContractQuery) String() string {
-	if cq.Query == nil && cq.PathPattern == nil {
-		return "<all contracts>"
-	} else if cq.Query != nil && cq.PathPattern == nil {
-		return *cq.Query
-	} else if cq.Query == nil && cq.PathPattern != nil {
-		return *cq.PathPattern
-	} else {
-		return fmt.Sprintf("%s and %s)", *cq.Query, *cq.PathPattern)
-	}
-}
 
 // SafeTransactionFilter defines filtering options for Safe transactions
 type SafeTransactionFilter struct {

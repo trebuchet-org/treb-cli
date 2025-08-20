@@ -50,6 +50,7 @@ var TemplateSet = wire.NewSet(
 var InteractiveSet = wire.NewSet(
 	interactive.NewSelectorAdapter,
 	wire.Bind(new(usecase.ContractSelector), new(*interactive.SelectorAdapter)),
+	wire.Bind(new(usecase.DeploymentSelector), new(*interactive.SelectorAdapter)),
 )
 
 // BlockchainSet provides blockchain-based implementations
@@ -82,6 +83,10 @@ var ScriptAdapters = wire.NewSet(
 	// Script resolution
 	resolvers.NewScriptResolver,
 	wire.Bind(new(usecase.ScriptResolver), new(*resolvers.ScriptResolver)),
+
+	// Deployment resolution
+	resolvers.NewDeploymentResolver,
+	wire.Bind(new(usecase.DeploymentResolver), new(*resolvers.DeploymentResolver)),
 
 	// ABI handling
 	abi.NewParser,

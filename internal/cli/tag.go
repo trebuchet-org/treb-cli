@@ -84,44 +84,12 @@ func runTag(cmd *cobra.Command, identifier string, flags *tagFlags) error {
 
 	result, err := app.TagDeployment.Execute(cmd.Context(), params)
 	if err != nil {
-		// Handle multiple matches error for interactive selection
-		if strings.Contains(err.Error(), "multiple deployments found") && !app.Config.NonInteractive {
-			// Try interactive selection
-			chainID := uint64(0)
-			if app.Config.Network != nil {
-				chainID = app.Config.Network.ChainID
-			}
-
-			deployment, err := app.TagDeployment.FindDeploymentInteractive(
-				cmd.Context(),
-				identifier,
-				chainID,
-				app.Config.Namespace,
-				app.Selector,
-			)
-			if err != nil {
-				return err
-			}
-
-			// Re-execute with specific deployment ID
-			params.Identifier = deployment.ID
-			result, err = app.TagDeployment.Execute(cmd.Context(), params)
-			if err != nil {
-				// Handle tag already exists/doesn't exist errors as warnings
-				if strings.Contains(err.Error(), "already exists") || strings.Contains(err.Error(), "does not exist") {
-					fmt.Println(render.FormatWarning(err.Error()))
-					return nil
-				}
-				return err
-			}
-		} else {
-			// Handle tag already exists/doesn't exist errors as warnings
-			if strings.Contains(err.Error(), "already exists") || strings.Contains(err.Error(), "does not exist") {
-				fmt.Println(render.FormatWarning(err.Error()))
-				return nil
-			}
-			return err
+		// Handle tag already exists/doesn't exist errors as warnings
+		if strings.Contains(err.Error(), "already exists") || strings.Contains(err.Error(), "does not exist") {
+			fmt.Println(render.FormatWarning(err.Error()))
+			return nil
 		}
+		return err
 	}
 
 	// Render the result

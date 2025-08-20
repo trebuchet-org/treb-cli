@@ -37,13 +37,13 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	deploymentSelector := ProvideDeploymentSelector(selectorAdapter)
 	fileRepository, err := deployments.NewFileRepositoryFromConfig(runtimeConfig)
 	if err != nil {
 		return nil, err
 	}
 	listDeployments := usecase.NewListDeployments(runtimeConfig, fileRepository, sink)
-	showDeployment := usecase.NewShowDeployment(runtimeConfig, fileRepository, sink)
+	deploymentResolver := resolvers.NewDeploymentResolver(runtimeConfig, fileRepository, selectorAdapter)
+	showDeployment := usecase.NewShowDeployment(runtimeConfig, fileRepository, deploymentResolver, sink)
 	string2 := adapters.ProvideProjectPath(runtimeConfig)
 	repository := contracts.NewRepository(string2)
 	contractResolver := resolvers.NewContractResolver(runtimeConfig, repository, selectorAdapter)
@@ -84,21 +84,14 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	verifyDeployment := usecase.NewVerifyDeployment(fileRepository, verifierAdapter, networkResolver)
 	orchestrateDeployment := usecase.NewOrchestrateDeployment(runScript, sink)
 	syncRegistry := usecase.NewSyncRegistry(runtimeConfig, fileRepository, sink)
-	tagDeployment := usecase.NewTagDeployment(fileRepository, sink)
+	tagDeployment := usecase.NewTagDeployment(fileRepository, deploymentResolver, sink)
 	manager := anvil.NewManager()
 	manageAnvil := usecase.NewManageAnvil(manager, sink)
 	initProject := usecase.NewInitProject(fileWriterAdapter, sink)
 	renderer := render.NewGenerateRenderer()
-	app, err := NewApp(runtimeConfig, deploymentSelector, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, showConfig, setConfig, removeConfig, runScript, verifyDeployment, orchestrateDeployment, syncRegistry, tagDeployment, manageAnvil, initProject, manager, renderer)
+	app, err := NewApp(runtimeConfig, selectorAdapter, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, showConfig, setConfig, removeConfig, runScript, verifyDeployment, orchestrateDeployment, syncRegistry, tagDeployment, manageAnvil, initProject, manager, renderer)
 	if err != nil {
 		return nil, err
 	}
 	return app, nil
-}
-
-// wire.go:
-
-// ProvideDeploymentSelector provides DeploymentSelector interface from SelectorAdapter
-func ProvideDeploymentSelector(adapter *interactive.SelectorAdapter) usecase.DeploymentSelector {
-	return adapter
 }

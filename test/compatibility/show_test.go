@@ -15,6 +15,7 @@ func TestShowCommand(t *testing.T) {
 			TestCmds: [][]string{
 				{"show", "Counter"},
 			},
+			ExpectDiff: true,
 		},
 		{
 			Name: "with_label",
@@ -25,6 +26,7 @@ func TestShowCommand(t *testing.T) {
 			TestCmds: [][]string{
 				{"show", "Counter:test"},
 			},
+			ExpectDiff: true,
 		},
 	})
 }

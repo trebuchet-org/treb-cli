@@ -181,6 +181,12 @@ type SafeClient interface {
 	GetTransactionExecutionInfo(ctx context.Context, safeTxHash string) (*models.SafeExecutionInfo, error)
 }
 
+// DeploymentResolver resolves deployment references to actual deployments
+type DeploymentResolver interface {
+	// ResolveDeployment resolves a deployment reference to a deployment
+	ResolveDeployment(ctx context.Context, query domain.DeploymentQuery) (*models.Deployment, error)
+}
+
 // ScriptResolver resolves script paths to script information
 type ScriptResolver interface {
 	// ResolveScript resolves a script path or name to script info

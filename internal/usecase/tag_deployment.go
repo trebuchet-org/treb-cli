@@ -11,13 +11,19 @@ import (
 // TagDeployment handles tagging of deployments
 type TagDeployment struct {
 	deploymentRepo DeploymentRepository
+	resolver       DeploymentResolver
 	progress       ProgressSink
 }
 
 // NewTagDeployment creates a new tag deployment use case
-func NewTagDeployment(deploymentRepo DeploymentRepository, progress ProgressSink) *TagDeployment {
+func NewTagDeployment(
+	deploymentRepo DeploymentRepository,
+	resolver DeploymentResolver,
+	progress ProgressSink,
+) *TagDeployment {
 	return &TagDeployment{
 		deploymentRepo: deploymentRepo,
+		resolver:       resolver,
 		progress:       progress,
 	}
 }
@@ -50,8 +56,13 @@ type TagDeploymentResult struct {
 
 // Execute handles tag operations on deployments
 func (t *TagDeployment) Execute(ctx context.Context, params TagDeploymentParams) (*TagDeploymentResult, error) {
-	// Find the deployment
-	deployment, err := t.findDeployment(ctx, params)
+	// Use the deployment resolver
+	query := domain.DeploymentQuery{
+		Reference: params.Identifier,
+		ChainID:   params.ChainID,
+		Namespace: params.Namespace,
+	}
+	deployment, err := t.resolver.ResolveDeployment(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -69,53 +80,6 @@ func (t *TagDeployment) Execute(ctx context.Context, params TagDeploymentParams)
 	}
 }
 
-// findDeployment locates a deployment by identifier
-func (t *TagDeployment) findDeployment(ctx context.Context, params TagDeploymentParams) (*models.Deployment, error) {
-	// Try as deployment ID first
-	deployment, err := t.deploymentRepo.GetDeployment(ctx, params.Identifier)
-	if err == nil {
-		return deployment, nil
-	}
-	if err != domain.ErrNotFound {
-		return nil, fmt.Errorf("failed to get deployment by ID: %w", err)
-	}
-
-	// If it looks like an address, try by address
-	if len(params.Identifier) == 42 && params.Identifier[:2] == "0x" {
-		if params.ChainID == 0 {
-			return nil, fmt.Errorf("chain ID required for address-based lookup")
-		}
-		deployment, err = t.deploymentRepo.GetDeploymentByAddress(ctx, params.ChainID, params.Identifier)
-		if err == nil {
-			return deployment, nil
-		}
-		if err != domain.ErrNotFound {
-			return nil, fmt.Errorf("failed to get deployment by address: %w", err)
-		}
-	}
-
-	// Try to find by contract name
-	filter := domain.DeploymentFilter{
-		ContractName: params.Identifier,
-		Namespace:    params.Namespace,
-		ChainID:      params.ChainID,
-	}
-	deployments, err := t.deploymentRepo.ListDeployments(ctx, filter)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list deployments: %w", err)
-	}
-
-	if len(deployments) == 0 {
-		return nil, fmt.Errorf("no deployment found matching '%s'", params.Identifier)
-	}
-
-	if len(deployments) == 1 {
-		return deployments[0], nil
-	}
-
-	// Multiple matches - return error (interactive selection should be handled at CLI layer)
-	return nil, fmt.Errorf("multiple deployments found matching '%s', please be more specific", params.Identifier)
-}
 
 // showTags displays current tags for a deployment
 func (t *TagDeployment) showTags(deployment *models.Deployment) (*TagDeploymentResult, error) {
@@ -188,37 +152,4 @@ func (t *TagDeployment) removeTag(ctx context.Context, deployment *models.Deploy
 		Tag:         tag,
 		CurrentTags: deployment.Tags,
 	}, nil
-}
-
-// FindDeploymentInteractive finds a deployment with support for interactive selection
-func (t *TagDeployment) FindDeploymentInteractive(ctx context.Context, identifier string, chainID uint64, namespace string, selector DeploymentSelector) (*models.Deployment, error) {
-	// Try exact match first
-	params := TagDeploymentParams{
-		Identifier: identifier,
-		ChainID:    chainID,
-		Namespace:  namespace,
-	}
-	deployment, err := t.findDeployment(ctx, params)
-	if err == nil {
-		return deployment, nil
-	}
-
-	// If multiple matches, use selector
-	if err.Error() == fmt.Sprintf("multiple deployments found matching '%s', please be more specific", identifier) {
-		// Get all matching deployments for selection
-		filter := domain.DeploymentFilter{
-			ContractName: identifier,
-			Namespace:    namespace,
-			ChainID:      chainID,
-		}
-		deployments, err := t.deploymentRepo.ListDeployments(ctx, filter)
-		if err != nil {
-			return nil, fmt.Errorf("failed to list deployments: %w", err)
-		}
-
-		// Use selector to pick one
-		return selector.SelectDeployment(ctx, deployments, "Multiple deployments found. Select one:")
-	}
-
-	return nil, err
 }

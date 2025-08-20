@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/trebuchet-org/treb-cli/internal/domain"
@@ -283,6 +284,15 @@ func shouldVerify(deployment *models.Deployment) bool {
 		status == models.VerificationStatusPartial ||
 		status == models.VerificationStatusUnverified ||
 		status == ""
+}
+
+// parseChainID tries to parse a string as a chain ID
+func parseChainID(s string) uint64 {
+	chainID, err := strconv.ParseUint(s, 10, 64)
+	if err != nil {
+		return 0
+	}
+	return chainID
 }
 
 // getNetworkName returns network name for a chain ID

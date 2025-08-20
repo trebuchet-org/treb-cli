@@ -13,8 +13,9 @@ import (
 )
 
 var (
-	addTag    string
-	removeTag string
+	addTag      string
+	removeTag   string
+	networkFlag string
 )
 
 var tagCmd = &cobra.Command{
@@ -45,6 +46,7 @@ Examples:
 func init() {
 	rootCmd.AddCommand(tagCmd)
 
+	tagCmd.Flags().StringVarP(&networkFlag, "network", "n", "", "Network to run on (e.g., mainnet, sepolia, local)")
 	tagCmd.Flags().StringVar(&addTag, "add", "", "Add a tag to the deployment")
 	tagCmd.Flags().StringVar(&removeTag, "remove", "", "Remove a tag from the deployment")
 }
@@ -129,9 +131,6 @@ func showDeploymentTags(deployment *types.Deployment) error {
 	tagStyle := color.New(color.FgCyan)
 
 	displayName := deployment.ContractDisplayName()
-	if deployment.Label != "" {
-		displayName += ":" + deployment.Label
-	}
 
 	fmt.Println()
 	titleStyle.Printf("Deployment: %s/%d/%s\n", deployment.Namespace, deployment.ChainID, displayName)
@@ -177,9 +176,6 @@ func addDeploymentTag(deployment *types.Deployment, tag string, manager *registr
 
 	// Show success
 	displayName := deployment.ContractDisplayName()
-	if deployment.Label != "" {
-		displayName += ":" + deployment.Label
-	}
 
 	color.New(color.FgGreen).Printf("✅ Added tag '%s' to %s/%d/%s\n",
 		tag,
@@ -232,9 +228,6 @@ func removeDeploymentTag(deployment *types.Deployment, tag string, manager *regi
 
 	// Show success
 	displayName := deployment.ContractDisplayName()
-	if deployment.Label != "" {
-		displayName += ":" + deployment.Label
-	}
 
 	color.New(color.FgGreen).Printf("✅ Removed tag '%s' from %s/%d/%s\n",
 		tag,
