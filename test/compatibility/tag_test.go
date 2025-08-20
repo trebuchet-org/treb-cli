@@ -140,6 +140,123 @@ func TestTagCommand(t *testing.T) {
 			ExpectErr:  true,
 			ExpectDiff: true,
 		},
+		// Additional test cases for more comprehensive coverage
+		{
+			Name: "tag_multiple_contracts_different_tags",
+			SetupCmds: [][]string{
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"run", "script/deploy/DeployCounter.s.sol"},
+				{"gen", "deploy", "src/SampleToken.sol:SampleToken"},
+				{"run", "script/deploy/DeploySampleToken.s.sol"},
+			},
+			TestCmds: [][]string{
+				{"tag", "Counter", "--add", "v1.0.0"},
+				{"tag", "SampleToken", "--add", "token-v1"},
+				{"list"}, // Verify both contracts exist with tags
+			},
+		},
+		{
+			Name: "tag_with_special_characters",
+			SetupCmds: [][]string{
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"run", "script/deploy/DeployCounter.s.sol"},
+			},
+			TestCmds: [][]string{
+				{"tag", "Counter", "--add", "release/2024.01"},
+				{"tag", "Counter", "--add", "hotfix-123"},
+				{"tag", "Counter", "--add", "RC_1.0.0"},
+				{"tag", "Counter"},
+			},
+		},
+		{
+			Name: "tag_deployment_by_id",
+			SetupCmds: [][]string{
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"run", "script/deploy/DeployCounter.s.sol"},
+			},
+			TestCmds: [][]string{
+				// Tag using full deployment ID format
+				{"tag", "default/31337/Counter", "--add", "v1.0.0"},
+				{"show", "Counter"},
+			},
+		},
+		{
+			Name: "tag_cross_namespace",
+			SetupCmds: [][]string{
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"run", "script/deploy/DeployCounter.s.sol"},
+				{"run", "script/deploy/DeployCounter.s.sol", "--namespace", "staging"},
+			},
+			TestCmds: [][]string{
+				{"tag", "Counter", "--add", "default-v1"},
+				{"tag", "Counter", "--add", "staging-v1", "--namespace", "staging"},
+				{"list", "--all"}, // Show both deployments with their tags
+			},
+		},
+		{
+			Name: "tag_library_deployment",
+			SetupCmds: [][]string{
+				{"gen", "deploy", "src/StringUtils.sol:StringUtils"},
+				{"run", "script/deploy/DeployStringUtils.s.sol"},
+			},
+			TestCmds: [][]string{
+				{"tag", "StringUtils", "--add", "lib-v1.0.0"},
+				{"show", "StringUtils"},
+			},
+		},
+		{
+			Name: "tag_with_network_and_namespace",
+			SetupCmds: [][]string{
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"run", "script/deploy/DeployCounter.s.sol", "--namespace", "production", "--network", "anvil-31337"},
+				{"run", "script/deploy/DeployCounter.s.sol", "--namespace", "production", "--network", "anvil-31338"},
+			},
+			TestCmds: [][]string{
+				{"tag", "Counter", "--add", "v1.0.0", "--namespace", "production", "--network", "anvil-31337"},
+				{"show", "Counter", "--namespace", "production", "--network", "anvil-31337"},
+			},
+		},
+		{
+			Name: "tag_long_tag_name",
+			SetupCmds: [][]string{
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"run", "script/deploy/DeployCounter.s.sol"},
+			},
+			TestCmds: [][]string{
+				{"tag", "Counter", "--add", "this-is-a-very-long-tag-name-that-should-still-work-v1.0.0-beta.1"},
+				{"tag", "Counter"},
+			},
+		},
+		{
+			Name: "tag_remove_all_tags",
+			SetupCmds: [][]string{
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"run", "script/deploy/DeployCounter.s.sol"},
+				{"tag", "Counter", "--add", "v1.0.0"},
+				{"tag", "Counter", "--add", "v1.0.1"},
+				{"tag", "Counter", "--add", "latest"},
+			},
+			TestCmds: [][]string{
+				{"tag", "Counter", "--remove", "v1.0.0"},
+				{"tag", "Counter", "--remove", "v1.0.1"},
+				{"tag", "Counter", "--remove", "latest"},
+				{"tag", "Counter"}, // Should show no tags
+			},
+		},
+		{
+			Name: "tag_after_deployment_update",
+			SetupCmds: [][]string{
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"run", "script/deploy/DeployCounter.s.sol", "--env", "LABEL=v1"},
+				{"tag", "Counter:v1", "--add", "initial"},
+				{"run", "script/deploy/DeployCounter.s.sol", "--env", "LABEL=v2"},
+			},
+			TestCmds: [][]string{
+				{"tag", "Counter:v2", "--add", "updated"},
+				{"show", "Counter:v1"}, // v1 should still have its tag
+				{"show", "Counter:v2"}, // v2 should have new tag
+			},
+		},
 	}
 
 	RunCompatibilityTests(t, tests)
