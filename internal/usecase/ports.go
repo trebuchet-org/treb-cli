@@ -17,12 +17,9 @@ type DeploymentRepository interface {
 	GetDeployment(ctx context.Context, id string) (*models.Deployment, error)
 	GetDeploymentByAddress(ctx context.Context, chainID uint64, address string) (*models.Deployment, error)
 	ListDeployments(ctx context.Context, filter domain.DeploymentFilter) ([]*models.Deployment, error)
+	GetAllDeployments(ctx context.Context) []*models.Deployment
 	SaveDeployment(ctx context.Context, deployment *models.Deployment) error
 	DeleteDeployment(ctx context.Context, id string) error
-}
-
-// TransactionRepository handles persistence of transactions
-type TransactionRepository interface {
 	GetTransaction(ctx context.Context, id string) (*models.Transaction, error)
 	ListTransactions(ctx context.Context, filter domain.TransactionFilter) ([]*models.Transaction, error)
 	SaveTransaction(ctx context.Context, transaction *models.Transaction) error
@@ -162,8 +159,8 @@ type BlockchainChecker interface {
 }
 
 // RegistryPruner handles registry pruning operations
-type RegistryPruner interface {
-	CollectPrunableItems(ctx context.Context, chainID uint64, includePending bool, checker BlockchainChecker) (*domain.ItemsToPrune, error)
+type DeploymentRepositoryPruner interface {
+	CollectPrunableItems(ctx context.Context, chainID uint64, includePending bool) (*domain.ItemsToPrune, error)
 	ExecutePrune(ctx context.Context, items *domain.ItemsToPrune) error
 }
 
@@ -247,20 +244,9 @@ type RunResultHydrator interface {
 // RegistryUpdater updates the deployment registry based on script execution
 type RegistryUpdater interface {
 	// PrepareUpdates analyzes the execution and prepares registry updates
-	PrepareUpdates(ctx context.Context, execution *forge.HydratedRunResult) (*RegistryChanges, error)
+	PrepareUpdates(ctx context.Context, execution *forge.HydratedRunResult) (*models.Changeset, error)
 	// ApplyUpdates applies the prepared changes to the registry
-	ApplyUpdates(ctx context.Context, changes *RegistryChanges) error
-	// HasChanges returns true if there are any changes to apply
-	HasChanges(changes *RegistryChanges) bool
-}
-
-// RegistryChanges represents changes to be made to the registry
-type RegistryChanges struct {
-	Deployments  []*models.Deployment
-	Transactions []*models.Transaction
-	AddedCount   int
-	UpdatedCount int
-	HasChanges   bool
+	ApplyUpdates(ctx context.Context, changeset *models.Changeset) error
 }
 
 // ExecutionStage represents a stage in the execution process

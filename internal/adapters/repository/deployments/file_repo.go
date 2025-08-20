@@ -1,16 +1,20 @@
 package deployments
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
+	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
 const (
@@ -21,8 +25,8 @@ const (
 	SolidityRegistryFile = "registry.json"
 )
 
-// Manager handles all registry operations for the new data model
-type Manager struct {
+// FileRepository stores the deployments in json files on the system
+type FileRepository struct {
 	rootDir          string
 	lookups          *LookupIndexes
 	mu               sync.RWMutex
@@ -32,8 +36,8 @@ type Manager struct {
 	solidityRegistry SolidityRegistry
 }
 
-// NewManager creates a new registry manager
-func NewManager(rootDir string) (*Manager, error) {
+// NewFileRepository creates a new registry manager
+func NewFileRepository(rootDir string) (*FileRepository, error) {
 	trebDir := filepath.Join(rootDir, TrebDir)
 
 	// Create .treb directory if it doesn't exist
@@ -41,7 +45,7 @@ func NewManager(rootDir string) (*Manager, error) {
 		return nil, fmt.Errorf("failed to create .treb directory: %w", err)
 	}
 
-	m := &Manager{
+	m := &FileRepository{
 		rootDir:          rootDir,
 		deployments:      make(map[string]*models.Deployment),
 		transactions:     make(map[string]*models.Transaction),
@@ -71,7 +75,7 @@ func NewManager(rootDir string) (*Manager, error) {
 }
 
 // load reads all registry files
-func (m *Manager) load() error {
+func (m *FileRepository) load() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -102,7 +106,7 @@ func (m *Manager) load() error {
 }
 
 // loadFile loads a JSON file from the .treb directory
-func (m *Manager) loadFile(filename string, v interface{}) error {
+func (m *FileRepository) loadFile(filename string, v any) error {
 	path := filepath.Join(m.rootDir, TrebDir, filename)
 
 	data, err := os.ReadFile(path)
@@ -114,7 +118,7 @@ func (m *Manager) loadFile(filename string, v interface{}) error {
 }
 
 // save writes all registry files
-func (m *Manager) save() error {
+func (m *FileRepository) save() error {
 	// Save deployments
 	if err := m.saveFile(DeploymentsFile, m.deployments); err != nil {
 		return fmt.Errorf("failed to save deployments: %w", err)
@@ -139,7 +143,7 @@ func (m *Manager) save() error {
 }
 
 // saveFile saves data to a JSON file in the .treb directory
-func (m *Manager) saveFile(filename string, v interface{}) error {
+func (m *FileRepository) saveFile(filename string, v any) error {
 	path := filepath.Join(m.rootDir, TrebDir, filename)
 
 	data, err := json.MarshalIndent(v, "", "  ")
@@ -158,7 +162,7 @@ func (m *Manager) saveFile(filename string, v interface{}) error {
 }
 
 // rebuildLookups rebuilds all lookup indexes from the loaded data
-func (m *Manager) rebuildLookups() {
+func (m *FileRepository) rebuildLookups() {
 	m.lookups.ByAddress = make(map[uint64]map[string]string)
 	m.lookups.ByNamespace = make(map[string]map[uint64][]string)
 	m.lookups.ByContract = make(map[string][]string)
@@ -203,7 +207,7 @@ func (m *Manager) rebuildLookups() {
 }
 
 // GetDeployment retrieves a deployment by ID
-func (m *Manager) GetDeployment(id string) (*models.Deployment, error) {
+func (m *FileRepository) GetDeployment(id string) (*models.Deployment, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -218,7 +222,7 @@ func (m *Manager) GetDeployment(id string) (*models.Deployment, error) {
 }
 
 // GetDeploymentByAddress retrieves a deployment by chain ID and address
-func (m *Manager) GetDeploymentByAddress(chainID uint64, address string) (*models.Deployment, error) {
+func (m *FileRepository) GetDeploymentByAddress(chainID uint64, address string) (*models.Deployment, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -236,7 +240,7 @@ func (m *Manager) GetDeploymentByAddress(chainID uint64, address string) (*model
 }
 
 // GetAllDeployments returns all deployments
-func (m *Manager) GetAllDeployments() map[string]*models.Deployment {
+func (m *FileRepository) GetAllDeployments() map[string]*models.Deployment {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -250,7 +254,7 @@ func (m *Manager) GetAllDeployments() map[string]*models.Deployment {
 }
 
 // GetAllDeploymentsHydrated returns all deployments with linked data
-func (m *Manager) GetAllDeploymentsHydrated() []*models.Deployment {
+func (m *FileRepository) GetAllDeploymentsHydrated() []*models.Deployment {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -284,7 +288,7 @@ func (m *Manager) GetAllDeploymentsHydrated() []*models.Deployment {
 }
 
 // findImplementationID finds the deployment ID for an implementation address
-func (m *Manager) findImplementationID(chainID uint64, address string) (string, error) {
+func (m *FileRepository) findImplementationID(chainID uint64, address string) (string, error) {
 	chainAddrs, exists := m.lookups.ByAddress[chainID]
 	if !exists {
 		return "", fmt.Errorf("no deployments found on chain %d", chainID)
@@ -299,7 +303,7 @@ func (m *Manager) findImplementationID(chainID uint64, address string) (string, 
 }
 
 // SaveDeployment saves or updates a deployment
-func (m *Manager) SaveDeployment(deployment *models.Deployment) error {
+func (m *FileRepository) SaveDeployment(deployment *models.Deployment) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -320,7 +324,7 @@ func (m *Manager) SaveDeployment(deployment *models.Deployment) error {
 }
 
 // SaveTransaction saves or updates a transaction
-func (m *Manager) SaveTransaction(tx *models.Transaction) error {
+func (m *FileRepository) SaveTransaction(tx *models.Transaction) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -337,7 +341,7 @@ func (m *Manager) SaveTransaction(tx *models.Transaction) error {
 }
 
 // DeleteDeployment removes a deployment by ID
-func (m *Manager) DeleteDeployment(id string) error {
+func (m *FileRepository) DeleteDeployment(ctx context.Context, id string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -355,7 +359,7 @@ func (m *Manager) DeleteDeployment(id string) error {
 }
 
 // UpdateDeploymentVerification updates the verification status of a deployment
-func (m *Manager) UpdateDeploymentVerification(id string, status models.VerificationStatus, verifiers map[string]models.VerifierStatus) error {
+func (m *FileRepository) UpdateDeploymentVerification(id string, status models.VerificationStatus, verifiers map[string]models.VerifierStatus) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -379,7 +383,7 @@ func (m *Manager) UpdateDeploymentVerification(id string, status models.Verifica
 }
 
 // TagDeployment adds a tag to a deployment
-func (m *Manager) TagDeployment(id string, tag string) error {
+func (m *FileRepository) TagDeployment(id string, tag string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -389,10 +393,8 @@ func (m *Manager) TagDeployment(id string, tag string) error {
 	}
 
 	// Check if tag already exists
-	for _, t := range dep.Tags {
-		if t == tag {
-			return nil // Tag already exists
-		}
+	if slices.Contains(dep.Tags, tag) {
+		return domain.ErrAlreadyExists
 	}
 
 	dep.Tags = append(dep.Tags, tag)
@@ -403,7 +405,7 @@ func (m *Manager) TagDeployment(id string, tag string) error {
 }
 
 // GetTransaction retrieves a transaction by ID
-func (m *Manager) GetTransaction(id string) (*models.Transaction, error) {
+func (m *FileRepository) GetTransaction(id string) (*models.Transaction, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -418,13 +420,13 @@ func (m *Manager) GetTransaction(id string) (*models.Transaction, error) {
 }
 
 // GetSafeTransaction retrieves a safe transaction by ID
-func (m *Manager) GetSafeTransaction(id string) (*models.SafeTransaction, error) {
+func (m *FileRepository) GetSafeTransaction(id string) (*models.SafeTransaction, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	tx, exists := m.safeTransactions[id]
 	if !exists {
-		return nil, fmt.Errorf("safe transaction %s not found", id)
+		return nil, domain.ErrNotFound
 	}
 
 	// Clone to avoid mutations
@@ -433,7 +435,7 @@ func (m *Manager) GetSafeTransaction(id string) (*models.SafeTransaction, error)
 }
 
 // SaveSafeTransaction saves or updates a safe transaction
-func (m *Manager) SaveSafeTransaction(tx *models.SafeTransaction) error {
+func (m *FileRepository) SaveSafeTransaction(tx *models.SafeTransaction) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -453,7 +455,7 @@ func (m *Manager) SaveSafeTransaction(tx *models.SafeTransaction) error {
 }
 
 // GetPendingSafeTransactions returns all pending safe transactions
-func (m *Manager) GetPendingSafeTransactions() ([]*models.SafeTransaction, error) {
+func (m *FileRepository) GetPendingSafeTransactions() ([]*models.SafeTransaction, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -469,19 +471,17 @@ func (m *Manager) GetPendingSafeTransactions() ([]*models.SafeTransaction, error
 }
 
 // GetAllTransactions returns all transactions
-func (m *Manager) GetAllTransactions() map[string]*models.Transaction {
+func (m *FileRepository) GetAllTransactions() map[string]*models.Transaction {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	transactions := make(map[string]*models.Transaction)
-	for k, v := range m.transactions {
-		transactions[k] = v
-	}
+	maps.Copy(transactions, m.transactions)
 	return transactions
 }
 
 // GetAllSafeTransactions returns all safe transactions
-func (m *Manager) GetAllSafeTransactions() map[string]*models.SafeTransaction {
+func (m *FileRepository) GetAllSafeTransactions() map[string]*models.SafeTransaction {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -493,7 +493,7 @@ func (m *Manager) GetAllSafeTransactions() map[string]*models.SafeTransaction {
 }
 
 // RemoveDeployment removes a deployment from the registry
-func (m *Manager) RemoveDeployment(id string) error {
+func (m *FileRepository) RemoveDeployment(id string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -506,7 +506,7 @@ func (m *Manager) RemoveDeployment(id string) error {
 }
 
 // RemoveTransaction removes a transaction from the registry
-func (m *Manager) RemoveTransaction(id string) error {
+func (m *FileRepository) RemoveTransaction(id string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -519,7 +519,7 @@ func (m *Manager) RemoveTransaction(id string) error {
 }
 
 // RemoveSafeTransaction removes a safe transaction from the registry
-func (m *Manager) RemoveSafeTransaction(safeTxHash string) error {
+func (m *FileRepository) RemoveSafeTransaction(safeTxHash string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -540,7 +540,7 @@ func (m *Manager) RemoveSafeTransaction(safeTxHash string) error {
 }
 
 // UpdateSafeTransaction updates an existing safe transaction
-func (m *Manager) UpdateSafeTransaction(tx *models.SafeTransaction) error {
+func (m *FileRepository) UpdateSafeTransaction(tx *models.SafeTransaction) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -563,50 +563,4 @@ type BatchUpdate struct {
 	SafeTransactions []*models.SafeTransaction
 }
 
-// ApplyBatchUpdate applies all updates in a single transaction with one lock
-func (m *Manager) ApplyBatchUpdate(update *BatchUpdate) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	now := time.Now()
-
-	// Apply all deployment updates
-	for _, deployment := range update.Deployments {
-		// Set timestamps
-		if deployment.CreatedAt.IsZero() {
-			deployment.CreatedAt = now
-		}
-		deployment.UpdatedAt = now
-		
-		// Save deployment
-		m.deployments[deployment.ID] = deployment
-	}
-
-	// Apply all transaction updates
-	for _, tx := range update.Transactions {
-		// Set timestamp
-		if tx.CreatedAt.IsZero() {
-			tx.CreatedAt = now
-		}
-		
-		// Save transaction
-		m.transactions[tx.ID] = tx
-	}
-
-	// Apply all safe transaction updates
-	for _, tx := range update.SafeTransactions {
-		// Set timestamp
-		if tx.CreatedAt.IsZero() {
-			tx.CreatedAt = now
-		}
-		
-		// Save transaction
-		m.safeTransactions[tx.ID] = tx
-	}
-
-	// Rebuild lookups once for all changes
-	m.rebuildLookups()
-
-	// Save all files once
-	return m.save()
-}
+var _ usecase.DeploymentRepository = (*FileRepository)(nil)

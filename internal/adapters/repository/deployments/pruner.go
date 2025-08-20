@@ -9,12 +9,20 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
+type Pruner struct {
+	repo    usecase.DeploymentRepository
+	checker usecase.BlockchainChecker
+}
+
+func NewPruner(repo usecase.DeploymentRepository, checker usecase.BlockchainChecker) *Pruner {
+	return &Pruner{repo: repo, checker: checker}
+}
+
 // CollectPrunableItems checks all registry entries and collects items that should be pruned
-func (s *RegistryStoreAdapter) CollectPrunableItems(
+func (p *Pruner) CollectPrunableItems(
 	ctx context.Context,
 	chainID uint64,
 	includePending bool,
-	checker usecase.BlockchainChecker,
 ) (*domain.ItemsToPrune, error) {
 	items := &domain.ItemsToPrune{
 		Deployments:      []domain.PruneItem{},
@@ -23,14 +31,14 @@ func (s *RegistryStoreAdapter) CollectPrunableItems(
 	}
 
 	// Check deployments
-	deployments := s.manager.GetAllDeployments()
+	deployments := p.repo.GetAllDeployments(ctx)
 	for _, deployment := range deployments {
 		// Only check deployments on the target chain
 		if deployment.ChainID != chainID {
 			continue
 		}
 
-		reason, shouldPrune := s.shouldPruneDeployment(ctx, deployment, checker)
+		reason, shouldPrune := p.shouldPruneDeployment(ctx, deployment)
 		if shouldPrune {
 			items.Deployments = append(items.Deployments, domain.PruneItem{
 				ID:      deployment.ID,
@@ -92,13 +100,12 @@ func (s *RegistryStoreAdapter) CollectPrunableItems(
 }
 
 // shouldPruneDeployment checks if a deployment should be pruned
-func (s *RegistryStoreAdapter) shouldPruneDeployment(
+func (p *Pruner) shouldPruneDeployment(
 	ctx context.Context,
 	deployment *models.Deployment,
-	checker usecase.BlockchainChecker,
 ) (string, bool) {
 	// Check if contract exists at address
-	exists, reason, err := checker.CheckDeploymentExists(ctx, deployment.Address)
+	exists, reason, err := p.checker.CheckDeploymentExists(ctx, deployment.Address)
 	if err != nil {
 		// Be conservative on errors - don't prune
 		return "", false
@@ -110,7 +117,7 @@ func (s *RegistryStoreAdapter) shouldPruneDeployment(
 
 	// Additional check: if it's a proxy, verify the implementation exists
 	if deployment.ProxyInfo != nil && deployment.ProxyInfo.Implementation != "" {
-		implExists, implReason, err := checker.CheckDeploymentExists(ctx, deployment.ProxyInfo.Implementation)
+		implExists, implReason, err := p.checker.CheckDeploymentExists(ctx, deployment.ProxyInfo.Implementation)
 		if err != nil {
 			// Be conservative on errors - don't prune
 			return "", false
@@ -124,10 +131,9 @@ func (s *RegistryStoreAdapter) shouldPruneDeployment(
 }
 
 // shouldPruneTransaction checks if a transaction should be pruned
-func (s *RegistryStoreAdapter) shouldPruneTransaction(
+func (p *Pruner) shouldPruneTransaction(
 	ctx context.Context,
 	tx *models.Transaction,
-	checker usecase.BlockchainChecker,
 ) (string, bool) {
 	// If transaction has no hash, it was never broadcast
 	if tx.Hash == "" {
@@ -139,7 +145,7 @@ func (s *RegistryStoreAdapter) shouldPruneTransaction(
 	}
 
 	// Check if transaction exists on-chain
-	exists, blockNumber, reason, err := checker.CheckTransactionExists(ctx, tx.Hash)
+	exists, blockNumber, reason, err := p.checker.CheckTransactionExists(ctx, tx.Hash)
 	if err != nil {
 		// Be conservative on errors - don't prune
 		return "", false
@@ -190,17 +196,17 @@ func (s *RegistryStoreAdapter) shouldPruneSafeTransaction(
 }
 
 // ExecutePrune removes the collected items from the registry
-func (s *RegistryStoreAdapter) ExecutePrune(ctx context.Context, items *domain.ItemsToPrune) error {
+func (p *Pruner) ExecutePrune(ctx context.Context, items *domain.ItemsToPrune) error {
 	// Remove deployments
 	for _, item := range items.Deployments {
-		if err := s.manager.RemoveDeployment(item.ID); err != nil {
+		if err := p.repo.DeleteDeployment(ctx, item.ID); err != nil {
 			return fmt.Errorf("failed to remove deployment %s: %w", item.ID, err)
 		}
 	}
 
 	// Remove transactions
 	for _, item := range items.Transactions {
-		if err := s.manager.RemoveTransaction(item.ID); err != nil {
+		if err := p.repo.DeleteTransaction(item.ID); err != nil {
 			return fmt.Errorf("failed to remove transaction %s: %w", item.ID, err)
 		}
 	}
@@ -216,4 +222,4 @@ func (s *RegistryStoreAdapter) ExecutePrune(ctx context.Context, items *domain.I
 }
 
 // Ensure RegistryStoreAdapter implements RegistryPruner
-var _ usecase.RegistryPruner = (*RegistryStoreAdapter)(nil)
+var _ usecase.DeploymentRepositoryPruner = (*Pruner)(nil)
