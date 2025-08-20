@@ -25,8 +25,8 @@ func Execute() error {
 func init() {
 	// Global flags
 	rootCmd.PersistentFlags().BoolVar(&nonInteractive, "non-interactive", false, "Disable interactive prompts")
-    // Add namespace as a global flag with shorthand -s for compatibility with tests
-    rootCmd.PersistentFlags().StringP("namespace", "s", "", "Namespace to use (defaults to current context namespace)")
+	// Add namespace as a global flag with shorthand -s for compatibility with tests
+	rootCmd.PersistentFlags().StringP("namespace", "s", "", "Namespace to use (defaults to current context namespace)")
 
 	// Add command groups
 	rootCmd.AddGroup(&cobra.Group{

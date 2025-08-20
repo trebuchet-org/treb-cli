@@ -22,10 +22,10 @@ var debugAnvilStartCmd = &cobra.Command{
 	Short: "Start local anvil node",
 	Long:  `Start a local anvil node with CreateX factory deployed. Fails if already running.`,
 	Run: func(cmd *cobra.Command, args []string) {
-        name, _ := cmd.Flags().GetString("name")
-        port, _ := cmd.Flags().GetString("port")
-        chainID, _ := cmd.Flags().GetString("chain-id")
-        if err := dev.StartAnvilInstance(name, port, chainID); err != nil {
+		name, _ := cmd.Flags().GetString("name")
+		port, _ := cmd.Flags().GetString("port")
+		chainID, _ := cmd.Flags().GetString("chain-id")
+		if err := dev.StartAnvilInstance(name, port, chainID); err != nil {
 			checkError(err)
 		}
 	},
@@ -36,9 +36,9 @@ var debugAnvilStopCmd = &cobra.Command{
 	Short: "Stop local anvil node",
 	Long:  `Stop the local anvil node if running.`,
 	Run: func(cmd *cobra.Command, args []string) {
-        name, _ := cmd.Flags().GetString("name")
-        port, _ := cmd.Flags().GetString("port")
-        if err := dev.StopAnvilInstance(name, port); err != nil {
+		name, _ := cmd.Flags().GetString("name")
+		port, _ := cmd.Flags().GetString("port")
+		if err := dev.StopAnvilInstance(name, port); err != nil {
 			checkError(err)
 		}
 	},
@@ -49,10 +49,10 @@ var debugAnvilRestartCmd = &cobra.Command{
 	Short: "Restart local anvil node",
 	Long:  `Restart the local anvil node with CreateX factory deployed.`,
 	Run: func(cmd *cobra.Command, args []string) {
-        name, _ := cmd.Flags().GetString("name")
-        port, _ := cmd.Flags().GetString("port")
-        chainID, _ := cmd.Flags().GetString("chain-id")
-        if err := dev.RestartAnvilInstance(name, port, chainID); err != nil {
+		name, _ := cmd.Flags().GetString("name")
+		port, _ := cmd.Flags().GetString("port")
+		chainID, _ := cmd.Flags().GetString("chain-id")
+		if err := dev.RestartAnvilInstance(name, port, chainID); err != nil {
 			checkError(err)
 		}
 	},
@@ -63,9 +63,9 @@ var debugAnvilLogsCmd = &cobra.Command{
 	Short: "Show anvil logs",
 	Long:  `Show logs from the local anvil node.`,
 	Run: func(cmd *cobra.Command, args []string) {
-        name, _ := cmd.Flags().GetString("name")
-        port, _ := cmd.Flags().GetString("port")
-        if err := dev.ShowAnvilLogsInstance(name, port); err != nil {
+		name, _ := cmd.Flags().GetString("name")
+		port, _ := cmd.Flags().GetString("port")
+		if err := dev.ShowAnvilLogsInstance(name, port); err != nil {
 			checkError(err)
 		}
 	},
@@ -76,9 +76,9 @@ var debugAnvilStatusCmd = &cobra.Command{
 	Short: "Show anvil status",
 	Long:  `Show status of the local anvil node.`,
 	Run: func(cmd *cobra.Command, args []string) {
-        name, _ := cmd.Flags().GetString("name")
-        port, _ := cmd.Flags().GetString("port")
-        if err := dev.ShowAnvilStatusInstance(name, port); err != nil {
+		name, _ := cmd.Flags().GetString("name")
+		port, _ := cmd.Flags().GetString("port")
+		if err := dev.ShowAnvilStatusInstance(name, port); err != nil {
 			checkError(err)
 		}
 	},
@@ -93,10 +93,10 @@ func init() {
 	devAnvilCmd.AddCommand(debugAnvilStatusCmd)
 	devCmd.AddCommand(devAnvilCmd)
 
-    // Shared flags for all anvil subcommands
-    for _, c := range []*cobra.Command{debugAnvilStartCmd, debugAnvilStopCmd, debugAnvilRestartCmd, debugAnvilLogsCmd, debugAnvilStatusCmd} {
-        c.Flags().String("name", "anvil0", "Instance name (e.g. anvil0, anvil1)")
-        c.Flags().String("port", "8545", "RPC port to bind")
-        c.Flags().String("chain-id", "", "Chain ID to use for the instance (optional)")
-    }
+	// Shared flags for all anvil subcommands
+	for _, c := range []*cobra.Command{debugAnvilStartCmd, debugAnvilStopCmd, debugAnvilRestartCmd, debugAnvilLogsCmd, debugAnvilStatusCmd} {
+		c.Flags().String("name", "anvil0", "Instance name (e.g. anvil0, anvil1)")
+		c.Flags().String("port", "8545", "RPC port to bind")
+		c.Flags().String("chain-id", "", "Chain ID to use for the instance (optional)")
+	}
 }

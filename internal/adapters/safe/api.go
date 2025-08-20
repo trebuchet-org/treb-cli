@@ -150,4 +150,3 @@ func (c *SafeClient) GetPendingTransactions(safeAddress common.Address) ([]*Mult
 
 	return result.Results, nil
 }
-

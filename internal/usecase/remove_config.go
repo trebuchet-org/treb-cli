@@ -99,4 +99,3 @@ func (uc *RemoveConfig) Run(ctx context.Context, params RemoveConfigParams) (*Re
 		RemovedValue:  removedValue,
 	}, nil
 }
-

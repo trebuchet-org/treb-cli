@@ -413,4 +413,3 @@ func calculateTableColumnWidths(tables []TableData) []int {
 
 	return widths
 }
-

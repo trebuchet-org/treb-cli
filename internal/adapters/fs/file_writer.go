@@ -42,4 +42,3 @@ func (f *FileWriterAdapter) EnsureDirectory(ctx context.Context, path string) er
 
 // Ensure the adapter implements the interface
 var _ usecase.FileWriter = (*FileWriterAdapter)(nil)
-

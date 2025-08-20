@@ -81,4 +81,3 @@ func (r *ConfigRenderer) RenderRemove(result *usecase.RemoveConfigResult) error 
 	fmt.Fprintf(r.out, "📁 config saved to: %s\n", getRelativePath(result.ConfigPath))
 	return nil
 }
-

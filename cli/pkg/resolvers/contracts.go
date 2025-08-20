@@ -66,14 +66,14 @@ func (c *ContractsResolver) ResolveContract(nameOrPath string, filter contracts.
 			// Sort matches by artifact path for consistent output
 			sortedMatches := make([]*contracts.ContractInfo, len(matches))
 			copy(sortedMatches, matches)
-			
+
 			sort.Slice(sortedMatches, func(i, j int) bool {
 				// Sort by full artifact path (path:name)
 				artifactI := fmt.Sprintf("%s:%s", sortedMatches[i].Path, sortedMatches[i].Name)
 				artifactJ := fmt.Sprintf("%s:%s", sortedMatches[j].Path, sortedMatches[j].Name)
 				return artifactI < artifactJ
 			})
-			
+
 			var suggestions []string
 			for _, match := range sortedMatches {
 				suggestion := fmt.Sprintf("  - %s (%s)", match.Name, match.Path)

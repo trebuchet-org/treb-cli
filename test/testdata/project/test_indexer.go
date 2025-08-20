@@ -11,14 +11,14 @@ func main() {
 		fmt.Printf("Failed to index: %v\n", err)
 		return
 	}
-	
+
 	// Try different key formats
 	keys := []string{
 		"Counter",
 		"src/Counter.sol:Counter",
 		"Counter.sol:Counter",
 	}
-	
+
 	for _, key := range keys {
 		contract, err := indexer.GetContract(key)
 		if err != nil {
@@ -27,7 +27,7 @@ func main() {
 			fmt.Printf("Found: %s => %s\n", key, contract.Path)
 		}
 	}
-	
+
 	// List all contracts
 	fmt.Println("\nAll indexed contracts:")
 	for _, infos := range indexer.GetAllContracts() {

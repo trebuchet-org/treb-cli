@@ -64,10 +64,10 @@ func (r *VerifyRenderer) RenderVerifyAllResult(result *usecase.VerifyAllResult, 
 	for i, verifyResult := range result.Results {
 		deployment := verifyResult.Deployment
 		displayName := r.getDisplayName(deployment)
-		
+
 		// Show status indicator
 		statusIcon := r.getStatusIcon(deployment.Verification.Status)
-		fmt.Fprintf(r.out, "  %s chain:%d/%s/%s\n", 
+		fmt.Fprintf(r.out, "  %s chain:%d/%s/%s\n",
 			statusIcon,
 			deployment.ChainID,
 			deployment.Namespace,
@@ -121,7 +121,7 @@ func (r *VerifyRenderer) RenderVerifyResult(result *usecase.VerifyResult, option
 
 	if result.Success {
 		color.New(color.FgGreen).Fprintln(r.out, "✓ Verification completed successfully!")
-		
+
 		// Show verification status
 		r.showVerificationStatus(deployment)
 	} else {
@@ -176,21 +176,21 @@ func (r *VerifyRenderer) showVerificationStatus(deployment *models.Deployment) {
 	for verifier, status := range deployment.Verification.Verifiers {
 		switch status.Status {
 		case "verified":
-			color.New(color.FgGreen).Fprintf(r.out, "  %s: ✓ Verified", 
+			color.New(color.FgGreen).Fprintf(r.out, "  %s: ✓ Verified",
 				cases.Title(language.English).String(verifier))
 			if status.URL != "" {
 				fmt.Fprintf(r.out, " - %s", status.URL)
 			}
 			fmt.Fprintln(r.out)
 		case "failed":
-			color.New(color.FgRed).Fprintf(r.out, "  %s: ✗ Failed", 
+			color.New(color.FgRed).Fprintf(r.out, "  %s: ✗ Failed",
 				cases.Title(language.English).String(verifier))
 			if status.Reason != "" {
 				fmt.Fprintf(r.out, " - %s", status.Reason)
 			}
 			fmt.Fprintln(r.out)
 		case "pending":
-			color.New(color.FgYellow).Fprintf(r.out, "  %s: ⏳ Pending\n", 
+			color.New(color.FgYellow).Fprintf(r.out, "  %s: ⏳ Pending\n",
 				cases.Title(language.English).String(verifier))
 		}
 	}

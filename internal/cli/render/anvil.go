@@ -37,7 +37,7 @@ func (r *AnvilRenderer) renderStart(result *usecase.ManageAnvilResult) error {
 		color.New(color.FgGreen).Printf("✅ %s\n", result.Message)
 		color.New(color.FgYellow).Printf("📋 Logs: %s\n", result.Status.LogFile)
 		color.New(color.FgBlue).Printf("🌐 RPC URL: %s\n", result.Status.RPCURL)
-		
+
 		if result.Status.CreateXDeployed {
 			color.New(color.FgGreen).Printf("✅ CreateX factory deployed at %s\n", result.Status.CreateXAddress)
 		} else {
@@ -64,18 +64,18 @@ func (r *AnvilRenderer) renderRestart(result *usecase.ManageAnvilResult) error {
 // renderStatus renders the status operation result
 func (r *AnvilRenderer) renderStatus(result *usecase.ManageAnvilResult) error {
 	color.New(color.FgCyan, color.Bold).Printf("📊 Anvil Status ('%s'):\n", result.Instance.Name)
-	
+
 	if result.Status.Running {
 		color.New(color.FgGreen).Printf("Status: 🟢 Running (PID %d)\n", result.Status.PID)
 		color.New(color.FgBlue).Printf("RPC URL: %s\n", result.Status.RPCURL)
 		color.New(color.FgYellow).Printf("Log file: %s\n", result.Status.LogFile)
-		
+
 		if result.Status.RPCHealthy {
 			color.New(color.FgGreen).Println("RPC Health: ✅ Responding")
 		} else {
 			color.New(color.FgRed).Println("RPC Health: ❌ Not responding")
 		}
-		
+
 		if result.Status.CreateXDeployed {
 			color.New(color.FgGreen).Printf("CreateX Status: ✅ Deployed at %s\n", result.Status.CreateXAddress)
 		} else {
@@ -86,7 +86,7 @@ func (r *AnvilRenderer) renderStatus(result *usecase.ManageAnvilResult) error {
 		color.New(color.FgHiBlack).Printf("PID file: %s\n", result.Instance.PidFile)
 		color.New(color.FgHiBlack).Printf("Log file: %s\n", result.Instance.LogFile)
 	}
-	
+
 	return nil
 }
 

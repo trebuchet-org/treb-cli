@@ -51,30 +51,30 @@ func (r *InitRenderer) printSuccessMessage(result *usecase.InitProjectResult) {
 	} else {
 		color.New(color.FgGreen, color.Bold).Println("🎉 treb initialized successfully!")
 	}
-	
+
 	fmt.Println("")
 	color.New(color.FgCyan, color.Bold).Println("📋 Next steps:")
-	
+
 	fmt.Println("1. Copy .env.example to .env and configure your deployment keys:")
 	fmt.Println("   • Set DEPLOYER_PRIVATE_KEY for your deployment wallet")
 	fmt.Println("   • Set RPC URLs for networks you'll deploy to")
 	fmt.Println("   • Set API keys for contract verification")
 	fmt.Println("")
-	
+
 	fmt.Println("2. Configure deployment environments in foundry.toml:")
 	fmt.Println("   • Add [profile.staging.deployer] and [profile.production.deployer] sections")
 	fmt.Println("   • See documentation for Safe multisig and hardware wallet support")
 	fmt.Println("")
-	
+
 	fmt.Println("3. Generate your first deployment script:")
 	color.New(color.FgHiBlack).Println("   treb gen deploy Counter")
 	fmt.Println("")
-	
+
 	fmt.Println("4. Predict and deploy:")
 	color.New(color.FgHiBlack).Println("   treb deploy predict Counter --network sepolia")
 	color.New(color.FgHiBlack).Println("   treb deploy Counter --network sepolia")
 	fmt.Println("")
-	
+
 	fmt.Println("5. View and manage deployments:")
 	color.New(color.FgHiBlack).Println("   treb list")
 	color.New(color.FgHiBlack).Println("   treb show Counter")

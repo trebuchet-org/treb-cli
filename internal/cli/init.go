@@ -44,4 +44,3 @@ func runInit(cmd *cobra.Command) error {
 	renderer := render.NewInitRenderer()
 	return renderer.Render(result)
 }
-

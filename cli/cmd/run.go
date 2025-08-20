@@ -137,7 +137,7 @@ func init() {
 	// Network flag
 	runCmd.Flags().StringP("network", "n", "", "Network to run on (e.g., mainnet, sepolia, local)")
 
-    runCmd.Flags().StringP("namespace", "s", "", "Namespace to use (defaults to current context namespace) [also sets foundry profile]")
+	runCmd.Flags().StringP("namespace", "s", "", "Namespace to use (defaults to current context namespace) [also sets foundry profile]")
 
 	// Environment variables flag
 	runCmd.Flags().StringSliceP("env", "e", []string{}, "Set environment variables for the script (format: KEY=VALUE, can be used multiple times)")

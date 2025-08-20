@@ -76,4 +76,3 @@ func (r *PruneRenderer) RenderItemsToPrune(changeset models.ChangesetModels) err
 
 	return nil
 }
-

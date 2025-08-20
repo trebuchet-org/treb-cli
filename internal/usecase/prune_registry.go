@@ -111,4 +111,3 @@ func (uc *PruneRegistry) Run(ctx context.Context, params PruneRegistryParams) (*
 		Changeset: changeset,
 	}, nil
 }
-

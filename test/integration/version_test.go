@@ -4,7 +4,6 @@ import (
 	"github.com/trebuchet-org/treb-cli/test/helpers"
 	"strings"
 	"testing"
-	
 )
 
 func TestVersionCommand(t *testing.T) {
@@ -18,7 +17,7 @@ func TestVersionCommand(t *testing.T) {
 			t.Errorf("Expected 'treb v' in output, got: %s", output)
 		}
 	})
-	
+
 	// Test v2 if available
 	if helpers.V2BinaryExists() {
 		helpers.IsolatedTestWithVersion(t, "v2", helpers.BinaryV2, func(t *testing.T, ctx *helpers.TrebContext) {

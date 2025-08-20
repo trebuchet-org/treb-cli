@@ -28,15 +28,15 @@ func (r *SyncRenderer) RenderSyncResult(result *usecase.SyncResult) error {
 	if result.PendingSafeTxsChecked > 0 {
 		fmt.Fprintf(r.out, "\nSafe Transactions:\n")
 		fmt.Fprintf(r.out, "  • Checked: %d\n", result.PendingSafeTxsChecked)
-		
+
 		if result.SafeTxsExecuted > 0 {
 			color.New(color.FgGreen).Fprintf(r.out, "  • Executed: %d\n", result.SafeTxsExecuted)
 		}
-		
+
 		if result.TransactionsUpdated > 0 {
 			fmt.Fprintf(r.out, "  • Transactions updated: %d\n", result.TransactionsUpdated)
 		}
-		
+
 		if result.DeploymentsUpdated > 0 {
 			fmt.Fprintf(r.out, "  • Deployments updated: %d\n", result.DeploymentsUpdated)
 		}

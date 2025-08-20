@@ -37,14 +37,14 @@ func NewListNetworks(resolver NetworkResolver) *ListNetworks {
 func (uc *ListNetworks) Run(ctx context.Context, params ListNetworksParams) (*ListNetworksResult, error) {
 	// Get all configured networks
 	networkNames := uc.resolver.GetNetworks(ctx)
-	
+
 	// Check each network's status
 	networks := make([]NetworkStatus, 0, len(networkNames))
 	for _, name := range networkNames {
 		status := NetworkStatus{
 			Name: name,
 		}
-		
+
 		// Try to resolve network to get chain ID
 		info, err := uc.resolver.ResolveNetwork(ctx, name)
 		if err != nil {
@@ -52,10 +52,10 @@ func (uc *ListNetworks) Run(ctx context.Context, params ListNetworksParams) (*Li
 		} else {
 			status.ChainID = info.ChainID
 		}
-		
+
 		networks = append(networks, status)
 	}
-	
+
 	return &ListNetworksResult{
 		Networks: networks,
 	}, nil

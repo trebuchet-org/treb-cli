@@ -81,4 +81,3 @@ func (uc *SetConfig) Run(ctx context.Context, params SetConfigParams) (*SetConfi
 		Value:         params.Value,
 	}, nil
 }
-

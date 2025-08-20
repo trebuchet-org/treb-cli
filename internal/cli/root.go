@@ -184,4 +184,3 @@ func getApp(cmd *cobra.Command) (*app.App, error) {
 
 	return app, nil
 }
-

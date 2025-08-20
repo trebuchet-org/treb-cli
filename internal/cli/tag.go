@@ -29,7 +29,7 @@ Examples:
   treb tag Counter:v1                  # Show current tags
   treb tag Counter:v1 --add v1.0.0     # Add a tag
   treb tag Counter:v1 --remove v1.0.0  # Remove a tag`,
-		Args: cobra.ExactArgs(1),
+		Args:         cobra.ExactArgs(1),
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runTag(cmd, args[0], flags)
@@ -74,7 +74,7 @@ func runTag(cmd *cobra.Command, identifier string, flags *tagFlags) error {
 		Operation:  operation,
 		Namespace:  app.Config.Namespace,
 	}
-	
+
 	// Add ChainID if network is configured
 	if app.Config.Network != nil {
 		params.ChainID = app.Config.Network.ChainID
@@ -89,7 +89,7 @@ func runTag(cmd *cobra.Command, identifier string, flags *tagFlags) error {
 			if app.Config.Network != nil {
 				chainID = app.Config.Network.ChainID
 			}
-			
+
 			deployment, err := app.TagDeployment.FindDeploymentInteractive(
 				cmd.Context(),
 				identifier,
@@ -126,4 +126,3 @@ func runTag(cmd *cobra.Command, identifier string, flags *tagFlags) error {
 	renderer := render.NewTagRenderer(app.Config)
 	return renderer.Render(result)
 }
-

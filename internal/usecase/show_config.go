@@ -40,4 +40,3 @@ func (uc *ShowConfig) Run(ctx context.Context) (*ShowConfigResult, error) {
 		Exists:     exists,
 	}, nil
 }
-

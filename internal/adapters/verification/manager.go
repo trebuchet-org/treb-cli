@@ -13,8 +13,8 @@ import (
 
 // Service handles contract verification across different explorers
 type Service struct {
-	client     *http.Client
-	apiKeys    map[string]string
+	client       *http.Client
+	apiKeys      map[string]string
 	explorerURLs map[string]string
 }
 
@@ -43,7 +43,7 @@ func (s *Service) SetExplorerURL(network string, url string) {
 func (s *Service) VerifyContract(ctx context.Context, params VerificationParams) (*VerificationResult, error) {
 	// Determine explorer type based on network
 	explorerType := s.getExplorerType(params.Network)
-	
+
 	switch explorerType {
 	case "etherscan":
 		return s.verifyOnEtherscan(ctx, params)
@@ -56,23 +56,23 @@ func (s *Service) VerifyContract(ctx context.Context, params VerificationParams)
 
 // VerificationParams contains parameters for contract verification
 type VerificationParams struct {
-	Network         string
-	Address         string
-	ContractName    string
-	SourceCode      string
-	CompilerVersion string
-	Optimization    bool
+	Network          string
+	Address          string
+	ContractName     string
+	SourceCode       string
+	CompilerVersion  string
+	Optimization     bool
 	OptimizationRuns int
-	ConstructorArgs string
-	Libraries       map[string]string
-	EVMVersion      string
+	ConstructorArgs  string
+	Libraries        map[string]string
+	EVMVersion       string
 }
 
 // VerificationResult contains the result of verification
 type VerificationResult struct {
-	Success      bool
-	Message      string
-	ExplorerURL  string
+	Success        bool
+	Message        string
+	ExplorerURL    string
 	VerificationID string
 }
 
@@ -80,13 +80,13 @@ type VerificationResult struct {
 func (s *Service) getExplorerType(network string) string {
 	// Most EVM chains use Etherscan-compatible APIs
 	blockscoutNetworks := []string{"gnosis", "xdai", "sokol"}
-	
+
 	for _, bn := range blockscoutNetworks {
 		if strings.EqualFold(network, bn) {
 			return "blockscout"
 		}
 	}
-	
+
 	return "etherscan"
 }
 
@@ -96,12 +96,12 @@ func (s *Service) verifyOnEtherscan(ctx context.Context, params VerificationPara
 	if !ok {
 		return nil, fmt.Errorf("no API key configured for network %s", params.Network)
 	}
-	
+
 	explorerURL, ok := s.explorerURLs[params.Network]
 	if !ok {
 		return nil, fmt.Errorf("no explorer URL configured for network %s", params.Network)
 	}
-	
+
 	// Build verification request
 	data := url.Values{}
 	data.Set("apikey", apiKey)
@@ -122,33 +122,33 @@ func (s *Service) verifyOnEtherscan(ctx context.Context, params VerificationPara
 	if params.EVMVersion != "" {
 		data.Set("evmversion", params.EVMVersion)
 	}
-	
+
 	// Handle libraries
 	if len(params.Libraries) > 0 {
 		libString := s.formatLibraries(params.Libraries)
 		data.Set("libraryname", libString)
 	}
-	
+
 	// Submit verification
 	resp, err := s.client.PostForm(explorerURL+"/api", data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to submit verification: %w", err)
 	}
 	defer resp.Body.Close()
-	
+
 	// Parse response
 	var result etherscanResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
-	
+
 	if result.Status != "1" {
 		return &VerificationResult{
 			Success: false,
 			Message: result.Result,
 		}, nil
 	}
-	
+
 	// Return success with GUID for status checking
 	return &VerificationResult{
 		Success:        true,
@@ -164,37 +164,37 @@ func (s *Service) verifyOnBlockscout(ctx context.Context, params VerificationPar
 	if !ok {
 		return nil, fmt.Errorf("no explorer URL configured for network %s", params.Network)
 	}
-	
+
 	// Build verification request for Blockscout
 	payload := map[string]interface{}{
-		"addressHash":     params.Address,
-		"name":           params.ContractName,
-		"compilerVersion": params.CompilerVersion,
-		"optimization":    params.Optimization,
-		"optimizationRuns": params.OptimizationRuns,
-		"contractSourceCode": params.SourceCode,
+		"addressHash":          params.Address,
+		"name":                 params.ContractName,
+		"compilerVersion":      params.CompilerVersion,
+		"optimization":         params.Optimization,
+		"optimizationRuns":     params.OptimizationRuns,
+		"contractSourceCode":   params.SourceCode,
 		"constructorArguments": params.ConstructorArgs,
-		"evmVersion": params.EVMVersion,
-		"libraries": params.Libraries,
+		"evmVersion":           params.EVMVersion,
+		"libraries":            params.Libraries,
 	}
-	
+
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
-	
+
 	req, err := http.NewRequestWithContext(ctx, "POST", explorerURL+"/api/v1/verified_smart_contracts", strings.NewReader(string(jsonData)))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := s.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to submit verification: %w", err)
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		return &VerificationResult{
@@ -202,7 +202,7 @@ func (s *Service) verifyOnBlockscout(ctx context.Context, params VerificationPar
 			Message: fmt.Sprintf("verification failed: %s", string(body)),
 		}, nil
 	}
-	
+
 	return &VerificationResult{
 		Success:     true,
 		Message:     "Contract verified successfully",
@@ -216,30 +216,30 @@ func (s *Service) CheckVerificationStatus(ctx context.Context, network string, g
 	if !ok {
 		return nil, fmt.Errorf("no API key configured for network %s", network)
 	}
-	
+
 	explorerURL, ok := s.explorerURLs[network]
 	if !ok {
 		return nil, fmt.Errorf("no explorer URL configured for network %s", network)
 	}
-	
+
 	// Build status check request
 	params := url.Values{}
 	params.Set("apikey", apiKey)
 	params.Set("module", "contract")
 	params.Set("action", "checkverifystatus")
 	params.Set("guid", guid)
-	
+
 	resp, err := s.client.Get(explorerURL + "/api?" + params.Encode())
 	if err != nil {
 		return nil, fmt.Errorf("failed to check status: %w", err)
 	}
 	defer resp.Body.Close()
-	
+
 	var result etherscanResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
-	
+
 	// Check if still pending
 	if strings.Contains(strings.ToLower(result.Result), "pending") {
 		return &VerificationResult{
@@ -247,7 +247,7 @@ func (s *Service) CheckVerificationStatus(ctx context.Context, network string, g
 			Message: "Verification still pending",
 		}, nil
 	}
-	
+
 	// Check if failed
 	if result.Status != "1" {
 		return &VerificationResult{
@@ -255,7 +255,7 @@ func (s *Service) CheckVerificationStatus(ctx context.Context, network string, g
 			Message: result.Result,
 		}, nil
 	}
-	
+
 	return &VerificationResult{
 		Success: true,
 		Message: "Contract verified successfully",
@@ -306,7 +306,7 @@ func (m *MultiVerifier) AddService(name string, service *Service) {
 // VerifyOnAll attempts to verify on all configured explorers
 func (m *MultiVerifier) VerifyOnAll(ctx context.Context, params VerificationParams) map[string]*VerificationResult {
 	results := make(map[string]*VerificationResult)
-	
+
 	for name, service := range m.services {
 		result, err := service.VerifyContract(ctx, params)
 		if err != nil {
@@ -318,6 +318,6 @@ func (m *MultiVerifier) VerifyOnAll(ctx context.Context, params VerificationPara
 			results[name] = result
 		}
 	}
-	
+
 	return results
 }

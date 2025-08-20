@@ -139,4 +139,3 @@ func (r *OrchestrateRenderer) renderSummary(result *usecase.OrchestrateResult) {
 		}
 	}
 }
-

@@ -1,8 +1,8 @@
 package integration
 
 import (
-	"github.com/trebuchet-org/treb-cli/test/helpers"
 	"fmt"
+	"github.com/trebuchet-org/treb-cli/test/helpers"
 	"testing"
 
 	"github.com/stretchr/testify/assert"

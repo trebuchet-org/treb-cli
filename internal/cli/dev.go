@@ -57,7 +57,7 @@ func addAnvilFlags(cmd *cobra.Command, flags *anvilFlags) {
 // newDevAnvilStartCmd creates the start command
 func newDevAnvilStartCmd() *cobra.Command {
 	flags := &anvilFlags{}
-	
+
 	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "Start local anvil node",
@@ -74,7 +74,7 @@ func newDevAnvilStartCmd() *cobra.Command {
 // newDevAnvilStopCmd creates the stop command
 func newDevAnvilStopCmd() *cobra.Command {
 	flags := &anvilFlags{}
-	
+
 	cmd := &cobra.Command{
 		Use:   "stop",
 		Short: "Stop local anvil node",
@@ -91,7 +91,7 @@ func newDevAnvilStopCmd() *cobra.Command {
 // newDevAnvilRestartCmd creates the restart command
 func newDevAnvilRestartCmd() *cobra.Command {
 	flags := &anvilFlags{}
-	
+
 	cmd := &cobra.Command{
 		Use:   "restart",
 		Short: "Restart local anvil node",
@@ -108,7 +108,7 @@ func newDevAnvilRestartCmd() *cobra.Command {
 // newDevAnvilStatusCmd creates the status command
 func newDevAnvilStatusCmd() *cobra.Command {
 	flags := &anvilFlags{}
-	
+
 	cmd := &cobra.Command{
 		Use:   "status",
 		Short: "Show anvil status",
@@ -125,7 +125,7 @@ func newDevAnvilStatusCmd() *cobra.Command {
 // newDevAnvilLogsCmd creates the logs command
 func newDevAnvilLogsCmd() *cobra.Command {
 	flags := &anvilFlags{}
-	
+
 	cmd := &cobra.Command{
 		Use:   "logs",
 		Short: "Show anvil logs",
@@ -167,7 +167,7 @@ func runAnvilCommand(cmd *cobra.Command, operation string, flags *anvilFlags) er
 		if err := renderer.RenderLogsHeader(result); err != nil {
 			return err
 		}
-		
+
 		// Stream logs
 		return app.AnvilManager.StreamLogs(cmd.Context(), result.Instance, os.Stdout)
 	}

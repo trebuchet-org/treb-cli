@@ -47,7 +47,7 @@ Available keys: namespace (ns), network
 Examples:
   treb config set namespace production
   treb config set network sepolia`,
-		Args: cobra.ExactArgs(2),
+		Args:         cobra.ExactArgs(2),
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get app from context
@@ -85,7 +85,7 @@ Removing network makes it unspecified (required as flags).
 Examples:
   treb config remove namespace
   treb config remove network`,
-		Args: cobra.ExactArgs(1),
+		Args:         cobra.ExactArgs(1),
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get app from context
