@@ -26,6 +26,11 @@ func TestMain(m *testing.M) {
 
 	// Run tests
 	code := m.Run()
+	defer func() {
+		if r := recover(); r != nil {
+			helpers.Teardown()
+		}
+	}()
 
 	// Teardown
 	helpers.Teardown()

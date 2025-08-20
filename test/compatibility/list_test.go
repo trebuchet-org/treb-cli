@@ -6,7 +6,7 @@ import (
 	"github.com/trebuchet-org/treb-cli/test/helpers"
 )
 
-func TestListCommandCompatibility(t *testing.T) {
+func TestListCommand(t *testing.T) {
 	tests := []CompatibilityTest{
 		{
 			Name:     "list_empty",

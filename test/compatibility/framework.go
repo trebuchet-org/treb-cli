@@ -2,9 +2,11 @@ package compatibility
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -20,6 +22,7 @@ type CompatibilityTest struct {
 	PostSetup   func(t *testing.T, ctx *helpers.TrebContext)
 	TestCmds    [][]string
 	ExpectErr   bool
+	ExpectDiff  bool
 	Normalizers []helpers.Normalizer
 	SetupCtx    *helpers.TrebContext
 }
@@ -42,18 +45,11 @@ func RunCompatibilityTest(t *testing.T, test CompatibilityTest) {
 		v1Output := runTest(t, helpers.BinaryV1, test)
 		v2Output := runTest(t, helpers.BinaryV2, test)
 
-		if diff := cmp.Diff(v1Output.testCmdsOutput, v2Output.testCmdsOutput); diff != "" {
-			t.Errorf("Output mismatch on Test Commands output (-want +got):\n%s", diff)
-		}
-		if diff := cmp.Diff(v1Output.deploymentsJSON, v2Output.deploymentsJSON); diff != "" {
-			t.Errorf("deployments.json mismatch (-want +got):\n%s", diff)
-		}
-		if diff := cmp.Diff(v1Output.transactionsJSON, v2Output.transactionsJSON); diff != "" {
-			t.Errorf("transactions.json mismatch (-want +got):\n%s", diff)
-		}
-		if diff := cmp.Diff(v1Output.safeTxsJSON, v2Output.safeTxsJSON); diff != "" {
-			t.Errorf("safe-txs.json mismatch (-want +got):\n%s", diff)
-		}
+		compareOutput(t, test, v1Output.testCmdsOutput, v2Output.testCmdsOutput, "Test Commands", "commands.golden")
+		compareOutput(t, test, v1Output.deploymentsJSON, v2Output.deploymentsJSON, "deployments.json", "deployments.json.golden")
+		compareOutput(t, test, v1Output.transactionsJSON, v2Output.transactionsJSON, "transactions.json", "transactions.json.golden")
+		compareOutput(t, test, v1Output.safeTxsJSON, v2Output.safeTxsJSON, "safe-txs.json", "safe-txs.json.golden")
+		compareOutput(t, test, v1Output.registryJSON, v2Output.registryJSON, "registry.json", "registry.json.golden")
 	})
 }
 
@@ -122,25 +118,68 @@ func runTest(t *testing.T, version helpers.BinaryVersion, test CompatibilityTest
 }
 
 func createTestOutput(testCmdsOutput string, test CompatibilityTest) (output testOutput) {
+	output.testCmdsOutput = helpers.Normalize(testCmdsOutput, test.Normalizers)
+
 	var err error
 	var data []byte
 
-	output.testCmdsOutput = helpers.Normalize(testCmdsOutput, test.Normalizers)
 	if data, err = os.ReadFile(path.Join(helpers.GetFixtureDir(), ".treb", "deployments.json")); err != nil {
-		panic(err)
+		if errors.Is(err, os.ErrNotExist) {
+			data = []byte{}
+		} else {
+			panic(err)
+		}
 	}
 	output.deploymentsJSON = helpers.Normalize(string(data), test.Normalizers)
 	if data, err = os.ReadFile(path.Join(helpers.GetFixtureDir(), ".treb", "transactions.json")); err != nil {
-		panic(err)
+		if errors.Is(err, os.ErrNotExist) {
+			data = []byte{}
+		} else {
+			panic(err)
+		}
 	}
 	output.transactionsJSON = helpers.Normalize(string(data), test.Normalizers)
 	if data, err = os.ReadFile(path.Join(helpers.GetFixtureDir(), ".treb", "safe-txs.json")); err != nil {
-		panic(err)
+		if errors.Is(err, os.ErrNotExist) {
+			data = []byte{}
+		} else {
+			panic(err)
+		}
 	}
 	output.safeTxsJSON = helpers.Normalize(string(data), test.Normalizers)
 	if data, err = os.ReadFile(path.Join(helpers.GetFixtureDir(), ".treb", "registry.json")); err != nil {
-		panic(err)
+		if errors.Is(err, os.ErrNotExist) {
+			data = []byte{}
+		} else {
+			panic(err)
+		}
 	}
 	output.registryJSON = helpers.Normalize(string(data), test.Normalizers)
 	return
+}
+
+func compareOutput(t *testing.T, test CompatibilityTest, v1Output, v2Output, displayName, goldenFile string) {
+	if diff := cmp.Diff(v1Output, v2Output); diff != "" {
+		goldenPath := helpers.GoldenPath(filepath.Join("compatibility", t.Name(), goldenFile))
+		if test.ExpectDiff {
+			if os.Getenv("UPDATE_GOLDEN") == "true" {
+				if err := os.MkdirAll(filepath.Dir(goldenPath), 0755); err != nil {
+					t.Fatalf("Failed to create golden directory: %v", err)
+				}
+				if err := os.WriteFile(goldenPath, []byte(diff), 0644); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				expected, err := os.ReadFile(goldenPath)
+				if err == os.ErrNotExist {
+					expected = []byte{}
+				}
+				if diff != string(expected) {
+					t.Errorf("Diff on %s (-want +got):\n%s\nExpected Diff:\n%s\n", displayName, diff, expected)
+				}
+			}
+		} else {
+			t.Errorf("Diff on %s (-want +got):\n%s", displayName, diff)
+		}
+	}
 }

@@ -5,7 +5,7 @@ import (
 	// "github.com/trebuchet-org/treb-cli/test/helpers"
 )
 
-func TestGenCommandCompatibility(t *testing.T) {
+func TestGenCommand(t *testing.T) {
 	tests := []CompatibilityTest{
 		{
 			Name: "gen_deploy_singleton",

@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestTagCommandCompatibility(t *testing.T) {
+func TestTagCommand(t *testing.T) {
 	tests := []CompatibilityTest{
 		{
 			Name: "tag_show_no_tags",

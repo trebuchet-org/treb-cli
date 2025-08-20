@@ -76,3 +76,7 @@ func V2BinaryExists() bool {
 func GetAnvilManager() *AnvilManager {
 	return anvilManager
 }
+
+func GoldenPath(test string) string {
+	return filepath.Join(testProjectRoot, "testdata", "golden", test)
+}

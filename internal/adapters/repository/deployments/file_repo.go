@@ -170,6 +170,9 @@ func (m *FileRepository) rebuildLookups() {
 	m.lookups.Proxies.Implementations = make(map[string][]string)
 	m.lookups.Proxies.ProxyToImpl = make(map[string]string)
 
+	// Clear and rebuild solidity registry
+	m.solidityRegistry = make(SolidityRegistry)
+
 	for id, dep := range m.deployments {
 		// By address
 		if m.lookups.ByAddress[dep.ChainID] == nil {
@@ -196,6 +199,9 @@ func (m *FileRepository) rebuildLookups() {
 			)
 			m.lookups.Proxies.ProxyToImpl[strings.ToLower(dep.Address)] = implAddr
 		}
+
+		// Update solidity registry
+		m.updateSolidityRegistry(dep)
 	}
 
 	// Rebuild pending items
@@ -205,6 +211,20 @@ func (m *FileRepository) rebuildLookups() {
 			m.lookups.Pending.SafeTxs = append(m.lookups.Pending.SafeTxs, id)
 		}
 	}
+}
+
+// updateSolidityRegistry updates the simplified Solidity registry
+func (m *FileRepository) updateSolidityRegistry(deployment *models.Deployment) {
+	if m.solidityRegistry[deployment.ChainID] == nil {
+		m.solidityRegistry[deployment.ChainID] = make(map[string]map[string]string)
+	}
+	if m.solidityRegistry[deployment.ChainID][deployment.Namespace] == nil {
+		m.solidityRegistry[deployment.ChainID][deployment.Namespace] = make(map[string]string)
+	}
+
+	// Use contract display name for registry key
+	key := deployment.ContractDisplayName()
+	m.solidityRegistry[deployment.ChainID][deployment.Namespace][key] = deployment.Address
 }
 
 // GetDeployment retrieves a deployment by ID

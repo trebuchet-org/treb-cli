@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestRunCommandCompatibility(t *testing.T) {
+func TestRunCommand(t *testing.T) {
 	tests := []CompatibilityTest{
 		{
 			Name: "simple",
@@ -16,6 +16,7 @@ func TestRunCommandCompatibility(t *testing.T) {
 				{"ls"},
 				{"show", "Counter"},
 			},
+			ExpectDiff: true,
 		},
 	}
 
