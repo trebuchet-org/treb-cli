@@ -123,8 +123,7 @@ func (h *RunResultHydrator) Hydrate(
 	// Enrich with broadcast data if available
 	if runResult.BroadcastPath != "" {
 		if err := h.enrichFromBroadcast(hydrated, runResult.BroadcastPath); err != nil {
-			// Don't fail, just log warning
-			fmt.Printf("Warning: Failed to enrich from broadcast: %v\n", err)
+			// Don't fail on broadcast enrichment errors
 		}
 	}
 

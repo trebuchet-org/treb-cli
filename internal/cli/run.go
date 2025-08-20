@@ -96,9 +96,6 @@ Examples:
 			renderer := render.NewScriptRenderer(cmd.OutOrStdout(), verbose)
 			progress := progress.NewRunProgress(renderer)
 
-			// Print deployment banner like v1
-			// render.PrintDeploymentBanner(cmd.OutOrStdout(), scriptName, app.Config.Network.Name, namespace, dryRun, parsedEnvVars)
-
 			params := usecase.RunScriptParams{
 				ScriptRef:  deploymentScriptRef,
 				Parameters: parsedEnvVars,

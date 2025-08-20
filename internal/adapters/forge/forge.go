@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -46,15 +47,11 @@ func (f *ForgeAdapter) Build() error {
 
 // Run executes a Foundry script with the given options
 func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptConfig) (*forge.RunResult, error) {
-	fmt.Println("DEBUG: ForgeAdapter.RunScript started")
-
 	// Build forge command arguments
 	args := f.buildArgs(config)
-	fmt.Printf("DEBUG: Forge args: %v\n", args)
 
 	// Build environment variables
 	env := f.buildEnv(config)
-	fmt.Printf("DEBUG: Environment vars: %d items\n", len(env))
 
 	if config.Debug {
 		fmt.Printf("Running: forge %s\n", strings.Join(args, " "))
@@ -67,10 +64,8 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 	cmd := exec.Command("forge", args...)
 	cmd.Dir = f.projectRoot
 	cmd.Env = append(os.Environ(), env...)
-	fmt.Printf("DEBUG: Working directory: %s\n", f.projectRoot)
 
 	// Start with PTY for proper color handling
-	fmt.Println("DEBUG: Starting PTY")
 	ptyFile, err := pty.Start(cmd)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start pty: %w", err)
@@ -263,9 +258,7 @@ func (f *ForgeAdapter) buildArgs(config usecase.RunScriptConfig) []string {
 // buildEnv builds environment variable array
 func (f *ForgeAdapter) buildEnv(config usecase.RunScriptConfig) []string {
 	env := make(map[string]string)
-	for k, v := range config.Parameters {
-		env[k] = v
-	}
+	maps.Copy(env, config.Parameters)
 
 	// Profile
 	env["FOUNDRY_PROFILE"] = config.Namespace

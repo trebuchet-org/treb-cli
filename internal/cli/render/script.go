@@ -57,9 +57,6 @@ func (r *ScriptRenderer) RenderExecution(result *usecase.RunScriptResult) error 
 
 	exec := result.RunResult
 
-	// Display deployment banner (already shown during execution)
-	// The banner is displayed by the script runner before execution
-
 	// Render transactions
 	if err := r.renderTransactions(exec); err != nil {
 		return err
@@ -489,6 +486,6 @@ func (r *ScriptRenderer) PrintDeploymentBanner(config *usecase.RunScriptConfig) 
 		}
 	}
 
-	fmt.Fprintf(r.out, "  Senders:      %s", gray.Sprintf("%v", config.SenderScriptConfig.Senders))
+	fmt.Fprintf(r.out, "  Senders:   %s\n", gray.Sprintf("%v", config.SenderScriptConfig.Senders))
 	fmt.Fprintf(r.out, "%s\n", gray.Sprint(strings.Repeat("─", 50)))
 }

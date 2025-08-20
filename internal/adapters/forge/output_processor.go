@@ -393,6 +393,6 @@ func (op *OutputProcessor) printSummary() {
 
 	// Only show warning if there were parsing issues
 	if op.ignoredCount > 0 {
-		fmt.Printf("\n⚠️  %d lines couldn't be parsed (saved in %s)\n", op.ignoredCount, op.debugDir)
+		// Ignored lines have been saved to debug directory
 	}
 }
