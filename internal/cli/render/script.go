@@ -205,6 +205,8 @@ func (r *ScriptRenderer) decodeCreateXCall(tx *forge.Transaction, exec *forge.Hy
 
 	// Common CreateX selectors
 	switch selector {
+	case "0x9c36a286": // deployCreate3(bytes32,bytes)
+		return fmt.Sprintf("CreateX::%sdeployCreate3%s(salt: 0xf39fd6e5..., initCode: 0x60806040...)", r.colorYellow, r.colorReset)
 	case "0x30783963": // deployCreate3 (based on v1 output)
 		return fmt.Sprintf("CreateX::%sdeployCreate3%s(salt: 0xf39fd6e5..., initCode: 0x60806040...)", r.colorYellow, r.colorReset)
 	case "0x50a1b77c": // deployCreate3

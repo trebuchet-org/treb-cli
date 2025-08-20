@@ -45,6 +45,7 @@ func (uc *ShowDeployment) Run(ctx context.Context, params ShowDeploymentParams) 
 	})
 
 	deployment, err := uc.resolveDeployment(ctx, params)
+	fmt.Println(deployment)
 	if err != nil {
 		return nil, err
 	}

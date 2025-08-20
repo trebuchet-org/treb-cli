@@ -219,16 +219,16 @@ func (i *Repository) SearchContracts(ctx context.Context, query domain.ContractQ
 }
 
 // GetContractByArtifact finds a contract by its artifact path
-func (i *Repository) GetContractByArtifact(ctx context.Context, artifactPath string) *models.Contract {
+func (i *Repository) GetContractByArtifact(ctx context.Context, artifact string) *models.Contract {
 	if err := i.Index(); err != nil {
 		panic(err)
 	}
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 
-	for _, info := range i.contracts {
-		if info.ArtifactPath == artifactPath {
-			return info
+	for _, contract := range i.contracts {
+		if fmt.Sprintf("%s:%s", contract.Path, contract.Name) == artifact {
+			return contract
 		}
 	}
 	return nil

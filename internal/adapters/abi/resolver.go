@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/bindings"
 	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
@@ -50,6 +51,16 @@ func (r *ABIResolver) FindByRef(ctx context.Context, contractRef string) (*abi.A
 }
 
 func (r *ABIResolver) FindByAddress(ctx context.Context, address common.Address) (*abi.ABI, error) {
+	// Check for well-known contracts first
+	if address == common.HexToAddress("0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed") {
+		// CreateX factory address
+		createXABI, err := abi.JSON(strings.NewReader(bindings.CreateXMetaData.ABI))
+		if err != nil {
+			return nil, err
+		}
+		return &createXABI, nil
+	}
+
 	deployment, err := r.deploymentRepo.GetDeploymentByAddress(ctx, r.config.Network.ChainID, address.String())
 	if err != nil {
 		return nil, err

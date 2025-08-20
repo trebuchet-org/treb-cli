@@ -219,6 +219,15 @@ func (m *FileRepository) GetDeployment(ctx context.Context, id string) (*models.
 
 	// Clone to avoid mutations
 	clone := *dep
+
+	// Link transaction if available
+	if dep.TransactionID != "" {
+		if tx, exists := m.transactions[dep.TransactionID]; exists {
+			txClone := *tx
+			clone.Transaction = &txClone
+		}
+	}
+
 	return &clone, nil
 }
 
@@ -245,6 +254,15 @@ func (m *FileRepository) GetDeploymentByAddress(ctx context.Context, chainID uin
 
 	// Clone to avoid mutations
 	clone := *dep
+
+	// Link transaction if available
+	if dep.TransactionID != "" {
+		if tx, exists := m.transactions[dep.TransactionID]; exists {
+			txClone := *tx
+			clone.Transaction = &txClone
+		}
+	}
+
 	return &clone, nil
 }
 
@@ -288,6 +306,12 @@ func (m *FileRepository) ListDeployments(ctx context.Context, filter domain.Depl
 
 		// Clone and add to result
 		clone := *dep
+		if dep.TransactionID != "" {
+			if tx, exists := m.transactions[dep.TransactionID]; exists {
+				txClone := *tx
+				clone.Transaction = &txClone
+			}
+		}
 		result = append(result, &clone)
 	}
 

@@ -20,10 +20,10 @@ type Transaction struct {
 	Hash    string `json:"hash"` // Transaction hash
 
 	// Transaction details
+	Status      TransactionStatus `json:"status"` // PENDING, EXECUTED, FAILED
 	BlockNumber uint64            `json:"blockNumber,omitempty"`
 	Sender      string            `json:"sender"` // From address
 	Nonce       uint64            `json:"nonce"`
-	Status      TransactionStatus `json:"status"` // PENDING, EXECUTED, FAILED
 
 	// Deployment references
 	Deployments []string `json:"deployments"` // Deployment IDs created in this tx

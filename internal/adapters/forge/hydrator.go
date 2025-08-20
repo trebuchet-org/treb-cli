@@ -28,10 +28,11 @@ type RunResultHydrator struct {
 }
 
 // NewRunResultHydrator creates a new internal parser
-func NewRunResultHydrator(projectRoot string, parser usecase.ABIParser) (*RunResultHydrator, error) {
+func NewRunResultHydrator(projectRoot string, parser usecase.ABIParser, indexer usecase.ContractRepository) (*RunResultHydrator, error) {
 	return &RunResultHydrator{
 		projectRoot: projectRoot,
 		parser:      parser,
+		indexer:     indexer,
 	}, nil
 }
 
@@ -88,6 +89,11 @@ func (h *RunResultHydrator) Hydrate(
 				if h.indexer != nil && e.Deployment.Artifact != "" {
 					if contractInfo := h.indexer.GetContractByArtifact(ctx, e.Deployment.Artifact); contractInfo != nil {
 						deployment.Contract = contractInfo
+					} else {
+						fmt.Printf("[DEBUG] %s not found in contract repository]n", e.Deployment.Artifact)
+						// Contract not found - this is expected for contracts deployed via scripts
+						// The artifact path in the event is the full path:name format
+						// but we still have the metadata in the event itself
 					}
 				}
 

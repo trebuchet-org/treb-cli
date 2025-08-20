@@ -70,7 +70,7 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	scriptResolver := resolvers.NewScriptResolver(string2, contractResolver)
 	parameterResolver := resolvers.NewParameterResolver(runtimeConfig, fileRepository, repository)
 	sendersManager := config.NewSendersManager(runtimeConfig)
-	runResultHydrator, err := forge.NewRunResultHydrator(string2, parser)
+	runResultHydrator, err := forge.NewRunResultHydrator(string2, parser, repository)
 	if err != nil {
 		return nil, err
 	}
