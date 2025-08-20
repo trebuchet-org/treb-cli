@@ -104,6 +104,7 @@ func FindProjectRoot() (string, error) {
 // SetupViper creates and configures a viper instance
 func SetupViper(projectRoot string, cmd *cobra.Command) *viper.Viper {
 	v := viper.New()
+	nameFormatter := strings.NewReplacer("-", "_", ".", "_")
 
 	// Set up config file
 	v.SetConfigName("config.local")
@@ -113,7 +114,7 @@ func SetupViper(projectRoot string, cmd *cobra.Command) *viper.Viper {
 	// Set up environment variables
 	v.SetEnvPrefix("TREB")
 	v.AutomaticEnv()
-	v.SetEnvKeyReplacer(strings.NewReplacer("-", "_", ".", "_"))
+	v.SetEnvKeyReplacer(nameFormatter)
 
 	// Set defaults
 	v.SetDefault("namespace", "default")
@@ -126,7 +127,8 @@ func SetupViper(projectRoot string, cmd *cobra.Command) *viper.Viper {
 	_ = v.ReadInConfig()
 
 	cmd.Flags().VisitAll(func(f *pflag.Flag) {
-		err := v.BindPFlag(f.Name, f)
+		name := nameFormatter.Replace(f.Name)
+		err := v.BindPFlag(name, f)
 		if err != nil {
 			panic(err)
 		}
@@ -134,21 +136,6 @@ func SetupViper(projectRoot string, cmd *cobra.Command) *viper.Viper {
 
 	return v
 }
-
-// // Only bind flags that exist and have been changed
-// if f := cmd.Flag("debug"); f != nil && f.Changed {
-// 	v.Set("debug", f.Value.String())
-// }
-// if f := cmd.Flag("non-interactive"); f != nil && f.Changed {
-// 	v.Set("non_interactive", f.Value.String())
-// }
-// // Intentionally omit --json to preserve v1 compatibility in usage output
-// if f := cmd.Flag("namespace"); f != nil && f.Changed {
-// 	v.Set("namespace", f.Value.String())
-// }
-// if f := cmd.Flag("network"); f != nil && f.Changed {
-// 	v.Set("network", f.Value.String())
-// }
 
 // ProvideNetworkResolver creates a NetworkResolver for Wire dependency injection
 func ProvideNetworkResolver(cfg *config.RuntimeConfig) *NetworkResolver {

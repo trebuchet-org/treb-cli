@@ -122,6 +122,13 @@ func (n PathNormalizer) Normalize(output string) string {
 	return output
 }
 
+type RepositoryHormalizer struct{}
+
+func (n RepositoryHormalizer) Normalize(output string) string {
+	output = regexp.MustCompile(`tx-0x[a-fA-F0-9]{64}`).ReplaceAllString(output, `tx-<ID>`)
+	return output
+}
+
 // VersionNormalizer replaces version-related strings
 type VersionNormalizer struct{}
 
@@ -143,6 +150,7 @@ func GetDefaultNormalizers() []Normalizer {
 		VersionNormalizer{},
 		TargetedGitCommitNormalizer{},
 		TargetedHashNormalizer{},
+		RepositoryHormalizer{},
 		// AddressNormalizer{}, // We don't normalize addresses as they should be deterministic
 		// PathNormalizer{},    // Often we want to see actual paths
 		// BlockNumberNormalizer{},

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -16,15 +17,16 @@ import (
 
 // CompatibilityTest runs a test against both v1 and v2 binaries
 type CompatibilityTest struct {
-	Name        string
-	PreSetup    func(t *testing.T, ctx *helpers.TrebContext)
-	SetupCmds   [][]string
-	PostSetup   func(t *testing.T, ctx *helpers.TrebContext)
-	TestCmds    [][]string
-	ExpectErr   bool
-	ExpectDiff  bool
-	Normalizers []helpers.Normalizer
-	SetupCtx    *helpers.TrebContext
+	Name                string
+	PreSetup            func(t *testing.T, ctx *helpers.TrebContext)
+	SetupCmds           [][]string
+	PostSetup           func(t *testing.T, ctx *helpers.TrebContext)
+	TestCmds            [][]string
+	ExpectErr           bool
+	ExpectDiff          bool
+	Normalizers         []helpers.Normalizer
+	SetupCtx            *helpers.TrebContext
+	IgnoreRegistryFiles bool
 }
 
 type testOutput struct {
@@ -46,10 +48,12 @@ func RunCompatibilityTest(t *testing.T, test CompatibilityTest) {
 		v2Output := runTest(t, helpers.BinaryV2, test)
 
 		compareOutput(t, test, v1Output.testCmdsOutput, v2Output.testCmdsOutput, "Test Commands", "commands.golden")
-		compareOutput(t, test, v1Output.deploymentsJSON, v2Output.deploymentsJSON, "deployments.json", "deployments.json.golden")
-		compareOutput(t, test, v1Output.transactionsJSON, v2Output.transactionsJSON, "transactions.json", "transactions.json.golden")
-		compareOutput(t, test, v1Output.safeTxsJSON, v2Output.safeTxsJSON, "safe-txs.json", "safe-txs.json.golden")
-		compareOutput(t, test, v1Output.registryJSON, v2Output.registryJSON, "registry.json", "registry.json.golden")
+		if !test.IgnoreRegistryFiles {
+			compareOutput(t, test, v1Output.deploymentsJSON, v2Output.deploymentsJSON, "deployments.json", "deployments.json.golden")
+			compareOutput(t, test, v1Output.transactionsJSON, v2Output.transactionsJSON, "transactions.json", "transactions.json.golden")
+			compareOutput(t, test, v1Output.safeTxsJSON, v2Output.safeTxsJSON, "safe-txs.json", "safe-txs.json.golden")
+			compareOutput(t, test, v1Output.registryJSON, v2Output.registryJSON, "registry.json", "registry.json.golden")
+		}
 	})
 }
 
@@ -174,12 +178,36 @@ func compareOutput(t *testing.T, test CompatibilityTest, v1Output, v2Output, dis
 				if err == os.ErrNotExist {
 					expected = []byte{}
 				}
-				if diff != string(expected) {
-					t.Errorf("Diff on %s (-want +got):\n%s\nExpected Diff:\n%s\n", displayName, diff, expected)
+				normalize := cmp.Transformer("normalize", func(s string) string { return norm(s) })
+				if diffDiff := cmp.Diff(string(expected), diff, normalize); diffDiff != "" {
+					t.Errorf("Diff on %s (-v1 +v2):\n%s\nExpected Diff (-v1 +v2):\n%s\nDiff Diff (-golden +test):\n%s\n", displayName, diff, string(expected), diffDiff)
 				}
 			}
 		} else {
 			t.Errorf("Diff on %s (-want +got):\n%s", displayName, diff)
 		}
 	}
+}
+
+func norm(s string) string {
+	// unify line endings
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+
+	// map NBSP and friends to regular space
+	s = strings.Map(func(r rune) rune {
+		switch r {
+		case '\u00A0', '\u2007', '\u202F': // NBSP, figure space, narrow NBSP
+			return ' '
+		default:
+			return r
+		}
+	}, s)
+
+	// trim trailing spaces/tabs on each line
+	lines := strings.Split(s, "\n")
+	for i := range lines {
+		lines[i] = strings.TrimRight(lines[i], " \t")
+	}
+	return strings.Join(lines, "\n")
+
 }

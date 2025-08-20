@@ -9,7 +9,7 @@ func TestPruneCommand(t *testing.T) {
 	var snapshot *helpers.AnvilSnapshot
 	tests := []CompatibilityTest{
 		{
-			Name:     "networks list",
+			Name:     "prune",
 			SetupCtx: helpers.NewTrebContext(t, helpers.BinaryV1),
 			PreSetup: func(t *testing.T, ctx *helpers.TrebContext) {
 				var err error

@@ -173,11 +173,11 @@ func (g *ScriptGeneratorAdapter) generateProxyScript(tmpl *domain.ScriptTemplate
 	initializerContent := ""
 	initialize := g.abiParser.FindInitializeMethod(tmpl.ABI)
 	if initialize != nil {
-		vars, encode := g.abiParser.GenerateInitializerArgs(initialize)
+		vars, encode, sig := g.abiParser.GenerateInitializerArgs(initialize)
 		initializerContent = fmt.Sprintf(`
         // TODO: Update these initializer arguments
-%s
-        %s`, vars, encode)
+		%s
+        return abi.encodeWithSignature("%s", %s);`, vars, sig, encode)
 	} else {
 		initializerContent = `
         // TODO: Update with initializer parameters

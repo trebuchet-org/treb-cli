@@ -52,12 +52,12 @@ func (p *Parser) GenerateConstructorArgs(abi *abi.ABI) (vars string, encode stri
 }
 
 // GenerateInitializerArgs generates variable declarations and encoding for initializer arguments
-func (p *Parser) GenerateInitializerArgs(method *abi.Method) (vars string, encode string) {
+func (p *Parser) GenerateInitializerArgs(method *abi.Method) (vars, encode, sig string) {
 	if method == nil || len(method.Inputs) == 0 {
-		return "", ""
+		return "", "", ""
 	}
-
-	return p.generateArgs(method.Inputs, "initializer")
+	vars, encode = p.generateArgs(method.Inputs, "init")
+	return vars, encode, method.Sig
 }
 
 // generateArgs generates variable declarations and encoding for arguments
@@ -73,10 +73,9 @@ func (p *Parser) generateArgs(inputs abi.Arguments, prefix string) (vars string,
 
 		// Generate variable declaration based on type
 		varType := p.solidityTypeToGo(input.Type.String())
-		envVar := fmt.Sprintf("%s_%s", strings.ToUpper(prefix), strings.ToUpper(varName))
 
-		varLines = append(varLines, fmt.Sprintf("%s %s = vm.envOr(\"%s\", %s);",
-			varType, varName, envVar, p.getDefaultValue(input.Type.String())))
+		varLines = append(varLines, fmt.Sprintf("%s %s = %s;",
+			varType, varName, p.getDefaultValue(input.Type.String())))
 
 		argNames = append(argNames, varName)
 	}

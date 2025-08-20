@@ -37,6 +37,8 @@ Examples:
 	}
 
 	// Add flags
+	cmd.Flags().StringP("network", "n", "", "Network to run on (e.g., mainnet, sepolia, local)")
+	cmd.Flags().StringP("namespace", "s", "", "Namespace to use (defaults to current context namespace) [also sets foundry profile]")
 	cmd.Flags().StringVar(&flags.add, "add", "", "Add a tag to the deployment")
 	cmd.Flags().StringVar(&flags.remove, "remove", "", "Remove a tag from the deployment")
 

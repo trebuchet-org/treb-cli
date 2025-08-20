@@ -100,7 +100,7 @@ type ScriptExecutionResult struct {
 type ABIParser interface {
 	FindInitializeMethod(abi *abi.ABI) *abi.Method
 	GenerateConstructorArgs(abi *abi.ABI) (vars string, encode string)
-	GenerateInitializerArgs(method *abi.Method) (vars string, encode string)
+	GenerateInitializerArgs(method *abi.Method) (vars, encode, sig string)
 	ParseEvent(rawLog *forge.EventLog) (any, error)
 	ParseEvents(rawLog *forge.ScriptOutput) ([]any, error)
 }
