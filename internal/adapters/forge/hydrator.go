@@ -20,7 +20,7 @@ import (
 type RunResultHydrator struct {
 	projectRoot        string
 	parser             usecase.ABIParser
-	indexer            usecase.ContractIndexer
+	indexer            usecase.ContractRepository
 	transactions       map[[32]byte]*forge.Transaction
 	transactionOrder   [][32]byte // Track order of transactions
 	proxyRelationships map[common.Address]*forge.ProxyRelationship

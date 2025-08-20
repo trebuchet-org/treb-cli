@@ -7,8 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/trebuchet-org/treb-cli/internal/config"
-	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -26,7 +25,7 @@ func NewInternalVerifier(cfg *config.RuntimeConfig) (*InternalVerifier, error) {
 }
 
 // Verify performs contract verification
-func (v *InternalVerifier) Verify(ctx context.Context, deployment *models.Deployment, network *domain.Network) error {
+func (v *InternalVerifier) Verify(ctx context.Context, deployment *models.Deployment, network *config.Network) error {
 	// Initialize verification status
 	if deployment.Verification.Verifiers == nil {
 		deployment.Verification.Verifiers = make(map[string]models.VerifierStatus)
@@ -77,7 +76,7 @@ func (v *InternalVerifier) Verify(ctx context.Context, deployment *models.Deploy
 }
 
 // verifyOnEtherscan performs verification on Etherscan
-func (v *InternalVerifier) verifyOnEtherscan(deployment *models.Deployment, network *domain.Network) error {
+func (v *InternalVerifier) verifyOnEtherscan(deployment *models.Deployment, network *config.Network) error {
 	// Get constructor args from deployment strategy
 	constructorArgs := deployment.DeploymentStrategy.ConstructorArgs
 	if constructorArgs != "" && strings.HasPrefix(constructorArgs, "0x") {
@@ -121,7 +120,7 @@ func (v *InternalVerifier) verifyOnEtherscan(deployment *models.Deployment, netw
 }
 
 // verifyOnSourceify performs verification on Sourcify
-func (v *InternalVerifier) verifyOnSourceify(deployment *models.Deployment, network *domain.Network) error {
+func (v *InternalVerifier) verifyOnSourceify(deployment *models.Deployment, network *config.Network) error {
 	// Get contract path from artifact
 	contractPath := fmt.Sprintf("%s:%s", deployment.Artifact.Path, deployment.ContractName)
 
@@ -184,7 +183,7 @@ func (v *InternalVerifier) executeForgeVerify(args []string) error {
 }
 
 // buildEtherscanURL builds the Etherscan URL for a contract
-func (v *InternalVerifier) buildEtherscanURL(network *domain.Network, address string) string {
+func (v *InternalVerifier) buildEtherscanURL(network *config.Network, address string) string {
 	if network.ExplorerURL == "" {
 		return ""
 	}
@@ -192,7 +191,7 @@ func (v *InternalVerifier) buildEtherscanURL(network *domain.Network, address st
 }
 
 // buildSourceifyURL builds the Sourcify URL for a contract
-func (v *InternalVerifier) buildSourceifyURL(network *domain.Network, address string) string {
+func (v *InternalVerifier) buildSourceifyURL(network *config.Network, address string) string {
 	return fmt.Sprintf("https://sourcify.dev/#/lookup/%s", address)
 }
 

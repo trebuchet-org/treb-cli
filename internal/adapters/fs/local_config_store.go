@@ -7,8 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/trebuchet-org/treb-cli/internal/config"
-	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -31,10 +30,10 @@ func (s *LocalConfigStoreAdapter) Exists() bool {
 }
 
 // Load reads the configuration from the file
-func (s *LocalConfigStoreAdapter) Load(ctx context.Context) (*domain.LocalConfig, error) {
+func (s *LocalConfigStoreAdapter) Load(ctx context.Context) (*config.LocalConfig, error) {
 	// If file doesn't exist, return default config
 	if !s.Exists() {
-		return domain.DefaultLocalConfig(), nil
+		return config.DefaultLocalConfig(), nil
 	}
 
 	data, err := os.ReadFile(s.configPath)
@@ -42,22 +41,22 @@ func (s *LocalConfigStoreAdapter) Load(ctx context.Context) (*domain.LocalConfig
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	var config domain.LocalConfig
-	if err := json.Unmarshal(data, &config); err != nil {
+	var localConfig config.LocalConfig
+	if err := json.Unmarshal(data, &localConfig); err != nil {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
 
 	// Fill in any missing fields with defaults
-	defaultCfg := domain.DefaultLocalConfig()
-	if config.Namespace == "" {
-		config.Namespace = defaultCfg.Namespace
+	defaultCfg := config.DefaultLocalConfig()
+	if localConfig.Namespace == "" {
+		localConfig.Namespace = defaultCfg.Namespace
 	}
 
-	return &config, nil
+	return &localConfig, nil
 }
 
 // Save writes the configuration to the file
-func (s *LocalConfigStoreAdapter) Save(ctx context.Context, config *domain.LocalConfig) error {
+func (s *LocalConfigStoreAdapter) Save(ctx context.Context, config *config.LocalConfig) error {
 	// Ensure directory exists
 	dir := filepath.Dir(s.configPath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -82,4 +81,4 @@ func (s *LocalConfigStoreAdapter) GetPath() string {
 }
 
 // Ensure LocalConfigStoreAdapter implements LocalConfigStore
-var _ usecase.LocalConfigStore = (*LocalConfigStoreAdapter)(nil)
+var _ usecase.LocalConfigRepository = (*LocalConfigStoreAdapter)(nil)

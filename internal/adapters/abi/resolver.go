@@ -6,23 +6,23 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
 type ABIResolver struct {
-	config      *config.RuntimeConfig
-	contracts   usecase.ContractIndexer
-	deployments usecase.DeploymentStore
+	config         *config.RuntimeConfig
+	contracts      usecase.ContractRepository
+	deploymentRepo usecase.DeploymentRepository
 }
 
-func NewABIResolver(config *config.RuntimeConfig, contracts usecase.ContractIndexer, deployments usecase.DeploymentStore) *ABIResolver {
+func NewABIResolver(config *config.RuntimeConfig, contracts usecase.ContractRepository, deploymentRepo usecase.DeploymentRepository) *ABIResolver {
 	return &ABIResolver{
-		config:      config,
-		contracts:   contracts,
-		deployments: deployments,
+		config:         config,
+		contracts:      contracts,
+		deploymentRepo: deploymentRepo,
 	}
 }
 
@@ -50,7 +50,7 @@ func (r *ABIResolver) FindByRef(ctx context.Context, contractRef string) (*abi.A
 }
 
 func (r *ABIResolver) FindByAddress(ctx context.Context, address common.Address) (*abi.ABI, error) {
-	deployment, err := r.deployments.GetDeploymentByAddress(ctx, r.config.Network.ChainID, address.String())
+	deployment, err := r.deploymentRepo.GetDeploymentByAddress(ctx, r.config.Network.ChainID, address.String())
 	if err != nil {
 		return nil, err
 	}

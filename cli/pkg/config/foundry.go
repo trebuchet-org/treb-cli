@@ -9,8 +9,10 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 )
+
+type SenderConfig = config.SenderConfig
 
 // FoundryConfig represents the full foundry.toml configuration
 type FoundryConfig struct {
@@ -28,7 +30,7 @@ type EtherscanConfig struct {
 
 // ProfileFoundryConfig represents a profile's foundry configuration
 type ProfileConfig struct {
-	Sender    domain.SenderConfig `toml:"sender,omitempty"`
+	Sender    config.SenderConfig `toml:"sender,omitempty"`
 	Libraries []string            `toml:"libraries,omitempty"`
 	// Other foundry settings
 	SrcPath       string   `toml:"src,omitempty"`

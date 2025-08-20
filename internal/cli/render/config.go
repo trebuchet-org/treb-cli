@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -28,12 +28,12 @@ func getRelativePath(path string) string {
 	if err != nil {
 		return path
 	}
-	
+
 	relPath, err := filepath.Rel(cwd, path)
 	if err != nil {
 		return path
 	}
-	
+
 	return relPath
 }
 
@@ -72,12 +72,13 @@ func (r *ConfigRenderer) RenderSet(result *usecase.SetConfigResult) error {
 // RenderRemove renders the result of removing a configuration value
 func (r *ConfigRenderer) RenderRemove(result *usecase.RemoveConfigResult) error {
 	switch result.Key {
-	case domain.ConfigKeyNamespace:
+	case config.ConfigKeyNamespace:
 		fmt.Fprintf(r.out, "✅ Reset namespace to: default\n")
-	case domain.ConfigKeyNetwork:
+	case config.ConfigKeyNetwork:
 		fmt.Fprintf(r.out, "✅ Removed network from config (will be required as flag)\n")
 	}
-	
+
 	fmt.Fprintf(r.out, "📁 config saved to: %s\n", getRelativePath(result.ConfigPath))
 	return nil
 }
+

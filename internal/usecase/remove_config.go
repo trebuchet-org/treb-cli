@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 )
 
 // RemoveConfigParams contains parameters for removing configuration
@@ -17,30 +17,30 @@ type RemoveConfigParams struct {
 
 // RemoveConfigResult contains the result of removing configuration
 type RemoveConfigResult struct {
-	UpdatedConfig *domain.LocalConfig
+	UpdatedConfig *config.LocalConfig
 	ConfigPath    string
-	Key           domain.ConfigKey
+	Key           config.ConfigKey
 	RemovedValue  string
 }
 
 // RemoveConfig is a use case for removing configuration values
 type RemoveConfig struct {
-	store LocalConfigStore
+	repo LocalConfigRepository
 }
 
 // NewRemoveConfig creates a new RemoveConfig use case
-func NewRemoveConfig(store LocalConfigStore) *RemoveConfig {
+func NewRemoveConfig(repo LocalConfigRepository) *RemoveConfig {
 	return &RemoveConfig{
-		store: store,
+		repo: repo,
 	}
 }
 
 // Run executes the remove config use case
 func (uc *RemoveConfig) Run(ctx context.Context, params RemoveConfigParams) (*RemoveConfigResult, error) {
 	// Config file must exist to remove values
-	if !uc.store.Exists() {
+	if !uc.repo.Exists() {
 		// Get relative path for error message
-		path := uc.store.GetPath()
+		path := uc.repo.GetPath()
 		if cwd, err := os.Getwd(); err == nil {
 			if relPath, err := filepath.Rel(cwd, path); err == nil {
 				path = relPath
@@ -51,12 +51,12 @@ func (uc *RemoveConfig) Run(ctx context.Context, params RemoveConfigParams) (*Re
 
 	// Normalize key to lowercase
 	key := strings.ToLower(params.Key)
-	
+
 	// Validate key
-	if !domain.IsValidConfigKey(key) {
+	if !config.IsValidConfigKey(key) {
 		validKeys := []string{}
-		for _, k := range domain.ValidConfigKeys() {
-			if k == domain.ConfigKeyNamespace {
+		for _, k := range config.ValidConfigKeys() {
+			if k == config.ConfigKeyNamespace {
 				validKeys = append(validKeys, string(k)+" (ns)")
 			} else {
 				validKeys = append(validKeys, string(k))
@@ -66,10 +66,10 @@ func (uc *RemoveConfig) Run(ctx context.Context, params RemoveConfigParams) (*Re
 	}
 
 	// Normalize the key
-	normalizedKey := domain.NormalizeConfigKey(key)
+	normalizedKey := config.NormalizeConfigKey(key)
 
 	// Load existing config
-	config, err := uc.store.Load(ctx)
+	localConfig, err := uc.repo.Load(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
@@ -79,23 +79,24 @@ func (uc *RemoveConfig) Run(ctx context.Context, params RemoveConfigParams) (*Re
 
 	// Remove the value based on key
 	switch normalizedKey {
-	case domain.ConfigKeyNamespace:
-		removedValue = config.Namespace
-		config.Namespace = "default"
-	case domain.ConfigKeyNetwork:
-		removedValue = config.Network
-		config.Network = ""
+	case config.ConfigKeyNamespace:
+		removedValue = localConfig.Namespace
+		localConfig.Namespace = "default"
+	case config.ConfigKeyNetwork:
+		removedValue = localConfig.Network
+		localConfig.Network = ""
 	}
 
 	// Save the updated config
-	if err := uc.store.Save(ctx, config); err != nil {
+	if err := uc.repo.Save(ctx, localConfig); err != nil {
 		return nil, fmt.Errorf("failed to save config: %w", err)
 	}
 
 	return &RemoveConfigResult{
-		UpdatedConfig: config,
-		ConfigPath:    uc.store.GetPath(),
+		UpdatedConfig: localConfig,
+		ConfigPath:    uc.repo.GetPath(),
 		Key:           normalizedKey,
 		RemovedValue:  removedValue,
 	}, nil
 }
+

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/trebuchet-org/treb-cli/internal/config"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain/forge"
 )
 
@@ -31,15 +31,16 @@ type RunScriptResult struct {
 
 // RunScript is the main use case for running deployment scripts
 type RunScript struct {
-	config         *config.RuntimeConfig
-	scriptResolver ScriptResolver
-	paramResolver  ParameterResolver
-	// paramPrompter   ParameterPrompter
+	config            *config.RuntimeConfig
+	scriptResolver    ScriptResolver
+	paramResolver     ParameterResolver
+	sendersManager    SendersManager
 	forgeScriptRunner ForgeScriptRunner
 	runResultHydrator RunResultHydrator
 	registryUpdater   RegistryUpdater
 	libraryResolver   LibraryResolver
 	progress          ProgressSink
+	// paramPrompter   ParameterPrompter
 }
 
 // NewRunScript creates a new RunScript use case
@@ -47,23 +48,24 @@ func NewRunScript(
 	cfg *config.RuntimeConfig,
 	scriptResolver ScriptResolver,
 	paramResolver ParameterResolver,
-	// paramPrompter ParameterPrompter,
-	forgeScriptRunner ForgeScriptRunner,
+	sendersManager SendersManager,
 	runResultHydrator RunResultHydrator,
 	registryUpdater RegistryUpdater,
 	libraryResolver LibraryResolver,
 	progress ProgressSink,
+	forgeScriptRunner ForgeScriptRunner,
 ) *RunScript {
 	return &RunScript{
-		config:         cfg,
-		scriptResolver: scriptResolver,
-		paramResolver:  paramResolver,
-		// paramPrompter:   paramPrompter,
+		config:            cfg,
+		scriptResolver:    scriptResolver,
+		paramResolver:     paramResolver,
+		sendersManager:    sendersManager,
 		forgeScriptRunner: forgeScriptRunner,
 		runResultHydrator: runResultHydrator,
 		registryUpdater:   registryUpdater,
 		libraryResolver:   libraryResolver,
 		progress:          progress,
+		// paramPrompter:   paramPrompter,
 	}
 }
 
@@ -174,8 +176,7 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 	// })
 
 	fmt.Println("DEBUG: Building sender config")
-	senderManager := config.NewSendersManager(uc.config.TrebConfig)
-	senderScriptConfig, err := senderManager.BuildSenderScriptConfig(script.Artifact)
+	senderScriptConfig, err := uc.sendersManager.BuildSenderScriptConfig(script.Artifact)
 	if err != nil {
 		return result, err
 	}

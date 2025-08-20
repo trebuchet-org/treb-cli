@@ -7,12 +7,13 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain/forge"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
 // DeploymentStore handles persistence of deployments
-type DeploymentStore interface {
+type DeploymentRepository interface {
 	GetDeployment(ctx context.Context, id string) (*models.Deployment, error)
 	GetDeploymentByAddress(ctx context.Context, chainID uint64, address string) (*models.Deployment, error)
 	ListDeployments(ctx context.Context, filter domain.DeploymentFilter) ([]*models.Deployment, error)
@@ -20,15 +21,15 @@ type DeploymentStore interface {
 	DeleteDeployment(ctx context.Context, id string) error
 }
 
-// TransactionStore handles persistence of transactions
-type TransactionStore interface {
+// TransactionRepository handles persistence of transactions
+type TransactionRepository interface {
 	GetTransaction(ctx context.Context, id string) (*models.Transaction, error)
 	ListTransactions(ctx context.Context, filter domain.TransactionFilter) ([]*models.Transaction, error)
 	SaveTransaction(ctx context.Context, transaction *models.Transaction) error
 }
 
 // ContractIndexer provides access to compiled contracts
-type ContractIndexer interface {
+type ContractRepository interface {
 	GetContract(ctx context.Context, key string) (*models.Contract, error)
 	SearchContracts(ctx context.Context, query domain.ContractQuery) []*models.Contract
 	GetContractByArtifact(ctx context.Context, artifact string) *models.Contract
@@ -36,7 +37,7 @@ type ContractIndexer interface {
 
 // ContractVerifier handles contract verification
 type ContractVerifier interface {
-	Verify(ctx context.Context, deployment *models.Deployment, network *domain.Network) error
+	Verify(ctx context.Context, deployment *models.Deployment, network *config.Network) error
 	GetVerificationStatus(ctx context.Context, deployment *models.Deployment) (*models.VerificationInfo, error)
 }
 
@@ -149,7 +150,7 @@ type ContractResolver interface {
 // NetworkResolver handles network configuration resolution
 type NetworkResolver interface {
 	GetNetworks(ctx context.Context) []string
-	ResolveNetwork(ctx context.Context, networkName string) (*domain.Network, error)
+	ResolveNetwork(ctx context.Context, networkName string) (*config.Network, error)
 }
 
 // BlockchainChecker checks on-chain state of contracts and transactions
@@ -166,16 +167,16 @@ type RegistryPruner interface {
 	ExecutePrune(ctx context.Context, items *domain.ItemsToPrune) error
 }
 
-// LocalConfigStore manages local configuration persistence
-type LocalConfigStore interface {
+// LocalConfigRepository manages local configuration persistence
+type LocalConfigRepository interface {
 	Exists() bool
-	Load(ctx context.Context) (*domain.LocalConfig, error)
-	Save(ctx context.Context, config *domain.LocalConfig) error
+	Load(ctx context.Context) (*config.LocalConfig, error)
+	Save(ctx context.Context, config *config.LocalConfig) error
 	GetPath() string
 }
 
-// SafeTransactionStore handles persistence of Safe transactions
-type SafeTransactionStore interface {
+// SafeTransactionRepository handles persistence of Safe transactions
+type SafeTransactionRepository interface {
 	GetSafeTransaction(ctx context.Context, safeTxHash string) (*models.SafeTransaction, error)
 	ListSafeTransactions(ctx context.Context, filter domain.SafeTransactionFilter) ([]*models.SafeTransaction, error)
 	SaveSafeTransaction(ctx context.Context, safeTx *models.SafeTransaction) error
@@ -224,14 +225,14 @@ type ForgeScriptRunner interface {
 // ScriptExecutionConfig contains configuration for script execution
 type RunScriptConfig struct {
 	Script             *models.Contract
-	Network            *domain.Network
+	Network            *config.Network
 	Namespace          string
 	Parameters         map[string]string // Includes resolved parameters and sender configs
 	DryRun             bool
 	Debug              bool
 	DebugJSON          bool
 	Libraries          []string
-	SenderScriptConfig domain.SenderScriptConfig
+	SenderScriptConfig config.SenderScriptConfig
 	Progress           ProgressSink
 }
 
@@ -286,4 +287,8 @@ type LibraryReference struct {
 	Path    string
 	Name    string
 	Address string
+}
+
+type SendersManager interface {
+	BuildSenderScriptConfig(script *models.Artifact) (*config.SenderScriptConfig, error)
 }

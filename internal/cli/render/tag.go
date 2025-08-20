@@ -5,7 +5,7 @@ import (
 	"sort"
 
 	"github.com/fatih/color"
-	"github.com/trebuchet-org/treb-cli/internal/config"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -142,4 +142,3 @@ func (r *TagRenderer) renderRemoveTag(deployment *models.Deployment, displayName
 
 	return nil
 }
-

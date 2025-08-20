@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 )
 
 // SenderInitConfig represents a single sender configuration for the new Senders library
@@ -21,7 +21,7 @@ type SenderInitConfig struct {
 	SenderType   [8]byte // bytes8 magic constant
 	CanBroadcast bool
 	Config       []byte // ABI-encoded config data
-	BaseConfig   domain.SenderConfig
+	BaseConfig   config.SenderConfig
 }
 
 // SenderConfigs represents the complete array of sender configurations
@@ -94,7 +94,7 @@ func BuildSenderConfigs(trebConfig *TrebConfig) (*SenderConfigs, error) {
 }
 
 // buildSenderInitConfig builds a single sender configuration using the new format
-func buildSenderInitConfig(id string, sender domain.SenderConfig, allSenders map[string]domain.SenderConfig) (*SenderInitConfig, error) {
+func buildSenderInitConfig(id string, sender config.SenderConfig, allSenders map[string]config.SenderConfig) (*SenderInitConfig, error) {
 	switch sender.Type {
 	case "private_key":
 		// Parse private key to get address

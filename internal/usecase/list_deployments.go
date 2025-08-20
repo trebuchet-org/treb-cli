@@ -4,8 +4,8 @@ import (
 	"context"
 	"sort"
 
-	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
@@ -20,15 +20,15 @@ type ListDeploymentsParams struct {
 // ListDeployments is the use case for listing deployments
 type ListDeployments struct {
 	config *config.RuntimeConfig
-	store  DeploymentStore
+	repo   DeploymentRepository
 	sink   ProgressSink
 }
 
 // NewListDeployments creates a new ListDeployments use case
-func NewListDeployments(cfg *config.RuntimeConfig, store DeploymentStore, sink ProgressSink) *ListDeployments {
+func NewListDeployments(cfg *config.RuntimeConfig, repo DeploymentRepository, sink ProgressSink) *ListDeployments {
 	return &ListDeployments{
 		config: cfg,
-		store:  store,
+		repo:   repo,
 		sink:   sink,
 	}
 }
@@ -55,7 +55,7 @@ func (uc *ListDeployments) Run(ctx context.Context, params ListDeploymentsParams
 	}
 
 	// Get deployments from store
-	deployments, err := uc.store.ListDeployments(ctx, filter)
+	deployments, err := uc.repo.ListDeployments(ctx, filter)
 	if err != nil {
 		return nil, err
 	}

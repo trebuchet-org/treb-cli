@@ -1,4 +1,4 @@
-package contracts
+package resolvers
 
 import (
 	"context"
@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -15,15 +15,19 @@ import (
 // ContractResolver handles contract resolution and selection
 type ContractResolver struct {
 	config   *config.RuntimeConfig
-	indexer  *Indexer
+	repo     usecase.ContractRepository
 	selector usecase.ContractSelector
 }
 
 // NewContractResolver creates a new contract resolver
-func NewContractResolver(cfg *config.RuntimeConfig, indexer *Indexer, selector usecase.ContractSelector) *ContractResolver {
+func NewContractResolver(
+	cfg *config.RuntimeConfig,
+	repo usecase.ContractRepository,
+	selector usecase.ContractSelector,
+) *ContractResolver {
 	return &ContractResolver{
 		config:   cfg,
-		indexer:  indexer,
+		repo:     repo,
 		selector: selector,
 	}
 }
@@ -31,7 +35,7 @@ func NewContractResolver(cfg *config.RuntimeConfig, indexer *Indexer, selector u
 // ResolveContractWithFilter resolves a contract reference with filtering
 func (r *ContractResolver) ResolveContract(ctx context.Context, query domain.ContractQuery) (*models.Contract, error) {
 	// First try exact match (could be "Counter" or "src/Counter.sol:Counter")
-	contracts := r.indexer.SearchContracts(ctx, query)
+	contracts := r.repo.SearchContracts(ctx, query)
 
 	if len(contracts) == 0 {
 		// Provide helpful error message based on what was filtered out
@@ -58,7 +62,7 @@ func (r *ContractResolver) ResolveContract(ctx context.Context, query domain.Con
 // GetProxyContracts returns all available proxy contracts
 func (r *ContractResolver) GetProxyContracts(ctx context.Context) ([]*models.Contract, error) {
 	var proxy = "Proxy"
-	proxies := r.indexer.SearchContracts(ctx, domain.ContractQuery{Query: &proxy})
+	proxies := r.repo.SearchContracts(ctx, domain.ContractQuery{Query: &proxy})
 	if len(proxies) == 0 {
 		return nil, fmt.Errorf("no proxy contracts found in project")
 	}

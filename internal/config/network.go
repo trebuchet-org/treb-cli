@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,13 +14,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
+	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
 // NetworkResolver resolves network names to configurations with caching
 type NetworkResolver struct {
 	projectRoot   string
-	foundryConfig *FoundryConfig
+	foundryConfig *config.FoundryConfig
 	cache         *NetworkCache
 	httpClient    *http.Client
 	mu            sync.RWMutex
@@ -34,7 +36,7 @@ type NetworkCache struct {
 }
 
 // NewNetworkResolver creates a new network resolver
-func NewNetworkResolver(projectRoot string, foundryConfig *FoundryConfig) *NetworkResolver {
+func NewNetworkResolver(projectRoot string, foundryConfig *config.FoundryConfig) *NetworkResolver {
 	r := &NetworkResolver{
 		projectRoot:   projectRoot,
 		foundryConfig: foundryConfig,
@@ -50,7 +52,7 @@ func NewNetworkResolver(projectRoot string, foundryConfig *FoundryConfig) *Netwo
 }
 
 // GetNetworks returns all configured network names
-func (r *NetworkResolver) GetNetworks() []string {
+func (r *NetworkResolver) GetNetworks(ctx context.Context) []string {
 	networks := make([]string, 0, len(r.foundryConfig.RpcEndpoints))
 	for name := range r.foundryConfig.RpcEndpoints {
 		networks = append(networks, name)
@@ -61,7 +63,7 @@ func (r *NetworkResolver) GetNetworks() []string {
 }
 
 // Resolve resolves a network name to its configuration
-func (r *NetworkResolver) Resolve(networkName string) (*domain.Network, error) {
+func (r *NetworkResolver) ResolveNetwork(ctx context.Context, networkName string) (*config.Network, error) {
 	// Check if network exists in foundry.toml
 	rpcURL, exists := r.foundryConfig.RpcEndpoints[networkName]
 	if !exists {
@@ -88,7 +90,7 @@ func (r *NetworkResolver) Resolve(networkName string) (*domain.Network, error) {
 	// Get explorer URL
 	explorer := r.getExplorerURL(networkName, chainID)
 
-	return &domain.Network{
+	return &config.Network{
 		Name:        networkName,
 		RPCURL:      rpcURL,
 		ChainID:     chainID,
@@ -277,3 +279,5 @@ func (r *NetworkResolver) saveCache() error {
 
 	return os.WriteFile(cachePath, data, 0644)
 }
+
+var _ usecase.NetworkResolver = (&NetworkResolver{})

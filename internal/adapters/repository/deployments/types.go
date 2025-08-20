@@ -1,4 +1,4 @@
-package registry
+package deployments
 
 // LookupIndexes contains various indexes for efficient lookups
 type LookupIndexes struct {

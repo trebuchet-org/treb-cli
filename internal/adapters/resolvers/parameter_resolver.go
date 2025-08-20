@@ -1,4 +1,4 @@
-package parameters
+package resolvers
 
 import (
 	"context"
@@ -6,27 +6,27 @@ import (
 	"os"
 	"strings"
 
-	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
 // ParameterResolver handles parameter resolution without pkg dependencies
 type ParameterResolver struct {
 	cfg             *config.RuntimeConfig
-	deploymentStore usecase.DeploymentStore
-	contractIndexer usecase.ContractIndexer
+	deploymentRepo  usecase.DeploymentRepository
+	contractIndexer usecase.ContractRepository
 }
 
 // NewParameterResolver creates a new internal parameter resolver
 func NewParameterResolver(
 	cfg *config.RuntimeConfig,
-	deploymentStore usecase.DeploymentStore,
-	contractIndexer usecase.ContractIndexer,
+	deploymentRepo usecase.DeploymentRepository,
+	contractIndexer usecase.ContractRepository,
 ) *ParameterResolver {
 	return &ParameterResolver{
 		cfg:             cfg,
-		deploymentStore: deploymentStore,
+		deploymentRepo:  deploymentRepo,
 		contractIndexer: contractIndexer,
 	}
 }
@@ -158,7 +158,7 @@ func (r *ParameterResolver) resolveDeployment(ctx context.Context, name string, 
 		ContractName: contractName,
 	}
 
-	deployments, err := r.deploymentStore.ListDeployments(ctx, filter)
+	deployments, err := r.deploymentRepo.ListDeployments(ctx, filter)
 	if err != nil {
 		return "", fmt.Errorf("failed to list deployments: %w", err)
 	}

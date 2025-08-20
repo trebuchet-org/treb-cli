@@ -1,23 +1,24 @@
-package fs
+package deployments
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/trebuchet-org/treb-cli/internal/adapters/registry"
-	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
+	"github.com/trebuchet-org/treb-cli/internal/domain/forge"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
+	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
 // RegistryStoreAdapter wraps the internal registry.Manager to implement DeploymentStore
 type RegistryStoreAdapter struct {
-	manager *registry.Manager
+	manager *Manager
 }
 
 // NewRegistryStoreAdapter creates a new adapter wrapping the internal registry manager
 func NewRegistryStoreAdapter(cfg *config.RuntimeConfig) (*RegistryStoreAdapter, error) {
-	manager, err := registry.NewManager(cfg.ProjectRoot)
+	manager, err := NewManager(cfg.ProjectRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create registry manager: %w", err)
 	}
@@ -210,4 +211,55 @@ func (r *RegistryStoreAdapter) ListSafeTransactions(ctx context.Context, filter 
 	}
 
 	return result, nil
+}
+
+// PrepareUpdates analyzes the execution and prepares registry updates
+func (r *RegistryStoreAdapter) PrepareUpdates(ctx context.Context, execution *forge.HydratedRunResult) (*usecase.RegistryChanges, error) {
+	changes := &usecase.RegistryChanges{
+		Deployments:  []*models.Deployment{},
+		Transactions: []*models.Transaction{},
+	}
+
+	// TODO: Implement the actual parsing logic from HydratedRunResult
+	// This would involve:
+	// 1. Parsing deployment events from execution
+	// 2. Creating Deployment models
+	// 3. Creating Transaction models
+	// 4. Linking deployments to transactions
+
+	return changes, nil
+}
+
+// ApplyUpdates applies the prepared changes to the registry using batch update
+func (r *RegistryStoreAdapter) ApplyUpdates(ctx context.Context, changes *usecase.RegistryChanges) error {
+	if changes == nil || !changes.HasChanges {
+		return nil
+	}
+
+	// Use the batch update to apply all changes at once
+	update := &BatchUpdate{
+		Deployments:  changes.Deployments,
+		Transactions: changes.Transactions,
+	}
+
+	return r.manager.ApplyBatchUpdate(update)
+}
+
+// HasChanges returns true if there are any changes to apply
+func (r *RegistryStoreAdapter) HasChanges(changes *usecase.RegistryChanges) bool {
+	return changes != nil && changes.HasChanges
+}
+
+// matchSafeTransactionStatus checks if a safe transaction status matches the filter
+func matchSafeTransactionStatus(status models.SafeTxStatus, filter models.TransactionStatus) bool {
+	switch filter {
+	case "pending":
+		return status == models.SafeTxStatusQueued
+	case "executed":
+		return status == models.SafeTxStatusExecuted
+	case "failed":
+		return status == models.SafeTxStatusFailed
+	default:
+		return string(status) == string(filter)
+	}
 }

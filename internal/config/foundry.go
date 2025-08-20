@@ -7,10 +7,11 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/joho/godotenv"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 )
 
 // loadFoundryConfig loads and parses foundry.toml
-func loadFoundryConfig(projectRoot string) (*FoundryConfig, error) {
+func loadFoundryConfig(projectRoot string) (*config.FoundryConfig, error) {
 	// Load .env files first for variable expansion
 	envFiles := []string{
 		filepath.Join(projectRoot, ".env"),
@@ -28,7 +29,7 @@ func loadFoundryConfig(projectRoot string) (*FoundryConfig, error) {
 
 	// Load foundry.toml
 	foundryPath := filepath.Join(projectRoot, "foundry.toml")
-	var cfg FoundryConfig
+	var cfg config.FoundryConfig
 
 	if _, err := toml.DecodeFile(foundryPath, &cfg); err != nil {
 		return nil, fmt.Errorf("failed to parse foundry.toml: %w", err)

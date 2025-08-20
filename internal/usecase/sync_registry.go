@@ -11,27 +11,27 @@ import (
 
 // SyncRegistry handles syncing the registry with on-chain state
 type SyncRegistry struct {
-	deploymentStore      DeploymentStore
-	transactionStore     TransactionStore
-	safeTransactionStore SafeTransactionStore
-	safeClient           SafeClient
-	progress             ProgressSink
+	deploymentRepo      DeploymentRepository
+	transactionRepo     TransactionRepository
+	safeTransactionRepo SafeTransactionRepository
+	safeClient          SafeClient
+	progress            ProgressSink
 }
 
 // NewSyncRegistry creates a new sync registry use case
 func NewSyncRegistry(
-	deploymentStore DeploymentStore,
-	transactionStore TransactionStore,
-	safeTransactionStore SafeTransactionStore,
+	deploymentRepo DeploymentRepository,
+	transactionRepo TransactionRepository,
+	safeTransactionRepo SafeTransactionRepository,
 	safeClient SafeClient,
 	progress ProgressSink,
 ) *SyncRegistry {
 	return &SyncRegistry{
-		deploymentStore:      deploymentStore,
-		transactionStore:     transactionStore,
-		safeTransactionStore: safeTransactionStore,
-		safeClient:           safeClient,
-		progress:             progress,
+		deploymentRepo:      deploymentRepo,
+		transactionRepo:     transactionRepo,
+		safeTransactionRepo: safeTransactionRepo,
+		safeClient:          safeClient,
+		progress:            progress,
 	}
 }
 
@@ -114,7 +114,7 @@ func (s *SyncRegistry) syncPendingSafeTransactions(ctx context.Context, debug bo
 	result := &SafeSyncResult{}
 
 	// Get all Safe transactions
-	safeTxs, err := s.safeTransactionStore.ListSafeTransactions(ctx, domain.SafeTransactionFilter{
+	safeTxs, err := s.safeTransactionRepo.ListSafeTransactions(ctx, domain.SafeTransactionFilter{
 		Status: models.TransactionStatusQueued,
 	})
 	if err != nil {
@@ -163,7 +163,7 @@ func (s *SyncRegistry) syncPendingSafeTransactions(ctx context.Context, debug bo
 				safeTx.ExecutedAt = &now
 
 				// Save the updated Safe transaction
-				if err := s.safeTransactionStore.SaveSafeTransaction(ctx, safeTx); err != nil {
+				if err := s.safeTransactionRepo.SaveSafeTransaction(ctx, safeTx); err != nil {
 					continue
 				}
 				result.Executed++
@@ -184,7 +184,7 @@ func (s *SyncRegistry) syncPendingSafeTransactions(ctx context.Context, debug bo
 				if executionInfo.Confirmations != safeTx.ConfirmationCount {
 					safeTx.ConfirmationCount = executionInfo.Confirmations
 					safeTx.Confirmations = executionInfo.ConfirmationDetails
-					_ = s.safeTransactionStore.SaveSafeTransaction(ctx, safeTx)
+					_ = s.safeTransactionRepo.SaveSafeTransaction(ctx, safeTx)
 				}
 			}
 		}
@@ -198,7 +198,7 @@ func (s *SyncRegistry) updateTransactionsForSafeTx(ctx context.Context, safeTx *
 	updated := 0
 
 	for _, txID := range safeTx.TransactionIDs {
-		tx, err := s.transactionStore.GetTransaction(ctx, txID)
+		tx, err := s.transactionRepo.GetTransaction(ctx, txID)
 		if err != nil {
 			continue
 		}
@@ -210,7 +210,7 @@ func (s *SyncRegistry) updateTransactionsForSafeTx(ctx context.Context, safeTx *
 			tx.CreatedAt = *safeTx.ExecutedAt
 		}
 
-		if err := s.transactionStore.SaveTransaction(ctx, tx); err == nil {
+		if err := s.transactionRepo.SaveTransaction(ctx, tx); err == nil {
 			updated++
 		}
 	}
@@ -225,7 +225,7 @@ func (s *SyncRegistry) updateDeploymentsForSafeTx(ctx context.Context, safeTx *m
 	// Get all deployments and check if they reference any of the transactions
 	for _, txID := range safeTx.TransactionIDs {
 		// Find deployments that reference this transaction
-		deployments, err := s.deploymentStore.ListDeployments(ctx, domain.DeploymentFilter{})
+		deployments, err := s.deploymentRepo.ListDeployments(ctx, domain.DeploymentFilter{})
 		if err != nil {
 			continue
 		}
@@ -235,7 +235,7 @@ func (s *SyncRegistry) updateDeploymentsForSafeTx(ctx context.Context, safeTx *m
 				// The deployment's transaction is now executed
 				// This might trigger additional verification or status updates
 				deployment.UpdatedAt = time.Now()
-				if err := s.deploymentStore.SaveDeployment(ctx, deployment); err == nil {
+				if err := s.deploymentRepo.SaveDeployment(ctx, deployment); err == nil {
 					updated++
 				}
 			}

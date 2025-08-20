@@ -1,4 +1,4 @@
-package fs
+package deployments
 
 import (
 	"context"
@@ -217,4 +217,3 @@ func (s *RegistryStoreAdapter) ExecutePrune(ctx context.Context, items *domain.I
 
 // Ensure RegistryStoreAdapter implements RegistryPruner
 var _ usecase.RegistryPruner = (*RegistryStoreAdapter)(nil)
-

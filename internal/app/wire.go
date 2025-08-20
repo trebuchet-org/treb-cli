@@ -7,7 +7,7 @@ import (
 	"github.com/google/wire"
 	"github.com/spf13/viper"
 	"github.com/trebuchet-org/treb-cli/internal/adapters"
-	"github.com/trebuchet-org/treb-cli/internal/adapters/interactive"
+	"github.com/trebuchet-org/treb-cli/internal/cli/interactive"
 	"github.com/trebuchet-org/treb-cli/internal/cli/render"
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
@@ -24,6 +24,10 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 		// Configuration
 		config.Provider,
 		config.ProvideNetworkResolver,
+		wire.Bind(new(usecase.NetworkResolver), new(*config.NetworkResolver)),
+
+		config.NewSendersManager,
+		wire.Bind(new(usecase.SendersManager), new(*config.SendersManager)),
 
 		// Adapters - now receive RuntimeConfig
 		adapters.AllAdapters,

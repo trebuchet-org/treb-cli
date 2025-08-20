@@ -5,17 +5,16 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/adapters/abi"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/anvil"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/blockchain"
-	internalconfig "github.com/trebuchet-org/treb-cli/internal/adapters/config"
-	"github.com/trebuchet-org/treb-cli/internal/adapters/contracts"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/forge"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/fs"
-	"github.com/trebuchet-org/treb-cli/internal/adapters/interactive"
-	"github.com/trebuchet-org/treb-cli/internal/adapters/parameters"
-	"github.com/trebuchet-org/treb-cli/internal/adapters/registry"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/repository/contracts"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/repository/deployments"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/resolvers"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/safe"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/template"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/verification"
-	"github.com/trebuchet-org/treb-cli/internal/config"
+	"github.com/trebuchet-org/treb-cli/internal/cli/interactive"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -28,17 +27,18 @@ func ProvideProjectPath(cfg *config.RuntimeConfig) string {
 
 // FSSet provides filesystem-based implementations
 var FSSet = wire.NewSet(
-	fs.NewRegistryStoreAdapter,
-	wire.Bind(new(usecase.DeploymentStore), new(*fs.RegistryStoreAdapter)),
-	wire.Bind(new(usecase.TransactionStore), new(*fs.RegistryStoreAdapter)),
-	wire.Bind(new(usecase.SafeTransactionStore), new(*fs.RegistryStoreAdapter)),
-	wire.Bind(new(usecase.RegistryPruner), new(*fs.RegistryStoreAdapter)),
+	deployments.NewRegistryStoreAdapter,
+	wire.Bind(new(usecase.DeploymentRepository), new(*deployments.RegistryStoreAdapter)),
+	wire.Bind(new(usecase.TransactionRepository), new(*deployments.RegistryStoreAdapter)),
+	wire.Bind(new(usecase.SafeTransactionRepository), new(*deployments.RegistryStoreAdapter)),
+	wire.Bind(new(usecase.RegistryPruner), new(*deployments.RegistryStoreAdapter)),
+	wire.Bind(new(usecase.RegistryUpdater), new(*deployments.RegistryStoreAdapter)),
 
 	fs.NewFileWriterAdapter,
 	wire.Bind(new(usecase.FileWriter), new(*fs.FileWriterAdapter)),
 
 	fs.NewLocalConfigStoreAdapter,
-	wire.Bind(new(usecase.LocalConfigStore), new(*fs.LocalConfigStoreAdapter)),
+	wire.Bind(new(usecase.LocalConfigRepository), new(*fs.LocalConfigStoreAdapter)),
 )
 
 // TemplateSet provides template-based implementations
@@ -51,12 +51,6 @@ var TemplateSet = wire.NewSet(
 var InteractiveSet = wire.NewSet(
 	interactive.NewSelectorAdapter,
 	wire.Bind(new(usecase.ContractSelector), new(*interactive.SelectorAdapter)),
-)
-
-// ConfigSet provides configuration-based implementations
-var ConfigSet = wire.NewSet(
-	internalconfig.NewNetworkResolverAdapter,
-	wire.Bind(new(usecase.NetworkResolver), new(*internalconfig.NetworkResolverAdapter)),
 )
 
 // BlockchainSet provides blockchain-based implementations
@@ -86,15 +80,15 @@ var AnvilSet = wire.NewSet(
 // ScriptAdapters provides all adapters needed for script execution
 var ScriptAdapters = wire.NewSet(
 	// Contract resolution and indexing
-	contracts.NewContractResolver,
-	wire.Bind(new(usecase.ContractResolver), new(*contracts.ContractResolver)),
+	resolvers.NewContractResolver,
+	wire.Bind(new(usecase.ContractResolver), new(*resolvers.ContractResolver)),
 
-	contracts.NewIndexer,
-	wire.Bind(new(usecase.ContractIndexer), new(*contracts.Indexer)),
+	contracts.NewRepository,
+	wire.Bind(new(usecase.ContractRepository), new(*contracts.Repository)),
 
 	// Script resolution
-	contracts.NewScriptResolver,
-	wire.Bind(new(usecase.ScriptResolver), new(*contracts.ScriptResolver)),
+	resolvers.NewScriptResolver,
+	wire.Bind(new(usecase.ScriptResolver), new(*resolvers.ScriptResolver)),
 
 	// ABI handling
 	abi.NewParser,
@@ -104,8 +98,8 @@ var ScriptAdapters = wire.NewSet(
 	wire.Bind(new(usecase.ABIResolver), new(*abi.ABIResolver)),
 
 	// Parameter handling
-	parameters.NewParameterResolver,
-	wire.Bind(new(usecase.ParameterResolver), new(*parameters.ParameterResolver)),
+	resolvers.NewParameterResolver,
+	wire.Bind(new(usecase.ParameterResolver), new(*resolvers.ParameterResolver)),
 
 	// TODO: Add these bask
 	// parameters.NewParameterPrompterAdapter,
@@ -119,13 +113,11 @@ var ScriptAdapters = wire.NewSet(
 	forge.NewRunResultHydrator,
 	wire.Bind(new(usecase.RunResultHydrator), new(*forge.RunResultHydrator)),
 
-	// Registry updates
-	registry.NewRegistryUpdater,
-	wire.Bind(new(usecase.RegistryUpdater), new(*registry.RegistryUpdater)),
+	// Registry updates - RegistryStoreAdapter also implements RegistryUpdater
 
 	// Library resolution
-	registry.NewLibraryResolver,
-	wire.Bind(new(usecase.LibraryResolver), new(*registry.LibraryResolver)),
+	resolvers.NewLibraryResolver,
+	wire.Bind(new(usecase.LibraryResolver), new(*resolvers.LibraryResolver)),
 )
 
 // AllAdapters includes all adapter sets
@@ -137,7 +129,6 @@ var AllAdapters = wire.NewSet(
 	FSSet,
 	TemplateSet,
 	InteractiveSet,
-	ConfigSet,
 	BlockchainSet,
 	VerificationSet,
 	SafeSet,

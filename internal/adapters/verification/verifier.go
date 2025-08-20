@@ -4,8 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/trebuchet-org/treb-cli/internal/config"
-	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -29,7 +28,7 @@ func NewVerifierAdapter(cfg *config.RuntimeConfig) (*VerifierAdapter, error) {
 }
 
 // Verify performs contract verification on multiple verifiers
-func (v *VerifierAdapter) Verify(ctx context.Context, deployment *models.Deployment, network *domain.Network) error {
+func (v *VerifierAdapter) Verify(ctx context.Context, deployment *models.Deployment, network *config.Network) error {
 	return v.verifier.Verify(ctx, deployment, network)
 }
 

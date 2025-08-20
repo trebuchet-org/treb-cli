@@ -12,16 +12,15 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/adapters/abi"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/anvil"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/blockchain"
-	config2 "github.com/trebuchet-org/treb-cli/internal/adapters/config"
-	"github.com/trebuchet-org/treb-cli/internal/adapters/contracts"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/forge"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/fs"
-	"github.com/trebuchet-org/treb-cli/internal/adapters/interactive"
-	"github.com/trebuchet-org/treb-cli/internal/adapters/parameters"
-	"github.com/trebuchet-org/treb-cli/internal/adapters/registry"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/repository/contracts"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/repository/deployments"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/resolvers"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/safe"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/template"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/verification"
+	"github.com/trebuchet-org/treb-cli/internal/cli/interactive"
 	"github.com/trebuchet-org/treb-cli/internal/cli/render"
 	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
@@ -40,17 +39,17 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 		return nil, err
 	}
 	deploymentSelector := ProvideDeploymentSelector(selectorAdapter)
-	registryStoreAdapter, err := fs.NewRegistryStoreAdapter(runtimeConfig)
+	registryStoreAdapter, err := deployments.NewRegistryStoreAdapter(runtimeConfig)
 	if err != nil {
 		return nil, err
 	}
 	listDeployments := usecase.NewListDeployments(runtimeConfig, registryStoreAdapter, sink)
 	showDeployment := usecase.NewShowDeployment(runtimeConfig, registryStoreAdapter, sink)
 	string2 := adapters.ProvideProjectPath(runtimeConfig)
-	indexer := contracts.NewIndexer(string2)
-	contractResolver := contracts.NewContractResolver(runtimeConfig, indexer, selectorAdapter)
+	repository := contracts.NewRepository(string2)
+	contractResolver := resolvers.NewContractResolver(runtimeConfig, repository, selectorAdapter)
 	parser := abi.NewParser(string2)
-	abiResolver := abi.NewABIResolver(runtimeConfig, indexer, registryStoreAdapter)
+	abiResolver := abi.NewABIResolver(runtimeConfig, repository, registryStoreAdapter)
 	scriptGeneratorAdapter, err := template.NewScriptGeneratorAdapter(runtimeConfig, parser, abiResolver)
 	if err != nil {
 		return nil, err
@@ -61,29 +60,28 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	}
 	generateDeploymentScript := usecase.NewGenerateDeploymentScript(runtimeConfig, contractResolver, parser, abiResolver, scriptGeneratorAdapter, fileWriterAdapter, sink)
 	networkResolver := config.ProvideNetworkResolver(runtimeConfig)
-	networkResolverAdapter := config2.NewNetworkResolverAdapter(networkResolver)
-	listNetworks := usecase.NewListNetworks(networkResolverAdapter)
+	listNetworks := usecase.NewListNetworks(networkResolver)
 	checkerAdapter := blockchain.NewCheckerAdapter()
-	pruneRegistry := usecase.NewPruneRegistry(networkResolverAdapter, checkerAdapter, registryStoreAdapter, sink)
+	pruneRegistry := usecase.NewPruneRegistry(networkResolver, checkerAdapter, registryStoreAdapter, sink)
 	localConfigStoreAdapter := fs.NewLocalConfigStoreAdapter(runtimeConfig)
 	showConfig := usecase.NewShowConfig(localConfigStoreAdapter)
 	setConfig := usecase.NewSetConfig(localConfigStoreAdapter)
 	removeConfig := usecase.NewRemoveConfig(localConfigStoreAdapter)
-	scriptResolver := contracts.NewScriptResolver(string2, contractResolver)
-	parameterResolver := parameters.NewParameterResolver(runtimeConfig, registryStoreAdapter, indexer)
-	forgeAdapter := forge.NewForgeAdapter(string2)
+	scriptResolver := resolvers.NewScriptResolver(string2, contractResolver)
+	parameterResolver := resolvers.NewParameterResolver(runtimeConfig, registryStoreAdapter, repository)
+	sendersManager := config.NewSendersManager(runtimeConfig)
 	runResultHydrator, err := forge.NewRunResultHydrator(string2, parser)
 	if err != nil {
 		return nil, err
 	}
-	registryUpdater := registry.NewRegistryUpdater(registryStoreAdapter, registryStoreAdapter)
-	libraryResolver := registry.NewLibraryResolver(registryStoreAdapter)
-	runScript := usecase.NewRunScript(runtimeConfig, scriptResolver, parameterResolver, forgeAdapter, runResultHydrator, registryUpdater, libraryResolver, sink)
+	libraryResolver := resolvers.NewLibraryResolver(registryStoreAdapter)
+	forgeAdapter := forge.NewForgeAdapter(string2)
+	runScript := usecase.NewRunScript(runtimeConfig, scriptResolver, parameterResolver, sendersManager, runResultHydrator, registryStoreAdapter, libraryResolver, sink, forgeAdapter)
 	verifierAdapter, err := verification.NewVerifierAdapter(runtimeConfig)
 	if err != nil {
 		return nil, err
 	}
-	verifyDeployment := usecase.NewVerifyDeployment(registryStoreAdapter, verifierAdapter, networkResolverAdapter, registryStoreAdapter)
+	verifyDeployment := usecase.NewVerifyDeployment(registryStoreAdapter, verifierAdapter, networkResolver, registryStoreAdapter)
 	orchestrateDeployment := usecase.NewOrchestrateDeployment(runScript, sink)
 	clientAdapter, err := safe.NewClientAdapter(runtimeConfig)
 	if err != nil {

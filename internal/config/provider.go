@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,10 +10,11 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 )
 
 // Provider creates RuntimeConfig for Wire dependency injection
-func Provider(v *viper.Viper) (*RuntimeConfig, error) {
+func Provider(v *viper.Viper) (*config.RuntimeConfig, error) {
 	// Get project root from viper
 	projectRoot := v.GetString("project_root")
 	if projectRoot == "" {
@@ -24,7 +26,7 @@ func Provider(v *viper.Viper) (*RuntimeConfig, error) {
 		}
 	}
 
-	cfg := &RuntimeConfig{
+	cfg := &config.RuntimeConfig{
 		ProjectRoot:    projectRoot,
 		DataDir:        filepath.Join(projectRoot, ".treb"),
 		Namespace:      v.GetString("namespace"),
@@ -67,7 +69,7 @@ func Provider(v *viper.Viper) (*RuntimeConfig, error) {
 	// Resolve network if specified
 	if networkName := v.GetString("network"); networkName != "" {
 		networkResolver := NewNetworkResolver(projectRoot, foundryConfig)
-		network, err := networkResolver.Resolve(networkName)
+		network, err := networkResolver.ResolveNetwork(context.Background(), networkName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve network %s: %w", networkName, err)
 		}
@@ -149,7 +151,7 @@ func SetupViper(projectRoot string, cmd *cobra.Command) *viper.Viper {
 // }
 
 // ProvideNetworkResolver creates a NetworkResolver for Wire dependency injection
-func ProvideNetworkResolver(cfg *RuntimeConfig) *NetworkResolver {
+func ProvideNetworkResolver(cfg *config.RuntimeConfig) *NetworkResolver {
 	return NewNetworkResolver(cfg.ProjectRoot, cfg.FoundryConfig)
 }
 

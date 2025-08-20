@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,8 +17,8 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
-// Indexer discovers and indexes contracts and their artifacts
-type Indexer struct {
+// Repository discovers and indexes contracts and their artifacts
+type Repository struct {
 	projectRoot       string
 	contracts         map[string]*models.Contract   // key: "path:contractName" or "contractName" if unique
 	contractNames     map[string][]*models.Contract // key: contract name, value: all contracts with that name
@@ -26,9 +27,9 @@ type Indexer struct {
 	indexed           bool
 }
 
-// NewIndexer creates a new contract indexer
-func NewIndexer(projectRoot string) *Indexer {
-	return &Indexer{
+// NewRepository creates a new contract indexer
+func NewRepository(projectRoot string) *Repository {
+	return &Repository{
 		projectRoot:       projectRoot,
 		contracts:         make(map[string]*models.Contract),
 		contractNames:     make(map[string][]*models.Contract),
@@ -37,7 +38,7 @@ func NewIndexer(projectRoot string) *Indexer {
 }
 
 // Index discovers all contracts and artifacts
-func (i *Indexer) Index() error {
+func (i *Repository) Index() error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
@@ -88,8 +89,24 @@ func (i *Indexer) Index() error {
 	return err
 }
 
+// runForgeBuild runs forge build command
+func (i *Repository) runForgeBuild() error {
+	// Check if we need to rebuild by looking for a cache indicator
+	// For now, always build without --force to improve performance
+	// The --force flag was causing significant slowdowns
+	cmd := exec.Command("forge", "build")
+	cmd.Dir = i.projectRoot
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("forge build failed: %w\nOutput: %s", err, string(output))
+	}
+
+	return nil
+}
+
 // processArtifact processes a single artifact file
-func (i *Indexer) processArtifact(artifactPath string) error {
+func (i *Repository) processArtifact(artifactPath string) error {
 	// Read artifact file
 	data, err := os.ReadFile(artifactPath)
 	if err != nil {
@@ -150,7 +167,7 @@ func (i *Indexer) processArtifact(artifactPath string) error {
 }
 
 // GetContract retrieves a contract by key (name or path:name)
-func (i *Indexer) GetContract(ctx context.Context, key string) (*models.Contract, error) {
+func (i *Repository) GetContract(ctx context.Context, key string) (*models.Contract, error) {
 	if err := i.Index(); err != nil {
 		return nil, err
 	}
@@ -165,7 +182,7 @@ func (i *Indexer) GetContract(ctx context.Context, key string) (*models.Contract
 }
 
 // SearchContracts searches for contracts matching a pattern
-func (i *Indexer) SearchContracts(ctx context.Context, query domain.ContractQuery) []*models.Contract {
+func (i *Repository) SearchContracts(ctx context.Context, query domain.ContractQuery) []*models.Contract {
 	if err := i.Index(); err != nil {
 		panic(err)
 	}
@@ -202,7 +219,7 @@ func (i *Indexer) SearchContracts(ctx context.Context, query domain.ContractQuer
 }
 
 // GetContractByArtifact finds a contract by its artifact path
-func (i *Indexer) GetContractByArtifact(ctx context.Context, artifactPath string) *models.Contract {
+func (i *Repository) GetContractByArtifact(ctx context.Context, artifactPath string) *models.Contract {
 	if err := i.Index(); err != nil {
 		panic(err)
 	}
@@ -218,7 +235,7 @@ func (i *Indexer) GetContractByArtifact(ctx context.Context, artifactPath string
 }
 
 // GetScriptContracts returns all script contracts
-func (i *Indexer) GetScriptContracts() []*models.Contract {
+func (i *Repository) GetScriptContracts() []*models.Contract {
 	if err := i.Index(); err != nil {
 		panic(err)
 	}
@@ -246,7 +263,7 @@ func (i *Indexer) GetScriptContracts() []*models.Contract {
 }
 
 // GetAllContracts returns all indexed contracts (for debugging)
-func (i *Indexer) GetAllContracts() map[string]*models.Contract {
+func (i *Repository) GetAllContracts() map[string]*models.Contract {
 	if err := i.Index(); err != nil {
 		panic(err)
 	}
@@ -255,27 +272,9 @@ func (i *Indexer) GetAllContracts() map[string]*models.Contract {
 
 	// Return a copy to avoid race conditions
 	result := make(map[string]*models.Contract)
-	for k, v := range i.contracts {
-		result[k] = v
-	}
+	maps.Copy(result, i.contracts)
 	return result
 }
 
-// runForgeBuild runs forge build command
-func (i *Indexer) runForgeBuild() error {
-	// Check if we need to rebuild by looking for a cache indicator
-	// For now, always build without --force to improve performance
-	// The --force flag was causing significant slowdowns
-	cmd := exec.Command("forge", "build")
-	cmd.Dir = i.projectRoot
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("forge build failed: %w\nOutput: %s", err, string(output))
-	}
-
-	return nil
-}
-
 // Ensure the adapter implements both interfaces
-var _ usecase.ContractIndexer = (*Indexer)(nil)
+var _ usecase.ContractRepository = (*Repository)(nil)

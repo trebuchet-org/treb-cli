@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/trebuchet-org/treb-cli/internal/config"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -42,3 +42,4 @@ func (f *FileWriterAdapter) EnsureDirectory(ctx context.Context, path string) er
 
 // Ensure the adapter implements the interface
 var _ usecase.FileWriter = (*FileWriterAdapter)(nil)
+

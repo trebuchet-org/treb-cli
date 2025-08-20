@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"text/template"
 
-	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -259,4 +259,3 @@ contract Deploy{{.ContractName}}Proxy is TrebScript {
 
 // Ensure the adapter implements the interface
 var _ usecase.ScriptGenerator = (*ScriptGeneratorAdapter)(nil)
-

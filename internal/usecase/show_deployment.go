@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
@@ -22,15 +22,15 @@ type ShowDeploymentParams struct {
 // ShowDeployment is the use case for showing deployment details
 type ShowDeployment struct {
 	config *config.RuntimeConfig
-	store  DeploymentStore
+	repo   DeploymentRepository
 	sink   ProgressSink
 }
 
 // NewShowDeployment creates a new ShowDeployment use case
-func NewShowDeployment(cfg *config.RuntimeConfig, store DeploymentStore, sink ProgressSink) *ShowDeployment {
+func NewShowDeployment(cfg *config.RuntimeConfig, repo DeploymentRepository, sink ProgressSink) *ShowDeployment {
 	return &ShowDeployment{
 		config: cfg,
-		store:  store,
+		repo:   repo,
 		sink:   sink,
 	}
 }
@@ -60,7 +60,7 @@ func (uc *ShowDeployment) Run(ctx context.Context, params ShowDeploymentParams) 
 		// Try to load the implementation deployment
 		if deployment.ProxyInfo.Implementation != "" {
 			// First try by address
-			impl, err := uc.store.GetDeploymentByAddress(ctx, deployment.ChainID, deployment.ProxyInfo.Implementation)
+			impl, err := uc.repo.GetDeploymentByAddress(ctx, deployment.ChainID, deployment.ProxyInfo.Implementation)
 			if err == nil {
 				deployment.Implementation = impl
 			}
@@ -89,7 +89,7 @@ func (uc *ShowDeployment) resolveDeployment(ctx context.Context, params ShowDepl
 	}
 
 	// 1. Try as deployment ID
-	deployment, err := uc.store.GetDeployment(ctx, ref)
+	deployment, err := uc.repo.GetDeployment(ctx, ref)
 	if err == nil {
 		return deployment, nil
 	}
@@ -98,13 +98,13 @@ func (uc *ShowDeployment) resolveDeployment(ctx context.Context, params ShowDepl
 	if strings.HasPrefix(ref, "0x") && len(ref) == 42 {
 		if chainID != 0 {
 			// If chain ID is specified, try direct lookup
-			deployment, err = uc.store.GetDeploymentByAddress(ctx, chainID, ref)
+			deployment, err = uc.repo.GetDeploymentByAddress(ctx, chainID, ref)
 			if err == nil {
 				return deployment, nil
 			}
 		} else {
 			// Search all deployments for this address
-			deployments, err := uc.store.ListDeployments(ctx, domain.DeploymentFilter{})
+			deployments, err := uc.repo.ListDeployments(ctx, domain.DeploymentFilter{})
 			if err != nil {
 				return nil, fmt.Errorf("failed to list deployments: %w", err)
 			}
@@ -149,7 +149,7 @@ func (uc *ShowDeployment) resolveDeployment(ctx context.Context, params ShowDepl
 		Namespace:    namespace,
 	}
 
-	deployments, err := uc.store.ListDeployments(ctx, filter)
+	deployments, err := uc.repo.ListDeployments(ctx, filter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list deployments: %w", err)
 	}
@@ -176,4 +176,3 @@ func parseChainID(s string) uint64 {
 	}
 	return chainID
 }
-

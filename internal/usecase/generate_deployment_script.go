@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/trebuchet-org/treb-cli/internal/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
@@ -209,7 +209,7 @@ func (uc *GenerateDeploymentScript) determineScriptPath(contractName string, scr
 }
 
 // buildInstructions builds deployment instructions for the user
-func (uc *GenerateDeploymentScript) buildInstructions(scriptType domain.ScriptType, scriptPath string, network *domain.Network) []string {
+func (uc *GenerateDeploymentScript) buildInstructions(scriptType domain.ScriptType, scriptPath string, network *config.Network) []string {
 	var instructions []string
 
 	switch scriptType {

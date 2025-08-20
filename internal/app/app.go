@@ -2,7 +2,7 @@ package app
 
 import (
 	"github.com/trebuchet-org/treb-cli/internal/cli/render"
-	"github.com/trebuchet-org/treb-cli/internal/config"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -82,4 +82,3 @@ func NewApp(
 		GenerateRenderer:         generateRenderer,
 	}, nil
 }
-

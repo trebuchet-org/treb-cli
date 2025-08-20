@@ -1,4 +1,4 @@
-package registry
+package deployments
 
 import (
 	"encoding/json"
@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
@@ -208,7 +209,7 @@ func (m *Manager) GetDeployment(id string) (*models.Deployment, error) {
 
 	dep, exists := m.deployments[id]
 	if !exists {
-		return nil, fmt.Errorf("deployment %s not found", id)
+		return nil, domain.ErrNotFound
 	}
 
 	// Clone to avoid mutations
@@ -552,5 +553,60 @@ func (m *Manager) UpdateSafeTransaction(tx *models.SafeTransaction) error {
 	}
 
 	m.safeTransactions[tx.ID] = tx
+	return m.save()
+}
+
+// BatchUpdate applies multiple updates to the registry in a single transaction
+type BatchUpdate struct {
+	Deployments      []*models.Deployment
+	Transactions     []*models.Transaction
+	SafeTransactions []*models.SafeTransaction
+}
+
+// ApplyBatchUpdate applies all updates in a single transaction with one lock
+func (m *Manager) ApplyBatchUpdate(update *BatchUpdate) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	now := time.Now()
+
+	// Apply all deployment updates
+	for _, deployment := range update.Deployments {
+		// Set timestamps
+		if deployment.CreatedAt.IsZero() {
+			deployment.CreatedAt = now
+		}
+		deployment.UpdatedAt = now
+		
+		// Save deployment
+		m.deployments[deployment.ID] = deployment
+	}
+
+	// Apply all transaction updates
+	for _, tx := range update.Transactions {
+		// Set timestamp
+		if tx.CreatedAt.IsZero() {
+			tx.CreatedAt = now
+		}
+		
+		// Save transaction
+		m.transactions[tx.ID] = tx
+	}
+
+	// Apply all safe transaction updates
+	for _, tx := range update.SafeTransactions {
+		// Set timestamp
+		if tx.CreatedAt.IsZero() {
+			tx.CreatedAt = now
+		}
+		
+		// Save transaction
+		m.safeTransactions[tx.ID] = tx
+	}
+
+	// Rebuild lookups once for all changes
+	m.rebuildLookups()
+
+	// Save all files once
 	return m.save()
 }

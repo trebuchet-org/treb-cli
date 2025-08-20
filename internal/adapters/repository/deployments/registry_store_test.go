@@ -1,4 +1,4 @@
-package fs_test
+package deployments_test
 
 import (
 	"context"
@@ -260,7 +260,7 @@ func TestRegistryStoreAdapter(t *testing.T) {
 
 		retrieved, err := store.GetDeployment(ctx, deployment.ID)
 		require.NoError(t, err)
-		
+
 		assert.NotNil(t, retrieved.ProxyInfo)
 		assert.Equal(t, deployment.ProxyInfo.Type, retrieved.ProxyInfo.Type)
 		assert.Equal(t, deployment.ProxyInfo.Implementation, retrieved.ProxyInfo.Implementation)
@@ -329,3 +329,4 @@ func TestRegistryStoreAdapter_RegistryFileStructure(t *testing.T) {
 	assert.FileExists(t, filepath.Join(trebDir, "deployments.json"))
 	assert.FileExists(t, filepath.Join(trebDir, "registry.json"))
 }
+

@@ -10,15 +10,15 @@ import (
 
 // TagDeployment handles tagging of deployments
 type TagDeployment struct {
-	deploymentStore DeploymentStore
-	progress        ProgressSink
+	deploymentRepo DeploymentRepository
+	progress       ProgressSink
 }
 
 // NewTagDeployment creates a new tag deployment use case
-func NewTagDeployment(deploymentStore DeploymentStore, progress ProgressSink) *TagDeployment {
+func NewTagDeployment(deploymentRepo DeploymentRepository, progress ProgressSink) *TagDeployment {
 	return &TagDeployment{
-		deploymentStore: deploymentStore,
-		progress:        progress,
+		deploymentRepo: deploymentRepo,
+		progress:       progress,
 	}
 }
 
@@ -72,7 +72,7 @@ func (t *TagDeployment) Execute(ctx context.Context, params TagDeploymentParams)
 // findDeployment locates a deployment by identifier
 func (t *TagDeployment) findDeployment(ctx context.Context, params TagDeploymentParams) (*models.Deployment, error) {
 	// Try as deployment ID first
-	deployment, err := t.deploymentStore.GetDeployment(ctx, params.Identifier)
+	deployment, err := t.deploymentRepo.GetDeployment(ctx, params.Identifier)
 	if err == nil {
 		return deployment, nil
 	}
@@ -85,7 +85,7 @@ func (t *TagDeployment) findDeployment(ctx context.Context, params TagDeployment
 		if params.ChainID == 0 {
 			return nil, fmt.Errorf("chain ID required for address-based lookup")
 		}
-		deployment, err = t.deploymentStore.GetDeploymentByAddress(ctx, params.ChainID, params.Identifier)
+		deployment, err = t.deploymentRepo.GetDeploymentByAddress(ctx, params.ChainID, params.Identifier)
 		if err == nil {
 			return deployment, nil
 		}
@@ -100,7 +100,7 @@ func (t *TagDeployment) findDeployment(ctx context.Context, params TagDeployment
 		Namespace:    params.Namespace,
 		ChainID:      params.ChainID,
 	}
-	deployments, err := t.deploymentStore.ListDeployments(ctx, filter)
+	deployments, err := t.deploymentRepo.ListDeployments(ctx, filter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list deployments: %w", err)
 	}
@@ -140,7 +140,7 @@ func (t *TagDeployment) addTag(ctx context.Context, deployment *models.Deploymen
 	deployment.Tags = append(deployment.Tags, tag)
 
 	// Save the deployment
-	if err := t.deploymentStore.SaveDeployment(ctx, deployment); err != nil {
+	if err := t.deploymentRepo.SaveDeployment(ctx, deployment); err != nil {
 		return nil, fmt.Errorf("failed to save deployment: %w", err)
 	}
 
@@ -176,7 +176,7 @@ func (t *TagDeployment) removeTag(ctx context.Context, deployment *models.Deploy
 	deployment.Tags = newTags
 
 	// Save the deployment
-	if err := t.deploymentStore.SaveDeployment(ctx, deployment); err != nil {
+	if err := t.deploymentRepo.SaveDeployment(ctx, deployment); err != nil {
 		return nil, fmt.Errorf("failed to save deployment: %w", err)
 	}
 
@@ -211,7 +211,7 @@ func (t *TagDeployment) FindDeploymentInteractive(ctx context.Context, identifie
 			Namespace:    namespace,
 			ChainID:      chainID,
 		}
-		deployments, err := t.deploymentStore.ListDeployments(ctx, filter)
+		deployments, err := t.deploymentRepo.ListDeployments(ctx, filter)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list deployments: %w", err)
 		}

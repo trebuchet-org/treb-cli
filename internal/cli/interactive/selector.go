@@ -8,7 +8,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/manifoldco/promptui"
 	"github.com/sahilm/fuzzy"
-	"github.com/trebuchet-org/treb-cli/internal/config"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )

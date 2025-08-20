@@ -1,4 +1,4 @@
-package registry
+package resolvers
 
 import (
 	"context"
@@ -10,13 +10,13 @@ import (
 
 // LibraryResolver resolves deployed libraries without pkg dependencies
 type LibraryResolver struct {
-	deploymentStore usecase.DeploymentStore
+	deploymentRepo usecase.DeploymentRepository
 }
 
 // NewLibraryResolver creates a new internal library resolver
-func NewLibraryResolver(deploymentStore usecase.DeploymentStore) *LibraryResolver {
+func NewLibraryResolver(deploymentRepo usecase.DeploymentRepository) *LibraryResolver {
 	return &LibraryResolver{
-		deploymentStore: deploymentStore,
+		deploymentRepo: deploymentRepo,
 	}
 }
 
@@ -31,7 +31,7 @@ func (r *LibraryResolver) GetDeployedLibraries(
 		Namespace: namespace,
 		ChainID:   chainID,
 	}
-	deployments, err := r.deploymentStore.ListDeployments(ctx, filter)
+	deployments, err := r.deploymentRepo.ListDeployments(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
