@@ -77,20 +77,27 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 		Success: false,
 	}
 
+	fmt.Println("DEBUG: RunScript.Run started")
+
 	// Stage 1: Resolve script
+	fmt.Printf("DEBUG: Resolving script: %s\n", params.ScriptRef)
 	script, err := uc.scriptResolver.ResolveScript(ctx, params.ScriptRef)
 	if err != nil {
 		return result, fmt.Errorf("failed to resolve script: %w", err)
 
 	}
+	fmt.Printf("DEBUG: Script resolved: %s\n", script.Path)
 
 	// Stage 2: Resolve parameters
+	fmt.Println("DEBUG: Getting script parameters")
 	scriptParams, err := uc.scriptResolver.GetScriptParameters(ctx, script)
 	if err != nil {
 		return result, fmt.Errorf("failed to get script parameters: %w", err)
 	}
+	fmt.Printf("DEBUG: Found %d script parameters\n", len(scriptParams))
 
 	// Resolve parameter values
+	fmt.Println("DEBUG: Resolving parameter values")
 	resolvedParams, err := uc.paramResolver.ResolveParameters(ctx, scriptParams, params.Parameters)
 	if err != nil {
 		return result, err
@@ -110,6 +117,7 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 	}
 
 	// Validate all required parameters have values
+	fmt.Println("DEBUG: Validating parameters")
 	if err := uc.paramResolver.ValidateParameters(ctx, scriptParams, resolvedParams); err != nil {
 		return result, fmt.Errorf("parameter validation failed: %w", err)
 	}
@@ -118,8 +126,10 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 	if uc.config.Network == nil {
 		return result, fmt.Errorf("could not resolve network")
 	}
+	fmt.Printf("DEBUG: Using network: %s (Chain ID: %d)\n", uc.config.Network.Name, uc.config.Network.ChainID)
 
 	// Get deployed libraries
+	fmt.Println("DEBUG: Getting deployed libraries")
 	libraries, err := uc.libraryResolver.GetDeployedLibraries(
 		ctx,
 		uc.config.Namespace,
@@ -130,6 +140,7 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 		uc.progress.Info(fmt.Sprintf("Warning: Failed to load deployed libraries: %v", err))
 		libraries = []LibraryReference{}
 	}
+	fmt.Printf("DEBUG: Found %d libraries\n", len(libraries))
 	libraryStrings := make([]string, len(libraries))
 	for i, library := range libraries {
 		libraryStrings[i] = fmt.Sprintf(
@@ -162,12 +173,15 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 	// 	Metadata: &execConfig,
 	// })
 
+	fmt.Println("DEBUG: Building sender config")
 	senderManager := config.NewSendersManager(uc.config.TrebConfig)
 	senderScriptConfig, err := senderManager.BuildSenderScriptConfig(script.Artifact)
 	if err != nil {
 		return result, err
 	}
+	fmt.Printf("DEBUG: Sender config built, encoded config length: %d\n", len(senderScriptConfig.EncodedConfig))
 
+	fmt.Println("DEBUG: Calling forgeScriptRunner.RunScript")
 	runResult, err := uc.forgeScriptRunner.RunScript(ctx, RunScriptConfig{
 		Network:            uc.config.Network,
 		Namespace:          uc.config.Namespace,
@@ -180,6 +194,7 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 		Progress:           progress,
 		SenderScriptConfig: *senderScriptConfig,
 	})
+	fmt.Println("DEBUG: forgeScriptRunner.RunScript returned")
 
 	result.RunResult = &forge.HydratedRunResult{RunResult: *runResult}
 
@@ -204,12 +219,15 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 		result.Error = fmt.Errorf("failed to hydrate run result: %w", err)
 		return result, nil
 	}
+	fmt.Println("DEBUG: runResultHydrator.Hydrate returned")
 
 	// Set execution metadata
 	hydratedRunResult.ExecutedAt = startTime
 	hydratedRunResult.ExecutionTime = time.Since(startTime)
 
 	result.RunResult = hydratedRunResult
+
+	// fmt.Println("%v", result.RunResult.Deployments)
 
 	// Stage 5: Update registry (if not dry run)
 	if !params.DryRun && len(result.RunResult.Deployments) > 0 {
@@ -230,6 +248,7 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 			}
 			result.RegistryChanges = changes
 		}
+		fmt.Println("DEBUG: deployment updated")
 	}
 
 	// Stage 6: Complete

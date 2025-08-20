@@ -42,6 +42,7 @@ func (h *RunResultHydrator) Hydrate(
 ) (*forge.HydratedRunResult, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+
 	// Reset parser state
 	h.transactions = make(map[[32]byte]*forge.Transaction)
 	h.transactionOrder = make([][32]byte, 0)
@@ -134,9 +135,6 @@ func (h *RunResultHydrator) Hydrate(
 
 // processTransactionSimulated processes a TransactionSimulated event
 func (h *RunResultHydrator) processTransactionSimulated(event *bindings.TrebTransactionSimulated) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
 	tx := &forge.Transaction{
 		SimulatedTransaction: event.SimulatedTx,
 		Status:               models.TransactionStatusSimulated,
@@ -160,9 +158,6 @@ func (h *RunResultHydrator) processSafeTransactionQueued(event *bindings.TrebSaf
 	hydrated.SafeTransactions = append(hydrated.SafeTransactions, safeTx)
 
 	// Update all referenced transactions to QUEUED status
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
 	for idx, txID := range event.TransactionIds {
 		if tx, exists := h.transactions[txID]; exists {
 			tx.Status = models.TransactionStatusQueued
@@ -186,9 +181,6 @@ func (h *RunResultHydrator) processSafeTransactionExecuted(event *bindings.TrebS
 	hydrated.SafeTransactions = append(hydrated.SafeTransactions, safeTx)
 
 	// Update all referenced transactions to EXECUTED status
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
 	for idx, txID := range event.TransactionIds {
 		if tx, exists := h.transactions[txID]; exists {
 			tx.Status = models.TransactionStatusExecuted
@@ -200,10 +192,7 @@ func (h *RunResultHydrator) processSafeTransactionExecuted(event *bindings.TrebS
 }
 
 // processProxyEvent processes proxy-related events
-func (h *RunResultHydrator) processProxyEvent(event interface{}) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
+func (h *RunResultHydrator) processProxyEvent(event any) {
 	switch e := event.(type) {
 	case *events.ProxyDeployedEvent:
 		h.proxyRelationships[e.ProxyAddress] = &forge.ProxyRelationship{
@@ -278,9 +267,6 @@ func nodeMatchesTransaction(tx *forge.Transaction, node *forge.TraceNode, prank 
 
 // processTraceOutput processes a trace output to enrich transactions
 func (h *RunResultHydrator) processTraceOutput(trace *forge.TraceOutput) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
 	// Walk through trace nodes
 	if len(trace.Arena) == 0 {
 		return
@@ -329,7 +315,6 @@ func (v *traceVisitor) walkTraceTree(fullTrace *forge.TraceOutput, nodeIdx int) 
 	node := &fullTrace.Arena[nodeIdx]
 
 	// Try to match this node with any transaction
-	v.hydrator.mu.Lock()
 	var matchedTx *forge.Transaction
 	for _, tx := range v.hydrator.transactions {
 		// Skip if already has trace data
@@ -344,15 +329,12 @@ func (v *traceVisitor) walkTraceTree(fullTrace *forge.TraceOutput, nodeIdx int) 
 			break
 		}
 	}
-	v.hydrator.mu.Unlock()
 
 	// If we found a match, extract the subtree
 	if matchedTx != nil {
 		subtree := v.extractSubtree(fullTrace, nodeIdx)
 
-		v.hydrator.mu.Lock()
 		matchedTx.TraceData = subtree
-		v.hydrator.mu.Unlock()
 	}
 
 	// Recursively process children
@@ -452,9 +434,6 @@ func (v *traceVisitor) extractSubtree(fullTrace *forge.TraceOutput, rootIdx int)
 
 // getTransactions returns all transactions in order
 func (h *RunResultHydrator) getTransactions() []*forge.Transaction {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-
 	// Return transactions in the order they were simulated
 	txs := make([]*forge.Transaction, 0, len(h.transactionOrder))
 	for _, txID := range h.transactionOrder {
