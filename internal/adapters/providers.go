@@ -10,7 +10,6 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/adapters/repository/contracts"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/repository/deployments"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/resolvers"
-	"github.com/trebuchet-org/treb-cli/internal/adapters/safe"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/template"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/verification"
 	"github.com/trebuchet-org/treb-cli/internal/cli/interactive"
@@ -27,12 +26,12 @@ func ProvideProjectPath(cfg *config.RuntimeConfig) string {
 
 // FSSet provides filesystem-based implementations
 var FSSet = wire.NewSet(
-	deployments.NewRegistryStoreAdapter,
-	wire.Bind(new(usecase.DeploymentRepository), new(*deployments.RegistryStoreAdapter)),
-	wire.Bind(new(usecase.TransactionRepository), new(*deployments.RegistryStoreAdapter)),
-	wire.Bind(new(usecase.SafeTransactionRepository), new(*deployments.RegistryStoreAdapter)),
-	wire.Bind(new(usecase.RegistryPruner), new(*deployments.RegistryStoreAdapter)),
-	wire.Bind(new(usecase.RegistryUpdater), new(*deployments.RegistryStoreAdapter)),
+	deployments.NewFileRepositoryFromConfig,
+	wire.Bind(new(usecase.DeploymentRepository), new(*deployments.FileRepository)),
+	wire.Bind(new(usecase.DeploymentRepositoryUpdater), new(*deployments.FileRepository)),
+
+	deployments.NewPruner,
+	wire.Bind(new(usecase.DeploymentRepositoryPruner), new(*deployments.Pruner)),
 
 	fs.NewFileWriterAdapter,
 	wire.Bind(new(usecase.FileWriter), new(*fs.FileWriterAdapter)),
@@ -63,12 +62,6 @@ var BlockchainSet = wire.NewSet(
 var VerificationSet = wire.NewSet(
 	verification.NewVerifierAdapter,
 	wire.Bind(new(usecase.ContractVerifier), new(*verification.VerifierAdapter)),
-)
-
-// SafeSet provides Safe-based implementations
-var SafeSet = wire.NewSet(
-	safe.NewClientAdapter,
-	wire.Bind(new(usecase.SafeClient), new(*safe.ClientAdapter)),
 )
 
 // AnvilSet provides anvil-based implementations
@@ -131,7 +124,6 @@ var AllAdapters = wire.NewSet(
 	InteractiveSet,
 	BlockchainSet,
 	VerificationSet,
-	SafeSet,
 	AnvilSet,
 	ScriptAdapters,
 )

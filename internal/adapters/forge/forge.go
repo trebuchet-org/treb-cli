@@ -78,9 +78,12 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 	defer ptyFile.Close()
 
 	result := &forge.RunResult{
-		DryRun:  config.DryRun,
-		Script:  config.Script,
-		Success: true, // Will be updated based on command exit
+		DryRun:    config.DryRun,
+		Script:    config.Script,
+		Success:   true, // Will be updated based on command exit
+		Namespace: config.Namespace,
+		Network:   config.Network.Name,
+		ChainID:   config.Network.ChainID,
 	}
 
 	// Debug mode: direct copy to stdout

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -200,14 +201,14 @@ func (m *FileRepository) rebuildLookups() {
 	// Rebuild pending items
 	m.lookups.Pending.SafeTxs = []string{}
 	for id, tx := range m.safeTransactions {
-		if tx.Status == models.SafeTxStatusQueued {
+		if tx.Status == models.TransactionStatusQueued {
 			m.lookups.Pending.SafeTxs = append(m.lookups.Pending.SafeTxs, id)
 		}
 	}
 }
 
 // GetDeployment retrieves a deployment by ID
-func (m *FileRepository) GetDeployment(id string) (*models.Deployment, error) {
+func (m *FileRepository) GetDeployment(ctx context.Context, id string) (*models.Deployment, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -222,7 +223,7 @@ func (m *FileRepository) GetDeployment(id string) (*models.Deployment, error) {
 }
 
 // GetDeploymentByAddress retrieves a deployment by chain ID and address
-func (m *FileRepository) GetDeploymentByAddress(chainID uint64, address string) (*models.Deployment, error) {
+func (m *FileRepository) GetDeploymentByAddress(ctx context.Context, chainID uint64, address string) (*models.Deployment, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -236,21 +237,88 @@ func (m *FileRepository) GetDeploymentByAddress(chainID uint64, address string) 
 		return nil, fmt.Errorf("deployment at address %s not found on chain %d", address, chainID)
 	}
 
-	return m.GetDeployment(id)
+	// Directly return the deployment to avoid recursive lock
+	dep, exists := m.deployments[id]
+	if !exists {
+		return nil, domain.ErrNotFound
+	}
+
+	// Clone to avoid mutations
+	clone := *dep
+	return &clone, nil
 }
 
 // GetAllDeployments returns all deployments
-func (m *FileRepository) GetAllDeployments() map[string]*models.Deployment {
+func (m *FileRepository) GetAllDeployments(ctx context.Context) []*models.Deployment {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	// Return a copy to avoid mutations
-	result := make(map[string]*models.Deployment)
-	for k, v := range m.deployments {
+	// Return a slice of cloned deployments
+	result := make([]*models.Deployment, 0, len(m.deployments))
+	for _, v := range m.deployments {
 		clone := *v
-		result[k] = &clone
+		result = append(result, &clone)
 	}
 	return result
+}
+
+// ListDeployments retrieves deployments matching the filter
+func (m *FileRepository) ListDeployments(ctx context.Context, filter domain.DeploymentFilter) ([]*models.Deployment, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	var result []*models.Deployment
+	for _, dep := range m.deployments {
+		// Apply filters
+		if filter.Namespace != "" && dep.Namespace != filter.Namespace {
+			continue
+		}
+		if filter.ChainID != 0 && dep.ChainID != filter.ChainID {
+			continue
+		}
+		if filter.ContractName != "" && dep.ContractName != filter.ContractName {
+			continue
+		}
+		if filter.Label != "" && dep.Label != filter.Label {
+			continue
+		}
+		if filter.Type != "" && dep.Type != filter.Type {
+			continue
+		}
+
+		// Clone and add to result
+		clone := *dep
+		result = append(result, &clone)
+	}
+
+	return result, nil
+}
+
+// ListTransactions lists transactions based on filter criteria
+func (m *FileRepository) ListTransactions(ctx context.Context, filter domain.TransactionFilter) ([]*models.Transaction, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	var result []*models.Transaction
+
+	for _, tx := range m.transactions {
+		// Apply filters
+		if filter.ChainID != 0 && tx.ChainID != filter.ChainID {
+			continue
+		}
+		if filter.Status != "" && tx.Status != filter.Status {
+			continue
+		}
+		if filter.Namespace != "" && tx.Environment != filter.Namespace {
+			continue
+		}
+
+		// Clone and add to result
+		clone := *tx
+		result = append(result, &clone)
+	}
+
+	return result, nil
 }
 
 // GetAllDeploymentsHydrated returns all deployments with linked data
@@ -303,7 +371,7 @@ func (m *FileRepository) findImplementationID(chainID uint64, address string) (s
 }
 
 // SaveDeployment saves or updates a deployment
-func (m *FileRepository) SaveDeployment(deployment *models.Deployment) error {
+func (m *FileRepository) SaveDeployment(ctx context.Context, deployment *models.Deployment) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -324,7 +392,7 @@ func (m *FileRepository) SaveDeployment(deployment *models.Deployment) error {
 }
 
 // SaveTransaction saves or updates a transaction
-func (m *FileRepository) SaveTransaction(tx *models.Transaction) error {
+func (m *FileRepository) SaveTransaction(ctx context.Context, tx *models.Transaction) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -405,7 +473,7 @@ func (m *FileRepository) TagDeployment(id string, tag string) error {
 }
 
 // GetTransaction retrieves a transaction by ID
-func (m *FileRepository) GetTransaction(id string) (*models.Transaction, error) {
+func (m *FileRepository) GetTransaction(ctx context.Context, id string) (*models.Transaction, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -420,7 +488,7 @@ func (m *FileRepository) GetTransaction(id string) (*models.Transaction, error) 
 }
 
 // GetSafeTransaction retrieves a safe transaction by ID
-func (m *FileRepository) GetSafeTransaction(id string) (*models.SafeTransaction, error) {
+func (m *FileRepository) GetSafeTransaction(ctx context.Context, id string) (*models.SafeTransaction, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -435,17 +503,17 @@ func (m *FileRepository) GetSafeTransaction(id string) (*models.SafeTransaction,
 }
 
 // SaveSafeTransaction saves or updates a safe transaction
-func (m *FileRepository) SaveSafeTransaction(tx *models.SafeTransaction) error {
+func (m *FileRepository) SaveSafeTransaction(ctx context.Context, tx *models.SafeTransaction) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	// Set timestamp
-	if tx.CreatedAt.IsZero() {
-		tx.CreatedAt = time.Now()
+	if tx.ProposedAt.IsZero() {
+		tx.ProposedAt = time.Now()
 	}
 
 	// Save transaction
-	m.safeTransactions[tx.ID] = tx
+	m.safeTransactions[tx.SafeTxHash] = tx
 
 	// Rebuild lookups to update pending items
 	m.rebuildLookups()
@@ -471,7 +539,7 @@ func (m *FileRepository) GetPendingSafeTransactions() ([]*models.SafeTransaction
 }
 
 // GetAllTransactions returns all transactions
-func (m *FileRepository) GetAllTransactions() map[string]*models.Transaction {
+func (m *FileRepository) GetAllTransactions(ctx context.Context) map[string]*models.Transaction {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -481,7 +549,7 @@ func (m *FileRepository) GetAllTransactions() map[string]*models.Transaction {
 }
 
 // GetAllSafeTransactions returns all safe transactions
-func (m *FileRepository) GetAllSafeTransactions() map[string]*models.SafeTransaction {
+func (m *FileRepository) GetAllSafeTransactions(ctx context.Context) map[string]*models.SafeTransaction {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -540,19 +608,19 @@ func (m *FileRepository) RemoveSafeTransaction(safeTxHash string) error {
 }
 
 // UpdateSafeTransaction updates an existing safe transaction
-func (m *FileRepository) UpdateSafeTransaction(tx *models.SafeTransaction) error {
+func (m *FileRepository) UpdateSafeTransaction(ctx context.Context, tx *models.SafeTransaction) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if tx == nil || tx.ID == "" {
+	if tx == nil || tx.SafeTxHash == "" {
 		return fmt.Errorf("invalid safe transaction")
 	}
 
-	if _, exists := m.safeTransactions[tx.ID]; !exists {
-		return fmt.Errorf("safe transaction %s not found", tx.ID)
+	if _, exists := m.safeTransactions[tx.SafeTxHash]; !exists {
+		return fmt.Errorf("safe transaction %s not found", tx.SafeTxHash)
 	}
 
-	m.safeTransactions[tx.ID] = tx
+	m.safeTransactions[tx.SafeTxHash] = tx
 	return m.save()
 }
 
@@ -563,4 +631,37 @@ type BatchUpdate struct {
 	SafeTransactions []*models.SafeTransaction
 }
 
+// ListSafeTransactions lists safe transactions based on filter criteria
+func (m *FileRepository) ListSafeTransactions(ctx context.Context, filter domain.SafeTransactionFilter) ([]*models.SafeTransaction, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	var result []*models.SafeTransaction
+
+	for _, tx := range m.safeTransactions {
+		// Apply filters
+		if filter.ChainID != 0 && tx.ChainID != filter.ChainID {
+			continue
+		}
+		if filter.SafeAddress != "" && tx.SafeAddress != filter.SafeAddress {
+			continue
+		}
+		if filter.Status != "" && tx.Status != filter.Status {
+			continue
+		}
+
+		// Clone and add to result
+		clone := *tx
+		result = append(result, &clone)
+	}
+
+	return result, nil
+}
+
+// NewFileRepositoryFromConfig creates a new FileRepository from RuntimeConfig
+func NewFileRepositoryFromConfig(cfg *config.RuntimeConfig) (*FileRepository, error) {
+	return NewFileRepository(cfg.ProjectRoot)
+}
+
 var _ usecase.DeploymentRepository = (*FileRepository)(nil)
+var _ usecase.DeploymentRepositoryUpdater = (*FileRepository)(nil)

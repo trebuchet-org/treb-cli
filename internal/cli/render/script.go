@@ -81,7 +81,7 @@ func (r *ScriptRenderer) RenderExecution(result *usecase.RunScriptResult) error 
 	if result.Success && !result.RunResult.DryRun {
 		if len(exec.Deployments) > 0 {
 			// Show registry update message
-			if result.RegistryChanges != nil && (result.RegistryChanges.AddedCount > 0 || result.RegistryChanges.UpdatedCount > 0) {
+			if result.Changeset != nil && result.Changeset.HasChanges() {
 				fmt.Fprintf(r.out, "%s✓ Updated registry for %s network in namespace %s%s\n",
 					r.colorGreen, exec.Network, exec.Namespace, r.colorReset)
 			}
@@ -416,15 +416,15 @@ func (r *ScriptRenderer) renderLogs(logs []string) error {
 }
 
 // renderRegistryUpdate displays the registry update summary
-func (r *ScriptRenderer) renderRegistryUpdate(changes *usecase.RegistryChanges, namespace, network string) error {
+func (r *ScriptRenderer) renderRegistryUpdate(changeset *models.Changeset, namespace, network string) error {
 	fmt.Fprintf(r.out, "\n%s✅ Updated registry for %s network in namespace %s%s\n",
 		r.colorGreen, network, namespace, r.colorReset)
 
-	if changes.AddedCount > 0 {
-		fmt.Fprintf(r.out, "  Added %d deployment(s)\n", changes.AddedCount)
+	if changeset.Create.Count() > 0 {
+		fmt.Fprintf(r.out, "  Added %d deployment(s)\n", changeset.Create.Count())
 	}
-	if changes.UpdatedCount > 0 {
-		fmt.Fprintf(r.out, "  Updated %d deployment(s)\n", changes.UpdatedCount)
+	if changeset.Update.Count() > 0 {
+		fmt.Fprintf(r.out, "  Updated %d deployment(s)\n", changeset.Update.Count())
 	}
 
 	return nil

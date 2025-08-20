@@ -64,112 +64,90 @@ type MultisigTransaction struct {
 
 // Confirmation represents a confirmation on a Safe transaction
 type Confirmation struct {
-	Owner               string    `json:"owner"`
-	SubmissionDate      time.Time `json:"submissionDate"`
-	TransactionHash     *string   `json:"transactionHash"`
-	Signature           string    `json:"signature"`
-	SignatureType       string    `json:"signatureType"`
-	Origin              string    `json:"origin,omitempty"`
-}
-
-// Client is a client for the Safe Transaction Service API
-type Client struct {
-	chainID    uint64
-	serviceURL string
-	httpClient *http.Client
-}
-
-// NewClient creates a new Safe client
-func NewClient(chainID uint64) (*Client, error) {
-	serviceURL, ok := TransactionServiceURLs[chainID]
-	if !ok {
-		return nil, fmt.Errorf("unsupported chain ID: %d", chainID)
-	}
-
-	return &Client{
-		chainID:    chainID,
-		serviceURL: serviceURL,
-		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
-		},
-	}, nil
+	Owner           string    `json:"owner"`
+	SubmissionDate  time.Time `json:"submissionDate"`
+	TransactionHash *string   `json:"transactionHash"`
+	Signature       string    `json:"signature"`
+	SignatureType   string    `json:"signatureType"`
+	Origin          string    `json:"origin,omitempty"`
 }
 
 // GetTransaction retrieves a Safe transaction by its hash
-func (c *Client) GetTransaction(safeTxHash common.Hash) (*MultisigTransaction, error) {
+func (c *SafeClient) GetTransaction(safeTxHash common.Hash) (*MultisigTransaction, error) {
 	url := fmt.Sprintf("%s/api/v1/multisig-transactions/%s/", c.serviceURL, safeTxHash.Hex())
-	
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	
+
 	req.Header.Set("Accept", "application/json")
-	
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("unexpected status code: %d, body: %s", resp.StatusCode, string(body))
 	}
-	
+
 	var tx MultisigTransaction
 	if err := json.NewDecoder(resp.Body).Decode(&tx); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
-	
+
 	return &tx, nil
 }
 
 // IsTransactionExecuted checks if a Safe transaction has been executed
-func (c *Client) IsTransactionExecuted(safeTxHash common.Hash) (bool, *common.Hash, error) {
+func (c *SafeClient) IsTransactionExecuted(safeTxHash common.Hash) (bool, *common.Hash, error) {
 	tx, err := c.GetTransaction(safeTxHash)
 	if err != nil {
 		return false, nil, err
 	}
-	
+
 	if tx.IsExecuted && tx.TransactionHash != nil {
 		ethTxHash := common.HexToHash(*tx.TransactionHash)
 		return true, &ethTxHash, nil
 	}
-	
+
 	return false, nil, nil
 }
 
 // GetPendingTransactions retrieves pending transactions for a Safe
-func (c *Client) GetPendingTransactions(safeAddress common.Address) ([]*MultisigTransaction, error) {
-	url := fmt.Sprintf("%s/api/v1/safes/%s/multisig-transactions/?executed=false&ordering=-nonce", 
+func (c *SafeClient) GetPendingTransactions(safeAddress common.Address) ([]*MultisigTransaction, error) {
+	url := fmt.Sprintf("%s/api/v1/safes/%s/multisig-transactions/?executed=false&ordering=-nonce",
 		c.serviceURL, safeAddress.Hex())
-	
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	
+
 	req.Header.Set("Accept", "application/json")
-	
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("unexpected status code: %d, body: %s", resp.StatusCode, string(body))
 	}
-	
+
 	var result struct {
 		Results []*MultisigTransaction `json:"results"`
 	}
-	
+
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
-	
+
 	return result.Results, nil
 }
+

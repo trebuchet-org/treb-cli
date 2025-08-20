@@ -7,6 +7,7 @@ import (
 
 	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain/forge"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
 // RunScriptParams contains parameters for running a script
@@ -23,10 +24,10 @@ type RunScriptParams struct {
 
 // RunScriptResult contains the result of running a script
 type RunScriptResult struct {
-	RunResult       *forge.HydratedRunResult
-	RegistryChanges *RegistryChanges
-	Success         bool
-	Error           error
+	RunResult *forge.HydratedRunResult
+	Changeset *models.Changeset
+	Success   bool
+	Error     error
 }
 
 // RunScript is the main use case for running deployment scripts
@@ -37,7 +38,7 @@ type RunScript struct {
 	sendersManager    SendersManager
 	forgeScriptRunner ForgeScriptRunner
 	runResultHydrator RunResultHydrator
-	registryUpdater   RegistryUpdater
+	registryUpdater   DeploymentRepositoryUpdater
 	libraryResolver   LibraryResolver
 	progress          ProgressSink
 	// paramPrompter   ParameterPrompter
@@ -50,7 +51,7 @@ func NewRunScript(
 	paramResolver ParameterResolver,
 	sendersManager SendersManager,
 	runResultHydrator RunResultHydrator,
-	registryUpdater RegistryUpdater,
+	registryUpdater DeploymentRepositoryUpdater,
 	libraryResolver LibraryResolver,
 	progress ProgressSink,
 	forgeScriptRunner ForgeScriptRunner,
@@ -236,18 +237,18 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 			Stage: string(StageParsing),
 		})
 
-		changes, err := uc.registryUpdater.PrepareUpdates(ctx, result.RunResult)
+		changeset, err := uc.registryUpdater.BuildChangesetFromRunResult(ctx, result.RunResult)
 		if err != nil {
 			result.Error = fmt.Errorf("failed to prepare registry updates: %w", err)
 			return result, nil
 		}
 
-		if uc.registryUpdater.HasChanges(changes) {
-			if err := uc.registryUpdater.ApplyUpdates(ctx, changes); err != nil {
+		if changeset.HasChanges() {
+			if err := uc.registryUpdater.ApplyChangeset(ctx, changeset); err != nil {
 				result.Error = fmt.Errorf("failed to update registry: %w", err)
 				return result, nil
 			}
-			result.RegistryChanges = changes
+			result.Changeset = changeset
 		}
 		fmt.Println("DEBUG: deployment updated")
 	}

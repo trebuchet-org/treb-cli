@@ -11,24 +11,21 @@ import (
 
 // VerifyDeployment handles contract verification on block explorers
 type VerifyDeployment struct {
-	deploymentRepo   DeploymentRepository
+	repo             DeploymentRepository
 	contractVerifier ContractVerifier
 	networkResolver  NetworkResolver
-	transactionRepo  TransactionRepository
 }
 
 // NewVerifyDeployment creates a new verify deployment use case
 func NewVerifyDeployment(
-	deploymentRepo DeploymentRepository,
+	repo DeploymentRepository,
 	contractVerifier ContractVerifier,
 	networkResolver NetworkResolver,
-	transactionRepo TransactionRepository,
 ) *VerifyDeployment {
 	return &VerifyDeployment{
-		deploymentRepo:   deploymentRepo,
+		repo:             repo,
 		contractVerifier: contractVerifier,
 		networkResolver:  networkResolver,
-		transactionRepo:  transactionRepo,
 	}
 }
 
@@ -49,7 +46,7 @@ type VerifyResult struct {
 // VerifyAll verifies all unverified deployments
 func (v *VerifyDeployment) VerifyAll(ctx context.Context, options VerifyOptions) (*VerifyAllResult, error) {
 	// Get all deployments
-	deployments, err := v.deploymentRepo.ListDeployments(ctx, domain.DeploymentFilter{})
+	deployments, err := v.repo.ListDeployments(ctx, domain.DeploymentFilter{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list deployments: %w", err)
 	}
@@ -81,7 +78,7 @@ func (v *VerifyDeployment) VerifyAll(ctx context.Context, options VerifyOptions)
 		}
 
 		// Check transaction status
-		tx, err := v.transactionRepo.GetTransaction(ctx, deployment.TransactionID)
+		tx, err := v.repo.GetTransaction(ctx, deployment.TransactionID)
 		if err != nil {
 			result.Skipped = append(result.Skipped, &SkippedDeployment{
 				Deployment: deployment,
@@ -131,7 +128,7 @@ func (v *VerifyDeployment) VerifySpecific(ctx context.Context, identifier string
 		if filter.ChainID == 0 {
 			return nil, fmt.Errorf("--chain flag is required when looking up by address")
 		}
-		deployment, err = v.deploymentRepo.GetDeploymentByAddress(ctx, filter.ChainID, identifier)
+		deployment, err = v.repo.GetDeploymentByAddress(ctx, filter.ChainID, identifier)
 		if err != nil {
 			return nil, fmt.Errorf("deployment not found at address %s on chain %d", identifier, filter.ChainID)
 		}
@@ -193,7 +190,7 @@ func (v *VerifyDeployment) verifyDeployment(ctx context.Context, deployment *mod
 	}
 
 	// Save updated deployment
-	if err := v.deploymentRepo.SaveDeployment(ctx, deployment); err != nil {
+	if err := v.repo.SaveDeployment(ctx, deployment); err != nil {
 		return &VerifyResult{
 			Deployment: deployment,
 			Success:    false,
@@ -210,7 +207,7 @@ func (v *VerifyDeployment) verifyDeployment(ctx context.Context, deployment *mod
 // findDeploymentByIdentifier finds a deployment by various identifier formats
 func (v *VerifyDeployment) findDeploymentByIdentifier(ctx context.Context, identifier string, filter domain.DeploymentFilter) (*models.Deployment, error) {
 	// Get all deployments with filter
-	deployments, err := v.deploymentRepo.ListDeployments(ctx, filter)
+	deployments, err := v.repo.ListDeployments(ctx, filter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list deployments: %w", err)
 	}
@@ -325,4 +322,3 @@ type SkippedDeployment struct {
 	Deployment *models.Deployment
 	Reason     string
 }
-

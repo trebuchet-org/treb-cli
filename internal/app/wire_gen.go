@@ -17,7 +17,6 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/adapters/repository/contracts"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/repository/deployments"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/resolvers"
-	"github.com/trebuchet-org/treb-cli/internal/adapters/safe"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/template"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/verification"
 	"github.com/trebuchet-org/treb-cli/internal/cli/interactive"
@@ -39,17 +38,17 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 		return nil, err
 	}
 	deploymentSelector := ProvideDeploymentSelector(selectorAdapter)
-	registryStoreAdapter, err := deployments.NewRegistryStoreAdapter(runtimeConfig)
+	fileRepository, err := deployments.NewFileRepositoryFromConfig(runtimeConfig)
 	if err != nil {
 		return nil, err
 	}
-	listDeployments := usecase.NewListDeployments(runtimeConfig, registryStoreAdapter, sink)
-	showDeployment := usecase.NewShowDeployment(runtimeConfig, registryStoreAdapter, sink)
+	listDeployments := usecase.NewListDeployments(runtimeConfig, fileRepository, sink)
+	showDeployment := usecase.NewShowDeployment(runtimeConfig, fileRepository, sink)
 	string2 := adapters.ProvideProjectPath(runtimeConfig)
 	repository := contracts.NewRepository(string2)
 	contractResolver := resolvers.NewContractResolver(runtimeConfig, repository, selectorAdapter)
 	parser := abi.NewParser(string2)
-	abiResolver := abi.NewABIResolver(runtimeConfig, repository, registryStoreAdapter)
+	abiResolver := abi.NewABIResolver(runtimeConfig, repository, fileRepository)
 	scriptGeneratorAdapter, err := template.NewScriptGeneratorAdapter(runtimeConfig, parser, abiResolver)
 	if err != nil {
 		return nil, err
@@ -62,33 +61,30 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	networkResolver := config.ProvideNetworkResolver(runtimeConfig)
 	listNetworks := usecase.NewListNetworks(networkResolver)
 	checkerAdapter := blockchain.NewCheckerAdapter()
-	pruneRegistry := usecase.NewPruneRegistry(networkResolver, checkerAdapter, registryStoreAdapter, sink)
+	pruner := deployments.NewPruner(fileRepository, checkerAdapter)
+	pruneRegistry := usecase.NewPruneRegistry(networkResolver, checkerAdapter, pruner, fileRepository, sink)
 	localConfigStoreAdapter := fs.NewLocalConfigStoreAdapter(runtimeConfig)
 	showConfig := usecase.NewShowConfig(localConfigStoreAdapter)
 	setConfig := usecase.NewSetConfig(localConfigStoreAdapter)
 	removeConfig := usecase.NewRemoveConfig(localConfigStoreAdapter)
 	scriptResolver := resolvers.NewScriptResolver(string2, contractResolver)
-	parameterResolver := resolvers.NewParameterResolver(runtimeConfig, registryStoreAdapter, repository)
+	parameterResolver := resolvers.NewParameterResolver(runtimeConfig, fileRepository, repository)
 	sendersManager := config.NewSendersManager(runtimeConfig)
 	runResultHydrator, err := forge.NewRunResultHydrator(string2, parser)
 	if err != nil {
 		return nil, err
 	}
-	libraryResolver := resolvers.NewLibraryResolver(registryStoreAdapter)
+	libraryResolver := resolvers.NewLibraryResolver(fileRepository)
 	forgeAdapter := forge.NewForgeAdapter(string2)
-	runScript := usecase.NewRunScript(runtimeConfig, scriptResolver, parameterResolver, sendersManager, runResultHydrator, registryStoreAdapter, libraryResolver, sink, forgeAdapter)
+	runScript := usecase.NewRunScript(runtimeConfig, scriptResolver, parameterResolver, sendersManager, runResultHydrator, fileRepository, libraryResolver, sink, forgeAdapter)
 	verifierAdapter, err := verification.NewVerifierAdapter(runtimeConfig)
 	if err != nil {
 		return nil, err
 	}
-	verifyDeployment := usecase.NewVerifyDeployment(registryStoreAdapter, verifierAdapter, networkResolver, registryStoreAdapter)
+	verifyDeployment := usecase.NewVerifyDeployment(fileRepository, verifierAdapter, networkResolver)
 	orchestrateDeployment := usecase.NewOrchestrateDeployment(runScript, sink)
-	clientAdapter, err := safe.NewClientAdapter(runtimeConfig)
-	if err != nil {
-		return nil, err
-	}
-	syncRegistry := usecase.NewSyncRegistry(registryStoreAdapter, registryStoreAdapter, registryStoreAdapter, clientAdapter, sink)
-	tagDeployment := usecase.NewTagDeployment(registryStoreAdapter, sink)
+	syncRegistry := usecase.NewSyncRegistry(runtimeConfig, fileRepository, sink)
+	tagDeployment := usecase.NewTagDeployment(fileRepository, sink)
 	manager := anvil.NewManager()
 	manageAnvil := usecase.NewManageAnvil(manager, sink)
 	initProject := usecase.NewInitProject(fileWriterAdapter, sink)

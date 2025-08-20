@@ -75,9 +75,9 @@ func (r *OrchestrateRenderer) renderExecutionResults(result *usecase.Orchestrate
 
 	for i, stepResult := range result.ExecutedSteps {
 		stepNum := i + 1
-		
+
 		// Display step header
-		color.New(color.Bold).Fprintf(r.out, "[%d/%d] %s\n", 
+		color.New(color.Bold).Fprintf(r.out, "[%d/%d] %s\n",
 			stepNum, totalSteps, stepResult.Step.Name)
 		fmt.Fprintf(r.out, "%s\n", strings.Repeat("─", 70))
 
@@ -88,10 +88,10 @@ func (r *OrchestrateRenderer) renderExecutionResults(result *usecase.Orchestrate
 			// Show success
 			if stepResult.RunResult.Success {
 				color.New(color.FgGreen).Fprintln(r.out, "✓ Completed successfully")
-				
+
 				// Show deployments if any
-				if stepResult.RunResult.RegistryChanges != nil {
-					deployments := stepResult.RunResult.RegistryChanges.Deployments
+				if stepResult.RunResult.Changeset != nil {
+					deployments := stepResult.RunResult.Changeset.Create.Deployments
 					if len(deployments) > 0 {
 						fmt.Fprintf(r.out, "  Deployments:\n")
 						for _, dep := range deployments {
@@ -116,26 +116,27 @@ func (r *OrchestrateRenderer) renderSummary(result *usecase.OrchestrateResult) {
 	fmt.Fprintf(r.out, "%s\n", strings.Repeat("═", 70))
 
 	if result.Success {
-		color.New(color.FgGreen, color.Bold).Fprintf(r.out, 
+		color.New(color.FgGreen, color.Bold).Fprintf(r.out,
 			"🎉 Successfully orchestrated %s deployment\n", result.Plan.Group)
-		
+
 		fmt.Fprintf(r.out, "\n📊 Summary:\n")
-		fmt.Fprintf(r.out, "  • Steps executed: %d/%d\n", 
+		fmt.Fprintf(r.out, "  • Steps executed: %d/%d\n",
 			len(result.ExecutedSteps), len(result.Plan.Components))
 		fmt.Fprintf(r.out, "  • Total deployments: %d\n", result.TotalDeployments)
 	} else {
-		color.New(color.FgRed, color.Bold).Fprintf(r.out, 
+		color.New(color.FgRed, color.Bold).Fprintf(r.out,
 			"❌ Orchestration failed\n")
-		
+
 		if result.FailedStep != nil {
 			fmt.Fprintf(r.out, "\n📊 Summary:\n")
 			fmt.Fprintf(r.out, "  • Failed at step: %s\n", result.FailedStep.Step.Name)
-			fmt.Fprintf(r.out, "  • Steps completed: %d/%d\n", 
+			fmt.Fprintf(r.out, "  • Steps completed: %d/%d\n",
 				len(result.ExecutedSteps)-1, len(result.Plan.Components))
-			
+
 			if result.FailedStep.Error != nil {
 				fmt.Fprintf(r.out, "  • Error: %v\n", result.FailedStep.Error)
 			}
 		}
 	}
 }
+

@@ -53,12 +53,12 @@ are preserved. Use --include-pending to also prune these items.`,
 
 			// Render items to be pruned
 			renderer := render.NewPruneRenderer(cmd.OutOrStdout())
-			if err := renderer.RenderItemsToPrune(result.ItemsPruned, result.TotalItems); err != nil {
+			if err := renderer.RenderItemsToPrune(result.Changeset.Delete); err != nil {
 				return err
 			}
 
 			// If no items to prune, we're done
-			if result.TotalItems == 0 {
+			if result.Changeset.Count() == 0 {
 				return nil
 			}
 
@@ -94,7 +94,7 @@ are preserved. Use --include-pending to also prune these items.`,
 				return err
 			}
 
-			fmt.Fprintf(cmd.OutOrStdout(), "✅ Successfully pruned %d items from the registry.\n", result.TotalItems)
+			fmt.Fprintf(cmd.OutOrStdout(), "✅ Successfully pruned %d items from the registry.\n", result.Changeset.Count())
 
 			return nil
 		},

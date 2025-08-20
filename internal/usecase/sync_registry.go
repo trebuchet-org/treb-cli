@@ -5,33 +5,28 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/trebuchet-org/treb-cli/internal/adapters/safe"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
 // SyncRegistry handles syncing the registry with on-chain state
 type SyncRegistry struct {
-	deploymentRepo      DeploymentRepository
-	transactionRepo     TransactionRepository
-	safeTransactionRepo SafeTransactionRepository
-	safeClient          SafeClient
-	progress            ProgressSink
+	cfg      *config.RuntimeConfig
+	repo     DeploymentRepository
+	progress ProgressSink
 }
 
 // NewSyncRegistry creates a new sync registry use case
 func NewSyncRegistry(
-	deploymentRepo DeploymentRepository,
-	transactionRepo TransactionRepository,
-	safeTransactionRepo SafeTransactionRepository,
-	safeClient SafeClient,
+	cfg *config.RuntimeConfig,
+	repo DeploymentRepository,
 	progress ProgressSink,
 ) *SyncRegistry {
 	return &SyncRegistry{
-		deploymentRepo:      deploymentRepo,
-		transactionRepo:     transactionRepo,
-		safeTransactionRepo: safeTransactionRepo,
-		safeClient:          safeClient,
-		progress:            progress,
+		repo:     repo,
+		progress: progress,
 	}
 }
 
@@ -75,22 +70,6 @@ func (s *SyncRegistry) Sync(ctx context.Context, options SyncOptions) (*SyncResu
 		result.DeploymentsUpdated = safeSyncResult.DeploymentsUpdated
 	}
 
-	// Clean invalid entries if requested
-	if options.Clean {
-		s.progress.OnProgress(ctx, ProgressEvent{
-			Stage:   "sync",
-			Message: "Cleaning invalid entries...",
-			Spinner: true,
-		})
-
-		cleanResult, err := s.cleanInvalidEntries(ctx)
-		if err != nil {
-			result.Errors = append(result.Errors, fmt.Sprintf("Failed to clean invalid entries: %v", err))
-		} else {
-			result.InvalidEntriesRemoved = cleanResult
-		}
-	}
-
 	// Report completion
 	s.progress.OnProgress(ctx, ProgressEvent{
 		Stage:   "sync",
@@ -114,7 +93,7 @@ func (s *SyncRegistry) syncPendingSafeTransactions(ctx context.Context, debug bo
 	result := &SafeSyncResult{}
 
 	// Get all Safe transactions
-	safeTxs, err := s.safeTransactionRepo.ListSafeTransactions(ctx, domain.SafeTransactionFilter{
+	safeTxs, err := s.repo.ListSafeTransactions(ctx, domain.SafeTransactionFilter{
 		Status: models.TransactionStatusQueued,
 	})
 	if err != nil {
@@ -140,9 +119,12 @@ func (s *SyncRegistry) syncPendingSafeTransactions(ctx context.Context, debug bo
 			Total:   len(safeTxs),
 		})
 
-		// Configure Safe client for this chain
-		if err := s.safeClient.SetChain(ctx, chainID); err != nil {
-			continue // Skip this chain if we can't configure the client
+		if s.cfg.Network == nil {
+			return nil, fmt.Errorf("network not configured")
+		}
+		safeClient, err := safe.NewSafeClient(s.cfg.Network.ChainID)
+		if err != nil {
+			return nil, err
 		}
 
 		// Check each pending Safe transaction
@@ -150,20 +132,20 @@ func (s *SyncRegistry) syncPendingSafeTransactions(ctx context.Context, debug bo
 			result.Checked++
 
 			// Check if transaction is executed
-			executionInfo, err := s.safeClient.GetTransactionExecutionInfo(ctx, safeTx.SafeTxHash)
+			executionInfo, err := safeClient.GetTransactionExecutionInfo(ctx, safeTx.SafeTxHash)
 			if err != nil {
 				continue
 			}
 
 			if executionInfo.IsExecuted {
 				// Update the Safe transaction
-				safeTx.Status = models.SafeTxStatusExecuted
+				safeTx.Status = models.TransactionStatusExecuted
 				safeTx.ExecutionTxHash = executionInfo.TxHash
 				now := time.Now()
 				safeTx.ExecutedAt = &now
 
 				// Save the updated Safe transaction
-				if err := s.safeTransactionRepo.SaveSafeTransaction(ctx, safeTx); err != nil {
+				if err := s.repo.SaveSafeTransaction(ctx, safeTx); err != nil {
 					continue
 				}
 				result.Executed++
@@ -181,10 +163,9 @@ func (s *SyncRegistry) syncPendingSafeTransactions(ctx context.Context, debug bo
 				}
 			} else {
 				// Update confirmation count if changed
-				if executionInfo.Confirmations != safeTx.ConfirmationCount {
-					safeTx.ConfirmationCount = executionInfo.Confirmations
+				if executionInfo.Confirmations != len(safeTx.Confirmations) {
 					safeTx.Confirmations = executionInfo.ConfirmationDetails
-					_ = s.safeTransactionRepo.SaveSafeTransaction(ctx, safeTx)
+					_ = s.repo.SaveSafeTransaction(ctx, safeTx)
 				}
 			}
 		}
@@ -198,7 +179,7 @@ func (s *SyncRegistry) updateTransactionsForSafeTx(ctx context.Context, safeTx *
 	updated := 0
 
 	for _, txID := range safeTx.TransactionIDs {
-		tx, err := s.transactionRepo.GetTransaction(ctx, txID)
+		tx, err := s.repo.GetTransaction(ctx, txID)
 		if err != nil {
 			continue
 		}
@@ -210,7 +191,7 @@ func (s *SyncRegistry) updateTransactionsForSafeTx(ctx context.Context, safeTx *
 			tx.CreatedAt = *safeTx.ExecutedAt
 		}
 
-		if err := s.transactionRepo.SaveTransaction(ctx, tx); err == nil {
+		if err := s.repo.SaveTransaction(ctx, tx); err == nil {
 			updated++
 		}
 	}
@@ -225,7 +206,7 @@ func (s *SyncRegistry) updateDeploymentsForSafeTx(ctx context.Context, safeTx *m
 	// Get all deployments and check if they reference any of the transactions
 	for _, txID := range safeTx.TransactionIDs {
 		// Find deployments that reference this transaction
-		deployments, err := s.deploymentRepo.ListDeployments(ctx, domain.DeploymentFilter{})
+		deployments, err := s.repo.ListDeployments(ctx, domain.DeploymentFilter{})
 		if err != nil {
 			continue
 		}
@@ -235,7 +216,7 @@ func (s *SyncRegistry) updateDeploymentsForSafeTx(ctx context.Context, safeTx *m
 				// The deployment's transaction is now executed
 				// This might trigger additional verification or status updates
 				deployment.UpdatedAt = time.Now()
-				if err := s.deploymentRepo.SaveDeployment(ctx, deployment); err == nil {
+				if err := s.repo.SaveDeployment(ctx, deployment); err == nil {
 					updated++
 				}
 			}
@@ -244,18 +225,3 @@ func (s *SyncRegistry) updateDeploymentsForSafeTx(ctx context.Context, safeTx *m
 
 	return updated, nil
 }
-
-// cleanInvalidEntries removes invalid entries from the registry
-func (s *SyncRegistry) cleanInvalidEntries(ctx context.Context) (int, error) {
-	removed := 0
-
-	// TODO: Implement cleanup logic
-	// This would involve:
-	// 1. Finding deployments with invalid transaction references
-	// 2. Finding transactions that don't exist on-chain
-	// 3. Finding orphaned Safe transactions
-	// 4. Removing or fixing these entries
-
-	return removed, nil
-}
-

@@ -3,53 +3,39 @@ package safe
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
-	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
 // ClientAdapter wraps the internal Safe client to implement SafeClient
-type ClientAdapter struct {
-	client  *Client
-	chainID uint64
+type SafeClient struct {
+	serviceURL string
+	httpClient *http.Client
 }
 
 // NewClientAdapter creates a new adapter wrapping the internal Safe client
-func NewClientAdapter(cfg *config.RuntimeConfig) (*ClientAdapter, error) {
-	// Create with a default chain ID (will be set later)
-	client, err := NewClient(1)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Safe client: %w", err)
+func NewSafeClient(chainId uint64) (*SafeClient, error) {
+	serviceURL, ok := TransactionServiceURLs[chainId]
+	if !ok {
+		return nil, fmt.Errorf("unsupported chain ID: %d", chainId)
 	}
 
-	return &ClientAdapter{
-		client:  client,
-		chainID: 1,
+	return &SafeClient{
+		serviceURL: serviceURL,
+		httpClient: &http.Client{
+			Timeout: 30 * time.Second,
+		},
 	}, nil
 }
 
-// SetChain configures the client for a specific chain
-func (c *ClientAdapter) SetChain(ctx context.Context, chainID uint64) error {
-	// Create a new client for the specified chain
-	client, err := NewClient(chainID)
-	if err != nil {
-		return fmt.Errorf("failed to create Safe client for chain %d: %w", chainID, err)
-	}
-
-	c.client = client
-	c.chainID = chainID
-	return nil
-}
-
 // GetTransactionExecutionInfo checks if a Safe transaction is executed
-func (c *ClientAdapter) GetTransactionExecutionInfo(ctx context.Context, safeTxHash string) (*models.SafeExecutionInfo, error) {
-	// Convert hex string to hash
+func (c *SafeClient) GetTransactionExecutionInfo(ctx context.Context, safeTxHash string) (*models.SafeExecutionInfo, error) {
 	hash := common.HexToHash(safeTxHash)
-
 	// Check if transaction is executed
-	isExecuted, ethTxHash, err := c.client.IsTransactionExecuted(hash)
+	isExecuted, ethTxHash, err := c.IsTransactionExecuted(hash)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check transaction execution: %w", err)
 	}
@@ -63,7 +49,7 @@ func (c *ClientAdapter) GetTransactionExecutionInfo(ctx context.Context, safeTxH
 	}
 
 	// Get transaction details for confirmation info
-	tx, err := c.client.GetTransaction(hash)
+	tx, err := c.GetTransaction(hash)
 	if err == nil && tx != nil {
 		info.Confirmations = len(tx.Confirmations)
 		info.ConfirmationsRequired = tx.ConfirmationsRequired
@@ -80,53 +66,3 @@ func (c *ClientAdapter) GetTransactionExecutionInfo(ctx context.Context, safeTxH
 
 	return info, nil
 }
-
-// GetTransactionDetails retrieves full Safe transaction details
-func (c *ClientAdapter) GetTransactionDetails(ctx context.Context, safeTxHash string) (*models.SafeTransaction, error) {
-	// Convert hex string to hash
-	hash := common.HexToHash(safeTxHash)
-
-	// Get transaction from Safe API
-	tx, err := c.client.GetTransaction(hash)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get transaction details: %w", err)
-	}
-
-	// Convert to domain type
-	safeTx := &models.SafeTransaction{
-		SafeTxHash:            safeTxHash,
-		ChainID:               c.chainID,
-		SafeAddress:           tx.Safe,
-		Nonce:                 uint64(tx.Nonce),
-		To:                    tx.To,
-		Value:                 tx.Value,
-		Data:                  tx.Data,
-		Operation:             tx.Operation,
-		ConfirmationsRequired: tx.ConfirmationsRequired,
-	}
-
-	// Add confirmations
-	for _, conf := range tx.Confirmations {
-		safeTx.Confirmations = append(safeTx.Confirmations, models.Confirmation{
-			Signer:    conf.Owner,
-			Signature: conf.Signature,
-		})
-	}
-
-	safeTx.ConfirmationCount = len(safeTx.Confirmations)
-
-	// Check execution status
-	if tx.IsExecuted {
-		safeTx.Status = models.SafeTxStatusExecuted
-		if tx.TransactionHash != nil && *tx.TransactionHash != "" {
-			safeTx.ExecutionTxHash = *tx.TransactionHash
-		}
-	} else {
-		safeTx.Status = models.SafeTxStatusQueued
-	}
-
-	return safeTx, nil
-}
-
-// Ensure the adapter implements the interface
-var _ usecase.SafeClient = (*ClientAdapter)(nil)

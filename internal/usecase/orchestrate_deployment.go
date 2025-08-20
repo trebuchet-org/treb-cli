@@ -109,8 +109,8 @@ func (o *OrchestrateDeployment) Execute(ctx context.Context, params OrchestrateP
 		}
 
 		// Count deployments
-		if stepResult.RunResult != nil && stepResult.RunResult.RegistryChanges != nil {
-			result.TotalDeployments += len(stepResult.RunResult.RegistryChanges.Deployments)
+		if stepResult.RunResult != nil && stepResult.RunResult.Changeset != nil {
+			result.TotalDeployments += len(stepResult.RunResult.Changeset.Create.Deployments)
 		}
 	}
 

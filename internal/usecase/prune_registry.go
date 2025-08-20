@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
 // PruneRegistryParams contains parameters for pruning the registry
@@ -16,15 +16,15 @@ type PruneRegistryParams struct {
 
 // PruneRegistryResult contains the result of pruning the registry
 type PruneRegistryResult struct {
-	ItemsPruned *domain.ItemsToPrune
-	TotalItems  int
+	Changeset *models.Changeset
 }
 
 // PruneRegistry is a use case for pruning invalid registry entries
 type PruneRegistry struct {
 	networkResolver   NetworkResolver
 	blockchainChecker BlockchainChecker
-	registryPruner    RegistryPruner
+	registryPruner    DeploymentRepositoryPruner
+	registryUpdater   DeploymentRepositoryUpdater
 	progress          ProgressSink
 }
 
@@ -32,7 +32,8 @@ type PruneRegistry struct {
 func NewPruneRegistry(
 	networkResolver NetworkResolver,
 	blockchainChecker BlockchainChecker,
-	registryPruner RegistryPruner,
+	registryPruner DeploymentRepositoryPruner,
+	registryUpdater DeploymentRepositoryUpdater,
 	progress ProgressSink,
 ) *PruneRegistry {
 	if progress == nil {
@@ -42,6 +43,7 @@ func NewPruneRegistry(
 		networkResolver:   networkResolver,
 		blockchainChecker: blockchainChecker,
 		registryPruner:    registryPruner,
+		registryUpdater:   registryUpdater,
 		progress:          progress,
 	}
 }
@@ -78,42 +80,35 @@ func (uc *PruneRegistry) Run(ctx context.Context, params PruneRegistryParams) (*
 		Spinner: true,
 	})
 
-	itemsToPrune, err := uc.registryPruner.CollectPrunableItems(
+	changeset, err := uc.registryPruner.CollectPrunableItems(
 		ctx,
 		networkInfo.ChainID,
 		params.IncludePending,
-		uc.blockchainChecker,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to collect items to prune: %w", err)
 	}
 
-	// Calculate total items
-	totalItems := len(itemsToPrune.Deployments) + 
-		len(itemsToPrune.Transactions) + 
-		len(itemsToPrune.SafeTransactions)
-
 	// If no items to prune or dry run, return early
-	if totalItems == 0 || params.DryRun {
+	if !changeset.HasChanges() {
 		return &PruneRegistryResult{
-			ItemsPruned: itemsToPrune,
-			TotalItems:  totalItems,
+			Changeset: changeset,
 		}, nil
 	}
 
 	// Execute prune
 	uc.progress.OnProgress(ctx, ProgressEvent{
 		Stage:   "execute_prune",
-		Message: fmt.Sprintf("Pruning %d items from registry", totalItems),
+		Message: fmt.Sprintf("Pruning %d items from registry", changeset.Delete.Count()),
 		Spinner: true,
 	})
 
-	if err := uc.registryPruner.ExecutePrune(ctx, itemsToPrune); err != nil {
+	if err := uc.registryUpdater.ApplyChangeset(ctx, changeset); err != nil {
 		return nil, fmt.Errorf("failed to prune items: %w", err)
 	}
 
 	return &PruneRegistryResult{
-		ItemsPruned: itemsToPrune,
-		TotalItems:  totalItems,
+		Changeset: changeset,
 	}, nil
 }
+

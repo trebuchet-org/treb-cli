@@ -1,6 +1,11 @@
 package models
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"strings"
+)
 
 // Contract represents information about a discovered contract
 type Contract struct {
@@ -11,11 +16,23 @@ type Contract struct {
 	Artifact     *Artifact `json:"artifact,omitempty"`
 }
 
+func (c *Contract) IsLibrary() bool {
+	return strings.Contains(c.Source(), fmt.Sprintf("library %s", c.Name))
+}
+
+func (c *Contract) Source() string {
+	data, err := os.ReadFile(c.Path)
+	if err != nil {
+		panic(err)
+	}
+	return string(data)
+}
+
 // BytecodeObject represents bytecode information in a Foundry artifact
 type BytecodeObject struct {
-	Object         string                 `json:"object"`
-	SourceMap      string                 `json:"sourceMap"`
-	LinkReferences map[string]interface{} `json:"linkReferences"`
+	Object         string         `json:"object"`
+	SourceMap      string         `json:"sourceMap"`
+	LinkReferences map[string]any `json:"linkReferences"`
 }
 
 // Artifact represents a Foundry compilation artifact

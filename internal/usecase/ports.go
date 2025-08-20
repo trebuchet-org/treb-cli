@@ -22,7 +22,13 @@ type DeploymentRepository interface {
 	DeleteDeployment(ctx context.Context, id string) error
 	GetTransaction(ctx context.Context, id string) (*models.Transaction, error)
 	ListTransactions(ctx context.Context, filter domain.TransactionFilter) ([]*models.Transaction, error)
+	GetAllTransactions(ctx context.Context) map[string]*models.Transaction
 	SaveTransaction(ctx context.Context, transaction *models.Transaction) error
+	GetSafeTransaction(ctx context.Context, safeTxHash string) (*models.SafeTransaction, error)
+	ListSafeTransactions(ctx context.Context, filter domain.SafeTransactionFilter) ([]*models.SafeTransaction, error)
+	SaveSafeTransaction(ctx context.Context, safeTx *models.SafeTransaction) error
+	UpdateSafeTransaction(ctx context.Context, safeTx *models.SafeTransaction) error
+	GetAllSafeTransactions(ctx context.Context) map[string]*models.SafeTransaction
 }
 
 // ContractIndexer provides access to compiled contracts
@@ -158,10 +164,8 @@ type BlockchainChecker interface {
 	CheckSafeContract(ctx context.Context, safeAddress string) (exists bool, reason string, err error)
 }
 
-// RegistryPruner handles registry pruning operations
 type DeploymentRepositoryPruner interface {
-	CollectPrunableItems(ctx context.Context, chainID uint64, includePending bool) (*domain.ItemsToPrune, error)
-	ExecutePrune(ctx context.Context, items *domain.ItemsToPrune) error
+	CollectPrunableItems(ctx context.Context, chainID uint64, includePending bool) (*models.Changeset, error)
 }
 
 // LocalConfigRepository manages local configuration persistence
@@ -172,19 +176,9 @@ type LocalConfigRepository interface {
 	GetPath() string
 }
 
-// SafeTransactionRepository handles persistence of Safe transactions
-type SafeTransactionRepository interface {
-	GetSafeTransaction(ctx context.Context, safeTxHash string) (*models.SafeTransaction, error)
-	ListSafeTransactions(ctx context.Context, filter domain.SafeTransactionFilter) ([]*models.SafeTransaction, error)
-	SaveSafeTransaction(ctx context.Context, safeTx *models.SafeTransaction) error
-	UpdateSafeTransaction(ctx context.Context, safeTx *models.SafeTransaction) error
-}
-
 // SafeClient handles interactions with Safe multisig contracts
 type SafeClient interface {
-	SetChain(ctx context.Context, chainID uint64) error
 	GetTransactionExecutionInfo(ctx context.Context, safeTxHash string) (*models.SafeExecutionInfo, error)
-	GetTransactionDetails(ctx context.Context, safeTxHash string) (*models.SafeTransaction, error)
 }
 
 // ScriptResolver resolves script paths to script information
@@ -239,14 +233,12 @@ type RunResultHydrator interface {
 	Hydrate(ctx context.Context, output *forge.RunResult) (*forge.HydratedRunResult, error)
 }
 
-// Registry Update Ports
-
 // RegistryUpdater updates the deployment registry based on script execution
-type RegistryUpdater interface {
+type DeploymentRepositoryUpdater interface {
 	// PrepareUpdates analyzes the execution and prepares registry updates
-	PrepareUpdates(ctx context.Context, execution *forge.HydratedRunResult) (*models.Changeset, error)
+	BuildChangesetFromRunResult(ctx context.Context, execution *forge.HydratedRunResult) (*models.Changeset, error)
 	// ApplyUpdates applies the prepared changes to the registry
-	ApplyUpdates(ctx context.Context, changeset *models.Changeset) error
+	ApplyChangeset(ctx context.Context, changeset *models.Changeset) error
 }
 
 // ExecutionStage represents a stage in the execution process
