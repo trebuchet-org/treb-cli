@@ -258,8 +258,25 @@ func (m *Manager) deployCreateX(instance *domain.AnvilInstance) error {
 	return m.makeRPCCall(instance, req)
 }
 
-// fetchCreateXBytecode fetches the CreateX bytecode from mainnet
+// getCreateXCachePath returns the path to the cached CreateX bytecode
+func getCreateXCachePath() string {
+	return filepath.Join("/tmp", fmt.Sprintf("treb-createx-%s.bytecode", CreateXAddress))
+}
+
+// fetchCreateXBytecode fetches the CreateX bytecode from cache or mainnet
 func (m *Manager) fetchCreateXBytecode() (string, error) {
+	cachePath := getCreateXCachePath()
+	
+	// Try to read from cache first
+	if cachedBytecode, err := os.ReadFile(cachePath); err == nil {
+		// Validate cached bytecode
+		bytecode := string(cachedBytecode)
+		if bytecode != "" && bytecode != "0x" && len(bytecode) > 100 {
+			return bytecode, nil
+		}
+	}
+	
+	// Cache miss or invalid, fetch from mainnet
 	// Use public mainnet RPC to fetch CreateX bytecode
 	mainnetRPC := "https://eth.llamarpc.com"
 
@@ -306,6 +323,12 @@ func (m *Manager) fetchCreateXBytecode() (string, error) {
 
 	if bytecode == "0x" || bytecode == "" {
 		return "", fmt.Errorf("CreateX contract not found at %s on mainnet", CreateXAddress)
+	}
+
+	// Cache the bytecode for future use
+	if err := os.WriteFile(cachePath, []byte(bytecode), 0644); err != nil {
+		// Log warning but don't fail - we have the bytecode
+		fmt.Printf("Warning: Failed to cache CreateX bytecode: %v\n", err)
 	}
 
 	return bytecode, nil

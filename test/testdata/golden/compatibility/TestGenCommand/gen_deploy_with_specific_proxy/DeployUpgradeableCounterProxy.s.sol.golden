@@ -1,0 +1,27 @@
+  (
+  	"""
+  	... // 4 identical lines
+  	import {Senders} from "treb-sol/src/internal/sender/Senders.sol";
+  	import {Deployer} from "treb-sol/src/internal/sender/Deployer.sol";
+- 	import {ERC1967Proxy} from "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
++ 	import {ERC1967Proxy} from "/Users/bogdan/Workspace/treb/treb-cli/test/testdata/project/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+  	
+  	contract DeployUpgradeableCounterProxy is TrebScript {
+  	... // 21 identical lines
+  	        // Deploy proxy
+  	        deployer
+- 	            .create3("lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy")
++ 	            .create3("/Users/bogdan/Workspace/treb/treb-cli/test/testdata/project/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy")
+  	            .setLabel(vm.envOr("proxyLabel", string("UpgradeableCounter")))
+  	            .deploy(_getProxyConstructorArgs(implementation));
+  	... // 15 identical lines
+  	        // TODO: Update these initializer arguments
+  	        address initialOwner = address(0);
+- 	        
+- 	        bytes4 selector = bytes4(keccak256("initialize(address)"));
+- 	        return abi.encodeWithSelector(selector, initialOwner);
++ 	        return abi.encodeWithSignature("initialize(address)", initialOwner);
+  	    }
+  	}
+  	"""
+  )

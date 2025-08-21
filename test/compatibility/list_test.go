@@ -67,6 +67,7 @@ func TestListCommand(t *testing.T) {
 				{"run", "script/deploy/DeployCounter.s.sol", "--namespace", "production"},
 			},
 			TestCmds: [][]string{{"list", "--all"}},
+			ExpectErr: ErrorBoth, // --all flag doesn't exist in either version
 		},
 		{
 			Name: "list_filter_by_namespace",
@@ -92,6 +93,7 @@ func TestListCommand(t *testing.T) {
 				{"list", "--network", "anvil-31337"},
 				{"list", "--network", "anvil-31338"},
 			},
+			ExpectErr: ErrorOnlyV1, // v1 uses --chain flag instead of --network
 		},
 		{
 			Name: "list_with_tags",

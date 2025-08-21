@@ -1,0 +1,9 @@
+  strings.Join({
+  	... // 135 identical bytes
+  	"y/ERC1967/ERC1967Proxy.sol:ERC1967Proxy] ===\n\n✅ Generated depl",
+  	"oyment script: script/deploy/DeployUpgradeableCounterProxy.s.sol",
+- 	"\n",
+  	"\nThis script will deploy both the implementation and proxy contr",
+  	"acts.\nMake sure to update the initializer parameters if needed.\n",
+  	... // 98 identical bytes
+  }, "")

@@ -1,0 +1,15 @@
+=== cmd 0: [gen deploy DoesntExist] ===
+Error: contract 'DoesntExist' not found
+Usage:
+  treb gen deploy <artifact> [flags]
+
+Flags:
+  -h, --help                    help for deploy
+      --proxy                   Generate proxy deployment script
+      --proxy-contract string   Specific proxy contract to use (optional)
+      --script-path string      Custom path for the generated script
+      --strategy string         Deployment strategy: CREATE2 or CREATE3 (default: CREATE3)
+
+Global Flags:
+  -s, --namespace string   Namespace to use (defaults to current context namespace)
+      --non-interactive    Disable interactive prompts

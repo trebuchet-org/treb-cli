@@ -1,0 +1,11 @@
+  strings.Join({
+  	... // 11 identical lines
+  	"",
+  	"Global Flags:",
+- 	"  -s, --namespace string   Namespace to use (defaults to current context namespace)",
+- 	"      --non-interactive    Disable interactive prompts",
++ 	"      --non-interactive   Disable interactive prompts",
+  	"",
+  	`Use "treb dev [command] --help" for more information about a command.`,
+  	"",
+  }, "\n")

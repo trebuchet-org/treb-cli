@@ -131,7 +131,7 @@ func StartAnvilInstance(name, port, chainID string) error {
 	// color.New(color.FgYellow).Printf("📋 Logs: %s\n", inst.LogFile)
 	// color.New(color.FgBlue).Printf("🌐 RPC URL: http://localhost:%s\n", inst.Port)
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 
 	if err := inst.deployCreateX(); err != nil {
 		return fmt.Errorf("Failed to deploy CreateX: %v\n", err)
@@ -285,8 +285,25 @@ func (a *AnvilInstance) writePidFile(pid int) error {
 	return os.WriteFile(a.PidFile, []byte(strconv.Itoa(pid)), 0644)
 }
 
-// fetchCreateXBytecode fetches the CreateX bytecode from mainnet
+// getCreateXCachePath returns the path to the cached CreateX bytecode
+func getCreateXCachePath() string {
+	return filepath.Join("/tmp", fmt.Sprintf("treb-createx-%s.bytecode", CreateXAddress))
+}
+
+// fetchCreateXBytecode fetches the CreateX bytecode from cache or mainnet
 func fetchCreateXBytecode() (string, error) {
+	cachePath := getCreateXCachePath()
+	
+	// Try to read from cache first
+	if cachedBytecode, err := os.ReadFile(cachePath); err == nil {
+		// Validate cached bytecode
+		bytecode := string(cachedBytecode)
+		if bytecode != "" && bytecode != "0x" && len(bytecode) > 100 {
+			return bytecode, nil
+		}
+	}
+	
+	// Cache miss or invalid, fetch from mainnet
 	// Use public mainnet RPC to fetch CreateX bytecode
 	mainnetRPC := "https://eth.llamarpc.com"
 
@@ -333,6 +350,12 @@ func fetchCreateXBytecode() (string, error) {
 
 	if bytecode == "0x" || bytecode == "" {
 		return "", fmt.Errorf("CreateX contract not found at %s on mainnet", CreateXAddress)
+	}
+
+	// Cache the bytecode for future use
+	if err := os.WriteFile(cachePath, []byte(bytecode), 0644); err != nil {
+		// Log warning but don't fail - we have the bytecode
+		fmt.Printf("Warning: Failed to cache CreateX bytecode: %v\n", err)
 	}
 
 	return bytecode, nil

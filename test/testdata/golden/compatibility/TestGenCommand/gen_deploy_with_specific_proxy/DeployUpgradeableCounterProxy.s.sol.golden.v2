@@ -1,0 +1,55 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import {TrebScript} from "treb-sol/src/TrebScript.sol";
+import {Senders} from "treb-sol/src/internal/sender/Senders.sol";
+import {Deployer} from "treb-sol/src/internal/sender/Deployer.sol";
+import {ERC1967Proxy} from "/Users/bogdan/Workspace/treb/treb-cli/test/testdata/project/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
+contract DeployUpgradeableCounterProxy is TrebScript {
+    using Senders for Senders.Sender;
+    using Deployer for Senders.Sender;
+    using Deployer for Deployer.Deployment;
+
+    /**
+     * @custom:env {sender:optional} deployer
+     * @custom:env {string:optional} implementationLabel
+     * @custom:env {string:optional} proxyLabel
+     * @custom:senders anvil
+     */
+    function run() public broadcast {
+        Senders.Sender storage deployer = sender(
+            vm.envOr("deployer", string("anvil"))
+        );
+
+        // Deploy implementation
+        address implementation = deployer
+            .create3("src/UpgradeableCounter.sol:UpgradeableCounter")
+            .setLabel(vm.envOr("implementationLabel", string("")))
+            .deploy();
+
+        // Deploy proxy
+        deployer
+            .create3("/Users/bogdan/Workspace/treb/treb-cli/test/testdata/project/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy")
+            .setLabel(vm.envOr("proxyLabel", string("UpgradeableCounter")))
+            .deploy(_getProxyConstructorArgs(implementation));
+    }
+
+    function _getProxyConstructorArgs(address implementation) internal pure returns (bytes memory) {
+        // TODO: Update based on proxy type
+        // For TransparentUpgradeableProxy:
+        // return abi.encode(implementation, proxyAdmin, initData);
+        
+        // For UUPS/ERC1967 proxy:
+        // return abi.encode(implementation, initData);
+        
+        bytes memory initData = _getInitializerData();
+        return abi.encode(implementation, initData);
+    }
+
+    function _getInitializerData() internal pure returns (bytes memory) {
+        // TODO: Update these initializer arguments
+        address initialOwner = address(0);
+        return abi.encodeWithSignature("initialize(address)", initialOwner);
+    }
+}

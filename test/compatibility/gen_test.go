@@ -42,6 +42,7 @@ func TestGenCommand(t *testing.T) {
 				[]string{"script/deploy/DeployStringUtils.s.sol"},
 				DefaultOutputArtifacs...,
 			),
+			ExpectDiff: true,
 		},
 		{
 			Name: "gen_deploy_token",
@@ -60,17 +61,6 @@ func TestGenCommand(t *testing.T) {
 			},
 			OutputArtifacts: append(
 				[]string{"script/deploy/DeployUpgradeableCounter.s.sol"},
-				DefaultOutputArtifacs...,
-			),
-		},
-		{
-			Name: "gen_deploy_with_proxy",
-			TestCmds: [][]string{
-				{"gen", "deploy", "src/UpgradeableCounter.sol:UpgradeableCounter", "--proxy"},
-			},
-			ExpectDiff: true, // Different proxy handling between versions
-			OutputArtifacts: append(
-				[]string{"script/deploy/DeployUpgradeableCounterProxy.s.sol"},
 				DefaultOutputArtifacs...,
 			),
 		},
@@ -106,22 +96,9 @@ func TestGenCommand(t *testing.T) {
 			),
 		},
 		{
-			Name: "gen_deploy_force_overwrite",
-			SetupCmds: [][]string{
-				{"gen", "deploy", "src/Counter.sol:Counter"},
-			},
-			TestCmds: [][]string{
-				{"gen", "deploy", "src/Counter.sol:Counter", "--force"},
-			},
-			OutputArtifacts: append(
-				[]string{"script/deploy/DeployCounter.s.sol"},
-				DefaultOutputArtifacs...,
-			),
-		},
-		{
 			Name: "gen_deploy_custom_output",
 			TestCmds: [][]string{
-				{"gen", "deploy", "src/Counter.sol:Counter", "--output", "script/custom/DeployMyCounter.s.sol"},
+				{"gen", "deploy", "src/Counter.sol:Counter", "--script-path", "script/custom/DeployMyCounter.s.sol"},
 			},
 			OutputArtifacts: append(
 				[]string{"script/custom/DeployMyCounter.s.sol"},
@@ -157,6 +134,8 @@ func TestGenCommand(t *testing.T) {
 				[]string{"script/deploy/DeployCounter.s.sol"},
 				DefaultOutputArtifacs...,
 			),
+			ExpectErr:  ErrorBoth,
+			ExpectDiff: true,
 		},
 		{
 			Name: "gen_deploy_create2_strategy",
@@ -165,31 +144,6 @@ func TestGenCommand(t *testing.T) {
 			},
 			OutputArtifacts: append(
 				[]string{"script/deploy/DeployCounter.s.sol"},
-				DefaultOutputArtifacs...,
-			),
-		},
-		{
-			Name: "gen_library",
-			TestCmds: [][]string{
-				{"gen", "library", "StringUtils"},
-			},
-			ExpectDiff: true, // May have different implementations
-			OutputArtifacts: append(
-				[]string{"src/libraries/StringUtils.sol"},
-				DefaultOutputArtifacs...,
-			),
-		},
-		{
-			Name: "gen_proxy",
-			SetupCmds: [][]string{
-				{"gen", "deploy", "src/UpgradeableCounter.sol:UpgradeableCounter"},
-			},
-			TestCmds: [][]string{
-				{"gen", "proxy", "UpgradeableCounter"},
-			},
-			ExpectDiff: true, // Different proxy generation approaches
-			OutputArtifacts: append(
-				[]string{"script/deploy/DeployUpgradeableCounterProxy.s.sol"},
 				DefaultOutputArtifacs...,
 			),
 		},

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 	"text/template"
 
 	"github.com/trebuchet-org/treb-cli/internal/domain"
@@ -174,10 +175,13 @@ func (g *ScriptGeneratorAdapter) generateProxyScript(tmpl *domain.ScriptTemplate
 	initialize := g.abiParser.FindInitializeMethod(tmpl.ABI)
 	if initialize != nil {
 		vars, encode, sig := g.abiParser.GenerateInitializerArgs(initialize)
+		// Remove the "return abi.encode(...)" wrapper since we're using encodeWithSignature
+		argList := strings.TrimPrefix(encode, "return abi.encode(")
+		argList = strings.TrimSuffix(argList, ");")
 		initializerContent = fmt.Sprintf(`
         // TODO: Update these initializer arguments
-		%s
-        return abi.encodeWithSignature("%s", %s);`, vars, sig, encode)
+%s
+        return abi.encodeWithSignature("%s", %s);`, vars, sig, argList)
 	} else {
 		initializerContent = `
         // TODO: Update with initializer parameters

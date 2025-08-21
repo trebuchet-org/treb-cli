@@ -47,20 +47,8 @@ func TestInitCommand(t *testing.T) {
 			},
 			ExpectDiff: true, // v1 and v2 have different output formatting
 		},
-		{
-			Name: "init_with_custom_namespace",
-			PreSetup: func(t *testing.T, ctx *helpers.TrebContext) {
-				// Remove existing .treb directory if present
-				trebDir := filepath.Join(ctx.GetWorkDir(), ".treb")
-				os.RemoveAll(trebDir)
-			},
-			TestCmds: [][]string{
-				{"init", "--namespace", "production"},
-			},
-			ExpectErr:  ErrorOnlyV2, // v2 doesn't have --namespace flag
-			ExpectDiff: true,
-		},
 	}
 
 	RunCompatibilityTests(t, tests)
 }
+

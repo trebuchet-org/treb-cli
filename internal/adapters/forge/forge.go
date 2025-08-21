@@ -266,6 +266,10 @@ func (f *ForgeAdapter) buildEnv(config usecase.RunScriptConfig) []string {
 	env["DRYRUN"] = strconv.FormatBool(config.DryRun || config.Debug || config.DebugJSON)
 	env["SENDER_CONFIGS"] = config.SenderScriptConfig.EncodedConfig
 
+	if config.Debug {
+		env["QUIET"] = "true"
+	}
+
 	var envStrings []string
 	for k, v := range env {
 		envStrings = append(envStrings, fmt.Sprintf("%s=%s", k, v))

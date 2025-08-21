@@ -190,21 +190,38 @@ func compareOutput(t *testing.T, test CompatibilityTest, v1Output, v2Output, dis
 	if diff := cmp.Diff(v1Output, v2Output); diff != "" {
 		goldenPath := helpers.GoldenPath(filepath.Join("compatibility", t.Name(), goldenFile))
 		if test.ExpectDiff {
+			// If we expect a diff lets compare each output to golden to make sure that we have what's expected
+			t.Logf("Diff on %s (-v1 +v2)\n%s\n", displayName, diff)
 			if helpers.ShouldUpdateGolden() {
 				if err := os.MkdirAll(filepath.Dir(goldenPath), 0755); err != nil {
 					t.Fatalf("Failed to create golden directory: %v", err)
 				}
-				if err := os.WriteFile(goldenPath, []byte(diff), 0644); err != nil {
+				if err := os.WriteFile(goldenPath+".v1", []byte(v1Output), 0644); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(goldenPath+".v2", []byte(v2Output), 0644); err != nil {
 					t.Fatal(err)
 				}
 			} else {
-				expected, err := os.ReadFile(goldenPath)
-				if err == os.ErrNotExist {
-					expected = []byte{}
+				// Lets compare golden files
+				var v1Golden, v2Golden []byte
+				var err error
+				v1Golden, err = os.ReadFile(goldenPath + ".v1")
+				if errors.Is(err, os.ErrNotExist) {
+					t.Fatalf("Golden file missing, run with -treb.updategolden")
+					v1Golden = []byte{}
 				}
-				normalize := cmp.Transformer("normalize", func(s string) string { return norm(s) })
-				if diffDiff := cmp.Diff(string(expected), diff, normalize); diffDiff != "" {
-					t.Errorf("Diff on %s (-v1 +v2):\n%s\nExpected Diff (-v1 +v2):\n%s\nDiff Diff (-golden +test):\n%s\n", displayName, diff, string(expected), diffDiff)
+				v2Golden, err = os.ReadFile(goldenPath + ".v2")
+				if errors.Is(err, os.ErrNotExist) {
+					t.Fatalf("Golden file missing, run with -treb.updategolden")
+					v2Golden = []byte{}
+				}
+				// normalize := cmp.Transformer("normalize", func(s string) string { return norm(s) })
+				if v1Diff := cmp.Diff(string(v1Golden), v1Output); v1Diff != "" {
+					t.Errorf("Diff on %s (v1) (-golden +output):\n%s", displayName, v1Diff)
+				}
+				if v2Diff := cmp.Diff(string(v2Golden), v2Output); v2Diff != "" {
+					t.Errorf("Diff on %s (v1) (-golden +output):\n%s", displayName, v2Diff)
 				}
 			}
 		} else {

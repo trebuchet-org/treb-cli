@@ -1,0 +1,29 @@
+=== cmd 0: [init] ===
+✅ Valid Foundry project detected
+✅ treb-sol library found
+📋 Created v2 registry structure in .treb/
+📝 .env.example already exists
+
+🎉 treb initialized successfully!
+
+📋 Next steps:
+1. Copy .env.example to .env and configure your deployment keys:
+   • Set DEPLOYER_PRIVATE_KEY for your deployment wallet
+   • Set RPC URLs for networks you'll deploy to
+   • Set API keys for contract verification
+
+2. Configure deployment environments in foundry.toml:
+   • Add [profile.staging.deployer] and [profile.production.deployer] sections
+   • See documentation for Safe multisig and hardware wallet support
+
+3. Generate your first deployment script:
+   treb gen deploy Counter
+
+4. Predict and deploy:
+   treb deploy predict Counter --network sepolia
+   treb deploy Counter --network sepolia
+
+5. View and manage deployments:
+   treb list
+   treb show Counter
+   treb tag Counter v<VERSION>

@@ -1,0 +1,16 @@
+=== cmd 0: [list --json] ===
+Error: unknown flag: --json
+Usage:
+  treb list [flags]
+
+Aliases:
+  list, ls
+
+Flags:
+  -c, --chain uint         Filter by chain ID
+      --contract string    Filter by contract name
+  -h, --help               help for list
+  -n, --namespace string   Filter by namespace
+
+Global Flags:
+      --non-interactive   Disable interactive prompts
