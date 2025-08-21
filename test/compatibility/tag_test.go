@@ -100,7 +100,7 @@ func TestTagCommand(t *testing.T) {
 		{
 			Name:       "tag_non_existing_deployment",
 			TestCmds:   [][]string{{"tag", "NonExisting"}},
-			ExpectErr:  true,
+			ExpectErr:  ErrorBoth,
 			ExpectDiff: true,
 		},
 		{
@@ -112,7 +112,7 @@ func TestTagCommand(t *testing.T) {
 			TestCmds: [][]string{
 				{"tag", "Counter", "--add", "v1.0.0", "--remove", "v1.0.1"},
 			},
-			ExpectErr: true,
+			ExpectErr: ErrorBoth,
 		},
 		{
 			Name: "tag_with_namespace",
@@ -137,7 +137,7 @@ func TestTagCommand(t *testing.T) {
 				// but in test mode it should fail with multiple matches
 				{"tag", "Counter", "--add", "v1.0.0", "--non-interactive"},
 			},
-			ExpectErr:  true,
+			ExpectErr:  ErrorBoth,
 			ExpectDiff: true,
 		},
 		// Additional test cases for more comprehensive coverage

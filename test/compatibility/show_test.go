@@ -38,13 +38,14 @@ func TestShowCommand(t *testing.T) {
 				// Using deterministic address from CreateX
 				{"show", "0x74148047D6bDf624C94eFc07F60cEE7b6052FB29"},
 			},
+			ExpectDiff: true, // v1 doesn't support showing by address
 		},
 		{
 			Name: "show_nonexistent_contract",
 			TestCmds: [][]string{
 				{"show", "NonExistentContract"},
 			},
-			ExpectErr: true,
+			ExpectErr: ErrorBoth,
 		},
 		{
 			Name: "show_with_namespace",
@@ -140,6 +141,7 @@ func TestShowCommand(t *testing.T) {
 				{"show", "Counter", "--json"},
 			},
 			ExpectDiff: true,
+			ExpectErr: ErrorOnlyV2, // v1 has --json flag but v2 doesn't
 		},
 	})
 }

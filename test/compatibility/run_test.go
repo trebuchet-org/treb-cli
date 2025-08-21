@@ -115,7 +115,7 @@ func TestRunCommand(t *testing.T) {
 			TestCmds: [][]string{
 				{"run", "script/deploy/NonExistent.s.sol"},
 			},
-			ExpectErr: true,
+			ExpectErr: ErrorBoth,
 		},
 		{
 			Name: "run_with_multiple_env_vars",
@@ -143,7 +143,7 @@ func TestRunCommand(t *testing.T) {
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 			},
 			TestCmds: [][]string{
-				{"run", "script/deploy/DeployCounter.s.sol", "--json"},
+				{"run", "script/deploy/DeployCounter.s.sol", "--debug-json"},
 			},
 			ExpectDiff: true,
 		},
@@ -156,7 +156,7 @@ func TestRunCommand(t *testing.T) {
 			TestCmds: [][]string{
 				{"run", "script/deploy/DeployCounter.s.sol", "--env", "LABEL=v1"}, // Should handle gracefully
 			},
-			ExpectErr: true, // Might error on redeploy attempt
+			ExpectErr: ErrorBoth, // Might error on redeploy attempt
 		},
 		{
 			Name: "run_cross_namespace_library",

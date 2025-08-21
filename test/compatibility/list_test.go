@@ -128,6 +128,7 @@ func TestListCommand(t *testing.T) {
 			},
 			TestCmds: [][]string{{"list", "--json"}},
 			ExpectDiff: true,
+			ExpectErr: ErrorBoth, // --json flag doesn't exist in either v1 or v2
 		},
 		{
 			Name: "list_with_mixed_deployment_status",

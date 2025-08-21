@@ -50,13 +50,13 @@ func TestConfigCommand(t *testing.T) {
 			TestCmds: [][]string{
 				{"config", "set", "invalid", "value"},
 			},
-			ExpectErr: true,
+			ExpectErr: ErrorBoth,
 		},
 		{
 			Name: "config remove namespace",
 			PreSetup: func(t *testing.T, ctx *helpers.TrebContext) {
 				// Create config with namespace set
-				configPath := filepath.Join(helpers.GetFixtureDir(), ".treb", "config.local.json")
+				configPath := filepath.Join(ctx.GetWorkDir(), ".treb", "config.local.json")
 				os.MkdirAll(filepath.Dir(configPath), 0755)
 				os.WriteFile(configPath, []byte(`{"namespace": "production", "network": ""}`), 0644)
 			},
@@ -69,9 +69,27 @@ func TestConfigCommand(t *testing.T) {
 			Name: "config remove network",
 			PreSetup: func(t *testing.T, ctx *helpers.TrebContext) {
 				// Create config with network set
-				configPath := filepath.Join(helpers.GetFixtureDir(), ".treb", "config.local.json")
+				// Use absolute path based on the test's working directory
+				configPath := filepath.Join(ctx.GetWorkDir(), ".treb", "config.local.json")
+				cwd, _ := os.Getwd()
+				if os.Getenv("TREB_TEST_DEBUG") != "" {
+					t.Logf("PreSetup: Creating config file at %s (cwd: %s, workDir: %s)", configPath, cwd, ctx.GetWorkDir())
+				}
 				os.MkdirAll(filepath.Dir(configPath), 0755)
-				os.WriteFile(configPath, []byte(`{"namespace": "default", "network": "celo"}`), 0644)
+				err := os.WriteFile(configPath, []byte(`{"namespace": "default", "network": "celo"}`), 0644)
+				if os.Getenv("TREB_TEST_DEBUG") != "" {
+					if err != nil {
+						t.Logf("PreSetup: Failed to write config file: %v", err)
+					} else {
+						t.Logf("PreSetup: Config file created successfully")
+						// Verify it exists
+						if _, err := os.Stat(configPath); err == nil {
+							t.Logf("PreSetup: Verified config file exists at %s", configPath)
+						} else {
+							t.Logf("PreSetup: Config file verification failed: %v", err)
+						}
+					}
+				}
 			},
 			TestCmds: [][]string{
 				{"config", "remove", "network"},
@@ -82,7 +100,7 @@ func TestConfigCommand(t *testing.T) {
 			Name: "config remove with ns alias",
 			PreSetup: func(t *testing.T, ctx *helpers.TrebContext) {
 				// Create config with namespace set
-				configPath := filepath.Join(helpers.GetFixtureDir(), ".treb", "config.local.json")
+				configPath := filepath.Join(ctx.GetWorkDir(), ".treb", "config.local.json")
 				os.MkdirAll(filepath.Dir(configPath), 0755)
 				os.WriteFile(configPath, []byte(`{"namespace": "production", "network": ""}`), 0644)
 			},
@@ -95,27 +113,27 @@ func TestConfigCommand(t *testing.T) {
 			Name: "config remove invalid key",
 			PreSetup: func(t *testing.T, ctx *helpers.TrebContext) {
 				// Create config file
-				configPath := filepath.Join(helpers.GetFixtureDir(), ".treb", "config.local.json")
+				configPath := filepath.Join(ctx.GetWorkDir(), ".treb", "config.local.json")
 				os.MkdirAll(filepath.Dir(configPath), 0755)
 				os.WriteFile(configPath, []byte(`{"namespace": "default", "network": ""}`), 0644)
 			},
 			TestCmds: [][]string{
 				{"config", "remove", "invalid"},
 			},
-			ExpectErr: true,
+			ExpectErr: ErrorBoth,
 		},
 		{
 			Name: "config remove when no config exists",
 			TestCmds: [][]string{
 				{"config", "remove", "namespace"},
 			},
-			ExpectErr: true,
+			ExpectErr: ErrorBoth,
 		},
 		{
 			Name: "config show with existing config",
 			PreSetup: func(t *testing.T, ctx *helpers.TrebContext) {
 				// Create config with both values set
-				configPath := filepath.Join(helpers.GetFixtureDir(), ".treb", "config.local.json")
+				configPath := filepath.Join(ctx.GetWorkDir(), ".treb", "config.local.json")
 				os.MkdirAll(filepath.Dir(configPath), 0755)
 				os.WriteFile(configPath, []byte(`{"namespace": "staging", "network": "polygon"}`), 0644)
 			},
@@ -127,7 +145,7 @@ func TestConfigCommand(t *testing.T) {
 			Name: "config show with network not set",
 			PreSetup: func(t *testing.T, ctx *helpers.TrebContext) {
 				// Create config with empty network
-				configPath := filepath.Join(helpers.GetFixtureDir(), ".treb", "config.local.json")
+				configPath := filepath.Join(ctx.GetWorkDir(), ".treb", "config.local.json")
 				os.MkdirAll(filepath.Dir(configPath), 0755)
 				os.WriteFile(configPath, []byte(`{"namespace": "default", "network": ""}`), 0644)
 			},
@@ -139,7 +157,7 @@ func TestConfigCommand(t *testing.T) {
 			Name: "config update existing value",
 			PreSetup: func(t *testing.T, ctx *helpers.TrebContext) {
 				// Create config with initial values
-				configPath := filepath.Join(helpers.GetFixtureDir(), ".treb", "config.local.json")
+				configPath := filepath.Join(ctx.GetWorkDir(), ".treb", "config.local.json")
 				os.MkdirAll(filepath.Dir(configPath), 0755)
 				os.WriteFile(configPath, []byte(`{"namespace": "default", "network": "celo"}`), 0644)
 			},

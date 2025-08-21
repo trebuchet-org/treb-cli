@@ -84,34 +84,79 @@ func (tc *TestCleanup) Cleanup(manager *AnvilManager) {
 // IsolatedTest runs a test with full isolation
 func IsolatedTest(t *testing.T, name string, fn func(t *testing.T, ctx *TrebContext)) {
 	t.Run(name, func(t *testing.T) {
-		// Clean artifacts first to ensure clean state
-		cleanTestArtifacts(t)
+		// Check if parallel mode is enabled
+		if IsParallelMode {
+			t.Parallel() // Enable parallel execution
+			
+			// Acquire a context from the pool
+			pool := GetGlobalPool()
+			if pool == nil {
+				t.Fatal("Test pool not initialized in parallel mode")
+			}
+			testCtx := pool.Acquire(t)
+			defer pool.Release(testCtx)
 
-		// Create cleanup handler with snapshot
-		cleanup := NewTestCleanup(t, anvilManager)
-		defer cleanup.Cleanup(anvilManager)
+			// Don't change working directory in parallel mode - TrebContext handles it
 
-		// Determine binary version from environment or default
-		version := GetBinaryVersionFromEnv()
+			// Determine binary version from environment or default
+			version := GetBinaryVersionFromEnv()
+			testCtx.TrebContext.SetVersion(version)
 
-		// Create test context and run test
-		ctx := NewTrebContext(t, version)
-		fn(t, ctx)
+			// Run the test
+			fn(t, testCtx.TrebContext)
+		} else {
+			// Sequential mode - use existing logic
+			// Clean artifacts first to ensure clean state
+			cleanTestArtifacts(t)
+
+			// Create cleanup handler with snapshot
+			cleanup := NewTestCleanup(t, anvilManager)
+			defer cleanup.Cleanup(anvilManager)
+
+			// Determine binary version from environment or default
+			version := GetBinaryVersionFromEnv()
+
+			// Create test context and run test
+			ctx := NewTrebContext(t, version)
+			fn(t, ctx)
+		}
 	})
 }
 
 // IsolatedTestWithVersion runs a test with a specific binary version
 func IsolatedTestWithVersion(t *testing.T, name string, version BinaryVersion, fn func(t *testing.T, ctx *TrebContext)) {
 	t.Run(name, func(t *testing.T) {
-		// Clean artifacts first to ensure clean state
-		cleanTestArtifacts(t)
+		// Check if parallel mode is enabled
+		if IsParallelMode {
+			t.Parallel() // Enable parallel execution
+			
+			// Acquire a context from the pool
+			pool := GetGlobalPool()
+			if pool == nil {
+				t.Fatal("Test pool not initialized in parallel mode")
+			}
+			testCtx := pool.Acquire(t)
+			defer pool.Release(testCtx)
 
-		// Create cleanup handler with snapshot
-		cleanup := NewTestCleanup(t, anvilManager)
-		defer cleanup.Cleanup(anvilManager)
+			// Don't change working directory in parallel mode - TrebContext handles it
 
-		// Create test context with specific version
-		ctx := NewTrebContext(t, version)
-		fn(t, ctx)
+			// Set the specific version
+			testCtx.TrebContext.SetVersion(version)
+
+			// Run the test
+			fn(t, testCtx.TrebContext)
+		} else {
+			// Sequential mode - use existing logic
+			// Clean artifacts first to ensure clean state
+			cleanTestArtifacts(t)
+
+			// Create cleanup handler with snapshot
+			cleanup := NewTestCleanup(t, anvilManager)
+			defer cleanup.Cleanup(anvilManager)
+
+			// Create test context with specific version
+			ctx := NewTrebContext(t, version)
+			fn(t, ctx)
+		}
 	})
 }

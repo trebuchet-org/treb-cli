@@ -23,7 +23,7 @@ func TestSyncCommand(t *testing.T) {
 			TestCmds: [][]string{
 				{"sync"},
 			},
-			ExpectErr: true, // May fail on local anvil network
+			ExpectErr: ErrorBoth, // May fail on local anvil network
 		},
 		{
 			Name: "sync_specific_chain",
@@ -35,7 +35,7 @@ func TestSyncCommand(t *testing.T) {
 			TestCmds: [][]string{
 				{"sync", "--network", "anvil-31337"},
 			},
-			ExpectErr: true, // May fail on local anvil network
+			ExpectErr: ErrorBoth, // May fail on local anvil network
 		},
 		{
 			Name: "sync_dry_run",
@@ -46,7 +46,7 @@ func TestSyncCommand(t *testing.T) {
 			TestCmds: [][]string{
 				{"sync", "--dry-run"},
 			},
-			ExpectErr: true, // May fail on local anvil network
+			ExpectErr: ErrorBoth, // May fail on local anvil network
 		},
 		{
 			Name: "sync_with_namespace",
@@ -57,7 +57,7 @@ func TestSyncCommand(t *testing.T) {
 			TestCmds: [][]string{
 				{"sync", "--namespace", "production"},
 			},
-			ExpectErr: true, // May fail on local anvil network
+			ExpectErr: ErrorBoth, // May fail on local anvil network
 		},
 		{
 			Name: "sync_force_update",
@@ -68,7 +68,7 @@ func TestSyncCommand(t *testing.T) {
 			TestCmds: [][]string{
 				{"sync", "--force"},
 			},
-			ExpectErr: true, // May fail on local anvil network
+			ExpectErr: ErrorBoth, // May fail on local anvil network
 		},
 	}
 

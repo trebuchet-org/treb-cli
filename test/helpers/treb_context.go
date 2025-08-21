@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -26,7 +27,7 @@ type TrebContext struct {
 	Network       string
 	Namespace     string
 	BinaryVersion BinaryVersion
-	BinaryPath    string // Resolved binary path
+	workDir       string // Working directory for parallel tests
 }
 
 // NewTrebContext creates a new TrebContext with default settings
@@ -38,17 +39,18 @@ func NewTrebContext(t *testing.T, version BinaryVersion) *TrebContext {
 		BinaryVersion: version,
 	}
 
-	// Resolve binary path based on version
-	switch version {
-	case BinaryV1:
-		tc.BinaryPath = GetTrebBin()
-	case BinaryV2:
-		tc.BinaryPath = GetV2Binary()
-	default:
-		t.Fatalf("Unknown binary version: %s", version)
-	}
-
 	return tc
+}
+
+func (tc *TrebContext) GetBinaryPath() string {
+	switch tc.BinaryVersion {
+	case BinaryV1:
+		return filepath.Join(bin, "treb")
+	case BinaryV2:
+		return filepath.Join(bin, "treb-v2")
+	default:
+		panic(fmt.Errorf("Unexpected BineryVersion: %v", tc.BinaryVersion))
+	}
 }
 
 // WithNetwork sets the network for this context
@@ -110,16 +112,40 @@ func (tc *TrebContext) Treb(args ...string) (string, error) {
 
 	if debugMode {
 		tc.t.Logf("=== TREB COMMAND DEBUG (%s) ===", tc.BinaryVersion)
-		tc.t.Logf("Binary: %s", tc.BinaryPath)
-		tc.t.Logf("Command: %s %s", tc.BinaryPath, strings.Join(allArgs, " "))
-		tc.t.Logf("Directory: %s", GetFixtureDir())
+		tc.t.Logf("Binary: %s", tc.GetBinaryPath())
+		tc.t.Logf("Command: %s %s", tc.GetBinaryPath(), strings.Join(allArgs, " "))
+		cwd, _ := os.Getwd()
+		tc.t.Logf("Current Working Dir: %s", cwd)
+		if tc.workDir != "" {
+			tc.t.Logf("Test WorkDir: %s", tc.workDir)
+			tc.t.Logf("Command Dir: %s", tc.workDir)
+		} else {
+			tc.t.Logf("Command Dir: %s", GetFixtureDir())
+		}
+		// Check if config file exists
+		configPath := ".treb/config.local.json"
+		if tc.workDir != "" {
+			configPath = tc.workDir + "/" + configPath
+		} else {
+			configPath = GetFixtureDir() + "/" + configPath
+		}
+		if _, err := os.Stat(configPath); err == nil {
+			tc.t.Logf("Config file exists at: %s", configPath)
+		} else {
+			tc.t.Logf("Config file NOT found at: %s (error: %v)", configPath, err)
+		}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, tc.BinaryPath, allArgs...)
-	cmd.Dir = GetFixtureDir()
+	cmd := exec.CommandContext(ctx, tc.GetBinaryPath(), allArgs...)
+	// Use work directory if set (for parallel tests), otherwise use fixture dir
+	if tc.workDir != "" {
+		cmd.Dir = tc.workDir
+	} else {
+		cmd.Dir = GetFixtureDir()
+	}
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -147,6 +173,19 @@ func (tc *TrebContext) Treb(args ...string) (string, error) {
 // GetVersion returns the binary version being used
 func (tc *TrebContext) GetVersion() BinaryVersion {
 	return tc.BinaryVersion
+}
+
+// SetVersion sets the binary version and updates the binary path
+func (tc *TrebContext) SetVersion(version BinaryVersion) {
+	tc.BinaryVersion = version
+}
+
+// GetWorkDir returns the working directory for the test
+func (tc *TrebContext) GetWorkDir() string {
+	if tc.workDir != "" {
+		return tc.workDir
+	}
+	return GetFixtureDir()
 }
 
 // supportsNetworkFlag returns true if the command supports --network flag

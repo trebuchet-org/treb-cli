@@ -15,6 +15,16 @@ import (
 	"github.com/trebuchet-org/treb-cli/test/helpers"
 )
 
+// ErrorExpectation specifies which versions should error
+type ErrorExpectation int
+
+const (
+	NoError ErrorExpectation = iota
+	ErrorOnlyV1
+	ErrorOnlyV2
+	ErrorBoth
+)
+
 // CompatibilityTest runs a test against both v1 and v2 binaries
 type CompatibilityTest struct {
 	Name                string
@@ -22,11 +32,27 @@ type CompatibilityTest struct {
 	SetupCmds           [][]string
 	PostSetup           func(t *testing.T, ctx *helpers.TrebContext)
 	TestCmds            [][]string
-	ExpectErr           bool
+	ExpectErr           ErrorExpectation
 	ExpectDiff          bool
 	Normalizers         []helpers.Normalizer
 	SetupCtx            *helpers.TrebContext
 	IgnoreRegistryFiles bool
+}
+
+// ExpectsError returns true if the test expects an error for the given context
+func (test CompatibilityTest) ExpectsError(ctx *helpers.TrebContext) bool {
+	switch test.ExpectErr {
+	case NoError:
+		return false
+	case ErrorOnlyV1:
+		return ctx.BinaryVersion == helpers.BinaryV1
+	case ErrorOnlyV2:
+		return ctx.BinaryVersion == helpers.BinaryV2
+	case ErrorBoth:
+		return true
+	default:
+		return false
+	}
 }
 
 type testOutput struct {
@@ -110,24 +136,28 @@ func runTest(t *testing.T, version helpers.BinaryVersion, test CompatibilityTest
 			}
 		}
 
-		if test.ExpectErr {
+		// Check if error is expected for this version
+		if test.ExpectsError(ctx) {
 			assert.Error(t, err, "Expected command to fail")
 		} else {
 			assert.NoError(t, err, "Command failed: %v\nOutput: %s", err, output)
 		}
 
-		testOutput = createTestOutput(output.String(), test)
+		testOutput = createTestOutput(output.String(), test, ctx)
 	})
 	return
 }
 
-func createTestOutput(testCmdsOutput string, test CompatibilityTest) (output testOutput) {
+func createTestOutput(testCmdsOutput string, test CompatibilityTest, ctx *helpers.TrebContext) (output testOutput) {
 	output.testCmdsOutput = helpers.Normalize(testCmdsOutput, test.Normalizers)
 
 	var err error
 	var data []byte
+	
+	// Use the test context's working directory instead of GetFixtureDir()
+	workDir := ctx.GetWorkDir()
 
-	if data, err = os.ReadFile(path.Join(helpers.GetFixtureDir(), ".treb", "deployments.json")); err != nil {
+	if data, err = os.ReadFile(path.Join(workDir, ".treb", "deployments.json")); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			data = []byte{}
 		} else {
@@ -135,7 +165,7 @@ func createTestOutput(testCmdsOutput string, test CompatibilityTest) (output tes
 		}
 	}
 	output.deploymentsJSON = helpers.Normalize(string(data), test.Normalizers)
-	if data, err = os.ReadFile(path.Join(helpers.GetFixtureDir(), ".treb", "transactions.json")); err != nil {
+	if data, err = os.ReadFile(path.Join(workDir, ".treb", "transactions.json")); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			data = []byte{}
 		} else {
@@ -143,7 +173,7 @@ func createTestOutput(testCmdsOutput string, test CompatibilityTest) (output tes
 		}
 	}
 	output.transactionsJSON = helpers.Normalize(string(data), test.Normalizers)
-	if data, err = os.ReadFile(path.Join(helpers.GetFixtureDir(), ".treb", "safe-txs.json")); err != nil {
+	if data, err = os.ReadFile(path.Join(workDir, ".treb", "safe-txs.json")); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			data = []byte{}
 		} else {
@@ -151,7 +181,7 @@ func createTestOutput(testCmdsOutput string, test CompatibilityTest) (output tes
 		}
 	}
 	output.safeTxsJSON = helpers.Normalize(string(data), test.Normalizers)
-	if data, err = os.ReadFile(path.Join(helpers.GetFixtureDir(), ".treb", "registry.json")); err != nil {
+	if data, err = os.ReadFile(path.Join(workDir, ".treb", "registry.json")); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			data = []byte{}
 		} else {

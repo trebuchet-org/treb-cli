@@ -19,6 +19,7 @@ func TestVersionCommand(t *testing.T) {
 				{"-v"},
 			},
 			ExpectDiff: true, // Different version outputs expected
+			ExpectErr: ErrorBoth, // Both versions don't support -v as a standalone flag
 		},
 		{
 			Name: "version_long_flag",
@@ -26,6 +27,7 @@ func TestVersionCommand(t *testing.T) {
 				{"--version"},
 			},
 			ExpectDiff: true, // Different version outputs expected
+			ExpectErr: ErrorBoth, // Both versions don't support --version as a standalone flag
 		},
 	}
 

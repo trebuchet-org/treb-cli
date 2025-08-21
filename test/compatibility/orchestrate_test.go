@@ -11,7 +11,7 @@ func TestOrchestrateCommand(t *testing.T) {
 			TestCmds: [][]string{
 				{"orchestrate", "nonexistent.yaml"},
 			},
-			ExpectErr: true,
+			ExpectErr: ErrorBoth, // Both versions will error (v1: file not found, v2: command not found)
 		},
 		// Note: orchestrate is a v1-only command, so most tests will fail for v2
 		// These tests primarily document the v1 behavior
@@ -20,7 +20,8 @@ func TestOrchestrateCommand(t *testing.T) {
 			TestCmds: [][]string{
 				{"orchestrate", "--help"},
 			},
-			ExpectDiff: true, // v2 won't have this command
+			ExpectDiff: true,
+			ExpectErr: ErrorOnlyV2, // v2 doesn't have orchestrate command
 		},
 	}
 

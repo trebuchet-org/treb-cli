@@ -64,13 +64,13 @@ setup-integration-test:
 # Run integration tests  
 integration-test: build build-v2 setup-integration-test
 	@echo "🔗 Running integration tests..."
-	@cd test && go mod download && go test ./... -v -timeout=10m -p=1
+	@cd go test ./test/... -v -timeout=10m -p=1
 
 # Run integration tests with coverage
 integration-test-coverage: build build-v2 setup-integration-test
 	@echo "🔗 Running integration tests with coverage..."
-	@cd test && go test ./... -v -timeout=10m -coverprofile=coverage.out -p=1
-	@cd test && go tool cover -html=coverage.out -o coverage.html
+	@go test ./test/... -v -timeout=10m -coverprofile=coverage.out -p=1
+	@go tool cover -html=coverage.out -o coverage.html
 	@echo "✅ Coverage report generated: test/coverage.html"
 
 # Clean build artifacts

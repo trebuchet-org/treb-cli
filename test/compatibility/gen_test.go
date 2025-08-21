@@ -18,7 +18,7 @@ func TestGenCommand(t *testing.T) {
 			TestCmds: [][]string{
 				{"gen", "deploy", "DoesntExist"},
 			},
-			ExpectErr:  true,
+			ExpectErr:  ErrorBoth,
 			ExpectDiff: true,
 		},
 		{
@@ -26,7 +26,7 @@ func TestGenCommand(t *testing.T) {
 			TestCmds: [][]string{
 				{"gen", "deploy", "Counter"},
 			},
-			ExpectErr:  true,
+			ExpectErr:  ErrorBoth,
 			ExpectDiff: true,
 		},
 		{
