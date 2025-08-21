@@ -75,19 +75,23 @@ func RunCompatibilityTest(t *testing.T, test CompatibilityTest) {
 		test.OutputArtifacts = DefaultOutputArtifacs
 	}
 
-	helpers.IsolatedTest(t, test.Name, func(t *testing.T, _ *helpers.TrebContext) {
-		v1Ch := make(chan testOutput, 1)
-		runTest(t, helpers.BinaryV1, test, v1Ch)
-		v2Ch := make(chan testOutput, 1)
-		runTest(t, helpers.BinaryV2, test, v2Ch)
+	// Don't use IsolatedTest here because it calls t.Parallel() which would
+	// cause this test to return before subtests complete
+	t.Run(test.Name, func(t *testing.T) {
+		t.Parallel()
+		// Store outputs from both versions
+		var v1Output, v2Output testOutput
 
-		v1Output := <-v1Ch
-		v2Output := <-v2Ch
+		// Run v1 test
+		v1Output = runTest(t, helpers.BinaryV1, test)
+		v2Output = runTest(t, helpers.BinaryV2, test)
 
+		// Run v2 test
+		// At this point, Go's testing framework ensures both subtests have completed
+		// before continuing with the parent test
 		compareOutput(t, test, v1Output.testCmdsStdout, v2Output.testCmdsStdout, "Test Commands", "commands.golden")
 		for path, artifact := range v1Output.artifacts {
 			compareOutput(t, test, artifact, v2Output.artifacts[path], path, filepath.Base(path)+".golden")
-
 		}
 	})
 }
@@ -99,7 +103,8 @@ func RunCompatibilityTests(t *testing.T, tests []CompatibilityTest) {
 	}
 }
 
-func runTest(t *testing.T, version helpers.BinaryVersion, test CompatibilityTest, res chan testOutput) {
+func runTest(t *testing.T, version helpers.BinaryVersion, test CompatibilityTest) testOutput {
+	var tOutput testOutput
 	helpers.IsolatedTestWithVersion(t, string(version), version, func(t *testing.T, ctx *helpers.TrebContext) {
 		var output bytes.Buffer
 		// Run setup if provided
@@ -117,8 +122,8 @@ func runTest(t *testing.T, version helpers.BinaryVersion, test CompatibilityTest
 		if test.SetupCmds != nil {
 			t.Logf("Running setup commands")
 			for _, cmd := range test.SetupCmds {
-				if output, err := setupCtx.Treb(cmd...); err != nil {
-					t.Fatalf("Failed setup command %v: %v\nOutput:\n%s", cmd, err, output)
+				if cmdOutput, err := setupCtx.Treb(cmd...); err != nil {
+					t.Fatalf("Failed setup command %v: %v\nOutput:\n%s", cmd, err, cmdOutput)
 				}
 			}
 		}
@@ -152,8 +157,9 @@ func runTest(t *testing.T, version helpers.BinaryVersion, test CompatibilityTest
 			assert.NoError(t, err, "Command failed: %v\nOutput: %s", err, output)
 		}
 
-		res <- createTestOutput(t, output.String(), test, ctx)
+		tOutput = createTestOutput(t, output.String(), test, ctx)
 	})
+	return tOutput
 }
 
 func createTestOutput(t *testing.T, testCmdsStdout string, test CompatibilityTest, ctx *helpers.TrebContext) (output testOutput) {

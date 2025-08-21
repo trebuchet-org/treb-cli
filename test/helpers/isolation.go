@@ -86,8 +86,6 @@ func IsolatedTest(t *testing.T, name string, fn func(t *testing.T, ctx *TrebCont
 	t.Run(name, func(t *testing.T) {
 		// Check if parallel mode is enabled
 		if IsParallelMode {
-			t.Parallel() // Enable parallel execution
-			
 			// Acquire a context from the pool
 			pool := GetGlobalPool()
 			if pool == nil {
@@ -128,8 +126,6 @@ func IsolatedTestWithVersion(t *testing.T, name string, version BinaryVersion, f
 	t.Run(name, func(t *testing.T) {
 		// Check if parallel mode is enabled
 		if IsParallelMode {
-			t.Parallel() // Enable parallel execution
-			
 			// Acquire a context from the pool
 			pool := GetGlobalPool()
 			if pool == nil {
