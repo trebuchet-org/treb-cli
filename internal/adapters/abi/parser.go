@@ -73,15 +73,21 @@ func (p *Parser) generateArgs(inputs abi.Arguments, prefix string) (vars string,
 
 		// Generate variable declaration based on type
 		varType := p.solidityTypeToGo(input.Type.String())
+		
+		// Add memory keyword for reference types
+		memoryKeyword := ""
+		if varType == "string" || varType == "bytes" || strings.Contains(varType, "[]") {
+			memoryKeyword = " memory"
+		}
 
-		varLines = append(varLines, fmt.Sprintf("%s %s = %s;",
-			varType, varName, p.getDefaultValue(input.Type.String())))
+		varLines = append(varLines, fmt.Sprintf("        %s%s %s = %s;",
+			varType, memoryKeyword, varName, p.getDefaultValue(input.Type.String())))
 
 		argNames = append(argNames, varName)
 	}
 
 	vars = strings.Join(varLines, "\n")
-	encode = strings.Join(argNames, ", ")
+	encode = fmt.Sprintf("return abi.encode(%s);", strings.Join(argNames, ", "))
 
 	return vars, encode
 }

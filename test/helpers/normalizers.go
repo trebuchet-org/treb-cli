@@ -129,6 +129,13 @@ func (n RepositoryHormalizer) Normalize(output string) string {
 	return output
 }
 
+type DebugNormalizer struct{}
+
+func (n DebugNormalizer) Normalize(output string) string {
+	output = regexp.MustCompile(`(?mi)^\s*DEBUG:.*\n`).ReplaceAllString(output, "")
+	return output
+}
+
 // VersionNormalizer replaces version-related strings
 type VersionNormalizer struct{}
 
@@ -151,6 +158,7 @@ func GetDefaultNormalizers() []Normalizer {
 		TargetedGitCommitNormalizer{},
 		TargetedHashNormalizer{},
 		RepositoryHormalizer{},
+		DebugNormalizer{},
 		// AddressNormalizer{}, // We don't normalize addresses as they should be deterministic
 		// PathNormalizer{},    // Often we want to see actual paths
 		// BlockNumberNormalizer{},

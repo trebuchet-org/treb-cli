@@ -91,7 +91,7 @@ func (g *ScriptGeneratorAdapter) generateContractScript(tmpl *domain.ScriptTempl
             .setLabel(vm.envOr("LABEL", string("")))
             .deploy`, strategyMethod, tmpl.ArtifactPath)
 
-	hasConstructor := tmpl.ABI.Constructor.Name != ""
+	hasConstructor := len(tmpl.ABI.Constructor.Inputs) > 0
 	if hasConstructor {
 		deployCall += "(_getConstructorArgs());"
 	} else {

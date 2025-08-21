@@ -108,7 +108,7 @@ func (tc *TrebContext) Treb(args ...string) (string, error) {
 	allArgs = append(allArgs, args...)
 
 	// Check if debug mode is enabled
-	debugMode := os.Getenv("TREB_TEST_DEBUG") != ""
+	debugMode := IsDebugEnabled()
 
 	if debugMode {
 		tc.t.Logf("=== TREB COMMAND DEBUG (%s) ===", tc.BinaryVersion)
@@ -146,6 +146,13 @@ func (tc *TrebContext) Treb(args ...string) (string, error) {
 	} else {
 		cmd.Dir = GetFixtureDir()
 	}
+	
+	// Pass environment variables
+	cmd.Env = os.Environ()
+	if debugMode {
+		// Pass TREB_TEST_DEBUG to the treb command if debug is enabled
+		cmd.Env = append(cmd.Env, "TREB_TEST_DEBUG=1")
+	}
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -168,6 +175,13 @@ func (tc *TrebContext) Treb(args ...string) (string, error) {
 	}
 
 	return output, err
+}
+
+// Debug logs a message only if debug mode is enabled
+func (tc *TrebContext) Debug(format string, args ...interface{}) {
+	if IsDebugEnabled() {
+		tc.t.Logf("[DEBUG] "+format, args...)
+	}
 }
 
 // GetVersion returns the binary version being used

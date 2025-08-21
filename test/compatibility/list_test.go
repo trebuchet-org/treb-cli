@@ -36,9 +36,9 @@ func TestListCommand(t *testing.T) {
 				{"run", "script/deploy/DeployCounter.s.sol", "--namespace", "production"},
 				{"run", "script/deploy/DeployCounter.s.sol", "--network", "anvil-31338", "--namespace", "production"},
 			},
-			TestCmds:            [][]string{{"list"}},
-			ExpectDiff:          true, // ordering in the transactions.json file is different
-			IgnoreRegistryFiles: true,
+			TestCmds:        [][]string{{"list"}},
+			ExpectDiff:      true, // ordering in the transactions.json file is different
+			OutputArtifacts: []string{},
 		},
 		{
 			Name: "list_with_proxy_relationships",
@@ -126,9 +126,9 @@ func TestListCommand(t *testing.T) {
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 			},
-			TestCmds: [][]string{{"list", "--json"}},
+			TestCmds:   [][]string{{"list", "--json"}},
 			ExpectDiff: true,
-			ExpectErr: ErrorBoth, // --json flag doesn't exist in either v1 or v2
+			ExpectErr:  ErrorBoth, // --json flag doesn't exist in either v1 or v2
 		},
 		{
 			Name: "list_with_mixed_deployment_status",

@@ -72,12 +72,12 @@ func TestConfigCommand(t *testing.T) {
 				// Use absolute path based on the test's working directory
 				configPath := filepath.Join(ctx.GetWorkDir(), ".treb", "config.local.json")
 				cwd, _ := os.Getwd()
-				if os.Getenv("TREB_TEST_DEBUG") != "" {
+				if helpers.IsDebugEnabled() {
 					t.Logf("PreSetup: Creating config file at %s (cwd: %s, workDir: %s)", configPath, cwd, ctx.GetWorkDir())
 				}
 				os.MkdirAll(filepath.Dir(configPath), 0755)
 				err := os.WriteFile(configPath, []byte(`{"namespace": "default", "network": "celo"}`), 0644)
-				if os.Getenv("TREB_TEST_DEBUG") != "" {
+				if helpers.IsDebugEnabled() {
 					if err != nil {
 						t.Logf("PreSetup: Failed to write config file: %v", err)
 					} else {

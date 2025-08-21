@@ -58,8 +58,15 @@ func buildBinaries() error {
 		cmd.Dir = projectRoot
 		output, err = cmd.CombinedOutput()
 		if err != nil {
-			// v2 build failure is not fatal, tests will skip if binary doesn't exist
-			fmt.Printf("  Warning: failed to build v2 binary: %v\n", err)
+			return fmt.Errorf("failed to build v2 binary: %w\nOutput: %s", err, output)
+		}
+	} else {
+		// Try alternative v2 build command
+		cmd = exec.Command("go", "build", "-tags", "v2", "-o", "bin/treb-v2", ".")
+		cmd.Dir = projectRoot
+		output, err = cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("failed to build v2 binary: %w\nOutput: %s", err, output)
 		}
 	}
 

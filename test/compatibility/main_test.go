@@ -21,8 +21,8 @@ func parseParallelFlag() int {
 
 // TestMain handles setup/teardown for all tests
 func TestMain(m *testing.M) {
-	// Parse flags first
-	flag.Parse()
+	// Initialize test flags (this will also parse flags)
+	helpers.InitTestFlags()
 
 	// Get the value of -test.parallel flag
 	parallelFlag := parseParallelFlag()

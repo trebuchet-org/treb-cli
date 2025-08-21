@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -27,16 +26,23 @@ const (
 
 // CompatibilityTest runs a test against both v1 and v2 binaries
 type CompatibilityTest struct {
-	Name                string
-	PreSetup            func(t *testing.T, ctx *helpers.TrebContext)
-	SetupCmds           [][]string
-	PostSetup           func(t *testing.T, ctx *helpers.TrebContext)
-	TestCmds            [][]string
-	ExpectErr           ErrorExpectation
-	ExpectDiff          bool
-	Normalizers         []helpers.Normalizer
-	SetupCtx            *helpers.TrebContext
-	IgnoreRegistryFiles bool
+	Name            string
+	PreSetup        func(t *testing.T, ctx *helpers.TrebContext)
+	SetupCmds       [][]string
+	PostSetup       func(t *testing.T, ctx *helpers.TrebContext)
+	TestCmds        [][]string
+	ExpectErr       ErrorExpectation
+	ExpectDiff      bool
+	Normalizers     []helpers.Normalizer
+	SetupCtx        *helpers.TrebContext
+	OutputArtifacts []string
+}
+
+var DefaultOutputArtifacs = []string{
+	".treb/deployments.json",
+	".treb/registry.json",
+	".treb/transactions.json",
+	".treb/safe-txs.json",
 }
 
 // ExpectsError returns true if the test expects an error for the given context
@@ -56,11 +62,8 @@ func (test CompatibilityTest) ExpectsError(ctx *helpers.TrebContext) bool {
 }
 
 type testOutput struct {
-	testCmdsOutput   string
-	deploymentsJSON  string
-	transactionsJSON string
-	safeTxsJSON      string
-	registryJSON     string
+	testCmdsStdout string
+	artifacts      map[string]string
 }
 
 // RunCompatibilityTest runs a test with both v1 and v2 contexts
@@ -68,17 +71,23 @@ func RunCompatibilityTest(t *testing.T, test CompatibilityTest) {
 	if test.Normalizers == nil {
 		test.Normalizers = helpers.GetDefaultNormalizers()
 	}
+	if test.OutputArtifacts == nil {
+		test.OutputArtifacts = DefaultOutputArtifacs
+	}
 
 	helpers.IsolatedTest(t, test.Name, func(t *testing.T, _ *helpers.TrebContext) {
-		v1Output := runTest(t, helpers.BinaryV1, test)
-		v2Output := runTest(t, helpers.BinaryV2, test)
+		v1Ch := make(chan testOutput, 1)
+		runTest(t, helpers.BinaryV1, test, v1Ch)
+		v2Ch := make(chan testOutput, 1)
+		runTest(t, helpers.BinaryV2, test, v2Ch)
 
-		compareOutput(t, test, v1Output.testCmdsOutput, v2Output.testCmdsOutput, "Test Commands", "commands.golden")
-		if !test.IgnoreRegistryFiles {
-			compareOutput(t, test, v1Output.deploymentsJSON, v2Output.deploymentsJSON, "deployments.json", "deployments.json.golden")
-			compareOutput(t, test, v1Output.transactionsJSON, v2Output.transactionsJSON, "transactions.json", "transactions.json.golden")
-			compareOutput(t, test, v1Output.safeTxsJSON, v2Output.safeTxsJSON, "safe-txs.json", "safe-txs.json.golden")
-			compareOutput(t, test, v1Output.registryJSON, v2Output.registryJSON, "registry.json", "registry.json.golden")
+		v1Output := <-v1Ch
+		v2Output := <-v2Ch
+
+		compareOutput(t, test, v1Output.testCmdsStdout, v2Output.testCmdsStdout, "Test Commands", "commands.golden")
+		for path, artifact := range v1Output.artifacts {
+			compareOutput(t, test, artifact, v2Output.artifacts[path], path, filepath.Base(path)+".golden")
+
 		}
 	})
 }
@@ -90,7 +99,7 @@ func RunCompatibilityTests(t *testing.T, tests []CompatibilityTest) {
 	}
 }
 
-func runTest(t *testing.T, version helpers.BinaryVersion, test CompatibilityTest) (testOutput testOutput) {
+func runTest(t *testing.T, version helpers.BinaryVersion, test CompatibilityTest, res chan testOutput) {
 	helpers.IsolatedTestWithVersion(t, string(version), version, func(t *testing.T, ctx *helpers.TrebContext) {
 		var output bytes.Buffer
 		// Run setup if provided
@@ -143,52 +152,33 @@ func runTest(t *testing.T, version helpers.BinaryVersion, test CompatibilityTest
 			assert.NoError(t, err, "Command failed: %v\nOutput: %s", err, output)
 		}
 
-		testOutput = createTestOutput(output.String(), test, ctx)
+		res <- createTestOutput(t, output.String(), test, ctx)
 	})
-	return
 }
 
-func createTestOutput(testCmdsOutput string, test CompatibilityTest, ctx *helpers.TrebContext) (output testOutput) {
-	output.testCmdsOutput = helpers.Normalize(testCmdsOutput, test.Normalizers)
+func createTestOutput(t *testing.T, testCmdsStdout string, test CompatibilityTest, ctx *helpers.TrebContext) (output testOutput) {
+	output.testCmdsStdout = helpers.Normalize(testCmdsStdout, test.Normalizers)
+	output.artifacts = make(map[string]string)
 
 	var err error
 	var data []byte
-	
+
 	// Use the test context's working directory instead of GetFixtureDir()
 	workDir := ctx.GetWorkDir()
 
-	if data, err = os.ReadFile(path.Join(workDir, ".treb", "deployments.json")); err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			data = []byte{}
-		} else {
-			panic(err)
+	for _, path := range test.OutputArtifacts {
+		if data, err = os.ReadFile(filepath.Join(workDir, path)); err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				data = []byte{}
+			} else {
+				panic(err)
+			}
+		}
+		output.artifacts[path] = helpers.Normalize(string(data), test.Normalizers)
+		if helpers.IsDebugEnabled() {
+			t.Logf("Reading artifact at %s:\n---\n%s\n---\n", path, data)
 		}
 	}
-	output.deploymentsJSON = helpers.Normalize(string(data), test.Normalizers)
-	if data, err = os.ReadFile(path.Join(workDir, ".treb", "transactions.json")); err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			data = []byte{}
-		} else {
-			panic(err)
-		}
-	}
-	output.transactionsJSON = helpers.Normalize(string(data), test.Normalizers)
-	if data, err = os.ReadFile(path.Join(workDir, ".treb", "safe-txs.json")); err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			data = []byte{}
-		} else {
-			panic(err)
-		}
-	}
-	output.safeTxsJSON = helpers.Normalize(string(data), test.Normalizers)
-	if data, err = os.ReadFile(path.Join(workDir, ".treb", "registry.json")); err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			data = []byte{}
-		} else {
-			panic(err)
-		}
-	}
-	output.registryJSON = helpers.Normalize(string(data), test.Normalizers)
 	return
 }
 
@@ -196,7 +186,7 @@ func compareOutput(t *testing.T, test CompatibilityTest, v1Output, v2Output, dis
 	if diff := cmp.Diff(v1Output, v2Output); diff != "" {
 		goldenPath := helpers.GoldenPath(filepath.Join("compatibility", t.Name(), goldenFile))
 		if test.ExpectDiff {
-			if os.Getenv("UPDATE_GOLDEN") == "true" {
+			if helpers.ShouldUpdateGolden() {
 				if err := os.MkdirAll(filepath.Dir(goldenPath), 0755); err != nil {
 					t.Fatalf("Failed to create golden directory: %v", err)
 				}
