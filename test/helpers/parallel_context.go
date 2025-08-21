@@ -24,6 +24,7 @@ type TestContext struct {
 	ID          string
 	WorkDir     string
 	AnvilNodes  map[string]*AnvilNode
+	Snapshots   map[string]string // chainID -> snapshotID for reverting state
 	TrebContext *TrebContext
 	inUse       bool
 	mu          sync.Mutex
@@ -50,8 +51,6 @@ type ProgressReporter struct {
 var (
 	globalPool     *TestContextPool
 	globalReporter *ProgressReporter
-	// IsParallelMode indicates whether tests are running in parallel mode
-	IsParallelMode bool
 )
 
 // GetGlobalPool returns the global test context pool
@@ -64,9 +63,6 @@ func InitializeTestPool(poolSize int) error {
 	if globalPool != nil {
 		return nil // Already initialized
 	}
-
-	// Set parallel mode flag
-	IsParallelMode = true
 
 	reporter := &ProgressReporter{}
 	globalReporter = reporter
@@ -97,20 +93,49 @@ func InitializeTestPool(poolSize int) error {
 		return fmt.Errorf("failed to build contracts: %w", err)
 	}
 
-	// Create contexts
-	for i := 0; i < poolSize; i++ {
-		reporter.SetStatus(fmt.Sprintf("Preparing test context %d/%d...", i+1, poolSize))
-		ctx, err := pool.createContext()
-		if err != nil {
-			// Clean up already created contexts
-			for _, c := range pool.contexts {
-				c.Cleanup()
-			}
-			return fmt.Errorf("failed to create context %d: %w", i, err)
-		}
-		pool.contexts = append(pool.contexts, ctx)
+	// Create contexts in parallel
+	reporter.SetStatus(fmt.Sprintf("Creating %d test contexts...", poolSize))
+
+	type contextResult struct {
+		ctx *TestContext
+		err error
+		idx int
 	}
 
+	resultChan := make(chan contextResult, poolSize)
+
+	// Launch goroutines to create contexts in parallel
+	for i := range poolSize {
+		go func(index int) {
+			ctx, err := pool.createContext()
+			resultChan <- contextResult{ctx: ctx, err: err, idx: index}
+		}(i)
+	}
+
+	// Collect results
+	results := make([]*TestContext, poolSize)
+	successCount := 0
+
+	for result := range resultChan {
+		if result.err != nil {
+			// Clean up already created contexts
+			for _, c := range pool.contexts {
+				if c != nil {
+					c.Cleanup()
+				}
+			}
+			return fmt.Errorf("failed to create context %d: %w", result.idx, result.err)
+		}
+		results[result.idx] = result.ctx
+		successCount++
+		reporter.SetStatus(fmt.Sprintf("Initialized %d/%d test contexts", successCount, poolSize))
+		if successCount == poolSize {
+			close(resultChan)
+		}
+	}
+
+	// Add all contexts to the pool
+	pool.contexts = results
 	globalPool = pool
 	reporter.SetStatus("Test environment ready")
 	reporter.Stop()
@@ -161,7 +186,7 @@ func (p *TestContextPool) createContext() (*TestContext, error) {
 	node1Name := fmt.Sprintf("anvil-31337-%s", ctx.ID)
 	node2Name := fmt.Sprintf("anvil-31338-%s", ctx.ID)
 
-	// Start first node
+	// Start first node (quietly)
 	if err := dev.StartAnvilInstance(node1Name, fmt.Sprintf("%d", port1), "31337"); err != nil {
 		return nil, fmt.Errorf("failed to start anvil node 1: %w", err)
 	}
@@ -170,7 +195,7 @@ func (p *TestContextPool) createContext() (*TestContext, error) {
 		URL:           fmt.Sprintf("http://127.0.0.1:%d", port1),
 	}
 
-	// Start second node
+	// Start second node (quietly)
 	if err := dev.StartAnvilInstance(node2Name, fmt.Sprintf("%d", port2), "31338"); err != nil {
 		dev.StopAnvilInstance(node1Name, fmt.Sprintf("%d", port1))
 		return nil, fmt.Errorf("failed to start anvil node 2: %w", err)
@@ -180,7 +205,47 @@ func (p *TestContextPool) createContext() (*TestContext, error) {
 		URL:           fmt.Sprintf("http://127.0.0.1:%d", port2),
 	}
 
+	// Initialize snapshots map
+	ctx.Snapshots = make(map[string]string)
 	return ctx, nil
+}
+
+func (ctx *TestContext) TakeSnapshots() error {
+	if snapshot1, err := takeSnapshot(ctx.AnvilNodes["anvil-31337"].URL); err == nil {
+		ctx.Snapshots["31337"] = snapshot1
+	} else {
+		return fmt.Errorf("Failed to create snapshot: %v", err)
+	}
+
+	if snapshot2, err := takeSnapshot(ctx.AnvilNodes["anvil-31338"].URL); err == nil {
+		ctx.Snapshots["31338"] = snapshot2
+	} else {
+		return fmt.Errorf("Failed to create snapshot: %v", err)
+	}
+	return nil
+}
+
+func (ctx *TestContext) RevertSnapshots() error {
+	for chainID, snapshotID := range ctx.Snapshots {
+		var nodeURL string
+		switch chainID {
+		case "31337":
+			if node, ok := ctx.AnvilNodes["anvil-31337"]; ok {
+				nodeURL = node.URL
+			}
+		case "31338":
+			if node, ok := ctx.AnvilNodes["anvil-31338"]; ok {
+				nodeURL = node.URL
+			}
+		}
+
+		if nodeURL != "" && snapshotID != "" {
+			if err := revertSnapshot(nodeURL, snapshotID); err != nil {
+				return fmt.Errorf("Failed to revert snapshot for chain %s: %v\n", chainID, err)
+			}
+		}
+	}
+	return nil
 }
 
 // updateFoundryConfig updates the foundry.toml with new ports
@@ -217,10 +282,27 @@ func (p *TestContextPool) Acquire(t *testing.T) *TestContext {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
+	// Check if all contexts are in use and skip cleanup is enabled
+	availableCount := 0
+	for _, ctx := range p.contexts {
+		if !ctx.inUse {
+			availableCount++
+		}
+	}
+
+	if availableCount == 0 && ShouldSkipCleanup() {
+		t.Fatal("No test contexts available and skip cleanup is enabled. " +
+			"Either disable skip cleanup or increase parallelism to provide more contexts.")
+	}
+
 	for {
 		for _, ctx := range p.contexts {
 			if !ctx.inUse {
 				ctx.inUse = true
+				err := ctx.TakeSnapshots()
+				if err != nil {
+					t.Fatal(err)
+				}
 				// Create TrebContext for the test
 				version := GetBinaryVersionFromEnv()
 				ctx.TrebContext = &TrebContext{
@@ -241,21 +323,34 @@ func (p *TestContextPool) Acquire(t *testing.T) *TestContext {
 }
 
 // Release returns a context to the pool
-func (p *TestContextPool) Release(ctx *TestContext) {
+func (p *TestContextPool) Release(ctx *TestContext) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	// Clean up the context
-	ctx.Clean()
+	// Log work directory if skip cleanup is enabled
+	if ShouldSkipCleanup() && ctx.TrebContext != nil {
+		ctx.TrebContext.t.Logf("🔍 Test work directory preserved at: %s", ctx.WorkDir)
+	}
+
+	// Clean up the context (unless skip cleanup is enabled)
+	if !ShouldSkipCleanup() {
+		if err := ctx.Clean(); err != nil {
+			return err
+		}
+	}
 	ctx.inUse = false
 	ctx.TrebContext = nil
 
 	// Signal that a context is available
 	p.cond.Signal()
+	return nil
 }
 
 // Clean cleans up a test context for reuse
-func (ctx *TestContext) Clean() {
+func (ctx *TestContext) Clean() error {
+	// First, revert Anvil nodes to their initial snapshots
+	// This ensures blockchain state is clean for the next test
+	ctx.RevertSnapshots()
 	// Clean test artifacts (these are real directories we created)
 	cleanDirs := []string{".treb", "broadcast", "cache", "out"}
 	for _, dir := range cleanDirs {
@@ -274,6 +369,7 @@ func (ctx *TestContext) Clean() {
 			}
 		}
 	}
+	return nil
 }
 
 // Cleanup destroys the test context
@@ -284,8 +380,12 @@ func (ctx *TestContext) Cleanup() {
 		delete(ctx.AnvilNodes, name)
 	}
 
-	// Remove work directory
-	os.RemoveAll(ctx.WorkDir)
+	// Remove work directory (unless skip cleanup is enabled)
+	if !ShouldSkipCleanup() {
+		os.RemoveAll(ctx.WorkDir)
+	} else {
+		fmt.Printf("🔍 Test context work directory preserved at: %s\n", ctx.WorkDir)
+	}
 }
 
 // Shutdown cleans up all contexts
@@ -505,4 +605,46 @@ func ParallelIsolatedTest(t *testing.T, name string, fn func(t *testing.T, ctx *
 		// Run the test
 		fn(t, testCtx.TrebContext)
 	})
+}
+
+// takeSnapshot takes a snapshot of the current blockchain state
+func takeSnapshot(rpcURL string) (string, error) {
+	cmd := exec.Command("cast", "rpc", "--rpc-url", rpcURL, "evm_snapshot")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to take snapshot: %w", err)
+	}
+
+	// The output is JSON, extract the snapshot ID
+	snapshotID := strings.Trim(string(output), "\"\n")
+	return snapshotID, nil
+}
+
+// revertSnapshot reverts the blockchain to a previous snapshot
+func revertSnapshot(rpcURL, snapshotID string) error {
+	cmd := exec.Command("cast", "rpc", "--rpc-url", rpcURL, "evm_revert", snapshotID)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to revert snapshot: %w", err)
+	}
+	return nil
+}
+
+// startAnvilQuietly starts an anvil instance without printing to stdout
+func startAnvilQuietly(name, port, chainID string) error {
+	// Temporarily redirect stdout to suppress output
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	// Start anvil
+	err := dev.StartAnvilInstance(name, port, chainID)
+
+	// Restore stdout
+	w.Close()
+	os.Stdout = oldStdout
+
+	// Drain the pipe to prevent blocking
+	go io.Copy(io.Discard, r)
+
+	return err
 }

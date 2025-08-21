@@ -34,7 +34,6 @@ type CompatibilityTest struct {
 	ExpectErr       ErrorExpectation
 	ExpectDiff      bool
 	Normalizers     []helpers.Normalizer
-	SetupCtx        *helpers.TrebContext
 	OutputArtifacts []string
 }
 
@@ -113,16 +112,11 @@ func runTest(t *testing.T, version helpers.BinaryVersion, test CompatibilityTest
 			test.PreSetup(t, ctx)
 		}
 
-		setupCtx := ctx
-		if test.SetupCtx != nil {
-			setupCtx = test.SetupCtx
-		}
-
 		// Run setup commands if provided
 		if test.SetupCmds != nil {
 			t.Logf("Running setup commands")
 			for _, cmd := range test.SetupCmds {
-				if cmdOutput, err := setupCtx.Treb(cmd...); err != nil {
+				if cmdOutput, err := ctx.Treb(cmd...); err != nil {
 					t.Fatalf("Failed setup command %v: %v\nOutput:\n%s", cmd, err, cmdOutput)
 				}
 			}
@@ -158,6 +152,11 @@ func runTest(t *testing.T, version helpers.BinaryVersion, test CompatibilityTest
 		}
 
 		tOutput = createTestOutput(t, output.String(), test, ctx)
+		
+		// Log work directory if skip cleanup is enabled
+		if helpers.ShouldSkipCleanup() {
+			t.Logf("🔍 Test work directory for %s: %s", version, ctx.GetWorkDir())
+		}
 	})
 	return tOutput
 }

@@ -10,6 +10,11 @@ import (
 func cleanTestArtifacts(t *testing.T) {
 	t.Helper()
 
+	if ShouldSkipCleanup() {
+		t.Logf("🔍 Skipping cleanup, test artifacts preserved at: %s", GetFixtureDir())
+		return
+	}
+
 	fixtureDir := GetFixtureDir()
 
 	// Clean .treb directory
@@ -84,75 +89,58 @@ func (tc *TestCleanup) Cleanup(manager *AnvilManager) {
 // IsolatedTest runs a test with full isolation
 func IsolatedTest(t *testing.T, name string, fn func(t *testing.T, ctx *TrebContext)) {
 	t.Run(name, func(t *testing.T) {
-		// Check if parallel mode is enabled
-		if IsParallelMode {
-			// Acquire a context from the pool
-			pool := GetGlobalPool()
-			if pool == nil {
-				t.Fatal("Test pool not initialized in parallel mode")
-			}
-			testCtx := pool.Acquire(t)
-			defer pool.Release(testCtx)
-
-			// Don't change working directory in parallel mode - TrebContext handles it
-
-			// Determine binary version from environment or default
-			version := GetBinaryVersionFromEnv()
-			testCtx.TrebContext.SetVersion(version)
-
-			// Run the test
-			fn(t, testCtx.TrebContext)
-		} else {
-			// Sequential mode - use existing logic
-			// Clean artifacts first to ensure clean state
-			cleanTestArtifacts(t)
-
-			// Create cleanup handler with snapshot
-			cleanup := NewTestCleanup(t, anvilManager)
-			defer cleanup.Cleanup(anvilManager)
-
-			// Determine binary version from environment or default
-			version := GetBinaryVersionFromEnv()
-
-			// Create test context and run test
-			ctx := NewTrebContext(t, version)
-			fn(t, ctx)
+		// Always use pool-based isolation for consistency
+		pool := GetGlobalPool()
+		if pool == nil {
+			t.Fatal("Test pool not initialized")
 		}
+		testCtx := pool.Acquire(t)
+
+		// Only release if not skipping cleanup
+		if !ShouldSkipCleanup() {
+			defer pool.Release(testCtx)
+		} else {
+			defer func() {
+				t.Logf("🔍 Test context not released due to skip cleanup flag: %s", testCtx.WorkDir)
+			}()
+		}
+
+		// Determine binary version from environment or default
+		version := GetBinaryVersionFromEnv()
+		testCtx.TrebContext.SetVersion(version)
+
+		// Run the test
+		fn(t, testCtx.TrebContext)
 	})
 }
 
 // IsolatedTestWithVersion runs a test with a specific binary version
 func IsolatedTestWithVersion(t *testing.T, name string, version BinaryVersion, fn func(t *testing.T, ctx *TrebContext)) {
 	t.Run(name, func(t *testing.T) {
-		// Check if parallel mode is enabled
-		if IsParallelMode {
-			// Acquire a context from the pool
-			pool := GetGlobalPool()
-			if pool == nil {
-				t.Fatal("Test pool not initialized in parallel mode")
-			}
-			testCtx := pool.Acquire(t)
-			defer pool.Release(testCtx)
-
-			// Don't change working directory in parallel mode - TrebContext handles it
-
-			// Set the specific version
-			testCtx.TrebContext.SetVersion(version)
-
-			// Run the test
-			fn(t, testCtx.TrebContext)
-		} else {
-			// Sequential mode - use existing logic
-			// Clean artifacts first to ensure clean state
-			cleanTestArtifacts(t)
-
-			// Create cleanup handler with snapshot
-			cleanup := NewTestCleanup(t, anvilManager)
-			defer cleanup.Cleanup(anvilManager)
-
-			// Create test context with specific version
-			ctx := NewTrebContext(t, version)
-			fn(t, ctx)
+		// Always use pool-based isolation for consistency
+		pool := GetGlobalPool()
+		if pool == nil {
+			t.Fatal("Test pool not initialized")
 		}
+		testCtx := pool.Acquire(t)
+
+		// Only release if not skipping cleanup
+		if !ShouldSkipCleanup() {
+			defer func() {
+				if err := pool.Release(testCtx); err != nil {
+					t.Fatal(err)
+				}
+			}()
+		} else {
+			defer func() {
+				t.Logf("🔍 Test context not released due to skip cleanup flag: %s", testCtx.WorkDir)
+			}()
+		}
+
+		// Set the specific version
+		testCtx.TrebContext.SetVersion(version)
+
+		// Run the test
+		fn(t, testCtx.TrebContext)
 	})
 }

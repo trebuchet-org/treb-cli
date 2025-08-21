@@ -63,9 +63,11 @@ func (m *SendersManager) BuildSenderScriptConfig(
 	}
 
 	var safeSigners []string
-	for _, sender := range senders {
-		if m.config.Senders[sender].Type == "safe" {
-			safeSigners = append(safeSigners, m.config.Senders[sender].Signer)
+	if m.config != nil && m.config.Senders != nil {
+		for _, senderKey := range senders {
+			if sender, exists := m.config.Senders[senderKey]; exists && sender.Type == "safe" {
+				safeSigners = append(safeSigners, sender.Signer)
+			}
 		}
 	}
 	signersHWConfig := m.getSendersHWConfig(safeSigners)
@@ -154,8 +156,17 @@ func (m *SendersManager) getSendersHWConfig(senders []string) config.SenderHWCon
 		UseTrezor:       false,
 		DerivationPaths: []string{},
 	}
+	
+	// Check if config is nil or has no senders
+	if m.config == nil || m.config.Senders == nil {
+		return hwConfig
+	}
+	
 	for _, senderKey := range senders {
-		sender := m.config.Senders[senderKey]
+		sender, exists := m.config.Senders[senderKey]
+		if !exists {
+			continue
+		}
 		hwConfig.UseTrezor = hwConfig.UseTrezor || sender.Type == "trezor"
 		hwConfig.UseLedger = hwConfig.UseLedger || sender.Type == "ledger"
 
@@ -182,7 +193,15 @@ func (m *SendersManager) buildSenderInitConfigs(senders []string) ([]config.Send
 }
 
 func (m *SendersManager) buildSenderInitConfig(senderKey string) (*config.SenderInitConfig, error) {
-	sender := m.config.Senders[senderKey]
+	if m.config == nil || m.config.Senders == nil {
+		return nil, fmt.Errorf("no sender configuration available")
+	}
+	
+	sender, exists := m.config.Senders[senderKey]
+	if !exists {
+		return nil, fmt.Errorf("sender '%s' not found in configuration", senderKey)
+	}
+	
 	switch sender.Type {
 	case "private_key":
 		// Parse private key to get address

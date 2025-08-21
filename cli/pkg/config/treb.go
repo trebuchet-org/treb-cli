@@ -75,11 +75,50 @@ func LoadTrebConfig(projectPath string) (*FoundryFullConfig, error) {
 }
 
 // GetProfileTrebConfig returns the treb config for a specific profile
+// If the profile doesn't exist, it falls back to default profile and merges
 func (fc *FoundryFullConfig) GetProfileTrebConfig(profileName string) (*TrebConfig, error) {
-	if profile, exists := fc.Profile[profileName]; exists {
-		return &profile.Treb, nil
+	// Start with default profile if it exists
+	var mergedConfig TrebConfig
+	if defaultProfile, exists := fc.Profile["default"]; exists {
+		// Deep copy the default config
+		mergedConfig = TrebConfig{
+			Senders:         make(map[string]config.SenderConfig),
+			LibraryDeployer: defaultProfile.Treb.LibraryDeployer,
+		}
+		for k, v := range defaultProfile.Treb.Senders {
+			mergedConfig.Senders[k] = v
+		}
 	}
-	return nil, fmt.Errorf("profile '%s' not found", profileName)
+
+	// If requesting default profile, return it as is
+	if profileName == "default" {
+		if len(mergedConfig.Senders) == 0 {
+			return nil, fmt.Errorf("profile 'default' not found")
+		}
+		return &mergedConfig, nil
+	}
+
+	// If specific profile exists, merge it with default
+	if profile, exists := fc.Profile[profileName]; exists {
+		// Override library deployer if set in specific profile
+		if profile.Treb.LibraryDeployer != "" {
+			mergedConfig.LibraryDeployer = profile.Treb.LibraryDeployer
+		}
+		
+		// Override senders - complete replacement per key, not deep merge
+		for k, v := range profile.Treb.Senders {
+			mergedConfig.Senders[k] = v
+		}
+		
+		return &mergedConfig, nil
+	}
+
+	// If profile doesn't exist but we have default, return default
+	if len(mergedConfig.Senders) > 0 {
+		return &mergedConfig, nil
+	}
+
+	return nil, fmt.Errorf("profile '%s' not found and no default profile available", profileName)
 }
 
 // expandEnvVar expands environment variables in a string

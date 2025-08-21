@@ -101,7 +101,7 @@ func StartAnvilInstance(name, port, chainID string) error {
 		return fmt.Errorf("anvil '%s' is already running (PID file exists at %s)", inst.Name, inst.PidFile)
 	}
 
-	color.New(color.FgCyan, color.Bold).Printf("🔨 Starting local anvil node '%s' on port %s...\n", inst.Name, inst.Port)
+	// color.New(color.FgCyan, color.Bold).Printf("🔨 Starting local anvil node '%s' on port %s...\n", inst.Name, inst.Port)
 
 	args := []string{"--port", inst.Port, "--host", "0.0.0.0"}
 	if inst.ChainID != "" {
@@ -127,17 +127,17 @@ func StartAnvilInstance(name, port, chainID string) error {
 		return fmt.Errorf("failed to write PID file: %w", err)
 	}
 
-	color.New(color.FgGreen).Printf("✅ Anvil '%s' started with PID %d\n", inst.Name, cmd.Process.Pid)
-	color.New(color.FgYellow).Printf("📋 Logs: %s\n", inst.LogFile)
-	color.New(color.FgBlue).Printf("🌐 RPC URL: http://localhost:%s\n", inst.Port)
+	// color.New(color.FgGreen).Printf("✅ Anvil '%s' started with PID %d\n", inst.Name, cmd.Process.Pid)
+	// color.New(color.FgYellow).Printf("📋 Logs: %s\n", inst.LogFile)
+	// color.New(color.FgBlue).Printf("🌐 RPC URL: http://localhost:%s\n", inst.Port)
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 
 	if err := inst.deployCreateX(); err != nil {
-		color.New(color.FgRed).Printf("⚠️  Warning: Failed to deploy CreateX: %v\n", err)
-		color.New(color.FgYellow).Println("Deployments may fail without CreateX factory")
+		return fmt.Errorf("Failed to deploy CreateX: %v\n", err)
+		// color.New(color.FgYellow).Println("Deployments may fail without CreateX factory")
 	} else {
-		color.New(color.FgGreen).Printf("✅ CreateX factory deployed at %s\n", CreateXAddress)
+		// color.New(color.FgGreen).Printf("✅ CreateX factory deployed at %s\n", CreateXAddress)
 	}
 
 	return nil
@@ -159,7 +159,7 @@ func StopAnvilInstance(name, port string) error {
 		return fmt.Errorf("failed to read PID file: %w", err)
 	}
 
-	color.New(color.FgCyan, color.Bold).Printf("🛑 Stopping anvil '%s' (PID %d)...\n", inst.Name, pid)
+	// color.New(color.FgCyan, color.Bold).Printf("🛑 Stopping anvil '%s' (PID %d)...\n", inst.Name, pid)
 
 	process, err := os.FindProcess(pid)
 	if err != nil {
@@ -176,7 +176,7 @@ func StopAnvilInstance(name, port string) error {
 		return fmt.Errorf("failed to remove PID file: %w", err)
 	}
 
-	color.New(color.FgGreen).Println("✅ Anvil stopped")
+	// color.New(color.FgGreen).Println("✅ Anvil stopped")
 	return nil
 }
 

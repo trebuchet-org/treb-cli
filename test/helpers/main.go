@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,8 +21,6 @@ func init() {
 	for !isTrebRoot(trebProjectRoot) && filepath.Dir(trebProjectRoot) != trebProjectRoot {
 		trebProjectRoot = filepath.Dir(trebProjectRoot)
 	}
-
-	fmt.Println(trebProjectRoot)
 
 	testProjectRoot = filepath.Join(trebProjectRoot, "test")
 	fixtureDir = filepath.Join(testProjectRoot, "testdata", "project")

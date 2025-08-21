@@ -10,6 +10,7 @@ import (
 var (
 	debugFlag        = flag.Bool("treb.debug", false, "Enable debug output for treb tests (equivalent to TREB_TEST_DEBUG=1)")
 	updateGoldenFlag = flag.Bool("treb.updategolden", false, "Update golden files (equivalent to UPDATE_GOLDEN=true)")
+	skipCleanupFlag  = flag.Bool("treb.skipcleanup", false, "Skip cleanup of test artifacts and log work directories (equivalent to TREB_TEST_SKIP_CLEANUP=1)")
 )
 
 // InitTestFlags initializes test flags and syncs them with environment variables
@@ -32,6 +33,12 @@ func InitTestFlags() {
 	} else if os.Getenv("UPDATE_GOLDEN") == "true" {
 		*updateGoldenFlag = true
 	}
+
+	if *skipCleanupFlag {
+		os.Setenv("TREB_TEST_SKIP_CLEANUP", "1")
+	} else if os.Getenv("TREB_TEST_SKIP_CLEANUP") != "" {
+		*skipCleanupFlag = true
+	}
 }
 
 // IsDebugEnabled returns true if debug mode is enabled
@@ -42,6 +49,11 @@ func IsDebugEnabled() bool {
 // ShouldUpdateGolden returns true if golden files should be updated
 func ShouldUpdateGolden() bool {
 	return *updateGoldenFlag || os.Getenv("UPDATE_GOLDEN") == "true"
+}
+
+// ShouldSkipCleanup returns true if test cleanup should be skipped
+func ShouldSkipCleanup() bool {
+	return *skipCleanupFlag || os.Getenv("TREB_TEST_SKIP_CLEANUP") != ""
 }
 
 // Debugf logs a debug message if debug mode is enabled

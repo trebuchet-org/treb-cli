@@ -52,22 +52,11 @@ func buildBinaries() error {
 	}
 
 	// Build v2 binary if it exists
-	v2Path := filepath.Join(projectRoot, "cli", "v2")
-	if _, err := os.Stat(v2Path); err == nil {
-		cmd = exec.Command("make", "build-v2")
-		cmd.Dir = projectRoot
-		output, err = cmd.CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("failed to build v2 binary: %w\nOutput: %s", err, output)
-		}
-	} else {
-		// Try alternative v2 build command
-		cmd = exec.Command("go", "build", "-tags", "v2", "-o", "bin/treb-v2", ".")
-		cmd.Dir = projectRoot
-		output, err = cmd.CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("failed to build v2 binary: %w\nOutput: %s", err, output)
-		}
+	cmd = exec.Command("make", "build-v2")
+	cmd.Dir = projectRoot
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to build v2 binary: %w\nOutput: %s", err, output)
 	}
 
 	return nil

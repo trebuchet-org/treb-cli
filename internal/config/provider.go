@@ -44,25 +44,53 @@ func Provider(v *viper.Viper) (*config.RuntimeConfig, error) {
 	}
 	cfg.FoundryConfig = foundryConfig
 
-	// Load profile-specific treb config (namespace = profile)
-	profile, ok := foundryConfig.Profile[cfg.Namespace]
-	if ok {
-		cfg.TrebConfig = profile.Treb
-		if os.Getenv("TREB_TEST_DEBUG") != "" {
-			fmt.Printf("DEBUG: Loaded TrebConfig for profile %s\n", cfg.Namespace)
-			if cfg.TrebConfig != nil && cfg.TrebConfig.Senders != nil {
-				fmt.Printf("DEBUG: Found %d senders\n", len(cfg.TrebConfig.Senders))
-				for name, sender := range cfg.TrebConfig.Senders {
-					fmt.Printf("DEBUG: Sender %s: type=%s\n", name, sender.Type)
-				}
-			} else {
-				fmt.Printf("DEBUG: TrebConfig or Senders is nil\n")
+	// Load profile-specific treb config with merging strategy
+	// Start with default profile if it exists
+	var mergedTrebConfig *config.TrebConfig
+	if defaultProfile, ok := foundryConfig.Profile["default"]; ok {
+		// Create a copy of default config
+		mergedTrebConfig = &config.TrebConfig{
+			Senders: make(map[string]config.SenderConfig),
+		}
+		if defaultProfile.Treb != nil && defaultProfile.Treb.Senders != nil {
+			for k, v := range defaultProfile.Treb.Senders {
+				mergedTrebConfig.Senders[k] = v
 			}
 		}
-	} else {
-		if os.Getenv("TREB_TEST_DEBUG") != "" {
-			fmt.Printf("DEBUG: Profile %s not found in foundry config\n", cfg.Namespace)
-			fmt.Printf("DEBUG: Available profiles: %v\n", getMapKeys(foundryConfig.Profile))
+	}
+
+	// If requesting a specific profile, merge it with default
+	if cfg.Namespace != "default" {
+		if profile, ok := foundryConfig.Profile[cfg.Namespace]; ok {
+			if mergedTrebConfig == nil {
+				// No default, use profile directly
+				mergedTrebConfig = profile.Treb
+			} else {
+				// Merge profile with default
+				if profile.Treb != nil {
+					// Override senders - complete replacement per key
+					if profile.Treb.Senders != nil {
+						for k, v := range profile.Treb.Senders {
+							mergedTrebConfig.Senders[k] = v
+						}
+					}
+				}
+			}
+		}
+		// If profile doesn't exist but we have default, use default
+	}
+
+	cfg.TrebConfig = mergedTrebConfig
+
+	if os.Getenv("TREB_TEST_DEBUG") != "" {
+		fmt.Printf("DEBUG: Loaded TrebConfig for profile %s\n", cfg.Namespace)
+		if cfg.TrebConfig != nil && cfg.TrebConfig.Senders != nil {
+			fmt.Printf("DEBUG: Found %d senders\n", len(cfg.TrebConfig.Senders))
+			for name, sender := range cfg.TrebConfig.Senders {
+				fmt.Printf("DEBUG: Sender %s: type=%s\n", name, sender.Type)
+			}
+		} else {
+			fmt.Printf("DEBUG: TrebConfig or Senders is nil\n")
 		}
 	}
 

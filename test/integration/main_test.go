@@ -10,25 +10,32 @@ import (
 
 // TestMain handles setup/teardown for all tests
 func TestMain(m *testing.M) {
-	// Force sequential test execution by setting parallel to 1
-	// This prevents nonce issues when multiple tests try to deploy simultaneously
-	testing.Init()
-	flag.Parse()
-	if !flag.Parsed() {
-		flag.Set("test.parallel", "1")
+	// Initialize test flags (this will also parse flags)
+	helpers.InitTestFlags()
+
+	// Always use pool-based isolation - default to 1 context for sequential tests
+	poolSize := 1
+	
+	// Check environment variable override
+	if envSize := os.Getenv("TREB_TEST_POOL_SIZE"); envSize != "" {
+		fmt.Sscanf(envSize, "%d", &poolSize)
 	}
 
-	// Setup
-	if err := helpers.Setup(); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to setup: %v\n", err)
+	fmt.Printf("🚀 Initializing test pool with %d contexts...\n", poolSize)
+	
+	if err := helpers.InitializeTestPool(poolSize); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to initialize test pool: %v\n", err)
 		os.Exit(1)
 	}
 
 	// Run tests
 	code := m.Run()
 
-	// Teardown
-	helpers.Teardown()
+	// Cleanup
+	fmt.Println("🧹 Cleaning up test pool...")
+	if pool := helpers.GetGlobalPool(); pool != nil {
+		pool.Shutdown()
+	}
 
 	os.Exit(code)
 }

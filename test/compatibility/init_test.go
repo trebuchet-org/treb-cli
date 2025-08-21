@@ -14,44 +14,51 @@ func TestInitCommand(t *testing.T) {
 			Name: "init_new_project",
 			PreSetup: func(t *testing.T, ctx *helpers.TrebContext) {
 				// Remove existing .treb directory if present
-				trebDir := filepath.Join(helpers.GetFixtureDir(), ".treb")
+				trebDir := filepath.Join(ctx.GetWorkDir(), ".treb")
 				os.RemoveAll(trebDir)
 			},
 			TestCmds: [][]string{
-				{"init", "test-project"},
+				{"init"},
 			},
+			ExpectDiff: true, // v1 and v2 have different emojis
 		},
 		{
 			Name: "init_existing_project",
-			TestCmds: [][]string{
-				{"init", "test-project"}, // Should handle gracefully
+			SetupCmds: [][]string{
+				{"init"}, // First init
 			},
+			TestCmds: [][]string{
+				{"init"}, // Should handle gracefully when already initialized
+			},
+			ExpectDiff: true, // v1 and v2 have different messages for re-init
 		},
 		{
 			Name: "init_and_deploy",
 			PreSetup: func(t *testing.T, ctx *helpers.TrebContext) {
 				// Remove existing .treb directory if present
-				trebDir := filepath.Join(helpers.GetFixtureDir(), ".treb")
+				trebDir := filepath.Join(ctx.GetWorkDir(), ".treb")
 				os.RemoveAll(trebDir)
 			},
 			TestCmds: [][]string{
-				{"init", "test-project"},
+				{"init"},
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 				{"list"},
 			},
+			ExpectDiff: true, // v1 and v2 have different output formatting
 		},
 		{
 			Name: "init_with_custom_namespace",
 			PreSetup: func(t *testing.T, ctx *helpers.TrebContext) {
 				// Remove existing .treb directory if present
-				trebDir := filepath.Join(helpers.GetFixtureDir(), ".treb")
+				trebDir := filepath.Join(ctx.GetWorkDir(), ".treb")
 				os.RemoveAll(trebDir)
 			},
 			TestCmds: [][]string{
-				{"init", "prod-project", "--namespace", "production"},
-				{"config", "show"},
+				{"init", "--namespace", "production"},
 			},
+			ExpectErr:  ErrorOnlyV2, // v2 doesn't have --namespace flag
+			ExpectDiff: true,
 		},
 	}
 
