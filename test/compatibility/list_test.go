@@ -119,10 +119,6 @@ func TestListCommand(t *testing.T) {
 				{"run", "script/deploy/DeployUpgradeableCounter.s.sol"},
 			},
 			TestCmds: [][]string{{"list"}},
-			OutputArtifacts: []string{
-				".treb/deployments.json",
-				".treb/registry.json",
-			},
 		},
 		{
 			Name: "list_json_output",

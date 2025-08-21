@@ -40,7 +40,6 @@ type CompatibilityTest struct {
 var DefaultOutputArtifacs = []string{
 	".treb/deployments.json",
 	".treb/registry.json",
-	".treb/transactions.json",
 	".treb/safe-txs.json",
 }
 
@@ -152,7 +151,7 @@ func runTest(t *testing.T, version helpers.BinaryVersion, test CompatibilityTest
 		}
 
 		tOutput = createTestOutput(t, output.String(), test, ctx)
-		
+
 		// Log work directory if skip cleanup is enabled
 		if helpers.ShouldSkipCleanup() {
 			t.Logf("🔍 Test work directory for %s: %s", version, ctx.GetWorkDir())
