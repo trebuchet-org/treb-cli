@@ -3,6 +3,7 @@ package forge
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 	"sync"
@@ -91,9 +92,6 @@ func (h *RunResultHydrator) Hydrate(
 						deployment.Contract = contractInfo
 					} else {
 						fmt.Printf("[DEBUG] %s not found in contract repository]n", e.Deployment.Artifact)
-						// Contract not found - this is expected for contracts deployed via scripts
-						// The artifact path in the event is the full path:name format
-						// but we still have the metadata in the event itself
 					}
 				}
 
@@ -121,9 +119,7 @@ func (h *RunResultHydrator) Hydrate(
 		hydrated.Transactions = h.getTransactions()
 
 		// Copy proxy relationships
-		for addr, rel := range h.proxyRelationships {
-			hydrated.ProxyRelationships[addr] = rel
-		}
+		maps.Copy(hydrated.ProxyRelationships, h.proxyRelationships)
 	}
 
 	// Enrich with broadcast data if available

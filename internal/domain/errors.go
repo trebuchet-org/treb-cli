@@ -77,7 +77,7 @@ type MissingArtifactErr struct {
 }
 
 func (e MissingArtifactErr) Error() string {
-	return fmt.Sprintf("Missing Artifact for contract: %s:s", e.Contract.Path, e.Contract.Name)
+	return fmt.Sprintf("Missing Artifact for contract: %s:%s", e.Contract.Path, e.Contract.Name)
 
 }
 

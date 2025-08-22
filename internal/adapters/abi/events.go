@@ -3,6 +3,7 @@ package abi
 import (
 	"encoding/hex"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -13,13 +14,15 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/domain/forge"
 )
 
+type Event = domain.ParsedEvent
+
 // ParseEvents parses all events from script output
-func (p *Parser) ParseEvents(output *forge.ScriptOutput) ([]any, error) {
+func (p *Parser) ParseEvents(output *forge.ScriptOutput) ([]Event, error) {
 	if output == nil || output.RawLogs == nil {
 		return nil, nil
 	}
 
-	var parsedEvents []any
+	var parsedEvents []domain.ParsedEvent
 
 	for _, rawLog := range output.RawLogs {
 		if len(rawLog.Topics) == 0 {
@@ -36,6 +39,10 @@ func (p *Parser) ParseEvents(output *forge.ScriptOutput) ([]any, error) {
 			continue
 		}
 
+		if os.Getenv("TREB_DEBUG") != "" {
+			fmt.Printf("[ABIParser:DEBUG] Parsed event %v\n", event)
+		}
+
 		parsedEvents = append(parsedEvents, event)
 	}
 
@@ -43,7 +50,7 @@ func (p *Parser) ParseEvents(output *forge.ScriptOutput) ([]any, error) {
 }
 
 // ParseEvent parses a single event log
-func (p *Parser) ParseEvent(rawLog *forge.EventLog) (any, error) {
+func (p *Parser) ParseEvent(rawLog *forge.EventLog) (Event, error) {
 	if len(rawLog.Topics) == 0 {
 		return nil, fmt.Errorf("log has no topics")
 	}
@@ -66,21 +73,21 @@ func (p *Parser) ParseEvent(rawLog *forge.EventLog) (any, error) {
 	// Try each known event type
 	eventParsers := []struct {
 		eventSig common.Hash
-		parser   func(*types.Log) (interface{}, error)
+		parser   func(*types.Log) (Event, error)
 	}{
-		{must(p.trebContract.GetEventID("ContractDeployed")), func(log *types.Log) (interface{}, error) {
+		{must(p.trebContract.GetEventID("ContractDeployed")), func(log *types.Log) (Event, error) {
 			return p.trebContract.UnpackContractDeployedEvent(log)
 		}},
-		{must(p.trebContract.GetEventID("DeploymentCollision")), func(log *types.Log) (interface{}, error) {
+		{must(p.trebContract.GetEventID("DeploymentCollision")), func(log *types.Log) (Event, error) {
 			return p.trebContract.UnpackDeploymentCollisionEvent(log)
 		}},
-		{must(p.trebContract.GetEventID("SafeTransactionQueued")), func(log *types.Log) (interface{}, error) {
+		{must(p.trebContract.GetEventID("SafeTransactionQueued")), func(log *types.Log) (Event, error) {
 			return p.trebContract.UnpackSafeTransactionQueuedEvent(log)
 		}},
-		{must(p.trebContract.GetEventID("SafeTransactionExecuted")), func(log *types.Log) (interface{}, error) {
+		{must(p.trebContract.GetEventID("SafeTransactionExecuted")), func(log *types.Log) (Event, error) {
 			return p.trebContract.UnpackSafeTransactionExecutedEvent(log)
 		}},
-		{must(p.trebContract.GetEventID("TransactionSimulated")), func(log *types.Log) (interface{}, error) {
+		{must(p.trebContract.GetEventID("TransactionSimulated")), func(log *types.Log) (Event, error) {
 			return p.trebContract.UnpackTransactionSimulatedEvent(log)
 		}},
 	}
@@ -117,7 +124,7 @@ func (p *Parser) convertToTypesLog(rawLog forge.EventLog) (*types.Log, error) {
 }
 
 // parseProxyEvent attempts to parse proxy-related events
-func (p *Parser) parseProxyEvent(rawLog forge.EventLog) (interface{}, error) {
+func (p *Parser) parseProxyEvent(rawLog forge.EventLog) (Event, error) {
 	if len(rawLog.Topics) == 0 {
 		return nil, fmt.Errorf("no topics")
 	}

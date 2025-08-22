@@ -82,7 +82,7 @@ func Provider(v *viper.Viper) (*config.RuntimeConfig, error) {
 
 	cfg.TrebConfig = mergedTrebConfig
 
-	if os.Getenv("TREB_TEST_DEBUG") != "" {
+	if os.Getenv("TREB_DEBUG") != "" {
 		fmt.Printf("DEBUG: Loaded TrebConfig for profile %s\n", cfg.Namespace)
 		if cfg.TrebConfig != nil && cfg.TrebConfig.Senders != nil {
 			fmt.Printf("DEBUG: Found %d senders\n", len(cfg.TrebConfig.Senders))

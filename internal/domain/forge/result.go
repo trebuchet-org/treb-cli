@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"github.com/trebuchet-org/treb-cli/internal/domain/bindings"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
@@ -31,7 +32,7 @@ type HydratedRunResult struct {
 	Deployments        []*Deployment                                        // Contract deployments
 	ProxyRelationships map[common.Address]*ProxyRelationship                // Proxy relationships
 	Collisions         map[common.Address]*bindings.TrebDeploymentCollision // Deployment collisions (contracts already deployed)
-	Events             []any                                                // All parsed events
+	Events             []domain.ParsedEvent                                 // All parsed events
 	ExecutionTime      time.Duration
 	ExecutedAt         time.Time
 }

@@ -18,7 +18,7 @@ const (
 
 // ParsedEvent is the interface for all parsed events
 type ParsedEvent interface {
-	Type() EventType
+	ContractEventName() string
 	String() string
 }
 
@@ -30,13 +30,17 @@ type AdminChangedEvent struct {
 	TransactionID common.Hash
 }
 
-func (e *AdminChangedEvent) Type() EventType {
-	return EventTypeAdminChanged
+func (AdminChangedEvent) ContractEventName() string {
+	return string(EventTypeAdminChanged)
 }
 
 func (e *AdminChangedEvent) String() string {
-	return fmt.Sprintf("Admin changed: proxy=%s, old=%s, new=%s",
-		e.ProxyAddress.Hex()[:10]+"...", e.PreviousAdmin.Hex()[:10]+"...", e.NewAdmin.Hex()[:10]+"...")
+	return fmt.Sprintf("%s: proxy=%s, old=%s, new=%s",
+		e.ContractEventName(),
+		e.ProxyAddress.Hex()[:10]+"...",
+		e.PreviousAdmin.Hex()[:10]+"...",
+		e.NewAdmin.Hex()[:10]+"...",
+	)
 }
 
 // BeaconUpgradedEvent represents a beacon upgrade
@@ -46,13 +50,16 @@ type BeaconUpgradedEvent struct {
 	TransactionID common.Hash
 }
 
-func (e *BeaconUpgradedEvent) Type() EventType {
-	return EventTypeBeaconUpgraded
+func (BeaconUpgradedEvent) ContractEventName() string {
+	return string(EventTypeBeaconUpgraded)
 }
 
 func (e *BeaconUpgradedEvent) String() string {
-	return fmt.Sprintf("Beacon upgraded: proxy=%s, beacon=%s",
-		e.ProxyAddress.Hex()[:10]+"...", e.Beacon.Hex()[:10]+"...")
+	return fmt.Sprintf("%s: proxy=%s, beacon=%s",
+		e.ContractEventName(),
+		e.ProxyAddress.Hex()[:10]+"...",
+		e.Beacon.Hex()[:10]+"...",
+	)
 }
 
 // UpgradedEvent represents a proxy implementation upgrade
@@ -62,13 +69,16 @@ type UpgradedEvent struct {
 	TransactionID         common.Hash
 }
 
-func (e *UpgradedEvent) Type() EventType {
-	return EventTypeUpgraded
+func (UpgradedEvent) ContractEventName() string {
+	return string(EventTypeUpgraded)
 }
 
 func (e *UpgradedEvent) String() string {
-	return fmt.Sprintf("Implementation upgraded: proxy=%s, impl=%s",
-		e.ProxyAddress.Hex()[:10]+"...", e.ImplementationAddress.Hex()[:10]+"...")
+	return fmt.Sprintf("%s: proxy=%s, impl=%s",
+		e.ContractEventName(),
+		e.ProxyAddress.Hex()[:10]+"...",
+		e.ImplementationAddress.Hex()[:10]+"...",
+	)
 }
 
 // UnknownEvent represents an unknown event type
@@ -79,10 +89,10 @@ type UnknownEvent struct {
 	TransactionID common.Hash
 }
 
-func (e *UnknownEvent) Type() EventType {
-	return EventTypeUnknown
+func (UnknownEvent) ContractEventName() string {
+	return string(EventTypeUnknown)
 }
 
 func (e *UnknownEvent) String() string {
-	return fmt.Sprintf("Unknown event: %s", e.Address.Hex()[:10]+"...")
+	return fmt.Sprintf("%s: %s", e.ContractEventName(), e.Address.Hex()[:10]+"...")
 }
