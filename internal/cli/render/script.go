@@ -89,12 +89,12 @@ func (r *ScriptRenderer) RenderExecution(result *usecase.RunScriptResult) error 
 
 // renderTransactions displays the transaction list
 func (r *ScriptRenderer) renderTransactions(exec *forge.HydratedRunResult) error {
-	fmt.Fprintf(r.out, "\n%s🔄 Transactions:%s\n", r.colorBold, r.colorReset)
-	fmt.Fprintf(r.out, "%s%s%s\n", r.colorGray, strings.Repeat("─", 50), r.colorReset)
+	fmt.Fprintf(r.out, "\n%s\n", bold.Sprint("🔄 Transactions:"))
+	fmt.Fprintf(r.out, "%s\n", gray.Sprint(strings.Repeat("─", 50)))
 
 	if len(exec.Transactions) == 0 {
-		fmt.Fprintf(r.out, "%sNo transactions executed (dry run or all deployments skipped)%s\n\n",
-			r.colorGray, r.colorReset)
+		fmt.Fprintf(r.out, "%s\n\n",
+			gray.Sprint("No transactions executed (dry run or all deployments skipped)"))
 		return nil
 	}
 
@@ -140,9 +140,9 @@ func (r *ScriptRenderer) renderTransactionTree(tx *forge.Transaction, exec *forg
 	}
 
 	// Display transaction header
-	fmt.Fprintf(r.out, "\n%s%s%s %s%s%s → %s\n",
-		r.getStatusColor(tx.Status), statusText, r.colorReset,
-		r.colorGreen, r.getKnownAddress(tx.Sender.Hex()), r.colorReset,
+	fmt.Fprintf(r.out, "\n%s %s → %s\n",
+		r.getStatusColor(tx.Status).Sprint(statusText),
+		green.Sprint(r.getKnownAddress(tx.Sender.Hex())),
 		methodCall)
 
 	// Find deployments for this transaction
@@ -183,7 +183,7 @@ func (r *ScriptRenderer) renderTransactionTree(tx *forge.Transaction, exec *forg
 		if tx.GasUsed != nil {
 			details = append(details, fmt.Sprintf("Gas: %d", *tx.GasUsed))
 		}
-		fmt.Fprintf(r.out, "└─ %s%s%s\n", r.colorGray, strings.Join(details, " | "), r.colorReset)
+		fmt.Fprintf(r.out, "└─ %s\n", gray.Sprint(strings.Join(details, " | ")))
 	}
 }
 
@@ -199,13 +199,13 @@ func (r *ScriptRenderer) decodeCreateXCall(tx *forge.Transaction, exec *forge.Hy
 	// Common CreateX selectors
 	switch selector {
 	case "0x9c36a286": // deployCreate3(bytes32,bytes)
-		return fmt.Sprintf("CreateX::%sdeployCreate3%s(salt: 0xf39fd6e5..., initCode: 0x60806040...)", r.colorYellow, r.colorReset)
+		return fmt.Sprintf("CreateX::%s(salt: 0xf39fd6e5..., initCode: 0x60806040...)", yellow.Sprint("deployCreate3"))
 	case "0x30783963": // deployCreate3 (based on v1 output)
-		return fmt.Sprintf("CreateX::%sdeployCreate3%s(salt: 0xf39fd6e5..., initCode: 0x60806040...)", r.colorYellow, r.colorReset)
+		return fmt.Sprintf("CreateX::%s(salt: 0xf39fd6e5..., initCode: 0x60806040...)", yellow.Sprint("deployCreate3"))
 	case "0x50a1b77c": // deployCreate3
-		return fmt.Sprintf("CreateX::%sdeployCreate3%s(salt: 0xf39fd6e5..., initCode: 0x60806040...)", r.colorYellow, r.colorReset)
+		return fmt.Sprintf("CreateX::%s(salt: 0xf39fd6e5..., initCode: 0x60806040...)", yellow.Sprint("deployCreate3"))
 	case "0x5e89c2f0": // deployCreate2
-		return fmt.Sprintf("CreateX::%sdeployCreate2%s(salt: 0xf39fd6e5..., initCode: 0x60806040...)", r.colorYellow, r.colorReset)
+		return fmt.Sprintf("CreateX::%s(salt: 0xf39fd6e5..., initCode: 0x60806040...)", yellow.Sprint("deployCreate2"))
 	default:
 		return fmt.Sprintf("CreateX::%s", selector)
 	}
@@ -226,13 +226,13 @@ func (r *ScriptRenderer) getKnownAddress(addr string) string {
 func (r *ScriptRenderer) getStatusColor(status models.TransactionStatus) *color.Color {
 	switch status {
 	case models.TransactionStatusSimulated:
-		return r.colorGray
+		return gray
 	case models.TransactionStatusQueued:
-		return r.colorYellow
+		return yellow
 	case models.TransactionStatusExecuted:
-		return r.colorGreen
+		return green
 	case models.TransactionStatusFailed:
-		return r.colorRed
+		return red
 	default:
 		return color.New()
 	}
@@ -257,11 +257,11 @@ func (r *ScriptRenderer) renderRegularDeployment(dep *forge.Deployment, isLast b
 	}
 
 	// Show intermediate steps (simplified without full trace)
-	fmt.Fprintf(r.out, "├─ %screate2(16 bytes)%s\n", r.colorGreen, r.colorReset)
-	fmt.Fprintf(r.out, "│  └─ %s[return]%s %s\n", r.colorGray, r.colorReset, r.shortenAddress(dep.Address.Hex()))
-	fmt.Fprintf(r.out, "├─ %sCreate3ProxyContractCreation%s(newContract: %s, salt: 0x%x...)\n",
-		r.colorCyan, r.colorReset, r.shortenAddress(dep.Address.Hex()), dep.Event.Salt[:4])
-	fmt.Fprintf(r.out, "├─ %s::%s0x60806040...%s\n", r.shortenAddress(dep.Address.Hex()), r.colorYellow, r.colorReset)
+	fmt.Fprintf(r.out, "├─ %s\n", green.Sprint("create2(16 bytes)"))
+	fmt.Fprintf(r.out, "│  └─ %s %s\n", gray.Sprint("[return]"), r.shortenAddress(dep.Address.Hex()))
+	fmt.Fprintf(r.out, "├─ %s(newContract: %s, salt: 0x%x...)\n",
+		cyan.Sprint("Create3ProxyContractCreation"), r.shortenAddress(dep.Address.Hex()), dep.Event.Salt[:4])
+	fmt.Fprintf(r.out, "├─ %s::%s\n", r.shortenAddress(dep.Address.Hex()), yellow.Sprint("0x60806040..."))
 
 	// Show the actual deployment
 	constructorArgs := ""
@@ -276,17 +276,17 @@ func (r *ScriptRenderer) renderRegularDeployment(dep *forge.Deployment, isLast b
 	if dep.Contract != nil && dep.Contract.Name != "" {
 		contractName = dep.Contract.Name
 	}
-	fmt.Fprintf(r.out, "│  └─ 🚀 %snew %s%s%s\n",
-		r.colorGreen, contractName, constructorArgs, r.colorReset)
-	fmt.Fprintf(r.out, "│     └─ %s[return]%s %s\n", r.colorGray, r.colorReset, dep.Address.Hex())
+	fmt.Fprintf(r.out, "│  └─ 🚀 %s\n",
+		green.Sprintf("new %s%s", contractName, constructorArgs))
+	fmt.Fprintf(r.out, "│     └─ %s %s\n", gray.Sprint("[return]"), dep.Address.Hex())
 
 	// Show final event
 	displayName := contractName
 	if dep.Event.Label != "" {
 		displayName = fmt.Sprintf("%s:%s", contractName, dep.Event.Label)
 	}
-	fmt.Fprintf(r.out, "%s %sContractCreation%s(newContract: %s: [%s...)\n",
-		prefix, r.colorCyan, r.colorReset, displayName, dep.Address.Hex()[:10])
+	fmt.Fprintf(r.out, "%s %s(newContract: %s: [%s...)\n",
+		prefix, cyan.Sprint("ContractCreation"), displayName, dep.Address.Hex()[:10])
 }
 
 // renderProxyDeployment renders a proxy contract deployment
@@ -304,19 +304,19 @@ func (r *ScriptRenderer) renderProxyDeployment(dep *forge.Deployment, isLast boo
 	}
 
 	// Show intermediate steps
-	fmt.Fprintf(r.out, "├─ create2(16 bytes)\n")
-	fmt.Fprintf(r.out, "│  └─ [return] %s\n", r.shortenAddress(dep.Address.Hex()))
-	fmt.Fprintf(r.out, "├─ Create3ProxyContractCreation(newContract: %s, salt: 0x%x...)\n",
-		r.shortenAddress(dep.Address.Hex()), dep.Event.Salt[:4])
-	fmt.Fprintf(r.out, "├─ %s::0x60806040...\n", r.shortenAddress(dep.Address.Hex()))
+	fmt.Fprintf(r.out, "├─ %s\n", "create2(16 bytes)")
+	fmt.Fprintf(r.out, "│  └─ %s %s\n", "[return]", r.shortenAddress(dep.Address.Hex()))
+	fmt.Fprintf(r.out, "├─ %s(newContract: %s, salt: 0x%x...)\n",
+		"Create3ProxyContractCreation", r.shortenAddress(dep.Address.Hex()), dep.Event.Salt[:4])
+	fmt.Fprintf(r.out, "├─ %s::%s\n", r.shortenAddress(dep.Address.Hex()), "0x60806040...")
 
 	// Show proxy deployment with constructor args
 	contractName := dep.Event.Artifact
 	if dep.Contract != nil && dep.Contract.Name != "" {
 		contractName = dep.Contract.Name
 	}
-	fmt.Fprintf(r.out, "│  └─ 🚀 %snew %s(%s\n",
-		r.colorGreen, contractName, r.colorReset)
+	fmt.Fprintf(r.out, "│  └─ 🚀 %s\n",
+		green.Sprintf("new %s(", contractName))
 	fmt.Fprintf(r.out, "│     │    implementation: %s,\n", proxyRel.ImplementationAddress.Hex())
 	fmt.Fprintf(r.out, "│     │    _data: 0xc4d66de8000000000000000000000000...(36 bytes)\n")
 	fmt.Fprintf(r.out, "│     │  )\n")
@@ -334,8 +334,8 @@ func (r *ScriptRenderer) renderProxyDeployment(dep *forge.Deployment, isLast boo
 	if dep.Event.Label != "" {
 		displayName = fmt.Sprintf("%s:%s", contractName, dep.Event.Label)
 	}
-	fmt.Fprintf(r.out, "%s ContractCreation(newContract: %s: [%s...)\n",
-		prefix, displayName, dep.Address.Hex()[:10])
+	fmt.Fprintf(r.out, "%s %s(newContract: %s: [%s...)\n",
+		prefix, "ContractCreation", displayName, dep.Address.Hex()[:10])
 }
 
 // getImplementationName tries to find the name of an implementation contract
@@ -362,33 +362,33 @@ func (r *ScriptRenderer) getImplementationName(implAddr string, exec *forge.Hydr
 // renderDeploymentSummary displays the deployment summary
 func (r *ScriptRenderer) renderDeploymentSummary(exec *forge.HydratedRunResult) error {
 	if len(exec.Collisions) > 0 {
-		fmt.Printf("\n%s⚠️ Deployment Collisions Detected:%s\n", r.colorYellow, r.colorReset)
-		fmt.Printf("%s%s%s\n", r.colorGray, strings.Repeat("─", 50), r.colorReset)
+		fmt.Fprintf(r.out, "\n%s\n", yellow.Sprint("⚠️ Deployment Collisions Detected:"))
+		fmt.Fprintf(r.out, "%s\n", gray.Sprint(strings.Repeat("─", 50)))
 
 		for address, collision := range exec.Collisions {
 			contractName := extractContractName(collision.DeploymentDetails.Artifact)
-			fmt.Printf("%s%s%s already deployed at %s%s%s\n",
-				r.colorCyan, contractName, r.colorReset,
-				r.colorYellow, address.Hex(), r.colorReset)
+			fmt.Fprintf(r.out, "%s already deployed at %s\n",
+				cyan.Sprint(contractName),
+				yellow.Sprint(address.Hex()))
 
 			// Show details if verbose
 			if collision.DeploymentDetails.Label != "" {
-				fmt.Printf("    Label: %s\n", collision.DeploymentDetails.Label)
+				fmt.Fprintf(r.out, "    Label: %s\n", collision.DeploymentDetails.Label)
 			}
 			if collision.DeploymentDetails.Entropy != "" {
-				fmt.Printf("    Entropy: %s\n", collision.DeploymentDetails.Entropy)
+				fmt.Fprintf(r.out, "    Entropy: %s\n", collision.DeploymentDetails.Entropy)
 			}
 		}
 
-		fmt.Printf("%sNote: These contracts were already deployed and deployment was skipped.%s\n\n",
-			r.colorGray, r.colorReset)
+		fmt.Fprintf(r.out, "%s\n\n",
+			gray.Sprint("Note: These contracts were already deployed and deployment was skipped."))
 	}
 	if len(exec.Deployments) == 0 {
 		return nil
 	}
 
-	fmt.Fprintf(r.out, "\n%s📦 Deployment Summary:%s\n", r.colorBold, r.colorReset)
-	fmt.Fprintf(r.out, "%s%s%s\n", r.colorGray, strings.Repeat("─", 50), r.colorReset)
+	fmt.Fprintf(r.out, "\n%s\n", bold.Sprint("📦 Deployment Summary:"))
+	fmt.Fprintf(r.out, "%s\n", gray.Sprint(strings.Repeat("─", 50)))
 
 	for _, dep := range exec.Deployments {
 		// Build deployment name
@@ -409,9 +409,9 @@ func (r *ScriptRenderer) renderDeploymentSummary(exec *forge.HydratedRunResult) 
 			name = fmt.Sprintf("%s[%s]", name, implName)
 		}
 
-		fmt.Fprintf(r.out, "%s%s%s at %s%s%s\n",
-			r.colorCyan, name, r.colorReset,
-			r.colorGreen, dep.Address.Hex(), r.colorReset)
+		fmt.Fprintf(r.out, "%s at %s\n",
+			cyan.Sprint(name),
+			green.Sprint(dep.Address.Hex()))
 	}
 
 	fmt.Fprintln(r.out) // Empty line after deployments
@@ -424,8 +424,8 @@ func (r *ScriptRenderer) renderLogs(logs []string) error {
 		return nil
 	}
 
-	fmt.Fprintf(r.out, "\n%s📝 Script Logs:%s\n", r.colorBold, r.colorReset)
-	fmt.Fprintf(r.out, "%s%s%s\n", r.colorGray, strings.Repeat("─", 40), r.colorReset)
+	fmt.Fprintf(r.out, "\n%s\n", bold.Sprint("📝 Script Logs:"))
+	fmt.Fprintf(r.out, "%s\n", gray.Sprint(strings.Repeat("─", 40)))
 
 	for _, log := range logs {
 		fmt.Fprintf(r.out, "  %s\n", log)
@@ -439,13 +439,13 @@ func (r *ScriptRenderer) renderLogs(logs []string) error {
 func (r *ScriptRenderer) getStatusDisplay(status models.TransactionStatus) string {
 	switch status {
 	case models.TransactionStatusSimulated:
-		return fmt.Sprintf("%sSimulated%s", r.colorYellow, r.colorReset)
+		return yellow.Sprint("Simulated")
 	case models.TransactionStatusQueued:
-		return fmt.Sprintf("%sQueued%s", r.colorPurple, r.colorReset)
+		return purple.Sprint("Queued")
 	case models.TransactionStatusExecuted:
-		return fmt.Sprintf("%sExecuted%s", r.colorGreen, r.colorReset)
+		return green.Sprint("Executed")
 	case models.TransactionStatusFailed:
-		return fmt.Sprintf("%sFailed%s", r.colorRed, r.colorReset)
+		return red.Sprint("Failed")
 	default:
 		return string(status)
 	}
