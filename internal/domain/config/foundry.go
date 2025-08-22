@@ -53,11 +53,3 @@ type SenderConfig struct {
 	Signer         string     `toml:"signer,omitempty"`          // For Safe senders
 	DerivationPath string     `toml:"derivation_path,omitempty"` // For Ledger senders
 }
-
-type SenderScriptConfig struct {
-	UseLedger       bool
-	UseTrezor       bool
-	DerivationPaths []string
-	EncodedConfig   string
-	Senders         []string
-}

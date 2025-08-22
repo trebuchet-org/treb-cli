@@ -2,6 +2,7 @@ package abi
 
 import (
 	"context"
+	"maps"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -9,6 +10,7 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"github.com/trebuchet-org/treb-cli/internal/domain/bindings"
 	"github.com/trebuchet-org/treb-cli/internal/domain/config"
+	"github.com/trebuchet-org/treb-cli/internal/domain/forge"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -17,6 +19,7 @@ type ABIResolver struct {
 	config         *config.RuntimeConfig
 	contracts      usecase.ContractRepository
 	deploymentRepo usecase.DeploymentRepository
+	execution      *forge.HydratedRunResult
 }
 
 func NewABIResolver(config *config.RuntimeConfig, contracts usecase.ContractRepository, deploymentRepo usecase.DeploymentRepository) *ABIResolver {
@@ -25,6 +28,11 @@ func NewABIResolver(config *config.RuntimeConfig, contracts usecase.ContractRepo
 		contracts:      contracts,
 		deploymentRepo: deploymentRepo,
 	}
+}
+
+// XXX: Need a better way to do this.
+func (r *ABIResolver) SetExecution(execution *forge.HydratedRunResult) {
+	r.execution = execution
 }
 
 func (r *ABIResolver) Get(ctx context.Context, artifact *models.Artifact) (*abi.ABI, error) {
@@ -61,6 +69,14 @@ func (r *ABIResolver) FindByAddress(ctx context.Context, address common.Address)
 		return &createXABI, nil
 	}
 
+	if r.execution != nil {
+		for _, deployment := range r.execution.Deployments {
+			if deployment.Address == address {
+				return r.FindByRef(ctx, deployment.Event.Artifact)
+			}
+		}
+	}
+
 	deployment, err := r.deploymentRepo.GetDeploymentByAddress(ctx, r.config.Network.ChainID, address.String())
 	if err != nil {
 		return nil, err
@@ -69,8 +85,22 @@ func (r *ABIResolver) FindByAddress(ctx context.Context, address common.Address)
 		return nil, domain.NoDeploymentErr{ChainID: r.config.Network.ChainID, Address: address}
 	}
 
-	return r.FindByRef(ctx, deployment.Artifact.Path)
+	abi, err := r.FindByRef(ctx, deployment.Artifact.Path)
+	if err != nil {
+		return nil, err
+	}
 
+	if r.execution != nil {
+		if proxyRel, exists := r.execution.ProxyRelationships[address]; exists {
+			if implAbi, err := r.FindByAddress(ctx, proxyRel.ImplementationAddress); err != nil {
+				return nil, err
+			} else if implAbi != nil {
+				maps.Copy(abi.Methods, implAbi.Methods)
+			}
+		}
+	}
+
+	return abi, nil
 }
 
 var _ usecase.ABIResolver = (&ABIResolver{})

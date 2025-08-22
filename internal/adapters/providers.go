@@ -89,8 +89,8 @@ var ScriptAdapters = wire.NewSet(
 	wire.Bind(new(usecase.DeploymentResolver), new(*resolvers.DeploymentResolver)),
 
 	// ABI handling
-	abi.NewParser,
-	wire.Bind(new(usecase.ABIParser), new(*abi.Parser)),
+	abi.NewEventParser,
+	wire.Bind(new(usecase.ABIParser), new(*abi.EventParser)),
 
 	abi.NewABIResolver,
 	wire.Bind(new(usecase.ABIResolver), new(*abi.ABIResolver)),

@@ -16,7 +16,7 @@ import (
 type Event = domain.ParsedEvent
 
 // ParseEvents parses all events from script output
-func (p *Parser) ParseEvents(output *forge.ScriptOutput) ([]Event, error) {
+func (p *EventParser) ParseEvents(output *forge.ScriptOutput) ([]Event, error) {
 	if output == nil || output.RawLogs == nil {
 		return nil, nil
 	}
@@ -46,7 +46,7 @@ func (p *Parser) ParseEvents(output *forge.ScriptOutput) ([]Event, error) {
 }
 
 // ParseEvent parses a single event log
-func (p *Parser) ParseEvent(rawLog *forge.EventLog) (Event, error) {
+func (p *EventParser) ParseEvent(rawLog *forge.EventLog) (Event, error) {
 	if len(rawLog.Topics) == 0 {
 		return nil, fmt.Errorf("log has no topics")
 	}
@@ -67,7 +67,7 @@ func (p *Parser) ParseEvent(rawLog *forge.EventLog) (Event, error) {
 	eventSig := rawLog.Topics[0]
 
 	// Try each known event type
-	eventParsers := []struct {
+	eventEventParsers := []struct {
 		eventSig common.Hash
 		parser   func(*types.Log) (Event, error)
 	}{
@@ -89,7 +89,7 @@ func (p *Parser) ParseEvent(rawLog *forge.EventLog) (Event, error) {
 	}
 
 	// Try each parser
-	for _, parser := range eventParsers {
+	for _, parser := range eventEventParsers {
 		if eventSig == parser.eventSig {
 			return parser.parser(typesLog)
 		}
@@ -105,7 +105,7 @@ func (p *Parser) ParseEvent(rawLog *forge.EventLog) (Event, error) {
 }
 
 // convertToTypesLog converts EventLog to types.Log
-func (p *Parser) convertToTypesLog(rawLog forge.EventLog) (*types.Log, error) {
+func (p *EventParser) convertToTypesLog(rawLog forge.EventLog) (*types.Log, error) {
 	// Decode hex data
 	data, err := hex.DecodeString(strings.TrimPrefix(rawLog.Data, "0x"))
 	if err != nil {
@@ -120,7 +120,7 @@ func (p *Parser) convertToTypesLog(rawLog forge.EventLog) (*types.Log, error) {
 }
 
 // parseProxyEvent attempts to parse proxy-related events
-func (p *Parser) parseProxyEvent(rawLog forge.EventLog) (Event, error) {
+func (p *EventParser) parseProxyEvent(rawLog forge.EventLog) (Event, error) {
 	if len(rawLog.Topics) == 0 {
 		return nil, fmt.Errorf("no topics")
 	}
@@ -147,7 +147,7 @@ func (p *Parser) parseProxyEvent(rawLog forge.EventLog) (Event, error) {
 }
 
 // parseUpgradedEvent parses an Upgraded event
-func (p *Parser) parseUpgradedEvent(log forge.EventLog) (*domain.UpgradedEvent, error) {
+func (p *EventParser) parseUpgradedEvent(log forge.EventLog) (*domain.UpgradedEvent, error) {
 	if len(log.Topics) < 2 {
 		return nil, fmt.Errorf("invalid Upgraded event: not enough topics")
 	}
@@ -159,7 +159,7 @@ func (p *Parser) parseUpgradedEvent(log forge.EventLog) (*domain.UpgradedEvent, 
 }
 
 // parseAdminChangedEvent parses an AdminChanged event
-func (p *Parser) parseAdminChangedEvent(log forge.EventLog) (*domain.AdminChangedEvent, error) {
+func (p *EventParser) parseAdminChangedEvent(log forge.EventLog) (*domain.AdminChangedEvent, error) {
 	if len(log.Topics) < 3 {
 		return nil, fmt.Errorf("invalid AdminChanged event: not enough topics")
 	}
@@ -172,7 +172,7 @@ func (p *Parser) parseAdminChangedEvent(log forge.EventLog) (*domain.AdminChange
 }
 
 // parseBeaconUpgradedEvent parses a BeaconUpgraded event
-func (p *Parser) parseBeaconUpgradedEvent(log forge.EventLog) (*domain.BeaconUpgradedEvent, error) {
+func (p *EventParser) parseBeaconUpgradedEvent(log forge.EventLog) (*domain.BeaconUpgradedEvent, error) {
 	if len(log.Topics) < 2 {
 		return nil, fmt.Errorf("invalid BeaconUpgraded event: not enough topics")
 	}

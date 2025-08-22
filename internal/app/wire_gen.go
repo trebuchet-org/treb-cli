@@ -50,9 +50,9 @@ func InitApp(v *viper.Viper, cmd *cobra.Command, sink usecase.ProgressSink) (*Ap
 	string2 := adapters.ProvideProjectPath(runtimeConfig)
 	repository := contracts.NewRepository(string2)
 	contractResolver := resolvers.NewContractResolver(runtimeConfig, repository, selectorAdapter)
-	parser := abi.NewParser(string2, logger)
+	eventParser := abi.NewEventParser(string2, logger)
 	abiResolver := abi.NewABIResolver(runtimeConfig, repository, fileRepository)
-	scriptGeneratorAdapter, err := template.NewScriptGeneratorAdapter(runtimeConfig, parser, abiResolver)
+	scriptGeneratorAdapter, err := template.NewScriptGeneratorAdapter(runtimeConfig, eventParser, abiResolver)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func InitApp(v *viper.Viper, cmd *cobra.Command, sink usecase.ProgressSink) (*Ap
 	if err != nil {
 		return nil, err
 	}
-	generateDeploymentScript := usecase.NewGenerateDeploymentScript(runtimeConfig, contractResolver, parser, abiResolver, scriptGeneratorAdapter, fileWriterAdapter, sink)
+	generateDeploymentScript := usecase.NewGenerateDeploymentScript(runtimeConfig, contractResolver, eventParser, abiResolver, scriptGeneratorAdapter, fileWriterAdapter, sink)
 	networkResolver := config.ProvideNetworkResolver(runtimeConfig)
 	listNetworks := usecase.NewListNetworks(networkResolver)
 	checkerAdapter := blockchain.NewCheckerAdapter()
@@ -73,7 +73,7 @@ func InitApp(v *viper.Viper, cmd *cobra.Command, sink usecase.ProgressSink) (*Ap
 	scriptResolver := resolvers.NewScriptResolver(string2, contractResolver)
 	parameterResolver := resolvers.NewParameterResolver(runtimeConfig, fileRepository, repository)
 	sendersManager := config.NewSendersManager(runtimeConfig)
-	runResultHydrator, err := forge.NewRunResultHydrator(string2, parser, repository, logger)
+	runResultHydrator, err := forge.NewRunResultHydrator(string2, eventParser, repository, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func InitApp(v *viper.Viper, cmd *cobra.Command, sink usecase.ProgressSink) (*Ap
 	initProject := usecase.NewInitProject(fileWriterAdapter, sink)
 	renderer := render.NewGenerateRenderer()
 	writer := render.ProvideIO(cmd)
-	scriptRenderer := render.NewScriptRenderer(writer, fileRepository)
+	scriptRenderer := render.NewScriptRenderer(writer, fileRepository, abiResolver, logger)
 	app, err := NewApp(runtimeConfig, selectorAdapter, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, showConfig, setConfig, removeConfig, runScript, verifyDeployment, orchestrateDeployment, syncRegistry, tagDeployment, manageAnvil, initProject, manager, renderer, scriptRenderer)
 	if err != nil {
 		return nil, err

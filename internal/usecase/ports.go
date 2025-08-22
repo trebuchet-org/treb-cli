@@ -110,6 +110,7 @@ type ABIResolver interface {
 	Get(ctx context.Context, artifact *models.Artifact) (*abi.ABI, error)
 	FindByRef(ctx context.Context, contractRef string) (*abi.ABI, error)
 	FindByAddress(ctx context.Context, address common.Address) (*abi.ABI, error)
+	SetExecution(execution *forge.HydratedRunResult)
 }
 
 // ScriptGenerator generates deployment scripts from templates

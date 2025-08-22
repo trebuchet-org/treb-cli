@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/trebuchet-org/treb-cli/internal/domain/forge"
-	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -27,13 +27,22 @@ var (
 type ScriptRenderer struct {
 	out             io.Writer
 	deploymentsRepo usecase.DeploymentRepository
+	abiResolver     usecase.ABIResolver
+	txRenderer      *TransactionRenderer
+	log             *slog.Logger
 }
 
 // NewScriptRenderer creates a new script renderer
-func NewScriptRenderer(out io.Writer, deploymentsRepo usecase.DeploymentRepository) *ScriptRenderer {
+func NewScriptRenderer(out io.Writer, deploymentsRepo usecase.DeploymentRepository, abiResolver usecase.ABIResolver, log *slog.Logger) *ScriptRenderer {
 	return &ScriptRenderer{
 		out:             out,
 		deploymentsRepo: deploymentsRepo,
+		log:             log.With("component", "ScriptRenderer"),
+		txRenderer: NewTransactionRenderer(
+			abiResolver,
+			deploymentsRepo,
+			log,
+		),
 	}
 }
 
@@ -108,237 +117,10 @@ func (r *ScriptRenderer) renderTransactions(exec *forge.HydratedRunResult) error
 
 // renderTransactionTree displays a transaction in tree format
 func (r *ScriptRenderer) renderTransactionTree(tx *forge.Transaction, exec *forge.HydratedRunResult) {
-	// Build status text
-	var statusText string
-	switch tx.Status {
-	case models.TransactionStatusSimulated:
-		statusText = "simulated"
-	case models.TransactionStatusQueued:
-		statusText = "queued   "
-	case models.TransactionStatusExecuted:
-		statusText = "executed "
-	case models.TransactionStatusFailed:
-		statusText = "failed   "
-	default:
-		statusText = "unknown  "
-	}
-
-	// Try to identify what this transaction does
-	var methodCall string
-
-	// Check if this is a CreateX deployment
-	toAddr := strings.ToLower(tx.Transaction.To.Hex())
-	if strings.HasSuffix(toAddr, "ba5ed099633d3b313e4d5f7bdc1305d3c28ba5ed") || toAddr == "0xba5ed099633d3b313e4d5f7bdc1305d3c28ba5ed" {
-		// This is a CreateX call, try to decode it
-		methodCall = r.decodeCreateXCall(tx, exec)
-	} else if len(tx.Transaction.Data) >= 4 {
-		// Generic transaction with data
-		methodCall = fmt.Sprintf("0x%x", tx.Transaction.Data[:4]) // Show selector
-	} else {
-		// Transaction with no data
-		methodCall = tx.Transaction.To.Hex()
-	}
-
-	// Display transaction header
-	fmt.Fprintf(r.out, "\n%s %s → %s\n",
-		r.getStatusColor(tx.Status).Sprint(statusText),
-		green.Sprint(r.getKnownAddress(tx.Sender.Hex())),
-		methodCall)
-
-	// Find deployments for this transaction
-	deployments := r.findDeploymentsForTransaction(tx, exec)
-
-	// Display deployment info if any
-	for i, dep := range deployments {
-		isLast := i == len(deployments)-1
-
-		// Show CREATE operation
-		// Check if this is a proxy deployment by looking for proxy relationships
-		isProxy := false
-		if exec.ProxyRelationships != nil {
-			if _, hasProxy := exec.ProxyRelationships[dep.Address]; hasProxy {
-				isProxy = true
-			}
-		}
-
-		if isProxy {
-			// Proxy deployment - show both implementation and proxy
-			r.renderProxyDeployment(dep, isLast, exec)
-		} else {
-			// Regular deployment
-			r.renderRegularDeployment(dep, isLast)
-		}
-	}
-
-	// Display transaction footer with gas and block info
-	if tx.TxHash != nil || tx.BlockNumber != nil || tx.GasUsed != nil {
-		var details []string
-		if tx.TxHash != nil {
-			// Shorten the hash to match v1 output
-			details = append(details, fmt.Sprintf("Tx: %s", tx.TxHash.Hex()))
-		}
-		if tx.BlockNumber != nil {
-			details = append(details, fmt.Sprintf("Block: %d", *tx.BlockNumber))
-		}
-		if tx.GasUsed != nil {
-			details = append(details, fmt.Sprintf("Gas: %d", *tx.GasUsed))
-		}
-		fmt.Fprintf(r.out, "└─ %s\n", gray.Sprint(strings.Join(details, " | ")))
-	}
+	// getImplementationName tries to find the name of an implementation contract
+	r.txRenderer.WithExecution(exec).DisplayTransactionWithEvents(tx)
 }
 
-// decodeCreateXCall tries to decode a CreateX call
-func (r *ScriptRenderer) decodeCreateXCall(tx *forge.Transaction, exec *forge.HydratedRunResult) string {
-	// Check method selector (first 4 bytes)
-	if len(tx.Transaction.Data) < 4 {
-		return "unknown()"
-	}
-
-	selector := fmt.Sprintf("0x%x", tx.Transaction.Data[:4])
-
-	// Common CreateX selectors
-	switch selector {
-	case "0x9c36a286": // deployCreate3(bytes32,bytes)
-		return fmt.Sprintf("CreateX::%s(salt: 0xf39fd6e5..., initCode: 0x60806040...)", yellow.Sprint("deployCreate3"))
-	case "0x30783963": // deployCreate3 (based on v1 output)
-		return fmt.Sprintf("CreateX::%s(salt: 0xf39fd6e5..., initCode: 0x60806040...)", yellow.Sprint("deployCreate3"))
-	case "0x50a1b77c": // deployCreate3
-		return fmt.Sprintf("CreateX::%s(salt: 0xf39fd6e5..., initCode: 0x60806040...)", yellow.Sprint("deployCreate3"))
-	case "0x5e89c2f0": // deployCreate2
-		return fmt.Sprintf("CreateX::%s(salt: 0xf39fd6e5..., initCode: 0x60806040...)", yellow.Sprint("deployCreate2"))
-	default:
-		return fmt.Sprintf("CreateX::%s", selector)
-	}
-}
-
-// getKnownAddress returns a known name for an address or shortens it
-func (r *ScriptRenderer) getKnownAddress(addr string) string {
-	// Check for known addresses
-	switch strings.ToLower(addr) {
-	case "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266":
-		return "anvil"
-	default:
-		return r.shortenAddress(addr)
-	}
-}
-
-// getStatusColor returns the color function for a transaction status
-func (r *ScriptRenderer) getStatusColor(status models.TransactionStatus) *color.Color {
-	switch status {
-	case models.TransactionStatusSimulated:
-		return gray
-	case models.TransactionStatusQueued:
-		return yellow
-	case models.TransactionStatusExecuted:
-		return green
-	case models.TransactionStatusFailed:
-		return red
-	default:
-		return color.New()
-	}
-}
-
-// findDeploymentsForTransaction finds deployments created in a transaction
-func (r *ScriptRenderer) findDeploymentsForTransaction(tx *forge.Transaction, exec *forge.HydratedRunResult) []*forge.Deployment {
-	var deployments []*forge.Deployment
-	for _, dep := range exec.Deployments {
-		if dep.TransactionID == tx.TransactionId {
-			deployments = append(deployments, dep)
-		}
-	}
-	return deployments
-}
-
-// renderRegularDeployment renders a regular contract deployment
-func (r *ScriptRenderer) renderRegularDeployment(dep *forge.Deployment, isLast bool) {
-	prefix := "├─"
-	if isLast {
-		prefix = "└─"
-	}
-
-	// Show intermediate steps (simplified without full trace)
-	fmt.Fprintf(r.out, "├─ %s\n", green.Sprint("create2(16 bytes)"))
-	fmt.Fprintf(r.out, "│  └─ %s %s\n", gray.Sprint("[return]"), r.shortenAddress(dep.Address.Hex()))
-	fmt.Fprintf(r.out, "├─ %s(newContract: %s, salt: 0x%x...)\n",
-		cyan.Sprint("Create3ProxyContractCreation"), r.shortenAddress(dep.Address.Hex()), dep.Event.Salt[:4])
-	fmt.Fprintf(r.out, "├─ %s::%s\n", r.shortenAddress(dep.Address.Hex()), yellow.Sprint("0x60806040..."))
-
-	// Show the actual deployment
-	constructorArgs := ""
-	if len(dep.Event.ConstructorArgs) > 0 {
-		// TODO: Decode constructor args if we have ABI
-		constructorArgs = "()"
-	} else {
-		constructorArgs = "()"
-	}
-
-	contractName := dep.Event.Artifact
-	if dep.Contract != nil && dep.Contract.Name != "" {
-		contractName = dep.Contract.Name
-	}
-	fmt.Fprintf(r.out, "│  └─ 🚀 %s\n",
-		green.Sprintf("new %s%s", contractName, constructorArgs))
-	fmt.Fprintf(r.out, "│     └─ %s %s\n", gray.Sprint("[return]"), dep.Address.Hex())
-
-	// Show final event
-	displayName := contractName
-	if dep.Event.Label != "" {
-		displayName = fmt.Sprintf("%s:%s", contractName, dep.Event.Label)
-	}
-	fmt.Fprintf(r.out, "%s %s(newContract: %s: [%s...)\n",
-		prefix, cyan.Sprint("ContractCreation"), displayName, dep.Address.Hex()[:10])
-}
-
-// renderProxyDeployment renders a proxy contract deployment
-func (r *ScriptRenderer) renderProxyDeployment(dep *forge.Deployment, isLast bool, exec *forge.HydratedRunResult) {
-	// Get proxy info from exec.ProxyRelationships
-	proxyRel, hasProxy := exec.ProxyRelationships[dep.Address]
-	if !hasProxy {
-		r.renderRegularDeployment(dep, isLast)
-		return
-	}
-
-	prefix := "├─"
-	if isLast {
-		prefix = "└─"
-	}
-
-	// Show intermediate steps
-	fmt.Fprintf(r.out, "├─ %s\n", "create2(16 bytes)")
-	fmt.Fprintf(r.out, "│  └─ %s %s\n", "[return]", r.shortenAddress(dep.Address.Hex()))
-	fmt.Fprintf(r.out, "├─ %s(newContract: %s, salt: 0x%x...)\n",
-		"Create3ProxyContractCreation", r.shortenAddress(dep.Address.Hex()), dep.Event.Salt[:4])
-	fmt.Fprintf(r.out, "├─ %s::%s\n", r.shortenAddress(dep.Address.Hex()), "0x60806040...")
-
-	// Show proxy deployment with constructor args
-	contractName := dep.Event.Artifact
-	if dep.Contract != nil && dep.Contract.Name != "" {
-		contractName = dep.Contract.Name
-	}
-	fmt.Fprintf(r.out, "│  └─ 🚀 %s\n",
-		green.Sprintf("new %s(", contractName))
-	fmt.Fprintf(r.out, "│     │    implementation: %s,\n", proxyRel.ImplementationAddress.Hex())
-	fmt.Fprintf(r.out, "│     │    _data: 0xc4d66de8000000000000000000000000...(36 bytes)\n")
-	fmt.Fprintf(r.out, "│     │  )\n")
-
-	// Show events
-	fmt.Fprintf(r.out, "│     ├─ Upgraded(implementation: %s: [%s...)\n",
-		r.getImplementationName(proxyRel.ImplementationAddress.Hex(), exec),
-		proxyRel.ImplementationAddress.Hex()[:10])
-	fmt.Fprintf(r.out, "│     ├─ %s::initialize(0x0000...0000) (delegate)\n",
-		r.getImplementationName(proxyRel.ImplementationAddress.Hex(), exec))
-	fmt.Fprintf(r.out, "│     └─ [return] %s\n", dep.Address.Hex())
-
-	// Show final event
-	displayName := contractName
-	if dep.Event.Label != "" {
-		displayName = fmt.Sprintf("%s:%s", contractName, dep.Event.Label)
-	}
-	fmt.Fprintf(r.out, "%s %s(newContract: %s: [%s...)\n",
-		prefix, "ContractCreation", displayName, dep.Address.Hex()[:10])
-}
-
-// getImplementationName tries to find the name of an implementation contract
 func (r *ScriptRenderer) getImplementationName(implAddr string, exec *forge.HydratedRunResult) string {
 	// Look for implementation in deployments
 	for _, dep := range exec.Deployments {
@@ -433,22 +215,6 @@ func (r *ScriptRenderer) renderLogs(logs []string) error {
 
 	fmt.Fprintln(r.out) // Empty line after logs
 	return nil
-}
-
-// getStatusDisplay returns a formatted status string
-func (r *ScriptRenderer) getStatusDisplay(status models.TransactionStatus) string {
-	switch status {
-	case models.TransactionStatusSimulated:
-		return yellow.Sprint("Simulated")
-	case models.TransactionStatusQueued:
-		return purple.Sprint("Queued")
-	case models.TransactionStatusExecuted:
-		return green.Sprint("Executed")
-	case models.TransactionStatusFailed:
-		return red.Sprint("Failed")
-	default:
-		return string(status)
-	}
 }
 
 // shortenAddress returns a shortened version of an address

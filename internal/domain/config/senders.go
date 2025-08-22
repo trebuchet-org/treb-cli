@@ -2,6 +2,15 @@ package config
 
 import "github.com/ethereum/go-ethereum/common"
 
+type SenderScriptConfig struct {
+	UseLedger         bool
+	UseTrezor         bool
+	DerivationPaths   []string
+	EncodedConfig     string
+	SenderInitConfigs []SenderInitConfig
+	Senders           []string
+}
+
 type SenderInitConfig struct {
 	BaseConfig   SenderConfig
 	Name         string

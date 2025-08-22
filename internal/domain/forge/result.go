@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"github.com/trebuchet-org/treb-cli/internal/domain/bindings"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
@@ -16,6 +17,7 @@ type RunResult struct {
 	Success       bool
 	RawOutput     []byte
 	ParsedOutput  *ParsedOutput
+	Senders       config.SenderScriptConfig
 	BroadcastPath string
 	Network       string
 	ChainID       uint64

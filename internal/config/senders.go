@@ -93,18 +93,19 @@ func (m *SendersManager) BuildSenderScriptConfig(
 	}
 
 	return &config.SenderScriptConfig{
-		UseLedger:       executionHWConfig.UseLedger,
-		UseTrezor:       executionHWConfig.UseTrezor,
-		DerivationPaths: executionHWConfig.DerivationPaths,
-		EncodedConfig:   encodedSenderInitConfigs,
-		Senders:         senders,
+		UseLedger:         executionHWConfig.UseLedger,
+		UseTrezor:         executionHWConfig.UseTrezor,
+		DerivationPaths:   executionHWConfig.DerivationPaths,
+		EncodedConfig:     encodedSenderInitConfigs,
+		SenderInitConfigs: senderInitConfigs,
+		Senders:           senders,
 	}, nil
 }
 
 func (m *SendersManager) getSendersFromScript(script *models.Artifact) ([]string, error) {
 	// Extract devdoc from metadata
 	var devdoc struct {
-		Methods map[string]map[string]interface{} `json:"methods"`
+		Methods map[string]map[string]any `json:"methods"`
 	}
 
 	if err := json.Unmarshal(script.Metadata.Output.DevDoc, &devdoc); err != nil {
@@ -156,12 +157,12 @@ func (m *SendersManager) getSendersHWConfig(senders []string) config.SenderHWCon
 		UseTrezor:       false,
 		DerivationPaths: []string{},
 	}
-	
+
 	// Check if config is nil or has no senders
 	if m.config == nil || m.config.Senders == nil {
 		return hwConfig
 	}
-	
+
 	for _, senderKey := range senders {
 		sender, exists := m.config.Senders[senderKey]
 		if !exists {
@@ -196,12 +197,12 @@ func (m *SendersManager) buildSenderInitConfig(senderKey string) (*config.Sender
 	if m.config == nil || m.config.Senders == nil {
 		return nil, fmt.Errorf("no sender configuration available")
 	}
-	
+
 	sender, exists := m.config.Senders[senderKey]
 	if !exists {
 		return nil, fmt.Errorf("sender '%s' not found in configuration", senderKey)
 	}
-	
+
 	switch sender.Type {
 	case "private_key":
 		// Parse private key to get address

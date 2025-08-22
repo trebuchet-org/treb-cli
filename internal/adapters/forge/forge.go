@@ -81,6 +81,7 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 		Namespace: config.Namespace,
 		Network:   config.Network.Name,
 		ChainID:   config.Network.ChainID,
+		Senders:   config.SenderScriptConfig,
 	}
 
 	// Debug mode: direct copy to stdout

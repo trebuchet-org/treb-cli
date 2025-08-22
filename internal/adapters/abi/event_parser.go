@@ -9,16 +9,16 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/domain/bindings"
 )
 
-// Parser handles ABI parsing from Foundry artifacts
-type Parser struct {
+// EventParser handles parsing of System events from the foundry script execution output
+type EventParser struct {
 	log             *slog.Logger
 	trebContract    *bindings.Treb
 	createXContract *bindings.CreateX
 }
 
-// NewParser creates a new ABI parser
-func NewParser(projectRoot string, log *slog.Logger) *Parser {
-	return &Parser{
+// NewEventParser creates a new ABI parser
+func NewEventParser(projectRoot string, log *slog.Logger) *EventParser {
+	return &EventParser{
 		log:             log,
 		trebContract:    bindings.NewTreb(),
 		createXContract: bindings.NewCreateX(),
@@ -26,7 +26,7 @@ func NewParser(projectRoot string, log *slog.Logger) *Parser {
 }
 
 // FindInitializeMethod finds an initializer method in the ABI
-func (p *Parser) FindInitializeMethod(abi *abi.ABI) *abi.Method {
+func (p *EventParser) FindInitializeMethod(abi *abi.ABI) *abi.Method {
 	if abi == nil {
 		return nil
 	}
@@ -46,7 +46,7 @@ func (p *Parser) FindInitializeMethod(abi *abi.ABI) *abi.Method {
 }
 
 // GenerateConstructorArgs generates variable declarations and encoding for constructor arguments
-func (p *Parser) GenerateConstructorArgs(abi *abi.ABI) (vars string, encode string) {
+func (p *EventParser) GenerateConstructorArgs(abi *abi.ABI) (vars string, encode string) {
 	if abi != nil && len(abi.Constructor.Inputs) == 0 {
 		return "", ""
 	}
@@ -55,7 +55,7 @@ func (p *Parser) GenerateConstructorArgs(abi *abi.ABI) (vars string, encode stri
 }
 
 // GenerateInitializerArgs generates variable declarations and encoding for initializer arguments
-func (p *Parser) GenerateInitializerArgs(method *abi.Method) (vars, encode, sig string) {
+func (p *EventParser) GenerateInitializerArgs(method *abi.Method) (vars, encode, sig string) {
 	if method == nil || len(method.Inputs) == 0 {
 		return "", "", ""
 	}
@@ -64,7 +64,7 @@ func (p *Parser) GenerateInitializerArgs(method *abi.Method) (vars, encode, sig 
 }
 
 // generateArgs generates variable declarations and encoding for arguments
-func (p *Parser) generateArgs(inputs abi.Arguments, prefix string) (vars string, encode string) {
+func (p *EventParser) generateArgs(inputs abi.Arguments, prefix string) (vars string, encode string) {
 	var varLines []string
 	var argNames []string
 
@@ -96,7 +96,7 @@ func (p *Parser) generateArgs(inputs abi.Arguments, prefix string) (vars string,
 }
 
 // solidityTypeToGo converts Solidity types to script variable types
-func (p *Parser) solidityTypeToGo(solType string) string {
+func (p *EventParser) solidityTypeToGo(solType string) string {
 	switch {
 	case strings.HasPrefix(solType, "uint"):
 		return "uint256"
@@ -116,7 +116,7 @@ func (p *Parser) solidityTypeToGo(solType string) string {
 }
 
 // getDefaultValue returns a default value for a Solidity type
-func (p *Parser) getDefaultValue(solType string) string {
+func (p *EventParser) getDefaultValue(solType string) string {
 	switch {
 	case strings.HasPrefix(solType, "uint") || strings.HasPrefix(solType, "int"):
 		return "0"
