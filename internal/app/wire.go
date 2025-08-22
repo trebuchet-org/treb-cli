@@ -15,7 +15,7 @@ import (
 )
 
 // InitApp creates a fully wired App instance with viper configuration
-func InitApp(v *viper.Viper, cmd *cobra.Command, sink usecase.ProgressSink) (*App, error) {
+func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 	wire.Build(
 		// Configuration
 		config.Provider,

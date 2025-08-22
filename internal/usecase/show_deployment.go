@@ -22,7 +22,6 @@ type ShowDeployment struct {
 	config   *config.RuntimeConfig
 	repo     DeploymentRepository
 	resolver DeploymentResolver
-	sink     ProgressSink
 }
 
 // NewShowDeployment creates a new ShowDeployment use case
@@ -30,29 +29,20 @@ func NewShowDeployment(
 	cfg *config.RuntimeConfig,
 	repo DeploymentRepository,
 	resolver DeploymentResolver,
-	sink ProgressSink,
 ) *ShowDeployment {
 	return &ShowDeployment{
 		config:   cfg,
 		repo:     repo,
 		resolver: resolver,
-		sink:     sink,
 	}
 }
 
 // Run executes the show deployment use case
 func (uc *ShowDeployment) Run(ctx context.Context, params ShowDeploymentParams) (*models.Deployment, error) {
-	// Report progress
-	uc.sink.OnProgress(ctx, ProgressEvent{
-		Stage:   "loading",
-		Message: "Loading deployment details",
-		Spinner: true,
-	})
-
 	// Use the deployment resolver
 	query := domain.DeploymentQuery{
 		Reference: params.DeploymentRef,
-		ChainID:   0, // Will use runtime config
+		ChainID:   0,  // Will use runtime config
 		Namespace: "", // Will use runtime config
 	}
 	deployment, err := uc.resolver.ResolveDeployment(ctx, query)
@@ -62,12 +52,6 @@ func (uc *ShowDeployment) Run(ctx context.Context, params ShowDeploymentParams) 
 
 	// If it's a proxy and we should resolve implementation
 	if params.ResolveProxy && deployment.Type == models.ProxyDeployment && deployment.ProxyInfo != nil {
-		uc.sink.OnProgress(ctx, ProgressEvent{
-			Stage:   "resolving",
-			Message: "Resolving proxy implementation",
-			Spinner: true,
-		})
-
 		// Try to load the implementation deployment
 		if deployment.ProxyInfo.Implementation != "" {
 			// First try by address
@@ -79,12 +63,5 @@ func (uc *ShowDeployment) Run(ctx context.Context, params ShowDeploymentParams) 
 		}
 	}
 
-	// Report completion
-	uc.sink.OnProgress(ctx, ProgressEvent{
-		Stage:   "complete",
-		Message: "Deployment loaded",
-	})
-
 	return deployment, nil
 }
-

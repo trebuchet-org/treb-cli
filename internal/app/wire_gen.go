@@ -15,6 +15,7 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/adapters/blockchain"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/forge"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/fs"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/progress"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/repository/contracts"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/repository/deployments"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/resolvers"
@@ -30,7 +31,7 @@ import (
 // Injectors from wire.go:
 
 // InitApp creates a fully wired App instance with viper configuration
-func InitApp(v *viper.Viper, cmd *cobra.Command, sink usecase.ProgressSink) (*App, error) {
+func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 	runtimeConfig, err := config.Provider(v)
 	if err != nil {
 		return nil, err
@@ -44,9 +45,9 @@ func InitApp(v *viper.Viper, cmd *cobra.Command, sink usecase.ProgressSink) (*Ap
 	if err != nil {
 		return nil, err
 	}
-	listDeployments := usecase.NewListDeployments(runtimeConfig, fileRepository, sink)
+	listDeployments := usecase.NewListDeployments(runtimeConfig, fileRepository)
 	deploymentResolver := resolvers.NewDeploymentResolver(runtimeConfig, fileRepository, selectorAdapter)
-	showDeployment := usecase.NewShowDeployment(runtimeConfig, fileRepository, deploymentResolver, sink)
+	showDeployment := usecase.NewShowDeployment(runtimeConfig, fileRepository, deploymentResolver)
 	string2 := adapters.ProvideProjectPath(runtimeConfig)
 	repository := contracts.NewRepository(string2)
 	contractResolver := resolvers.NewContractResolver(runtimeConfig, repository, selectorAdapter)
@@ -60,12 +61,13 @@ func InitApp(v *viper.Viper, cmd *cobra.Command, sink usecase.ProgressSink) (*Ap
 	if err != nil {
 		return nil, err
 	}
-	generateDeploymentScript := usecase.NewGenerateDeploymentScript(runtimeConfig, contractResolver, eventParser, abiResolver, scriptGeneratorAdapter, fileWriterAdapter, sink)
+	generateDeploymentScript := usecase.NewGenerateDeploymentScript(runtimeConfig, contractResolver, eventParser, abiResolver, scriptGeneratorAdapter, fileWriterAdapter)
 	networkResolver := config.ProvideNetworkResolver(runtimeConfig)
 	listNetworks := usecase.NewListNetworks(networkResolver)
 	checkerAdapter := blockchain.NewCheckerAdapter()
 	pruner := deployments.NewPruner(fileRepository, checkerAdapter)
-	pruneRegistry := usecase.NewPruneRegistry(networkResolver, checkerAdapter, pruner, fileRepository, sink)
+	spinnerProgressReporter := progress.NewSpinnerProgressReporter()
+	pruneRegistry := usecase.NewPruneRegistry(networkResolver, checkerAdapter, pruner, fileRepository, spinnerProgressReporter)
 	localConfigStoreAdapter := fs.NewLocalConfigStoreAdapter(runtimeConfig)
 	showConfig := usecase.NewShowConfig(localConfigStoreAdapter)
 	setConfig := usecase.NewSetConfig(localConfigStoreAdapter)
@@ -79,18 +81,18 @@ func InitApp(v *viper.Viper, cmd *cobra.Command, sink usecase.ProgressSink) (*Ap
 	}
 	libraryResolver := resolvers.NewLibraryResolver(fileRepository)
 	forgeAdapter := forge.NewForgeAdapter(string2, logger)
-	runScript := usecase.NewRunScript(runtimeConfig, scriptResolver, parameterResolver, sendersManager, runResultHydrator, fileRepository, libraryResolver, sink, forgeAdapter)
+	runScript := usecase.NewRunScript(runtimeConfig, scriptResolver, parameterResolver, sendersManager, runResultHydrator, fileRepository, libraryResolver, spinnerProgressReporter, forgeAdapter)
 	verifierAdapter, err := verification.NewVerifierAdapter(runtimeConfig)
 	if err != nil {
 		return nil, err
 	}
 	verifyDeployment := usecase.NewVerifyDeployment(fileRepository, verifierAdapter, networkResolver)
-	composeDeployment := usecase.NewComposeDeployment(runScript, sink)
-	syncRegistry := usecase.NewSyncRegistry(runtimeConfig, fileRepository, sink)
-	tagDeployment := usecase.NewTagDeployment(fileRepository, deploymentResolver, sink)
+	composeDeployment := usecase.NewComposeDeployment(runScript, spinnerProgressReporter)
+	syncRegistry := usecase.NewSyncRegistry(runtimeConfig, fileRepository, spinnerProgressReporter)
+	tagDeployment := usecase.NewTagDeployment(fileRepository, deploymentResolver, spinnerProgressReporter)
 	manager := anvil.NewManager()
-	manageAnvil := usecase.NewManageAnvil(manager, sink)
-	initProject := usecase.NewInitProject(fileWriterAdapter, sink)
+	manageAnvil := usecase.NewManageAnvil(manager, spinnerProgressReporter)
+	initProject := usecase.NewInitProject(fileWriterAdapter, spinnerProgressReporter)
 	renderer := render.NewGenerateRenderer()
 	writer := render.ProvideIO(cmd)
 	scriptRenderer := render.NewScriptRenderer(writer, fileRepository, abiResolver, logger)

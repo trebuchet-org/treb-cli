@@ -37,6 +37,7 @@ type ComposeParams struct {
 	DebugJSON      bool
 	Verbose        bool
 	NonInteractive bool
+	Progress       ProgressSink
 }
 
 // ComposeResult contains the result of orchestration

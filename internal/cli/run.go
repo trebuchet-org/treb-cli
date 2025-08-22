@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/trebuchet-org/treb-cli/internal/adapters/progress"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -91,15 +90,12 @@ Examples:
 				namespace = "default"
 			}
 
-			progress := progress.NewRunProgress(app.ScriptRenderer)
-
 			params := usecase.RunScriptParams{
 				ScriptRef:  deploymentScriptRef,
 				Parameters: parsedEnvVars,
 				DryRun:     dryRun,
 				Debug:      debug,
 				DebugJSON:  debugJSON,
-				Progress:   progress,
 			}
 			result, err := app.RunScript.Run(cmd.Context(), params)
 			if err != nil {

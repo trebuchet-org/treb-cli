@@ -34,7 +34,6 @@ type GenerateDeploymentScript struct {
 	abiResolver      ABIResolver
 	scriptGenerator  ScriptGenerator
 	fileWriter       FileWriter
-	sink             ProgressSink
 }
 
 // NewGenerateDeploymentScript creates a new GenerateDeploymentScript use case
@@ -45,7 +44,6 @@ func NewGenerateDeploymentScript(
 	abiResolver ABIResolver,
 	scriptGenerator ScriptGenerator,
 	fileWriter FileWriter,
-	sink ProgressSink,
 ) *GenerateDeploymentScript {
 	return &GenerateDeploymentScript{
 		config:           cfg,
@@ -54,7 +52,6 @@ func NewGenerateDeploymentScript(
 		abiResolver:      abiResolver,
 		scriptGenerator:  scriptGenerator,
 		fileWriter:       fileWriter,
-		sink:             sink,
 	}
 }
 
@@ -79,13 +76,6 @@ func (uc *GenerateDeploymentScript) Run(ctx context.Context, params GenerateScri
 	} else if params.UseProxy {
 		scriptType = domain.ScriptTypeProxy
 	}
-
-	// Parse ABI
-	uc.sink.OnProgress(ctx, ProgressEvent{
-		Stage:   "parsing",
-		Message: "Parsing contract ABI",
-		Spinner: true,
-	})
 
 	abi, err := uc.abiResolver.Get(ctx, contract.Artifact)
 
@@ -128,13 +118,6 @@ func (uc *GenerateDeploymentScript) Run(ctx context.Context, params GenerateScri
 		template.ProxyInfo = proxyInfo
 	}
 
-	// Generate script
-	uc.sink.OnProgress(ctx, ProgressEvent{
-		Stage:   "generating",
-		Message: "Generating deployment script",
-		Spinner: true,
-	})
-
 	scriptContent, err := uc.scriptGenerator.GenerateScript(ctx, template)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate script: %w", err)
@@ -147,11 +130,6 @@ func (uc *GenerateDeploymentScript) Run(ctx context.Context, params GenerateScri
 
 	// Build result
 	instructions := uc.buildInstructions(scriptType, scriptPath, uc.config.Network)
-
-	uc.sink.OnProgress(ctx, ProgressEvent{
-		Stage:   "complete",
-		Message: "Script generated successfully",
-	})
 
 	return &GenerateScriptResult{
 		ScriptPath:   scriptPath,

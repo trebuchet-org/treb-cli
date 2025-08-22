@@ -1,0 +1,22 @@
+group: Protocol
+components:
+  UG0:
+    script: DeployUpgradeableCounterProxy
+    deps:
+      - UG1
+      - UG2
+    env:
+      proxyLabel: v123
+  UG1:
+    script: DeployUpgradeableCounterProxy
+    deps:
+      - UG2
+    env:
+      proxyLabel: v124
+  UG2:
+    script: DeployUpgradeableCounterProxy
+    env:
+      proxyLabel: v124
+  
+  
+

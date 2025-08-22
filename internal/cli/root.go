@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/trebuchet-org/treb-cli/internal/adapters/progress"
 	"github.com/trebuchet-org/treb-cli/internal/app"
 	"github.com/trebuchet-org/treb-cli/internal/config"
 )
@@ -44,11 +43,8 @@ smart contract deployments using CreateX factory contracts.`,
 			// Set up viper
 			v := config.SetupViper(projectRoot, cmd)
 
-			// Create progress sink (can be replaced with proper implementation later)
-			sink := progress.NewNopSink()
-
 			// Initialize app with DI
-			app, err := app.InitApp(v, cmd, sink)
+			app, err := app.InitApp(v, cmd)
 			if err != nil {
 				return fmt.Errorf("failed to initialize app: %w", err)
 			}

@@ -21,27 +21,18 @@ type ListDeploymentsParams struct {
 type ListDeployments struct {
 	config *config.RuntimeConfig
 	repo   DeploymentRepository
-	sink   ProgressSink
 }
 
 // NewListDeployments creates a new ListDeployments use case
-func NewListDeployments(cfg *config.RuntimeConfig, repo DeploymentRepository, sink ProgressSink) *ListDeployments {
+func NewListDeployments(cfg *config.RuntimeConfig, repo DeploymentRepository) *ListDeployments {
 	return &ListDeployments{
 		config: cfg,
 		repo:   repo,
-		sink:   sink,
 	}
 }
 
 // Run executes the list deployments use case
 func (uc *ListDeployments) Run(ctx context.Context, params ListDeploymentsParams) (*DeploymentListResult, error) {
-	// Report progress
-	uc.sink.OnProgress(ctx, ProgressEvent{
-		Stage:   "loading",
-		Message: "Loading deployments from registry",
-		Spinner: true,
-	})
-
 	// Create filter from params and runtime config
 	filter := domain.DeploymentFilter{
 		Namespace:    uc.config.Namespace,
@@ -65,14 +56,6 @@ func (uc *ListDeployments) Run(ctx context.Context, params ListDeploymentsParams
 
 	// Calculate summary
 	summary := calculateSummary(deployments)
-
-	// Report completion
-	uc.sink.OnProgress(ctx, ProgressEvent{
-		Stage:   "complete",
-		Current: len(deployments),
-		Total:   len(deployments),
-		Message: "Deployments loaded",
-	})
 
 	return &DeploymentListResult{
 		Deployments: deployments,

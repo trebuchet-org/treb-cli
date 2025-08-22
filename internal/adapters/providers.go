@@ -7,6 +7,7 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/adapters/blockchain"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/forge"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/fs"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/progress"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/repository/contracts"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/repository/deployments"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/resolvers"
@@ -116,6 +117,13 @@ var ScriptAdapters = wire.NewSet(
 	// Library resolution
 	resolvers.NewLibraryResolver,
 	wire.Bind(new(usecase.LibraryResolver), new(*resolvers.LibraryResolver)),
+
+	// Progress reporters
+	progress.NewRunProgress,
+	wire.Bind(new(usecase.RunProgressSink), new(*progress.RunProgress)),
+
+	progress.NewSpinnerProgressReporter,
+	wire.Bind(new(usecase.ProgressSink), new(*progress.SpinnerProgressReporter)),
 )
 
 // AllAdapters includes all adapter sets

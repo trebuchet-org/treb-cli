@@ -80,7 +80,6 @@ func (t *TagDeployment) Execute(ctx context.Context, params TagDeploymentParams)
 	}
 }
 
-
 // showTags displays current tags for a deployment
 func (t *TagDeployment) showTags(deployment *models.Deployment) (*TagDeploymentResult, error) {
 	return &TagDeploymentResult{

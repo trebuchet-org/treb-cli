@@ -19,7 +19,6 @@ type RunScriptParams struct {
 	DebugJSON      bool
 	Verbose        bool
 	NonInteractive bool
-	Progress       ProgressSink
 }
 
 // RunScriptResult contains the result of running a script
@@ -40,7 +39,7 @@ type RunScript struct {
 	runResultHydrator RunResultHydrator
 	registryUpdater   DeploymentRepositoryUpdater
 	libraryResolver   LibraryResolver
-	progress          ProgressSink
+	progress          RunProgressSink
 	// paramPrompter   ParameterPrompter
 }
 
@@ -53,7 +52,7 @@ func NewRunScript(
 	runResultHydrator RunResultHydrator,
 	registryUpdater DeploymentRepositoryUpdater,
 	libraryResolver LibraryResolver,
-	progress ProgressSink,
+	progress RunProgressSink,
 	forgeScriptRunner ForgeScriptRunner,
 ) *RunScript {
 	return &RunScript{
@@ -72,7 +71,6 @@ func NewRunScript(
 
 // Run executes the script with the given parameters
 func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScriptResult, error) {
-	progress := params.Progress
 	startTime := time.Now()
 
 	// Initialize result
@@ -157,12 +155,11 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 		DryRun:             params.DryRun,
 		Debug:              params.Debug,
 		DebugJSON:          params.DebugJSON,
-		Progress:           progress,
+		Progress:           uc.progress,
 		SenderScriptConfig: *senderScriptConfig,
 	}
 
-	// Stage 3: Execute script
-	progress.OnProgress(ctx, ProgressEvent{
+	uc.progress.OnProgress(ctx, ProgressEvent{
 		Stage:    string(StageSimulating),
 		Message:  "Simulating",
 		Metadata: &runScriptConfig,
@@ -182,7 +179,7 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 	}
 
 	// Stage 4: Parse execution
-	progress.OnProgress(ctx, ProgressEvent{
+	uc.progress.OnProgress(ctx, ProgressEvent{
 		Stage:   string(StageParsing),
 		Message: "Parsing",
 	})
@@ -203,7 +200,7 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 
 	// Stage 5: Update registry (if not dry run)
 	if !params.DryRun && len(result.RunResult.Deployments) > 0 {
-		progress.OnProgress(ctx, ProgressEvent{
+		uc.progress.OnProgress(ctx, ProgressEvent{
 			Stage: string(StageParsing),
 		})
 
@@ -223,7 +220,7 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 	}
 
 	// Stage 6: Complete
-	progress.OnProgress(ctx, ProgressEvent{
+	uc.progress.OnProgress(ctx, ProgressEvent{
 		Stage: string(StageCompleted),
 	})
 

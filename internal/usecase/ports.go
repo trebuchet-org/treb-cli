@@ -63,6 +63,13 @@ type ProgressSink interface {
 	Error(message string)
 }
 
+// ProgressSink receives progress events
+type RunProgressSink interface {
+	OnProgress(ctx context.Context, event ProgressEvent)
+	Info(message string)
+	Error(message string)
+}
+
 // NopProgress is a no-op implementation of ProgressSink
 type NopProgress struct{}
 
