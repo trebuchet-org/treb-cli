@@ -3,14 +3,15 @@ package forge
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"maps"
 	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/broadcast"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/events"
+	"github.com/trebuchet-org/treb-cli/internal/adapters/forge/broadcast"
+	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"github.com/trebuchet-org/treb-cli/internal/domain/bindings"
 	"github.com/trebuchet-org/treb-cli/internal/domain/forge"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
@@ -20,7 +21,9 @@ import (
 // RunResultHydrator is our new clean implementation of the execution parser
 type RunResultHydrator struct {
 	projectRoot        string
+	log                *slog.Logger
 	parser             usecase.ABIParser
+	broadcastParser    *broadcast.Parser
 	indexer            usecase.ContractRepository
 	transactions       map[[32]byte]*forge.Transaction
 	transactionOrder   [][32]byte // Track order of transactions
@@ -29,11 +32,13 @@ type RunResultHydrator struct {
 }
 
 // NewRunResultHydrator creates a new internal parser
-func NewRunResultHydrator(projectRoot string, parser usecase.ABIParser, indexer usecase.ContractRepository) (*RunResultHydrator, error) {
+func NewRunResultHydrator(projectRoot string, parser usecase.ABIParser, indexer usecase.ContractRepository, log *slog.Logger) (*RunResultHydrator, error) {
 	return &RunResultHydrator{
-		projectRoot: projectRoot,
-		parser:      parser,
-		indexer:     indexer,
+		projectRoot:     projectRoot,
+		log:             log.With("component", "RunResultHydrator"),
+		broadcastParser: broadcast.NewParser(projectRoot),
+		parser:          parser,
+		indexer:         indexer,
 	}, nil
 }
 
@@ -91,7 +96,7 @@ func (h *RunResultHydrator) Hydrate(
 					if contractInfo := h.indexer.GetContractByArtifact(ctx, e.Deployment.Artifact); contractInfo != nil {
 						deployment.Contract = contractInfo
 					} else {
-						fmt.Printf("[DEBUG] %s not found in contract repository]n", e.Deployment.Artifact)
+						h.log.Warn("Deployment artifact not found in contract repository", "artifact", e.Deployment.Artifact)
 					}
 				}
 
@@ -119,6 +124,7 @@ func (h *RunResultHydrator) Hydrate(
 		hydrated.Transactions = h.getTransactions()
 
 		// Copy proxy relationships
+		h.log.Debug("Extracted proxy relationships", "proxyRel", h.proxyRelationships)
 		maps.Copy(hydrated.ProxyRelationships, h.proxyRelationships)
 	}
 
@@ -193,15 +199,9 @@ func (h *RunResultHydrator) processSafeTransactionExecuted(event *bindings.TrebS
 }
 
 // processProxyEvent processes proxy-related events
-func (h *RunResultHydrator) processProxyEvent(event any) {
+func (h *RunResultHydrator) processProxyEvent(event domain.ParsedEvent) {
 	switch e := event.(type) {
-	case *events.ProxyDeployedEvent:
-		h.proxyRelationships[e.ProxyAddress] = &forge.ProxyRelationship{
-			ProxyAddress:          e.ProxyAddress,
-			ImplementationAddress: e.ImplementationAddress,
-			ProxyType:             forge.ProxyTypeMinimal,
-		}
-	case *events.UpgradedEvent:
+	case *domain.UpgradedEvent:
 		if rel, exists := h.proxyRelationships[e.ProxyAddress]; exists {
 			rel.ImplementationAddress = e.ImplementationAddress
 		} else {
@@ -211,7 +211,7 @@ func (h *RunResultHydrator) processProxyEvent(event any) {
 				ProxyType:             forge.ProxyTypeUUPS,
 			}
 		}
-	case *events.AdminChangedEvent:
+	case *domain.AdminChangedEvent:
 		if rel, exists := h.proxyRelationships[e.ProxyAddress]; exists {
 			rel.AdminAddress = &e.NewAdmin
 			if rel.ProxyType == forge.ProxyTypeMinimal {
@@ -225,7 +225,7 @@ func (h *RunResultHydrator) processProxyEvent(event any) {
 				ProxyType:             forge.ProxyTypeTransparent,
 			}
 		}
-	case *events.BeaconUpgradedEvent:
+	case *domain.BeaconUpgradedEvent:
 		if rel, exists := h.proxyRelationships[e.ProxyAddress]; exists {
 			rel.BeaconAddress = &e.Beacon
 			rel.ProxyType = forge.ProxyTypeBeacon
@@ -449,8 +449,7 @@ func (h *RunResultHydrator) getTransactions() []*forge.Transaction {
 // enrichFromBroadcast enriches the execution with data from the broadcast file
 func (h *RunResultHydrator) enrichFromBroadcast(hydrated *HydratedRunResult, broadcastPath string) error {
 	// Parse broadcast file
-	parser := broadcast.NewParser(broadcastPath)
-	broadcastData, err := parser.ParseBroadcastFile(broadcastPath)
+	broadcastData, err := h.broadcastParser.ParseBroadcastFile(broadcastPath)
 	if err != nil {
 		return fmt.Errorf("failed to parse broadcast file: %w", err)
 	}

@@ -2,6 +2,7 @@ package abi
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -10,13 +11,15 @@ import (
 
 // Parser handles ABI parsing from Foundry artifacts
 type Parser struct {
+	log             *slog.Logger
 	trebContract    *bindings.Treb
 	createXContract *bindings.CreateX
 }
 
 // NewParser creates a new ABI parser
-func NewParser(projectRoot string) *Parser {
+func NewParser(projectRoot string, log *slog.Logger) *Parser {
 	return &Parser{
+		log:             log,
 		trebContract:    bindings.NewTreb(),
 		createXContract: bindings.NewCreateX(),
 	}
@@ -73,7 +76,7 @@ func (p *Parser) generateArgs(inputs abi.Arguments, prefix string) (vars string,
 
 		// Generate variable declaration based on type
 		varType := p.solidityTypeToGo(input.Type.String())
-		
+
 		// Add memory keyword for reference types
 		memoryKeyword := ""
 		if varType == "string" || varType == "bytes" || strings.Contains(varType, "[]") {

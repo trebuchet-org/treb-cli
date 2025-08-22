@@ -5,16 +5,17 @@ package app
 
 import (
 	"github.com/google/wire"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/trebuchet-org/treb-cli/internal/adapters"
 	"github.com/trebuchet-org/treb-cli/internal/cli/render"
 	"github.com/trebuchet-org/treb-cli/internal/config"
+	"github.com/trebuchet-org/treb-cli/internal/logging"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
-
 // InitApp creates a fully wired App instance with viper configuration
-func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
+func InitApp(v *viper.Viper, cmd *cobra.Command, sink usecase.ProgressSink) (*App, error) {
 	wire.Build(
 		// Configuration
 		config.Provider,
@@ -24,8 +25,16 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 		config.NewSendersManager,
 		wire.Bind(new(usecase.SendersManager), new(*config.SendersManager)),
 
+		render.ProvideIO,
+
+		// Logging
+		logging.LoggingSet,
+
 		// Adapters - now receive RuntimeConfig
 		adapters.AllAdapters,
+
+		// Renderers
+		render.NewScriptRenderer,
 		render.NewGenerateRenderer,
 
 		// Use cases
@@ -44,7 +53,6 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 		usecase.NewTagDeployment,
 		usecase.NewManageAnvil,
 		usecase.NewInitProject,
-
 
 		// App
 		NewApp,

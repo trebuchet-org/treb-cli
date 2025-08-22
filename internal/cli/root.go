@@ -48,7 +48,7 @@ smart contract deployments using CreateX factory contracts.`,
 			sink := progress.NewNopSink()
 
 			// Initialize app with DI
-			app, err := app.InitApp(v, sink)
+			app, err := app.InitApp(v, cmd, sink)
 			if err != nil {
 				return fmt.Errorf("failed to initialize app: %w", err)
 			}

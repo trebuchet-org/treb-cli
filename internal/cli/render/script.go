@@ -1,6 +1,7 @@
 package render
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -11,36 +12,28 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
+var (
+	bold   = color.New(color.Bold)
+	gray   = color.New(color.FgHiBlack)
+	cyan   = color.New(color.FgCyan)
+	blue   = color.New(color.FgBlue)
+	purple = color.New(color.FgMagenta)
+	yellow = color.New(color.FgYellow)
+	green  = color.New(color.FgGreen)
+	red    = color.New(color.FgRed)
+)
+
 // ScriptRenderer renders script execution results
 type ScriptRenderer struct {
-	out     io.Writer
-	verbose bool
-	// Color definitions
-	colorBold   string
-	colorReset  string
-	colorGray   string
-	colorCyan   string
-	colorBlue   string
-	colorPurple string
-	colorYellow string
-	colorGreen  string
-	colorRed    string
+	out             io.Writer
+	deploymentsRepo usecase.DeploymentRepository
 }
 
 // NewScriptRenderer creates a new script renderer
-func NewScriptRenderer(out io.Writer, verbose bool) *ScriptRenderer {
+func NewScriptRenderer(out io.Writer, deploymentsRepo usecase.DeploymentRepository) *ScriptRenderer {
 	return &ScriptRenderer{
-		out:         out,
-		verbose:     verbose,
-		colorBold:   color.New(color.Bold).SprintFunc()(""),
-		colorReset:  color.New(color.Reset).SprintFunc()(""),
-		colorGray:   color.New(color.FgHiBlack).SprintFunc()(""),
-		colorCyan:   color.New(color.FgCyan).SprintFunc()(""),
-		colorBlue:   color.New(color.FgBlue).SprintFunc()(""),
-		colorPurple: color.New(color.FgMagenta).SprintFunc()(""),
-		colorYellow: color.New(color.FgYellow).SprintFunc()(""),
-		colorGreen:  color.New(color.FgGreen).SprintFunc()(""),
-		colorRed:    color.New(color.FgRed).SprintFunc()(""),
+		out:             out,
+		deploymentsRepo: deploymentsRepo,
 	}
 }
 
@@ -79,12 +72,12 @@ func (r *ScriptRenderer) RenderExecution(result *usecase.RunScriptResult) error 
 		if len(exec.Deployments) > 0 {
 			// Show registry update message
 			if result.Changeset != nil && result.Changeset.HasChanges() {
-				fmt.Fprintf(r.out, "%s✓ Updated registry for %s network in namespace %s%s\n",
-					r.colorGreen, exec.Network, exec.Namespace, r.colorReset)
+				fmt.Fprintf(r.out, green.Sprintf("✓ Updated registry for %s network in namespace %s\n",
+					exec.Network, exec.Namespace))
 			}
 		} else {
-			fmt.Fprintf(r.out, "%s- No registry changes recorded for %s network in namespace %s%s\n",
-				r.colorYellow, exec.Network, exec.Namespace, r.colorReset)
+			fmt.Fprintf(r.out, yellow.Sprintf("- No registry changes recorded for %s network in namespace %s\n",
+				exec.Network, exec.Namespace))
 		}
 	}
 
@@ -230,7 +223,7 @@ func (r *ScriptRenderer) getKnownAddress(addr string) string {
 }
 
 // getStatusColor returns the color function for a transaction status
-func (r *ScriptRenderer) getStatusColor(status models.TransactionStatus) string {
+func (r *ScriptRenderer) getStatusColor(status models.TransactionStatus) *color.Color {
 	switch status {
 	case models.TransactionStatusSimulated:
 		return r.colorGray
@@ -241,7 +234,7 @@ func (r *ScriptRenderer) getStatusColor(status models.TransactionStatus) string 
 	case models.TransactionStatusFailed:
 		return r.colorRed
 	default:
-		return ""
+		return color.New()
 	}
 }
 
@@ -357,11 +350,39 @@ func (r *ScriptRenderer) getImplementationName(implAddr string, exec *forge.Hydr
 			return contractName
 		}
 	}
-	return "Implementation"
+
+	deployment, err := r.deploymentsRepo.GetDeploymentByAddress(context.Background(), exec.ChainID, implAddr)
+	if err == nil {
+		return deployment.ContractName
+	}
+
+	return "UnknownImplementation"
 }
 
 // renderDeploymentSummary displays the deployment summary
 func (r *ScriptRenderer) renderDeploymentSummary(exec *forge.HydratedRunResult) error {
+	if len(exec.Collisions) > 0 {
+		fmt.Printf("\n%s⚠️ Deployment Collisions Detected:%s\n", r.colorYellow, r.colorReset)
+		fmt.Printf("%s%s%s\n", r.colorGray, strings.Repeat("─", 50), r.colorReset)
+
+		for address, collision := range exec.Collisions {
+			contractName := extractContractName(collision.DeploymentDetails.Artifact)
+			fmt.Printf("%s%s%s already deployed at %s%s%s\n",
+				r.colorCyan, contractName, r.colorReset,
+				r.colorYellow, address.Hex(), r.colorReset)
+
+			// Show details if verbose
+			if collision.DeploymentDetails.Label != "" {
+				fmt.Printf("    Label: %s\n", collision.DeploymentDetails.Label)
+			}
+			if collision.DeploymentDetails.Entropy != "" {
+				fmt.Printf("    Entropy: %s\n", collision.DeploymentDetails.Entropy)
+			}
+		}
+
+		fmt.Printf("%sNote: These contracts were already deployed and deployment was skipped.%s\n\n",
+			r.colorGray, r.colorReset)
+	}
 	if len(exec.Deployments) == 0 {
 		return nil
 	}
@@ -411,21 +432,6 @@ func (r *ScriptRenderer) renderLogs(logs []string) error {
 	}
 
 	fmt.Fprintln(r.out) // Empty line after logs
-	return nil
-}
-
-// renderRegistryUpdate displays the registry update summary
-func (r *ScriptRenderer) renderRegistryUpdate(changeset *models.Changeset, namespace, network string) error {
-	fmt.Fprintf(r.out, "\n%s✅ Updated registry for %s network in namespace %s%s\n",
-		r.colorGreen, network, namespace, r.colorReset)
-
-	if changeset.Create.Count() > 0 {
-		fmt.Fprintf(r.out, "  Added %d deployment(s)\n", changeset.Create.Count())
-	}
-	if changeset.Update.Count() > 0 {
-		fmt.Fprintf(r.out, "  Updated %d deployment(s)\n", changeset.Update.Count())
-	}
-
 	return nil
 }
 
@@ -490,4 +496,23 @@ func (r *ScriptRenderer) PrintDeploymentBanner(config *usecase.RunScriptConfig) 
 
 	fmt.Fprintf(r.out, "  Senders:   %s\n", gray.Sprintf("%v", config.SenderScriptConfig.Senders))
 	fmt.Fprintf(r.out, "%s\n", gray.Sprint(strings.Repeat("─", 50)))
+}
+
+// extractContractName extracts just the contract name from an artifact path
+func extractContractName(artifact string) string {
+	// First check if it has a colon separator (Foundry format)
+	if idx := strings.LastIndex(artifact, ":"); idx != -1 {
+		return artifact[idx+1:]
+	}
+
+	// Otherwise, check for path separator and .sol extension
+	if idx := strings.LastIndex(artifact, "/"); idx != -1 {
+		name := artifact[idx+1:]
+		// Remove .sol extension if present
+		name = strings.TrimSuffix(name, ".sol")
+		return name
+	}
+
+	// If no separators, return as-is
+	return artifact
 }

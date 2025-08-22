@@ -6,7 +6,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/progress"
-	"github.com/trebuchet-org/treb-cli/internal/cli/render"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -17,7 +16,6 @@ func NewRunCmd() *cobra.Command {
 		dryRun    bool
 		debug     bool
 		debugJSON bool
-		verbose   bool
 	)
 
 	cmd := &cobra.Command{
@@ -93,8 +91,7 @@ Examples:
 				namespace = "default"
 			}
 
-			renderer := render.NewScriptRenderer(cmd.OutOrStdout(), verbose)
-			progress := progress.NewRunProgress(renderer)
+			progress := progress.NewRunProgress(app.ScriptRenderer)
 
 			params := usecase.RunScriptParams{
 				ScriptRef:  deploymentScriptRef,
@@ -115,7 +112,7 @@ Examples:
 				return fmt.Errorf("script execution failed")
 			}
 
-			if err := renderer.RenderExecution(result); err != nil {
+			if err := app.ScriptRenderer.RenderExecution(result); err != nil {
 				return err
 			}
 

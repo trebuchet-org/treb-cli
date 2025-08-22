@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"maps"
 	"os"
 	"path/filepath"
@@ -29,6 +30,7 @@ const (
 // FileRepository stores the deployments in json files on the system
 type FileRepository struct {
 	rootDir          string
+	log              *slog.Logger
 	lookups          *LookupIndexes
 	mu               sync.RWMutex
 	deployments      map[string]*models.Deployment
@@ -38,7 +40,7 @@ type FileRepository struct {
 }
 
 // NewFileRepository creates a new registry manager
-func NewFileRepository(rootDir string) (*FileRepository, error) {
+func NewFileRepository(rootDir string, log *slog.Logger) (*FileRepository, error) {
 	trebDir := filepath.Join(rootDir, TrebDir)
 
 	// Create .treb directory if it doesn't exist
@@ -47,6 +49,7 @@ func NewFileRepository(rootDir string) (*FileRepository, error) {
 	}
 
 	m := &FileRepository{
+		log:              log.With("component", "FileRepository"),
 		rootDir:          rootDir,
 		deployments:      make(map[string]*models.Deployment),
 		transactions:     make(map[string]*models.Transaction),
@@ -703,8 +706,8 @@ func (m *FileRepository) ListSafeTransactions(ctx context.Context, filter domain
 }
 
 // NewFileRepositoryFromConfig creates a new FileRepository from RuntimeConfig
-func NewFileRepositoryFromConfig(cfg *config.RuntimeConfig) (*FileRepository, error) {
-	return NewFileRepository(cfg.ProjectRoot)
+func NewFileRepositoryFromConfig(cfg *config.RuntimeConfig, log *slog.Logger) (*FileRepository, error) {
+	return NewFileRepository(cfg.ProjectRoot, log)
 }
 
 var _ usecase.DeploymentRepository = (*FileRepository)(nil)

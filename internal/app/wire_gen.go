@@ -7,6 +7,7 @@
 package app
 
 import (
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/trebuchet-org/treb-cli/internal/adapters"
 	"github.com/trebuchet-org/treb-cli/internal/adapters/abi"
@@ -22,13 +23,14 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/cli/interactive"
 	"github.com/trebuchet-org/treb-cli/internal/cli/render"
 	"github.com/trebuchet-org/treb-cli/internal/config"
+	"github.com/trebuchet-org/treb-cli/internal/logging"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
 // Injectors from wire.go:
 
 // InitApp creates a fully wired App instance with viper configuration
-func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
+func InitApp(v *viper.Viper, cmd *cobra.Command, sink usecase.ProgressSink) (*App, error) {
 	runtimeConfig, err := config.Provider(v)
 	if err != nil {
 		return nil, err
@@ -37,7 +39,8 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	fileRepository, err := deployments.NewFileRepositoryFromConfig(runtimeConfig)
+	logger := logging.NewLogger(runtimeConfig)
+	fileRepository, err := deployments.NewFileRepositoryFromConfig(runtimeConfig, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +50,7 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	string2 := adapters.ProvideProjectPath(runtimeConfig)
 	repository := contracts.NewRepository(string2)
 	contractResolver := resolvers.NewContractResolver(runtimeConfig, repository, selectorAdapter)
-	parser := abi.NewParser(string2)
+	parser := abi.NewParser(string2, logger)
 	abiResolver := abi.NewABIResolver(runtimeConfig, repository, fileRepository)
 	scriptGeneratorAdapter, err := template.NewScriptGeneratorAdapter(runtimeConfig, parser, abiResolver)
 	if err != nil {
@@ -70,12 +73,12 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	scriptResolver := resolvers.NewScriptResolver(string2, contractResolver)
 	parameterResolver := resolvers.NewParameterResolver(runtimeConfig, fileRepository, repository)
 	sendersManager := config.NewSendersManager(runtimeConfig)
-	runResultHydrator, err := forge.NewRunResultHydrator(string2, parser, repository)
+	runResultHydrator, err := forge.NewRunResultHydrator(string2, parser, repository, logger)
 	if err != nil {
 		return nil, err
 	}
 	libraryResolver := resolvers.NewLibraryResolver(fileRepository)
-	forgeAdapter := forge.NewForgeAdapter(string2)
+	forgeAdapter := forge.NewForgeAdapter(string2, logger)
 	runScript := usecase.NewRunScript(runtimeConfig, scriptResolver, parameterResolver, sendersManager, runResultHydrator, fileRepository, libraryResolver, sink, forgeAdapter)
 	verifierAdapter, err := verification.NewVerifierAdapter(runtimeConfig)
 	if err != nil {
@@ -89,7 +92,9 @@ func InitApp(v *viper.Viper, sink usecase.ProgressSink) (*App, error) {
 	manageAnvil := usecase.NewManageAnvil(manager, sink)
 	initProject := usecase.NewInitProject(fileWriterAdapter, sink)
 	renderer := render.NewGenerateRenderer()
-	app, err := NewApp(runtimeConfig, selectorAdapter, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, showConfig, setConfig, removeConfig, runScript, verifyDeployment, orchestrateDeployment, syncRegistry, tagDeployment, manageAnvil, initProject, manager, renderer)
+	writer := render.ProvideIO(cmd)
+	scriptRenderer := render.NewScriptRenderer(writer, fileRepository)
+	app, err := NewApp(runtimeConfig, selectorAdapter, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, showConfig, setConfig, removeConfig, runScript, verifyDeployment, orchestrateDeployment, syncRegistry, tagDeployment, manageAnvil, initProject, manager, renderer, scriptRenderer)
 	if err != nil {
 		return nil, err
 	}

@@ -220,6 +220,7 @@ func (f *FileRepository) createDeploymentFromRecord(
 	// Check if this is a proxy based on proxy relationships
 	var proxyInfo *models.ProxyInfo
 	if proxyRel, exists := execution.ProxyRelationships[record.Address]; exists {
+		f.log.Debug("Recording proxy", "address", record.Address, "info", proxyRel)
 		deploymentType = models.ProxyDeployment
 		proxyInfo = &models.ProxyInfo{
 			Type:           string(proxyRel.ProxyType),

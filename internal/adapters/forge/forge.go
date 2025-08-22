@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"maps"
 	"os"
 	"os/exec"
@@ -20,27 +21,33 @@ import (
 
 // ForgeAdapter handles Forge command execution with streaming output
 type ForgeAdapter struct {
+	log         *slog.Logger
 	projectRoot string
 }
 
 // NewForgeAdapter creates a new forge executor
-func NewForgeAdapter(projectRoot string) *ForgeAdapter {
+func NewForgeAdapter(projectRoot string, log *slog.Logger) *ForgeAdapter {
 	return &ForgeAdapter{
+		log:         log.With("component", "ForgeAdapter"),
 		projectRoot: projectRoot,
 	}
 }
 
 // Build runs forge build with proper output handling
 func (f *ForgeAdapter) Build() error {
+	f.log.Debug("running forge build", "dir", f.projectRoot)
+
 	cmd := exec.Command("forge", "build")
 	cmd.Dir = f.projectRoot
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
+		f.log.Error("forge build failed", "error", err, "output", string(output))
 		// Only print error details if build actually failed
 		return fmt.Errorf("forge build failed: %w\nOutput: %s", err, string(output))
 	}
 
+	f.log.Debug("forge build completed successfully")
 	// Don't print anything on success - let the caller handle UI
 	return nil
 }
@@ -53,12 +60,7 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 	// Build environment variables
 	env := f.buildEnv(config)
 
-	if config.Debug {
-		fmt.Printf("Running: forge %s\n", strings.Join(args, " "))
-		if len(env) > 0 {
-			fmt.Printf("With env vars: %v\n", env)
-		}
-	}
+	f.log.Debug("Running forge script", "args", args, "env", env)
 
 	// Execute the script
 	cmd := exec.Command("forge", args...)

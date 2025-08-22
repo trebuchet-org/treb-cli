@@ -3,7 +3,6 @@ package abi
 import (
 	"encoding/hex"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -39,10 +38,7 @@ func (p *Parser) ParseEvents(output *forge.ScriptOutput) ([]Event, error) {
 			continue
 		}
 
-		if os.Getenv("TREB_DEBUG") != "" {
-			fmt.Printf("[ABIParser:DEBUG] Parsed event %v\n", event)
-		}
-
+		p.log.Debug("Parsed event", "event", event)
 		parsedEvents = append(parsedEvents, event)
 	}
 
