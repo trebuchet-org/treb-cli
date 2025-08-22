@@ -25,7 +25,7 @@ type App struct {
 	RemoveConfig             *usecase.RemoveConfig
 	RunScript                *usecase.RunScript
 	VerifyDeployment         *usecase.VerifyDeployment
-	OrchestrateDeployment    *usecase.OrchestrateDeployment
+	ComposeDeployment        *usecase.ComposeDeployment
 	SyncRegistry             *usecase.SyncRegistry
 	TagDeployment            *usecase.TagDeployment
 	ManageAnvil              *usecase.ManageAnvil
@@ -53,7 +53,7 @@ func NewApp(
 	removeConfig *usecase.RemoveConfig,
 	runScript *usecase.RunScript,
 	verifyDeployment *usecase.VerifyDeployment,
-	orchestrateDeployment *usecase.OrchestrateDeployment,
+	composeDeployment *usecase.ComposeDeployment,
 	syncRegistry *usecase.SyncRegistry,
 	tagDeployment *usecase.TagDeployment,
 	manageAnvil *usecase.ManageAnvil,
@@ -75,7 +75,7 @@ func NewApp(
 		RemoveConfig:             removeConfig,
 		RunScript:                runScript,
 		VerifyDeployment:         verifyDeployment,
-		OrchestrateDeployment:    orchestrateDeployment,
+		ComposeDeployment:        composeDeployment,
 		SyncRegistry:             syncRegistry,
 		TagDeployment:            tagDeployment,
 		ManageAnvil:              manageAnvil,

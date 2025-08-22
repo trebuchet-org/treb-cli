@@ -48,7 +48,7 @@ func InitApp(v *viper.Viper, cmd *cobra.Command, sink usecase.ProgressSink) (*Ap
 		usecase.NewRemoveConfig,
 		usecase.NewRunScript,
 		usecase.NewVerifyDeployment,
-		usecase.NewOrchestrateDeployment,
+		usecase.NewComposeDeployment,
 		usecase.NewSyncRegistry,
 		usecase.NewTagDeployment,
 		usecase.NewManageAnvil,

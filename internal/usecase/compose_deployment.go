@@ -9,25 +9,25 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// OrchestrateDeployment handles orchestrated deployments from YAML configuration
-type OrchestrateDeployment struct {
+// ComposeDeployment handles orchestrated deployments from YAML configuration
+type ComposeDeployment struct {
 	runScript *RunScript
 	progress  ProgressSink
 }
 
-// NewOrchestrateDeployment creates a new orchestrate deployment use case
-func NewOrchestrateDeployment(
+// NewComposeDeployment creates a new orchestrate deployment use case
+func NewComposeDeployment(
 	runScript *RunScript,
 	progress ProgressSink,
-) *OrchestrateDeployment {
-	return &OrchestrateDeployment{
+) *ComposeDeployment {
+	return &ComposeDeployment{
 		runScript: runScript,
 		progress:  progress,
 	}
 }
 
-// OrchestrateParams contains parameters for orchestration
-type OrchestrateParams struct {
+// ComposeParams contains parameters for orchestration
+type ComposeParams struct {
 	ConfigPath     string
 	Network        string
 	Namespace      string
@@ -39,8 +39,8 @@ type OrchestrateParams struct {
 	NonInteractive bool
 }
 
-// OrchestrateResult contains the result of orchestration
-type OrchestrateResult struct {
+// ComposeResult contains the result of orchestration
+type ComposeResult struct {
 	Plan             *ExecutionPlan
 	ExecutedSteps    []*StepResult
 	FailedStep       *StepResult
@@ -56,9 +56,9 @@ type StepResult struct {
 }
 
 // Execute runs the orchestration
-func (o *OrchestrateDeployment) Execute(ctx context.Context, params OrchestrateParams) (*OrchestrateResult, error) {
+func (o *ComposeDeployment) Execute(ctx context.Context, params ComposeParams) (*ComposeResult, error) {
 	// Parse orchestration file
-	config, err := o.parseOrchestrationFile(params.ConfigPath)
+	config, err := o.parseComposeFile(params.ConfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse orchestration file: %w", err)
 	}
@@ -83,7 +83,7 @@ func (o *OrchestrateDeployment) Execute(ctx context.Context, params OrchestrateP
 	})
 
 	// Execute each step
-	result := &OrchestrateResult{
+	result := &ComposeResult{
 		Plan:          plan,
 		ExecutedSteps: make([]*StepResult, 0),
 		Success:       true,
@@ -117,14 +117,14 @@ func (o *OrchestrateDeployment) Execute(ctx context.Context, params OrchestrateP
 	return result, nil
 }
 
-// parseOrchestrationFile parses the YAML orchestration file
-func (o *OrchestrateDeployment) parseOrchestrationFile(path string) (*OrchestrationConfig, error) {
+// parseComposeFile parses the YAML orchestration file
+func (o *ComposeDeployment) parseComposeFile(path string) (*ComposeConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
-	var config OrchestrationConfig
+	var config ComposeConfig
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
 	}
@@ -133,7 +133,7 @@ func (o *OrchestrateDeployment) parseOrchestrationFile(path string) (*Orchestrat
 }
 
 // createExecutionPlan creates a linearized execution plan from the configuration
-func (o *OrchestrateDeployment) createExecutionPlan(config *OrchestrationConfig) (*ExecutionPlan, error) {
+func (o *ComposeDeployment) createExecutionPlan(config *ComposeConfig) (*ExecutionPlan, error) {
 	graph := NewDependencyGraph(config)
 	steps, err := graph.TopologicalSort()
 	if err != nil {
@@ -147,7 +147,7 @@ func (o *OrchestrateDeployment) createExecutionPlan(config *OrchestrationConfig)
 }
 
 // executeStep executes a single orchestration step
-func (o *OrchestrateDeployment) executeStep(ctx context.Context, step *ExecutionStep, params OrchestrateParams) *StepResult {
+func (o *ComposeDeployment) executeStep(ctx context.Context, step *ExecutionStep, params ComposeParams) *StepResult {
 	// Prepare parameters for run script
 	scriptParams := RunScriptParams{
 		ScriptRef:      step.Script,
@@ -169,10 +169,10 @@ func (o *OrchestrateDeployment) executeStep(ctx context.Context, step *Execution
 	}
 }
 
-// Orchestration configuration types
+// Compose configuration types
 
-// OrchestrationConfig represents the top-level configuration for orchestrated deployments
-type OrchestrationConfig struct {
+// ComposeConfig represents the top-level configuration for orchestrated deployments
+type ComposeConfig struct {
 	Group      string                      `yaml:"group"`
 	Components map[string]*ComponentConfig `yaml:"components"`
 }
@@ -199,7 +199,7 @@ type ExecutionStep struct {
 }
 
 // Validate checks the orchestration configuration for errors
-func (config *OrchestrationConfig) Validate() error {
+func (config *ComposeConfig) Validate() error {
 	if config.Group == "" {
 		return fmt.Errorf("group name is required")
 	}
@@ -235,7 +235,7 @@ type DependencyGraph struct {
 }
 
 // NewDependencyGraph creates a new dependency graph from the orchestration config
-func NewDependencyGraph(config *OrchestrationConfig) *DependencyGraph {
+func NewDependencyGraph(config *ComposeConfig) *DependencyGraph {
 	graph := &DependencyGraph{
 		nodes: config.Components,
 		edges: make(map[string][]string),

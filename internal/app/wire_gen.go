@@ -85,7 +85,7 @@ func InitApp(v *viper.Viper, cmd *cobra.Command, sink usecase.ProgressSink) (*Ap
 		return nil, err
 	}
 	verifyDeployment := usecase.NewVerifyDeployment(fileRepository, verifierAdapter, networkResolver)
-	orchestrateDeployment := usecase.NewOrchestrateDeployment(runScript, sink)
+	composeDeployment := usecase.NewComposeDeployment(runScript, sink)
 	syncRegistry := usecase.NewSyncRegistry(runtimeConfig, fileRepository, sink)
 	tagDeployment := usecase.NewTagDeployment(fileRepository, deploymentResolver, sink)
 	manager := anvil.NewManager()
@@ -94,7 +94,7 @@ func InitApp(v *viper.Viper, cmd *cobra.Command, sink usecase.ProgressSink) (*Ap
 	renderer := render.NewGenerateRenderer()
 	writer := render.ProvideIO(cmd)
 	scriptRenderer := render.NewScriptRenderer(writer, fileRepository, abiResolver, logger)
-	app, err := NewApp(runtimeConfig, selectorAdapter, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, showConfig, setConfig, removeConfig, runScript, verifyDeployment, orchestrateDeployment, syncRegistry, tagDeployment, manageAnvil, initProject, manager, renderer, scriptRenderer)
+	app, err := NewApp(runtimeConfig, selectorAdapter, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, showConfig, setConfig, removeConfig, runScript, verifyDeployment, composeDeployment, syncRegistry, tagDeployment, manageAnvil, initProject, manager, renderer, scriptRenderer)
 	if err != nil {
 		return nil, err
 	}

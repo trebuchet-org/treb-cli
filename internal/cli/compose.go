@@ -8,8 +8,8 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
-// NewOrchestrateCmd creates the orchestrate command using the new architecture
-func NewOrchestrateCmd() *cobra.Command {
+// NewComposeCmd creates the orchestrate command using the new architecture
+func NewComposeCmd() *cobra.Command {
 	var (
 		network        string
 		namespace      string
@@ -22,14 +22,14 @@ func NewOrchestrateCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "orchestrate <orchestration-file>",
+		Use:   "compose <compose-file>",
 		Short: "Execute orchestrated deployments from a YAML configuration",
 		Long: `Execute multiple deployment scripts in dependency order based on a YAML configuration file.
 
-The orchestration file defines components, their deployment scripts, dependencies, and environment variables.
+The composes file defines components, their deployment scripts, dependencies, and environment variables.
 Treb will build a dependency graph and execute scripts in the correct order.
 
-Example orchestration file (deploy.yaml):
+Example compose file (protocol.yaml):
   group: Mento Protocol
   components:
     Broker:
@@ -51,13 +51,13 @@ Example orchestration file (deploy.yaml):
 
 This will execute: Broker → Tokens → Reserve → SortedOracles`,
 		Example: `  # Execute orchestration from YAML file
-  treb orchestrate deploy.yaml
+  treb compose deploy.yaml
 
   # Execute with specific network and dry run
-  treb orchestrate deploy.yaml --network sepolia --dry-run
+  treb compose deploy.yaml --network sepolia --dry-run
 
   # Execute with debug output
-  treb orchestrate deploy.yaml --debug --verbose`,
+  treb compose deploy.yaml --debug --verbose`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app, err := getApp(cmd)
@@ -80,8 +80,8 @@ This will execute: Broker → Tokens → Reserve → SortedOracles`,
 				namespace = "default"
 			}
 
-			// Create orchestrate parameters
-			params := usecase.OrchestrateParams{
+			// Create compose parameters
+			params := usecase.ComposeParams{
 				ConfigPath:     orchestrationFile,
 				Network:        network,
 				Namespace:      namespace,
@@ -96,14 +96,14 @@ This will execute: Broker → Tokens → Reserve → SortedOracles`,
 			ctx := cmd.Context()
 
 			// Execute orchestration
-			result, err := app.OrchestrateDeployment.Execute(ctx, params)
+			result, err := app.ComposeDeployment.Execute(ctx, params)
 			if err != nil {
 				return err
 			}
 
 			// Render the results
-			renderer := render.NewOrchestrateRenderer(cmd.OutOrStdout())
-			return renderer.RenderOrchestrateResult(result)
+			renderer := render.NewComposeRenderer(cmd.OutOrStdout())
+			return renderer.RenderComposeResult(result)
 		},
 	}
 

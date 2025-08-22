@@ -118,9 +118,9 @@ smart contract deployments using CreateX factory contracts.`,
 	verifyCmd.GroupID = "main"
 	rootCmd.AddCommand(verifyCmd)
 
-	orchestrateCmd := NewOrchestrateCmd()
-	orchestrateCmd.GroupID = "main"
-	rootCmd.AddCommand(orchestrateCmd)
+	composeCmd := NewComposeCmd()
+	composeCmd.GroupID = "main"
+	rootCmd.AddCommand(composeCmd)
 
 	syncCmd := NewSyncCmd()
 	syncCmd.GroupID = "management"
@@ -161,11 +161,6 @@ func newDeploymentCommands() *cobra.Command {
 		Short: "Deployment commands",
 		Long:  "Commands for managing smart contract deployments",
 	}
-
-	// Add deployment subcommands (placeholder for now)
-	// deployCmd.AddCommand(newRunCmd())
-	// deployCmd.AddCommand(newGenerateCmd())
-	// deployCmd.AddCommand(newVerifyCmd())
 
 	return deployCmd
 }

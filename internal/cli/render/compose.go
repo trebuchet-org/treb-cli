@@ -9,20 +9,20 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
-// OrchestrateRenderer handles rendering of orchestration results
-type OrchestrateRenderer struct {
+// ComposeRenderer handles rendering of orchestration results
+type ComposeRenderer struct {
 	out io.Writer
 }
 
-// NewOrchestrateRenderer creates a new orchestrate renderer
-func NewOrchestrateRenderer(out io.Writer) *OrchestrateRenderer {
-	return &OrchestrateRenderer{
+// NewComposeRenderer creates a new orchestrate renderer
+func NewComposeRenderer(out io.Writer) *ComposeRenderer {
+	return &ComposeRenderer{
 		out: out,
 	}
 }
 
-// RenderOrchestrateResult renders the result of orchestration
-func (r *OrchestrateRenderer) RenderOrchestrateResult(result *usecase.OrchestrateResult) error {
+// RenderComposeResult renders the result of orchestration
+func (r *ComposeRenderer) RenderComposeResult(result *usecase.ComposeResult) error {
 	// Show the execution plan
 	r.renderExecutionPlan(result.Plan)
 
@@ -36,7 +36,7 @@ func (r *OrchestrateRenderer) RenderOrchestrateResult(result *usecase.Orchestrat
 }
 
 // renderExecutionPlan displays the execution plan
-func (r *OrchestrateRenderer) renderExecutionPlan(plan *usecase.ExecutionPlan) {
+func (r *ComposeRenderer) renderExecutionPlan(plan *usecase.ExecutionPlan) {
 	fmt.Fprintf(r.out, "\n🎯 Orchestrating %s\n", plan.Group)
 	fmt.Fprintf(r.out, "📋 Execution plan: %d components\n\n", len(plan.Components))
 
@@ -70,7 +70,7 @@ func (r *OrchestrateRenderer) renderExecutionPlan(plan *usecase.ExecutionPlan) {
 }
 
 // renderExecutionResults displays the results of each step
-func (r *OrchestrateRenderer) renderExecutionResults(result *usecase.OrchestrateResult) {
+func (r *ComposeRenderer) renderExecutionResults(result *usecase.ComposeResult) {
 	totalSteps := len(result.Plan.Components)
 
 	for i, stepResult := range result.ExecutedSteps {
@@ -112,7 +112,7 @@ func (r *OrchestrateRenderer) renderExecutionResults(result *usecase.Orchestrate
 }
 
 // renderSummary displays the final summary
-func (r *OrchestrateRenderer) renderSummary(result *usecase.OrchestrateResult) {
+func (r *ComposeRenderer) renderSummary(result *usecase.ComposeResult) {
 	fmt.Fprintf(r.out, "%s\n", strings.Repeat("═", 70))
 
 	if result.Success {
