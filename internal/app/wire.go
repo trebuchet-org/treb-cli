@@ -36,6 +36,7 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 		// Renderers
 		render.NewScriptRenderer,
 		render.NewGenerateRenderer,
+		render.NewComposeRenderer,
 
 		// Use cases
 		usecase.NewListDeployments,

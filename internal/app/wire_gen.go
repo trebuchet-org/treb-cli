@@ -80,23 +80,26 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 		return nil, err
 	}
 	libraryResolver := resolvers.NewLibraryResolver(fileRepository)
+	writer := render.ProvideIO(cmd)
+	scriptRenderer := render.NewScriptRenderer(writer, fileRepository, abiResolver, logger)
+	runProgress := progress.NewRunProgress(scriptRenderer)
 	forgeAdapter := forge.NewForgeAdapter(string2, logger)
-	runScript := usecase.NewRunScript(runtimeConfig, scriptResolver, parameterResolver, sendersManager, runResultHydrator, fileRepository, libraryResolver, spinnerProgressReporter, forgeAdapter)
+	runScript := usecase.NewRunScript(runtimeConfig, scriptResolver, parameterResolver, sendersManager, runResultHydrator, fileRepository, libraryResolver, runProgress, forgeAdapter)
 	verifierAdapter, err := verification.NewVerifierAdapter(runtimeConfig)
 	if err != nil {
 		return nil, err
 	}
 	verifyDeployment := usecase.NewVerifyDeployment(fileRepository, verifierAdapter, networkResolver)
-	composeDeployment := usecase.NewComposeDeployment(runScript, spinnerProgressReporter)
+	composeRenderer := render.NewComposeRenderer(writer)
+	composeProgress := progress.NewComposeProgress(composeRenderer, scriptRenderer)
+	composeDeployment := usecase.NewComposeDeployment(runScript, composeProgress)
 	syncRegistry := usecase.NewSyncRegistry(runtimeConfig, fileRepository, spinnerProgressReporter)
 	tagDeployment := usecase.NewTagDeployment(fileRepository, deploymentResolver, spinnerProgressReporter)
 	manager := anvil.NewManager()
 	manageAnvil := usecase.NewManageAnvil(manager, spinnerProgressReporter)
 	initProject := usecase.NewInitProject(fileWriterAdapter, spinnerProgressReporter)
 	renderer := render.NewGenerateRenderer()
-	writer := render.ProvideIO(cmd)
-	scriptRenderer := render.NewScriptRenderer(writer, fileRepository, abiResolver, logger)
-	app, err := NewApp(runtimeConfig, selectorAdapter, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, showConfig, setConfig, removeConfig, runScript, verifyDeployment, composeDeployment, syncRegistry, tagDeployment, manageAnvil, initProject, manager, renderer, scriptRenderer)
+	app, err := NewApp(runtimeConfig, selectorAdapter, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, showConfig, setConfig, removeConfig, runScript, verifyDeployment, composeDeployment, syncRegistry, tagDeployment, manageAnvil, initProject, manager, renderer, scriptRenderer, composeRenderer)
 	if err != nil {
 		return nil, err
 	}

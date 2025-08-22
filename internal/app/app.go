@@ -37,6 +37,7 @@ type App struct {
 	// Renderers
 	GenerateRenderer render.Renderer[*usecase.GenerateScriptResult]
 	ScriptRenderer   *render.ScriptRenderer
+	ComposeRenderer  *render.ComposeRenderer
 }
 
 // NewApp creates a new application instance with all use cases
@@ -61,6 +62,7 @@ func NewApp(
 	anvilManager usecase.AnvilManager,
 	generateRenderer render.Renderer[*usecase.GenerateScriptResult],
 	scriptRenderer *render.ScriptRenderer,
+	composeRenderer *render.ComposeRenderer,
 ) (*App, error) {
 	return &App{
 		Config:                   cfg,
@@ -83,5 +85,6 @@ func NewApp(
 		AnvilManager:             anvilManager,
 		GenerateRenderer:         generateRenderer,
 		ScriptRenderer:           scriptRenderer,
+		ComposeRenderer:          composeRenderer,
 	}, nil
 }

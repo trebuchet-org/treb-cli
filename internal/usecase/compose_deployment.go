@@ -12,13 +12,13 @@ import (
 // ComposeDeployment handles orchestrated deployments from YAML configuration
 type ComposeDeployment struct {
 	runScript *RunScript
-	progress  ProgressSink
+	progress  ComposeSink
 }
 
 // NewComposeDeployment creates a new orchestrate deployment use case
 func NewComposeDeployment(
 	runScript *RunScript,
-	progress ProgressSink,
+	progress ComposeSink,
 ) *ComposeDeployment {
 	return &ComposeDeployment{
 		runScript: runScript,
@@ -37,7 +37,6 @@ type ComposeParams struct {
 	DebugJSON      bool
 	Verbose        bool
 	NonInteractive bool
-	Progress       ProgressSink
 }
 
 // ComposeResult contains the result of orchestration
@@ -75,12 +74,10 @@ func (o *ComposeDeployment) Execute(ctx context.Context, params ComposeParams) (
 		return nil, fmt.Errorf("failed to create execution plan: %w", err)
 	}
 
-	// Report progress
+	// Emit plan created event so it can be rendered
 	o.progress.OnProgress(ctx, ProgressEvent{
-		Stage:   "orchestration",
-		Current: 0,
-		Total:   len(plan.Components),
-		Message: fmt.Sprintf("Starting orchestration of %s", plan.Group),
+		Stage:    "plan_created",
+		Metadata: plan,
 	})
 
 	// Execute each step
@@ -91,17 +88,26 @@ func (o *ComposeDeployment) Execute(ctx context.Context, params ComposeParams) (
 	}
 
 	for i, step := range plan.Components {
-		// Report step progress
+		// Emit step starting event
 		o.progress.OnProgress(ctx, ProgressEvent{
-			Stage:   "orchestration",
-			Current: i + 1,
-			Total:   len(plan.Components),
-			Message: fmt.Sprintf("Executing %s (%s)", step.Name, step.Script),
+			Stage: "step_starting",
+			Metadata: map[string]interface{}{
+				"name":    step.Name,
+				"script":  step.Script,
+				"current": i + 1,
+				"total":   len(plan.Components),
+			},
 		})
 
 		// Execute the step
 		stepResult := o.executeStep(ctx, step, params)
 		result.ExecutedSteps = append(result.ExecutedSteps, stepResult)
+
+		// Emit step completed event
+		o.progress.OnProgress(ctx, ProgressEvent{
+			Stage:    "step_completed",
+			Metadata: stepResult,
+		})
 
 		if stepResult.Error != nil {
 			result.FailedStep = stepResult
@@ -114,6 +120,11 @@ func (o *ComposeDeployment) Execute(ctx context.Context, params ComposeParams) (
 			result.TotalDeployments += len(stepResult.RunResult.Changeset.Create.Deployments)
 		}
 	}
+
+	// Emit compose completed event
+	o.progress.OnProgress(ctx, ProgressEvent{
+		Stage: "compose_completed",
+	})
 
 	return result, nil
 }

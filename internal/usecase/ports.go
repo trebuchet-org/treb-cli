@@ -63,7 +63,12 @@ type ProgressSink interface {
 	Error(message string)
 }
 
-// ProgressSink receives progress events
+type ComposeSink interface {
+	OnProgress(ctx context.Context, event ProgressEvent)
+	Info(message string)
+	Error(message string)
+}
+
 type RunProgressSink interface {
 	OnProgress(ctx context.Context, event ProgressEvent)
 	Info(message string)

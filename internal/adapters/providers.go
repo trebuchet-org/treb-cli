@@ -122,6 +122,9 @@ var ScriptAdapters = wire.NewSet(
 	progress.NewRunProgress,
 	wire.Bind(new(usecase.RunProgressSink), new(*progress.RunProgress)),
 
+	progress.NewComposeProgress,
+	wire.Bind(new(usecase.ComposeSink), new(*progress.ComposeProgress)),
+
 	progress.NewSpinnerProgressReporter,
 	wire.Bind(new(usecase.ProgressSink), new(*progress.SpinnerProgressReporter)),
 )

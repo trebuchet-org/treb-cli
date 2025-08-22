@@ -21,22 +21,20 @@ func NewComposeRenderer(out io.Writer) *ComposeRenderer {
 	}
 }
 
+// GetWriter returns the io.Writer used by this renderer
+func (r *ComposeRenderer) GetWriter() io.Writer {
+	return r.out
+}
+
 // RenderComposeResult renders the result of orchestration
 func (r *ComposeRenderer) RenderComposeResult(result *usecase.ComposeResult) error {
-	// Show the execution plan
-	r.renderExecutionPlan(result.Plan)
-
-	// Show the results
-	r.renderExecutionResults(result)
-
-	// Show summary
+	// Only show summary since plan and results are rendered in real-time
 	r.renderSummary(result)
-
 	return nil
 }
 
-// renderExecutionPlan displays the execution plan
-func (r *ComposeRenderer) renderExecutionPlan(plan *usecase.ExecutionPlan) {
+// RenderExecutionPlan displays the execution plan
+func (r *ComposeRenderer) RenderExecutionPlan(plan *usecase.ExecutionPlan) {
 	fmt.Fprintf(r.out, "\n🎯 Orchestrating %s\n", plan.Group)
 	fmt.Fprintf(r.out, "📋 Execution plan: %d components\n\n", len(plan.Components))
 
@@ -108,6 +106,25 @@ func (r *ComposeRenderer) renderExecutionResults(result *usecase.ComposeResult) 
 		}
 
 		fmt.Fprintln(r.out)
+	}
+}
+
+// RenderStepResult renders a single step result
+func (r *ComposeRenderer) RenderStepResult(stepResult *usecase.StepResult) {
+	if stepResult.Error != nil {
+		// Show error
+		color.New(color.FgRed).Fprintf(r.out, "❌ Failed: %v\n", stepResult.Error)
+	} else if stepResult.RunResult != nil && stepResult.RunResult.Success {
+		// Show success with basic info
+		color.New(color.FgGreen).Fprintln(r.out, "✓ Step completed successfully")
+		
+		// Count deployments if any
+		if stepResult.RunResult.Changeset != nil {
+			deployments := stepResult.RunResult.Changeset.Create.Deployments
+			if len(deployments) > 0 {
+				fmt.Fprintf(r.out, "  Created %d deployment(s)\n", len(deployments))
+			}
+		}
 	}
 }
 
