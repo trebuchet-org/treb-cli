@@ -59,7 +59,7 @@ setup-integration-test:
 # Run integration tests  
 integration-test: setup-integration-test
 	@echo "🔗 Running integration tests..."
-	@gotestsum ./test/... -v -timeout=10m
+	@go test ./test/... -v -timeout=10m
 
 # Run integration tests with coverage
 integration-test-coverage: setup-integration-test
