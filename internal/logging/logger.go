@@ -59,8 +59,7 @@ func NewLogger(cfg *config.RuntimeConfig) *slog.Logger {
 	// 	opts.AddSource = true
 	// }
 
-	var handler slog.Handler
-	handler = slog.NewTextHandler(os.Stderr, opts)
+	var handler slog.Handler = slog.NewTextHandler(os.Stderr, opts)
 
 	return slog.New(handler)
 }

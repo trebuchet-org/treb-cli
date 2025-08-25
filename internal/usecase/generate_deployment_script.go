@@ -78,6 +78,9 @@ func (uc *GenerateDeploymentScript) Run(ctx context.Context, params GenerateScri
 	}
 
 	abi, err := uc.abiResolver.Get(ctx, contract.Artifact)
+	if err != nil {
+		return nil, err
+	}
 
 	// Build artifact path if not already specified
 	artifactPath := fmt.Sprintf("%s:%s", contract.Path, contract.Name)

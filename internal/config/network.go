@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -247,13 +248,7 @@ func (r *NetworkResolver) updateCache(networkName, rpcURL string, chainID uint64
 	}
 
 	// Add network name if not already present
-	found := false
-	for _, name := range r.cache.ChainNames[chainID] {
-		if name == networkName {
-			found = true
-			break
-		}
-	}
+	found := slices.Contains(r.cache.ChainNames[chainID], networkName)
 	if !found {
 		r.cache.ChainNames[chainID] = append(r.cache.ChainNames[chainID], networkName)
 	}
@@ -261,7 +256,9 @@ func (r *NetworkResolver) updateCache(networkName, rpcURL string, chainID uint64
 	r.cache.UpdatedAt = time.Now()
 
 	// Save to disk (ignore errors, cache is just for performance)
-	r.saveCache()
+	if err := r.saveCache(); err != nil {
+		panic(err)
+	}
 }
 
 // saveCache saves the cache to disk

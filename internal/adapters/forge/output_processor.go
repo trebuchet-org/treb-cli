@@ -27,7 +27,7 @@ const (
 // ParsedEntity represents different types of parsed output
 type ParsedEntity struct {
 	Type    string
-	Data    interface{}
+	Data    any
 	RawLine string
 	Stage   Stage
 }
@@ -171,7 +171,7 @@ func (op *OutputProcessor) ProcessOutput(reader io.Reader, entityChan chan<- Par
 	}
 	op.mu.Unlock()
 
-	op.printSummary()
+	op.spinner.Stop()
 
 	return nil
 }
@@ -384,15 +384,5 @@ func (op *OutputProcessor) saveIgnoredLine(line string) {
 	if err := os.WriteFile(filename, []byte(line), 0644); err != nil {
 		// Silently ignore write errors
 		return
-	}
-}
-
-// printSummary prints a summary of the execution
-func (op *OutputProcessor) printSummary() {
-	op.spinner.Stop()
-
-	// Only show warning if there were parsing issues
-	if op.ignoredCount > 0 {
-		// Ignored lines have been saved to debug directory
 	}
 }

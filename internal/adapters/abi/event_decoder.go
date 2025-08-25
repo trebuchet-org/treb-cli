@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	ethabi "github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/trebuchet-org/treb-cli/internal/domain/forge"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
@@ -83,7 +82,7 @@ func (e *EventDecoder) DecodeEventFromABI(log *forge.LogEntry, abi *abi.ABI) (*f
 	}
 }
 
-func (e *EventDecoder) decodeRawLog(log *LogEntry, abi *abi.ABI) (*LogEntry, error) {
+func (e *EventDecoder) decodeRawLog(log *LogEntry, sourceABI *abi.ABI) (*LogEntry, error) {
 	// use the abi resolver to resolve as much as possible from the logEntry and return a new LogEntry with
 	// Decoded filled in
 
@@ -96,7 +95,7 @@ func (e *EventDecoder) decodeRawLog(log *LogEntry, abi *abi.ABI) (*LogEntry, err
 	eventSig := log.RawLog.Topics[0]
 
 	// Find the event in the ABI that matches the signature
-	for _, event := range abi.Events {
+	for _, event := range sourceABI.Events {
 		if event.ID == eventSig {
 			// Decode the event
 			decodedParams := make(map[string]any)
@@ -104,7 +103,7 @@ func (e *EventDecoder) decodeRawLog(log *LogEntry, abi *abi.ABI) (*LogEntry, err
 			// First decode indexed parameters from topics
 			if len(log.RawLog.Topics) > 1 {
 				// Create a list of indexed inputs only
-				var indexedInputs ethabi.Arguments
+				var indexedInputs abi.Arguments
 				for _, input := range event.Inputs {
 					if input.Indexed {
 						indexedInputs = append(indexedInputs, input)
@@ -112,7 +111,7 @@ func (e *EventDecoder) decodeRawLog(log *LogEntry, abi *abi.ABI) (*LogEntry, err
 				}
 
 				// Skip the first topic (event signature)
-				err := ethabi.ParseTopicsIntoMap(decodedParams, indexedInputs, log.RawLog.Topics[1:])
+				err := abi.ParseTopicsIntoMap(decodedParams, indexedInputs, log.RawLog.Topics[1:])
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse topics: %w", err)
 				}
@@ -126,7 +125,7 @@ func (e *EventDecoder) decodeRawLog(log *LogEntry, abi *abi.ABI) (*LogEntry, err
 				}
 
 				// Create a sub-map for non-indexed inputs only
-				var nonIndexedInputs ethabi.Arguments
+				var nonIndexedInputs abi.Arguments
 				for _, input := range event.Inputs {
 					if !input.Indexed {
 						nonIndexedInputs = append(nonIndexedInputs, input)

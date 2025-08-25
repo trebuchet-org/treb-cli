@@ -71,7 +71,7 @@ Examples:
 			}
 
 			if app.Config.Network == nil {
-				return fmt.Errorf("No active network set in config, --network flag is required")
+				return fmt.Errorf("no active network set in config, --network flag is required")
 			}
 
 			// Parse environment variables (KEY=VALUE)
@@ -82,12 +82,6 @@ Examples:
 					return fmt.Errorf("invalid env var format: %s (expected key=value)", envVar)
 				}
 				parsedEnvVars[parts[0]] = parts[1]
-			}
-
-			// Get namespace from flag or use default
-			namespace, _ := cmd.Flags().GetString("namespace")
-			if namespace == "" {
-				namespace = "default"
 			}
 
 			params := usecase.RunScriptParams{

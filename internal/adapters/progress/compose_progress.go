@@ -67,7 +67,9 @@ func (p *ComposeProgress) OnProgress(ctx context.Context, event usecase.Progress
 
 			// If the step has a run result, render the execution summary
 			if stepResult.RunResult != nil && stepResult.RunResult.RunResult != nil {
-				p.scriptRenderer.RenderExecution(stepResult.RunResult)
+				if err := p.scriptRenderer.RenderExecution(stepResult.RunResult); err != nil {
+					panic(err)
+				}
 			}
 		}
 

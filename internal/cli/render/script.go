@@ -17,8 +17,6 @@ var (
 	bold   = color.New(color.Bold)
 	gray   = color.New(color.FgHiBlack)
 	cyan   = color.New(color.FgCyan)
-	blue   = color.New(color.FgBlue)
-	purple = color.New(color.FgMagenta)
 	yellow = color.New(color.FgYellow)
 	green  = color.New(color.FgGreen)
 	red    = color.New(color.FgRed)
@@ -28,7 +26,6 @@ var (
 type ScriptRenderer struct {
 	out             io.Writer
 	deploymentsRepo usecase.DeploymentRepository
-	abiResolver     usecase.ABIResolver
 	txRenderer      *TransactionRenderer
 	log             *slog.Logger
 }
@@ -82,11 +79,11 @@ func (r *ScriptRenderer) RenderExecution(result *usecase.RunScriptResult) error 
 		if len(exec.Deployments) > 0 {
 			// Show registry update message
 			if result.Changeset != nil && result.Changeset.HasChanges() {
-				fmt.Fprintf(r.out, green.Sprintf("✓ Updated registry for %s network in namespace %s\n",
+				fmt.Fprint(r.out, green.Sprintf("✓ Updated registry for %s network in namespace %s\n",
 					exec.Network, exec.Namespace))
 			}
 		} else {
-			fmt.Fprintf(r.out, yellow.Sprintf("- No registry changes recorded for %s network in namespace %s\n",
+			fmt.Fprint(r.out, yellow.Sprintf("- No registry changes recorded for %s network in namespace %s\n",
 				exec.Network, exec.Namespace))
 		}
 	}
@@ -216,14 +213,6 @@ func (r *ScriptRenderer) renderLogs(logs []string) error {
 
 	fmt.Fprintln(r.out) // Empty line after logs
 	return nil
-}
-
-// shortenAddress returns a shortened version of an address
-func (r *ScriptRenderer) shortenAddress(addr string) string {
-	if len(addr) >= 10 {
-		return addr[:10] + "..."
-	}
-	return addr
 }
 
 // PrintDeploymentBanner prints the deployment banner (called before execution)

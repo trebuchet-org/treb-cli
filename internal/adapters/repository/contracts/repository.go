@@ -190,7 +190,7 @@ func (i *Repository) SearchContracts(ctx context.Context, query domain.ContractQ
 	defer i.mu.RUnlock()
 
 	var results []*models.Contract
-	var artifactQuery string = ""
+	var artifactQuery = ""
 	var pathRegex *regexp.Regexp
 	if query.Query != nil {
 		artifactQuery = strings.ToLower(*query.Query)

@@ -169,12 +169,3 @@ func SetupViper(projectRoot string, cmd *cobra.Command) *viper.Viper {
 func ProvideNetworkResolver(cfg *config.RuntimeConfig) *NetworkResolver {
 	return NewNetworkResolver(cfg.ProjectRoot, cfg.FoundryConfig)
 }
-
-// getMapKeys returns the keys of a map as a slice
-func getMapKeys[K comparable, V any](m map[K]V) []K {
-	keys := make([]K, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	return keys
-}

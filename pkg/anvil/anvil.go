@@ -134,10 +134,7 @@ func StartAnvilInstance(name, port, chainID string) error {
 	time.Sleep(200 * time.Millisecond)
 
 	if err := inst.deployCreateX(); err != nil {
-		return fmt.Errorf("Failed to deploy CreateX: %v\n", err)
-		// color.New(color.FgYellow).Println("Deployments may fail without CreateX factory")
-	} else {
-		// color.New(color.FgGreen).Printf("✅ CreateX factory deployed at %s\n", CreateXAddress)
+		return fmt.Errorf("failed to deploy CreateX: %v", err)
 	}
 
 	return nil

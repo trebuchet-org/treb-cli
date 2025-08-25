@@ -67,48 +67,6 @@ func (r *ComposeRenderer) RenderExecutionPlan(plan *usecase.ExecutionPlan) {
 	fmt.Fprintln(r.out)
 }
 
-// renderExecutionResults displays the results of each step
-func (r *ComposeRenderer) renderExecutionResults(result *usecase.ComposeResult) {
-	totalSteps := len(result.Plan.Components)
-
-	for i, stepResult := range result.ExecutedSteps {
-		stepNum := i + 1
-
-		// Display step header
-		color.New(color.Bold).Fprintf(r.out, "[%d/%d] %s\n",
-			stepNum, totalSteps, stepResult.Step.Name)
-		fmt.Fprintf(r.out, "%s\n", strings.Repeat("─", 70))
-
-		if stepResult.Error != nil {
-			// Show error
-			color.New(color.FgRed).Fprintf(r.out, "❌ Failed: %v\n", stepResult.Error)
-		} else if stepResult.RunResult != nil {
-			// Show success
-			if stepResult.RunResult.Success {
-				color.New(color.FgGreen).Fprintln(r.out, "✓ Completed successfully")
-
-				// Show deployments if any
-				if stepResult.RunResult.Changeset != nil {
-					deployments := stepResult.RunResult.Changeset.Create.Deployments
-					if len(deployments) > 0 {
-						fmt.Fprintf(r.out, "  Deployments:\n")
-						for _, dep := range deployments {
-							fmt.Fprintf(r.out, "    • %s at %s\n", dep.ContractName, dep.Address)
-						}
-					}
-				}
-			} else {
-				color.New(color.FgRed).Fprintln(r.out, "❌ Failed")
-				if stepResult.RunResult.Error != nil {
-					fmt.Fprintf(r.out, "  Error: %v\n", stepResult.RunResult.Error)
-				}
-			}
-		}
-
-		fmt.Fprintln(r.out)
-	}
-}
-
 // RenderStepResult renders a single step result
 func (r *ComposeRenderer) RenderStepResult(stepResult *usecase.StepResult) {
 	if stepResult.Error != nil {

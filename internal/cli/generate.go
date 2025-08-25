@@ -101,8 +101,7 @@ Examples:
 				return err
 			}
 
-			app.GenerateRenderer.Render(result)
-			return nil
+			return app.GenerateRenderer.Render(result)
 		},
 	}
 

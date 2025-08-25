@@ -121,7 +121,7 @@ func (tr *TransactionRenderer) rootTxStatus() string {
 func (tr *TransactionRenderer) formatDecodedTx(decoded *abi.DecodedTransaction) string {
 	var method, args string
 	var destination = tr.txDecoder.GetLabel(decoded.To)
-	if decoded != nil && decoded.Method != "" {
+	if decoded.Method != "" {
 		method = decoded.Method
 
 		// Format arguments
