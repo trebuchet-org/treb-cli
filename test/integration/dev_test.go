@@ -29,4 +29,3 @@ func TestDevCommand(t *testing.T) {
 
 	RunIntegrationTests(t, tests)
 }
-

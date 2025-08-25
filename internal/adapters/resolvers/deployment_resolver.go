@@ -200,4 +200,3 @@ func parseChainID(s string) uint64 {
 
 // Ensure the adapter implements the interface
 var _ usecase.DeploymentResolver = (*DeploymentResolver)(nil)
-

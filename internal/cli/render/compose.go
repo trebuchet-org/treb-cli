@@ -117,7 +117,7 @@ func (r *ComposeRenderer) RenderStepResult(stepResult *usecase.StepResult) {
 	} else if stepResult.RunResult != nil && stepResult.RunResult.Success {
 		// Show success with basic info
 		color.New(color.FgGreen).Fprintln(r.out, "✓ Step completed successfully")
-		
+
 		// Count deployments if any
 		if stepResult.RunResult.Changeset != nil {
 			deployments := stepResult.RunResult.Changeset.Create.Deployments

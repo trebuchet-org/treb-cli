@@ -14,7 +14,7 @@ LDFLAGS = -X $(CONFIG_PKG).Version=$(VERSION) \
 # Build the CLI binary
 build: bindings
 	@echo "🔨 Building treb..."
-	@go build -ldflags="$(LDFLAGS)" -tags dev -o bin/treb ./cli/v2
+	@go build -ldflags="$(LDFLAGS)" -tags dev -o bin/treb ./cli
 
 bindings: forge_build
 	@echo "🔨 Building bindings..."
@@ -59,7 +59,7 @@ setup-integration-test:
 # Run integration tests  
 integration-test: setup-integration-test
 	@echo "🔗 Running integration tests..."
-	@cd go test ./test/... -v -timeout=10m -p=1
+	@gotestsum ./test/... -v -timeout=10m
 
 # Run integration tests with coverage
 integration-test-coverage: setup-integration-test

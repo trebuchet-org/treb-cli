@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -9,9 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
-	"time"
 
-	"github.com/briandowns/spinner"
+	"github.com/yarlson/pin"
 )
 
 // Test flags
@@ -21,7 +21,7 @@ var (
 	skipCleanupFlag  = flag.Bool("treb.skipcleanup", false, "Skip cleanup of test artifacts and log work directories (equivalent to TREB_TEST_SKIP_CLEANUP=1)")
 )
 var parallel = 1
-var setupSpinner *spinner.Spinner
+var setupSpinner *pin.Pin
 var (
 	bin             string
 	fixtureDir      string
@@ -31,11 +31,9 @@ var (
 func Setup() error {
 	parseFlags()
 
-	setupSpinner = spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-	defer setupSpinner.Stop()
-	setupSpinner.Start()
-
-	setupSpinner.Suffix = "Setting up testing env"
+	setupSpinner = pin.New("Setting up testing env")
+	defer setupSpinner.Stop("Test environment ready")
+	setupSpinner.Start(context.Background())
 
 	if err := buildBinaries(); err != nil {
 		return err
@@ -66,7 +64,7 @@ func Cleanup() {
 }
 
 func buildBinaries() error {
-	setupSpinner.Suffix = "Building binaries..."
+	setupSpinner.UpdateMessage("Building binaries...")
 	// Get project root (parent of test directory)
 	wd, _ := os.Getwd()
 	projectRoot := filepath.Dir(filepath.Dir(wd))

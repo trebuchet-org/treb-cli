@@ -12,8 +12,8 @@ func TestMain(m *testing.M) {
 	if err := helpers.Setup(); err != nil {
 		panic(err)
 	}
-	defer helpers.Cleanup()
 	// Run tests
 	code := m.Run()
+	helpers.Cleanup()
 	os.Exit(code)
 }

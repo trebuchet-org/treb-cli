@@ -93,4 +93,3 @@ func (p *ComposeProgress) Error(message string) {
 
 // Ensure ComposeProgress implements ProgressSink
 var _ usecase.ProgressSink = (*ComposeProgress)(nil)
-

@@ -20,7 +20,6 @@ type DeploymentFilter struct {
 	Type         models.DeploymentType
 }
 
-
 // SafeTransactionFilter defines filtering options for Safe transactions
 type SafeTransactionFilter struct {
 	ChainID     uint64

@@ -251,7 +251,7 @@ func (r *ScriptRenderer) PrintDeploymentBanner(config *usecase.RunScriptConfig) 
 
 	if len(config.Parameters) > 0 {
 		keys := make([]string, 0, len(config.Parameters))
-		for k, _ := range config.Parameters {
+		for k := range config.Parameters {
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)

@@ -71,7 +71,7 @@ func initializeTestPool(poolSize int) error {
 	pool.cond = sync.NewCond(&pool.mu)
 
 	// Build contracts once
-	setupSpinner.Suffix = "Building contracts..."
+	setupSpinner.UpdateMessage("Building contracts...")
 	cmd := exec.Command("forge", "build")
 	cmd.Dir = baseProject
 	if err := cmd.Run(); err != nil {
@@ -79,7 +79,7 @@ func initializeTestPool(poolSize int) error {
 	}
 
 	// Create contexts in parallel
-	setupSpinner.Suffix = fmt.Sprintf("Creating %d test contexts...", poolSize)
+	setupSpinner.UpdateMessage(fmt.Sprintf("Creating %d test contexts...", poolSize))
 
 	type contextResult struct {
 		ctx *TestContext
@@ -113,7 +113,7 @@ func initializeTestPool(poolSize int) error {
 		}
 		results[result.idx] = result.ctx
 		successCount++
-		setupSpinner.Suffix = fmt.Sprintf("Initialized %d/%d test contexts", successCount, poolSize)
+		setupSpinner.UpdateMessage(fmt.Sprintf("Initialized %d/%d test contexts", successCount, poolSize))
 		if successCount == poolSize {
 			close(resultChan)
 		}
@@ -122,7 +122,6 @@ func initializeTestPool(poolSize int) error {
 	// Add all contexts to the pool
 	pool.contexts = results
 	globalPool = pool
-	setupSpinner.Suffix = "Test environment ready"
 	return nil
 }
 

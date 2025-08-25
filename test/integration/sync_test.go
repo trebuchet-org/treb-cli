@@ -28,4 +28,3 @@ func TestSyncCommand(t *testing.T) {
 
 	RunIntegrationTests(t, tests)
 }
-

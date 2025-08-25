@@ -16,4 +16,3 @@ func TestVersionCommand(t *testing.T) {
 
 	RunIntegrationTests(t, tests)
 }
-

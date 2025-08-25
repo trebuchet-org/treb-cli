@@ -266,7 +266,7 @@ func getCreateXCachePath() string {
 // fetchCreateXBytecode fetches the CreateX bytecode from cache or mainnet
 func (m *Manager) fetchCreateXBytecode() (string, error) {
 	cachePath := getCreateXCachePath()
-	
+
 	// Try to read from cache first
 	if cachedBytecode, err := os.ReadFile(cachePath); err == nil {
 		// Validate cached bytecode
@@ -275,7 +275,7 @@ func (m *Manager) fetchCreateXBytecode() (string, error) {
 			return bytecode, nil
 		}
 	}
-	
+
 	// Cache miss or invalid, fetch from mainnet
 	// Use public mainnet RPC to fetch CreateX bytecode
 	mainnetRPC := "https://eth.llamarpc.com"
