@@ -5,11 +5,10 @@ VERSION ?= $(shell git describe --tags --always --dirty)
 COMMIT ?= $(shell git rev-parse HEAD)
 DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 TREB_SOL_COMMIT ?= $(shell cd treb-sol 2>/dev/null && git rev-parse HEAD || echo "unknown")
-CONFIG_PKG ?= github.com/trebuchet-org/treb-cli/internal/config
-LDFLAGS = -X $(CONFIG_PKG).Version=$(VERSION) \
-					-X $(CONFIG_PKG).Commit=$(COMMIT) \
-					-X $(CONFIG_PKG).Date=$(DATE) \
-					-X $(CONFIG_PKG).TrebSolCommit=$(TREB_SOL_COMMIT)
+LDFLAGS = -X main.version=$(VERSION) \
+					-X main.commit=$(COMMIT) \
+					-X main.date=$(DATE) \
+					-X main.trebSolCommit=$(TREB_SOL_COMMIT)
 
 # Build the CLI binary
 build: bindings
