@@ -16,7 +16,7 @@ type TimestampNormalizer struct{}
 
 func (n TimestampNormalizer) Normalize(output string) string {
 	// ISO timestamps: 2024-08-09T14:30:45Z
-	output = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z?`).ReplaceAllString(output, "<TIMESTAMP>")
+	output = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z?(\+\d+:\d+)?`).ReplaceAllString(output, "<TIMESTAMP>")
 
 	// Standard timestamps: 2024-08-09 14:30:45
 	output = regexp.MustCompile(`\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}`).ReplaceAllString(output, "<TIMESTAMP>")
