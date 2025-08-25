@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"maps"
 	"os"
 	"os/exec"
@@ -23,14 +24,16 @@ type Repository struct {
 	contracts         map[string]*models.Contract   // key: "path:contractName" or "contractName" if unique
 	contractNames     map[string][]*models.Contract // key: contract name, value: all contracts with that name
 	bytecodeHashIndex map[string]*models.Contract   // key: bytecodeHash -> Contract
+	log               *slog.Logger
 	mu                sync.RWMutex
 	indexed           bool
 }
 
 // NewRepository creates a new contract indexer
-func NewRepository(projectRoot string) *Repository {
+func NewRepository(projectRoot string, log *slog.Logger) *Repository {
 	return &Repository{
 		projectRoot:       projectRoot,
+		log:               log,
 		contracts:         make(map[string]*models.Contract),
 		contractNames:     make(map[string][]*models.Contract),
 		bytecodeHashIndex: make(map[string]*models.Contract),
@@ -119,6 +122,8 @@ func (i *Repository) processArtifact(artifactPath string) error {
 		// Skip invalid artifacts
 		return nil
 	}
+
+	i.log.Debug("processing artifact", "path", artifactPath, "compilationTarget", artifact.Metadata.Settings.CompilationTarget)
 
 	// Skip if no bytecode
 	if artifact.Bytecode.Object == "" || artifact.Bytecode.Object == "0x" {

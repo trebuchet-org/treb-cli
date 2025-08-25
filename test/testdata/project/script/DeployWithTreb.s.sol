@@ -53,4 +53,3 @@ contract DeployWithTrebScript is TrebScript {
         }
     }
 }
-

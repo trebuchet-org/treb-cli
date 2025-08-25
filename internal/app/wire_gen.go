@@ -49,7 +49,7 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 	deploymentResolver := resolvers.NewDeploymentResolver(runtimeConfig, fileRepository, selectorAdapter)
 	showDeployment := usecase.NewShowDeployment(runtimeConfig, fileRepository, deploymentResolver)
 	string2 := adapters.ProvideProjectPath(runtimeConfig)
-	repository := contracts.NewRepository(string2)
+	repository := contracts.NewRepository(string2, logger)
 	contractResolver := resolvers.NewContractResolver(runtimeConfig, repository, selectorAdapter)
 	eventParser := abi.NewEventParser(string2, logger)
 	abiResolver := abi.NewABIResolver(runtimeConfig, repository, fileRepository)

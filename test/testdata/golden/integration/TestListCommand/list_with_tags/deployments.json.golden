@@ -31,8 +31,8 @@
       "v<VERSION>",
       "latest"
     ],
-    "createdAt": "<TIMESTAMP>+03:00",
-    "updatedAt": "<TIMESTAMP>+03:00"
+    "createdAt": "<TIMESTAMP>",
+    "updatedAt": "<TIMESTAMP>"
   },
   "default/31337/SampleToken": {
     "id": "default/31337/SampleToken",
@@ -65,7 +65,7 @@
     "tags": [
       "token-v1"
     ],
-    "createdAt": "<TIMESTAMP>+03:00",
-    "updatedAt": "<TIMESTAMP>+03:00"
+    "createdAt": "<TIMESTAMP>",
+    "updatedAt": "<TIMESTAMP>"
   }
 }

@@ -28,8 +28,8 @@
       "status": "UNVERIFIED"
     },
     "tags": null,
-    "createdAt": "<TIMESTAMP>+03:00",
-    "updatedAt": "<TIMESTAMP>+03:00"
+    "createdAt": "<TIMESTAMP>",
+    "updatedAt": "<TIMESTAMP>"
   },
   "default/31337/Counter:v2": {
     "id": "default/31337/Counter:v2",
@@ -60,8 +60,8 @@
       "status": "UNVERIFIED"
     },
     "tags": null,
-    "createdAt": "<TIMESTAMP>+03:00",
-    "updatedAt": "<TIMESTAMP>+03:00"
+    "createdAt": "<TIMESTAMP>",
+    "updatedAt": "<TIMESTAMP>"
   },
   "default/31337/Counter:v3": {
     "id": "default/31337/Counter:v3",
@@ -92,7 +92,7 @@
       "status": "UNVERIFIED"
     },
     "tags": null,
-    "createdAt": "<TIMESTAMP>+03:00",
-    "updatedAt": "<TIMESTAMP>+03:00"
+    "createdAt": "<TIMESTAMP>",
+    "updatedAt": "<TIMESTAMP>"
   }
 }

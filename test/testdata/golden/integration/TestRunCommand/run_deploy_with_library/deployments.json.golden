@@ -28,8 +28,8 @@
       "status": "UNVERIFIED"
     },
     "tags": null,
-    "createdAt": "<TIMESTAMP>+03:00",
-    "updatedAt": "<TIMESTAMP>+03:00"
+    "createdAt": "<TIMESTAMP>",
+    "updatedAt": "<TIMESTAMP>"
   },
   "default/31337/TestWithNewLib": {
     "id": "default/31337/TestWithNewLib",
@@ -60,7 +60,7 @@
       "status": "UNVERIFIED"
     },
     "tags": null,
-    "createdAt": "<TIMESTAMP>+03:00",
-    "updatedAt": "<TIMESTAMP>+03:00"
+    "createdAt": "<TIMESTAMP>",
+    "updatedAt": "<TIMESTAMP>"
   }
 }

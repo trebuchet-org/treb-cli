@@ -32,7 +32,7 @@
       "hotfix-123",
       "RC_1.0.0"
     ],
-    "createdAt": "<TIMESTAMP>+03:00",
-    "updatedAt": "<TIMESTAMP>+03:00"
+    "createdAt": "<TIMESTAMP>",
+    "updatedAt": "<TIMESTAMP>"
   }
 }

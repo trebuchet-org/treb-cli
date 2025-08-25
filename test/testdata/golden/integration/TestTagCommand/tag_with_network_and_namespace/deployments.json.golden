@@ -30,8 +30,8 @@
     "tags": [
       "v<VERSION>"
     ],
-    "createdAt": "<TIMESTAMP>+03:00",
-    "updatedAt": "<TIMESTAMP>+03:00"
+    "createdAt": "<TIMESTAMP>",
+    "updatedAt": "<TIMESTAMP>"
   },
   "production/31338/Counter": {
     "id": "production/31338/Counter",
@@ -62,7 +62,7 @@
       "status": "UNVERIFIED"
     },
     "tags": null,
-    "createdAt": "<TIMESTAMP>+03:00",
-    "updatedAt": "<TIMESTAMP>+03:00"
+    "createdAt": "<TIMESTAMP>",
+    "updatedAt": "<TIMESTAMP>"
   }
 }

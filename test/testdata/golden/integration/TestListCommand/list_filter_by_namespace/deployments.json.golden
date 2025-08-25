@@ -28,8 +28,8 @@
       "status": "UNVERIFIED"
     },
     "tags": null,
-    "createdAt": "<TIMESTAMP>+03:00",
-    "updatedAt": "<TIMESTAMP>+03:00"
+    "createdAt": "<TIMESTAMP>",
+    "updatedAt": "<TIMESTAMP>"
   },
   "production/31337/Counter": {
     "id": "production/31337/Counter",
@@ -60,8 +60,8 @@
       "status": "UNVERIFIED"
     },
     "tags": null,
-    "createdAt": "<TIMESTAMP>+03:00",
-    "updatedAt": "<TIMESTAMP>+03:00"
+    "createdAt": "<TIMESTAMP>",
+    "updatedAt": "<TIMESTAMP>"
   },
   "staging/31337/Counter": {
     "id": "staging/31337/Counter",
@@ -92,7 +92,7 @@
       "status": "UNVERIFIED"
     },
     "tags": null,
-    "createdAt": "<TIMESTAMP>+03:00",
-    "updatedAt": "<TIMESTAMP>+03:00"
+    "createdAt": "<TIMESTAMP>",
+    "updatedAt": "<TIMESTAMP>"
   }
 }

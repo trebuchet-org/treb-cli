@@ -30,7 +30,7 @@
     "tags": [
       "this-is-a-very-long-tag-name-that-should-still-work-v<VERSION>"
     ],
-    "createdAt": "<TIMESTAMP>+03:00",
-    "updatedAt": "<TIMESTAMP>+03:00"
+    "createdAt": "<TIMESTAMP>",
+    "updatedAt": "<TIMESTAMP>"
   }
 }
