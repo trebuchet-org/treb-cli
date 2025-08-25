@@ -37,6 +37,7 @@ unit-test:
 # Setup integration test dependencies
 setup-integration-test:
 	@echo "🔧 Setting up integration test dependencies..."
+	@go install gotest.tools/gotestsum@latest
 	@cd test/testdata/project && \
 	if [ ! -d "lib/forge-std" ]; then \
 		echo "Installing forge-std..."; \
@@ -59,14 +60,7 @@ setup-integration-test:
 # Run integration tests  
 integration-test: setup-integration-test
 	@echo "🔗 Running integration tests..."
-	@go test ./test/... -v -timeout=10m
-
-# Run integration tests with coverage
-integration-test-coverage: setup-integration-test
-	@echo "🔗 Running integration tests with coverage..."
-	@go test ./test/... -v -timeout=10m -coverprofile=coverage.out -p=1
-	@go tool cover -html=coverage.out -o coverage.html
-	@echo "✅ Coverage report generated: test/coverage.html"
+	@gotestsum --format=testname --no-summary=output ./test/... -v -timeout=10m
 
 # Clean build artifacts
 clean:
