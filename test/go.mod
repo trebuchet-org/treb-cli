@@ -11,9 +11,12 @@ require (
 	github.com/trebuchet-org/treb-cli v0.0.0
 )
 
+require golang.org/x/term v0.31.0 // indirect
+
 replace github.com/trebuchet-org/treb-cli => ../
 
 require (
+	github.com/briandowns/spinner v1.23.2
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect

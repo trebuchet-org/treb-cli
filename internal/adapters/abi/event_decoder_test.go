@@ -44,6 +44,8 @@ func (m *MockABIResolver) FindByAddress(ctx context.Context, address common.Addr
 	return nil, args.Error(1)
 }
 
+func (m *MockABIResolver) SetExecution(exec *forge.HydratedRunResult) {}
+
 // MockDeploymentRepository is a mock implementation
 type MockDeploymentRepository struct {
 	usecase.DeploymentRepository // Embed to satisfy interface
@@ -67,6 +69,7 @@ func TestEventDecoder_DecodeEvent(t *testing.T) {
 		wantDecoded bool
 		wantName    string
 		wantParams  int
+		wantErr     bool
 	}{
 		{
 			name: "Already decoded event",
@@ -123,7 +126,10 @@ func TestEventDecoder_DecodeEvent(t *testing.T) {
 					Data:   "",
 				},
 			},
-			emitter:     common.HexToAddress("0x1234567890123456789012345678901234567890"),
+			emitter: common.HexToAddress("0x1234567890123456789012345678901234567890"),
+			mockSetup: func(m *MockABIResolver) {
+				m.On("FindByAddress", mock.Anything, mock.Anything).Return(nil, nil)
+			},
 			wantDecoded: false,
 		},
 		{
@@ -141,6 +147,7 @@ func TestEventDecoder_DecodeEvent(t *testing.T) {
 				m.On("FindByAddress", mock.Anything, mock.Anything).Return(nil, assert.AnError)
 			},
 			wantDecoded: false,
+			wantErr:     true,
 			// This test expects an error since the decoder returns an error when ABI is not found
 		},
 	}
@@ -149,7 +156,6 @@ func TestEventDecoder_DecodeEvent(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup mocks
 			mockResolver := new(MockABIResolver)
-			mockRepo := new(MockDeploymentRepository)
 
 			if tt.mockSetup != nil {
 				tt.mockSetup(mockResolver)
@@ -158,14 +164,16 @@ func TestEventDecoder_DecodeEvent(t *testing.T) {
 			// Create decoder
 			decoder := NewEventDecoder(
 				mockResolver,
-				mockRepo,
-				&forge.HydratedRunResult{},
 				slog.Default(),
 			)
 
 			// Decode event
 			result, err := decoder.DecodeEvent(tt.log, tt.emitter)
-			assert.NoError(t, err)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
 
 			// Verify results
 			if tt.wantDecoded {
@@ -325,4 +333,3 @@ func TestLogEntry_IsDecoded(t *testing.T) {
 		})
 	}
 }
-

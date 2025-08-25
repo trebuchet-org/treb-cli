@@ -56,6 +56,11 @@ func (l *LogEntry) RawData() ([]byte, error) {
 }
 
 func (e *EventDecoder) DecodeEvent(log *forge.LogEntry, emitter common.Address) (*forge.LogEntry, error) {
+	wrappedLog := (*LogEntry)(log)
+	if wrappedLog.IsDecoded() {
+		e.log.Debug("Log entry already decoded, skipping")
+		return log, nil
+	}
 	// Try to find ABI for the emitter address
 	abi, err := e.abiResolver.FindByAddress(context.Background(), emitter)
 	if err != nil {

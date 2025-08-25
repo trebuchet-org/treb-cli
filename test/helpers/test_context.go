@@ -8,11 +8,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
-	"time"
-
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/pelletier/go-toml/v2"
@@ -41,16 +39,13 @@ type TestContextPool struct {
 	teardownCh  chan struct{}
 }
 
-// ProgressReporter handles progress reporting with spinners
-type ProgressReporter struct {
-	mu      sync.Mutex
-	current string
-	done    bool
+type AnvilNode struct {
+	*anvil.AnvilInstance
+	URL string
 }
 
 var (
-	globalPool     *TestContextPool
-	globalReporter *ProgressReporter
+	globalPool *TestContextPool
 )
 
 // GetGlobalPool returns the global test context pool
@@ -59,20 +54,9 @@ func GetGlobalPool() *TestContextPool {
 }
 
 // InitializeTestPool creates a global test context pool
-func InitializeTestPool(poolSize int) error {
+func initializeTestPool(poolSize int) error {
 	if globalPool != nil {
 		return nil // Already initialized
-	}
-
-	reporter := &ProgressReporter{}
-	globalReporter = reporter
-
-	// Start progress reporter
-	go reporter.Run()
-
-	reporter.SetStatus("Building binaries...")
-	if err := buildBinaries(); err != nil {
-		return fmt.Errorf("failed to build binaries: %w", err)
 	}
 
 	baseProject := GetFixtureDir()
@@ -86,7 +70,7 @@ func InitializeTestPool(poolSize int) error {
 	pool.cond = sync.NewCond(&pool.mu)
 
 	// Build contracts once
-	reporter.SetStatus("Building contracts...")
+	setupSpinner.Suffix = "Building contracts..."
 	cmd := exec.Command("forge", "build")
 	cmd.Dir = baseProject
 	if err := cmd.Run(); err != nil {
@@ -94,7 +78,7 @@ func InitializeTestPool(poolSize int) error {
 	}
 
 	// Create contexts in parallel
-	reporter.SetStatus(fmt.Sprintf("Creating %d test contexts...", poolSize))
+	setupSpinner.Suffix = fmt.Sprintf("Creating %d test contexts...", poolSize)
 
 	type contextResult struct {
 		ctx *TestContext
@@ -128,7 +112,7 @@ func InitializeTestPool(poolSize int) error {
 		}
 		results[result.idx] = result.ctx
 		successCount++
-		reporter.SetStatus(fmt.Sprintf("Initialized %d/%d test contexts", successCount, poolSize))
+		setupSpinner.Suffix = fmt.Sprintf("Initialized %d/%d test contexts", successCount, poolSize)
 		if successCount == poolSize {
 			close(resultChan)
 		}
@@ -137,8 +121,7 @@ func InitializeTestPool(poolSize int) error {
 	// Add all contexts to the pool
 	pool.contexts = results
 	globalPool = pool
-	reporter.SetStatus("Test environment ready")
-	reporter.Stop()
+	setupSpinner.Suffix = "Test environment ready"
 	return nil
 }
 
@@ -304,13 +287,11 @@ func (p *TestContextPool) Acquire(t *testing.T) *TestContext {
 					t.Fatal(err)
 				}
 				// Create TrebContext for the test
-				version := GetBinaryVersionFromEnv()
 				ctx.TrebContext = &TrebContext{
-					t:             t,
-					Network:       "anvil-31337",
-					Namespace:     "default",
-					BinaryVersion: version,
-					workDir:       ctx.WorkDir,
+					t:         t,
+					Network:   "anvil-31337",
+					Namespace: "default",
+					workDir:   ctx.WorkDir,
 				}
 				// Don't change the global working directory in parallel tests
 				// The TrebContext will use workDir to set cmd.Dir instead
@@ -548,65 +529,6 @@ func copyDir(src, dst string) error {
 	})
 }
 
-// ProgressReporter implementation
-func (r *ProgressReporter) SetStatus(status string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.current = status
-}
-
-func (r *ProgressReporter) Stop() {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.done = true
-}
-
-func (r *ProgressReporter) Run() {
-	spinner := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
-	i := 0
-
-	for {
-		r.mu.Lock()
-		if r.done {
-			r.mu.Unlock()
-			fmt.Printf("\r\033[K") // Clear line
-			break
-		}
-		status := r.current
-		r.mu.Unlock()
-
-		if status != "" {
-			fmt.Printf("\r%s %s", spinner[i], status)
-			i = (i + 1) % len(spinner)
-		}
-
-		time.Sleep(100 * time.Millisecond)
-	}
-}
-
-// ParallelIsolatedTest runs a test using the context pool
-func ParallelIsolatedTest(t *testing.T, name string, fn func(t *testing.T, ctx *TrebContext)) {
-	t.Run(name, func(t *testing.T) {
-		t.Parallel() // Enable parallel execution
-
-		if globalPool == nil {
-			t.Fatal("Test pool not initialized. Call InitializeTestPool in TestMain")
-		}
-
-		// Acquire a context from the pool
-		testCtx := globalPool.Acquire(t)
-		defer globalPool.Release(testCtx)
-
-		// Change to the test's work directory
-		oldWd, _ := os.Getwd()
-		os.Chdir(testCtx.WorkDir)
-		defer os.Chdir(oldWd)
-
-		// Run the test
-		fn(t, testCtx.TrebContext)
-	})
-}
-
 // takeSnapshot takes a snapshot of the current blockchain state
 func takeSnapshot(rpcURL string) (string, error) {
 	cmd := exec.Command("cast", "rpc", "--rpc-url", rpcURL, "evm_snapshot")
@@ -627,24 +549,4 @@ func revertSnapshot(rpcURL, snapshotID string) error {
 		return fmt.Errorf("failed to revert snapshot: %w", err)
 	}
 	return nil
-}
-
-// startAnvilQuietly starts an anvil instance without printing to stdout
-func startAnvilQuietly(name, port, chainID string) error {
-	// Temporarily redirect stdout to suppress output
-	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// Start anvil
-	err := anvil.StartAnvilInstance(name, port, chainID)
-
-	// Restore stdout
-	w.Close()
-	os.Stdout = oldStdout
-
-	// Drain the pipe to prevent blocking
-	go io.Copy(io.Discard, r)
-
-	return err
 }

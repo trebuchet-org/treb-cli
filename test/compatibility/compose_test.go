@@ -9,7 +9,7 @@ func TestComposeCommand(t *testing.T) {
 		{
 			Name: "without_config",
 			TestCmds: [][]string{
-				{"conpose", "nonexistent.yaml"},
+				{"compose", "nonexistent.yaml"},
 			},
 			ExpectErr: ErrorBoth, // Both versions will error (v1: file not found, v2: command not found)
 		},

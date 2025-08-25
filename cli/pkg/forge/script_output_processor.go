@@ -27,7 +27,7 @@ const (
 // ParsedEntity represents different types of parsed output
 type ParsedEntity struct {
 	Type    string
-	Data    interface{}
+	Data    any
 	Stage   Stage
 	RawLine string
 }

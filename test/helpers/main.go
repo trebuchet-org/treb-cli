@@ -1,18 +1,124 @@
 package helpers
 
 import (
+	"flag"
+	"fmt"
 	"os"
+	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
+	"time"
+
+	"github.com/briandowns/spinner"
 )
 
-// Global test variables
+// Test flags
+var (
+	debugFlag        = flag.Bool("treb.debug", false, "Enable debug output for treb tests (equivalent to TREB_TEST_DEBUG=1)")
+	updateGoldenFlag = flag.Bool("treb.updategolden", false, "Update golden files (equivalent to UPDATE_GOLDEN=true)")
+	skipCleanupFlag  = flag.Bool("treb.skipcleanup", false, "Skip cleanup of test artifacts and log work directories (equivalent to TREB_TEST_SKIP_CLEANUP=1)")
+)
+var parallel = 1
+var setupSpinner *spinner.Spinner
 var (
 	bin             string
 	fixtureDir      string
 	testProjectRoot string
-	anvilManager    *AnvilManager
 )
+
+func Setup() error {
+	parseFlags()
+
+	setupSpinner = spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+	defer setupSpinner.Stop()
+	setupSpinner.Start()
+
+	setupSpinner.Suffix = "Setting up testing env"
+
+	if err := buildBinaries(); err != nil {
+		return err
+	}
+	if err := initializeTestPool(parallel); err != nil {
+		return err
+	}
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		sig := <-sigs
+		fmt.Println("Caught signal:", sig)
+
+		// Perform cleanup here
+		Cleanup()
+
+		// Exit immediately after cleanup
+		os.Exit(1)
+	}()
+
+	return nil
+}
+
+func Cleanup() {
+	globalPool.Shutdown()
+}
+
+func buildBinaries() error {
+	setupSpinner.Suffix = "Building binaries..."
+	// Get project root (parent of test directory)
+	wd, _ := os.Getwd()
+	projectRoot := filepath.Dir(filepath.Dir(wd))
+
+	// Build v1 binary
+	cmd := exec.Command("make", "build")
+	cmd.Dir = projectRoot
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to build v1 binary: %w\nOutput: %s", err, output)
+	}
+
+	// Build v2 binary if it exists
+	cmd = exec.Command("make", "build-v2")
+	cmd.Dir = projectRoot
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to build v2 binary: %w\nOutput: %s", err, output)
+	}
+
+	return nil
+}
+
+// InitTestFlags initializes test flags and syncs them with environment variables
+func parseFlags() {
+	// Parse flags if not already parsed
+	if !flag.Parsed() {
+		flag.Parse()
+	}
+
+	parallelF := flag.Lookup("test.parallel")
+	fmt.Sscanf(parallelF.Value.String(), "%d", &parallel)
+}
+
+// IsDebugEnabled returns true if debug mode is enabled
+func IsDebugEnabled() bool {
+	return *debugFlag
+}
+
+// ShouldUpdateGolden returns true if golden files should be updated
+func ShouldUpdateGolden() bool {
+	return *updateGoldenFlag
+}
+
+// ShouldSkipCleanup returns true if test cleanup should be skipped
+func ShouldSkipCleanup() bool {
+	return *skipCleanupFlag
+}
+
+func Parallel() int {
+	return parallel
+}
 
 // InitGlobals initializes global test variables
 func init() {
@@ -27,13 +133,6 @@ func init() {
 
 	// Binary is at project root level
 	bin = filepath.Join(trebProjectRoot, "bin")
-
-	var err error
-	anvilManager, err = NewAnvilManager()
-	if err != nil {
-		panic(err)
-	}
-
 }
 
 func isTrebRoot(wd string) bool {
@@ -56,22 +155,6 @@ func GetTrebBin() string {
 // GetFixtureDir returns the path to the test fixture directory
 func GetFixtureDir() string {
 	return fixtureDir
-}
-
-// GetV2Binary returns the path to the v2 binary
-func GetV2Binary() string {
-	return filepath.Join(bin, "treb-v2")
-}
-
-// V2BinaryExists checks if v2 binary exists
-func V2BinaryExists() bool {
-	_, err := os.Stat(GetV2Binary())
-	return err == nil
-}
-
-// GetGlobalAnvilManager returns the global anvil manager
-func GetAnvilManager() *AnvilManager {
-	return anvilManager
 }
 
 func GoldenPath(test string) string {

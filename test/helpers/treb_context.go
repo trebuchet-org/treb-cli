@@ -13,44 +13,27 @@ import (
 	"time"
 )
 
-// BinaryVersion represents which treb binary to use
-type BinaryVersion string
-
-const (
-	BinaryV1 BinaryVersion = "v1"
-	BinaryV2 BinaryVersion = "v2"
-)
-
 // TrebContext holds configuration for running treb commands in tests
 type TrebContext struct {
-	t             *testing.T
-	Network       string
-	Namespace     string
-	BinaryVersion BinaryVersion
-	workDir       string // Working directory for parallel tests
+	t         *testing.T
+	Network   string
+	Namespace string
+	workDir   string // Working directory for parallel tests
 }
 
 // NewTrebContext creates a new TrebContext with default settings
-func NewTrebContext(t *testing.T, version BinaryVersion) *TrebContext {
+func NewTrebContext(t *testing.T) *TrebContext {
 	tc := &TrebContext{
-		t:             t,
-		Network:       "anvil-31337",
-		Namespace:     "default",
-		BinaryVersion: version,
+		t:         t,
+		Network:   "anvil-31337",
+		Namespace: "default",
 	}
 
 	return tc
 }
 
 func (tc *TrebContext) GetBinaryPath() string {
-	switch tc.BinaryVersion {
-	case BinaryV1:
-		return filepath.Join(bin, "treb")
-	case BinaryV2:
-		return filepath.Join(bin, "treb-v2")
-	default:
-		panic(fmt.Errorf("Unexpected BineryVersion: %v", tc.BinaryVersion))
-	}
+	return filepath.Join(bin, "treb")
 }
 
 // WithNetwork sets the network for this context
@@ -111,7 +94,7 @@ func (tc *TrebContext) Treb(args ...string) (string, error) {
 	debugMode := IsDebugEnabled()
 
 	if debugMode {
-		tc.t.Logf("=== TREB COMMAND DEBUG (%s) ===", tc.BinaryVersion)
+		tc.t.Logf("=== TREB COMMAND DEBUG ===")
 		tc.t.Logf("Binary: %s", tc.GetBinaryPath())
 		tc.t.Logf("Command: %s %s", tc.GetBinaryPath(), strings.Join(allArgs, " "))
 		cwd, _ := os.Getwd()
@@ -146,7 +129,7 @@ func (tc *TrebContext) Treb(args ...string) (string, error) {
 	} else {
 		cmd.Dir = GetFixtureDir()
 	}
-	
+
 	// Pass environment variables
 	cmd.Env = os.Environ()
 	if debugMode {
@@ -184,16 +167,6 @@ func (tc *TrebContext) Debug(format string, args ...interface{}) {
 	}
 }
 
-// GetVersion returns the binary version being used
-func (tc *TrebContext) GetVersion() BinaryVersion {
-	return tc.BinaryVersion
-}
-
-// SetVersion sets the binary version and updates the binary path
-func (tc *TrebContext) SetVersion(version BinaryVersion) {
-	tc.BinaryVersion = version
-}
-
 // GetWorkDir returns the working directory for the test
 func (tc *TrebContext) GetWorkDir() string {
 	if tc.workDir != "" {
@@ -212,17 +185,4 @@ func supportsNetworkFlag(command string) bool {
 func supportsNamespaceFlag(command string) bool {
 	namespaceCommands := []string{"run", "show", "verify", "list", "tag"}
 	return slices.Contains(namespaceCommands, command)
-}
-
-// Helper to determine which binary version to use based on environment
-func GetBinaryVersionFromEnv() BinaryVersion {
-	version := os.Getenv("TREB_TEST_BINARY")
-	switch version {
-	case "v2":
-		return BinaryV2
-	case "v1", "":
-		return BinaryV1
-	default:
-		panic(fmt.Sprintf("Invalid TREB_TEST_BINARY value: %s", version))
-	}
 }

@@ -5,24 +5,19 @@ VERSION ?= $(shell git describe --tags --always --dirty)
 COMMIT ?= $(shell git rev-parse HEAD)
 DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 TREB_SOL_COMMIT ?= $(shell cd treb-sol 2>/dev/null && git rev-parse HEAD || echo "unknown")
-LDFLAGS = -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE) -X github.com/trebuchet-org/treb-cli/cli/pkg/version.TrebSolCommit=$(TREB_SOL_COMMIT)
+CONFIG_PKG ?= github.com/trebuchet-org/treb-cli/internal/config
+LDFLAGS = -X $(CONFIG_PKG).Version=$(VERSION) \
+					-X $(CONFIG_PKG).Commit=$(COMMIT) \
+					-X $(CONFIG_PKG).Date=$(DATE) \
+					-X $(CONFIG_PKG).TrebSolCommit=$(TREB_SOL_COMMIT)
 
 # Build the CLI binary
 build: bindings
 	@echo "🔨 Building treb..."
-	@go build -ldflags="$(LDFLAGS)" -tags dev -o bin/treb ./cli
-
-# Build the v2 CLI binary (only imports from internal/)
-build-v2:
-	@echo "🔨 Building treb v2..."
-	@go build -ldflags="-X 'github.com/trebuchet-org/treb-cli/internal/cli.Version=$(VERSION)'" -o bin/treb-v2 ./cli/v2
-	@echo "✓ Built treb v2 at bin/treb-v2" 
+	@go build -ldflags="$(LDFLAGS)" -tags dev -o bin/treb ./cli/v2
 
 bindings: forge_build
 	@echo "🔨 Building bindings..."
-	@cat treb-sol/out/ITrebEvents.sol/ITrebEvents.json | jq ".abi" | abigen --v2 --pkg bindings --type Treb --out cli/pkg/abi/bindings/treb.go --abi -
-	@cat treb-sol/out/ICreateX.sol/ICreateX.json | jq ".abi" | abigen --v2 --pkg bindings --type CreateX --out cli/pkg/abi/bindings/createx.go --abi -
-	# Generate bindings for v2 architecture
 	@cat treb-sol/out/ITrebEvents.sol/ITrebEvents.json | jq ".abi" | abigen --v2 --pkg bindings --type Treb --out internal/domain/bindings/treb.go --abi -
 	@cat treb-sol/out/ICreateX.sol/ICreateX.json | jq ".abi" | abigen --v2 --pkg bindings --type CreateX --out internal/domain/bindings/createx.go --abi -
 
@@ -62,12 +57,12 @@ setup-integration-test:
 	@echo "✅ Integration test dependencies ready"
 
 # Run integration tests  
-integration-test: build build-v2 setup-integration-test
+integration-test: setup-integration-test
 	@echo "🔗 Running integration tests..."
 	@cd go test ./test/... -v -timeout=10m -p=1
 
 # Run integration tests with coverage
-integration-test-coverage: build build-v2 setup-integration-test
+integration-test-coverage: setup-integration-test
 	@echo "🔗 Running integration tests with coverage..."
 	@go test ./test/... -v -timeout=10m -coverprofile=coverage.out -p=1
 	@go tool cover -html=coverage.out -o coverage.html
