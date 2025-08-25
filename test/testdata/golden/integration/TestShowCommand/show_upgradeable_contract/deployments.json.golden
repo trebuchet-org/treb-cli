@@ -11,7 +11,7 @@
     "deploymentStrategy": {
       "method": "CREATE3",
       "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266008d9e2c117c70323e10888e",
-      "initCodeHash": "0x18b7937b0f550d6e87e4e876297cf0b79ea12fda80c2af253a813cc0084f625f",
+      "initCodeHash": "0x948d446ec515f1f062437c160b4da79ac193437d5797f1e946ea7378f84b1bb2",
       "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
       "constructorArgs": "0x",
       "entropy": "default/src/UpgradeableCounter.sol:UpgradeableCounter"
@@ -20,7 +20,7 @@
     "artifact": {
       "path": "src/UpgradeableCounter.sol",
       "compilerVersion": "0.8.30+commit.73712a01",
-      "bytecodeHash": "0x18b7937b0f550d6e87e4e876297cf0b79ea12fda80c2af253a813cc0084f625f",
+      "bytecodeHash": "0x948d446ec515f1f062437c160b4da79ac193437d5797f1e946ea7378f84b1bb2",
       "scriptPath": "script/deploy/DeployUpgradeableCounter.s.sol",
       "gitCommit": ""
     },

@@ -5,13 +5,13 @@
     "chainId": 31337,
     "contractName": "MathUtils",
     "label": "",
-    "address": "0xfA6Fb06D6F72d1227e5edD88a7e5B0da8e05550c",
+    "address": "0xBdB80E85342D1192f8647ab982Fff0e4Cb895c17",
     "type": "LIBRARY",
     "transactionId": "tx-<ID>",
     "deploymentStrategy": {
       "method": "CREATE2",
       "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600cd288ef870d1ca3f54af85",
-      "initCodeHash": "0x9d78996ac4b97f154ed9aa9cbf6fb53364a29580e405d99d7149b91f81ea1fae",
+      "initCodeHash": "0x366617c364ee8cd0560c8d3ca7ccac29373af8ad5bf0f3293db15d0396285a6b",
       "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
       "constructorArgs": "0x",
       "entropy": "default/src/TestWithNewLib.sol:MathUtils"
@@ -20,7 +20,7 @@
     "artifact": {
       "path": "src/TestWithNewLib.sol",
       "compilerVersion": "0.8.30+commit.73712a01",
-      "bytecodeHash": "0x9d78996ac4b97f154ed9aa9cbf6fb53364a29580e405d99d7149b91f81ea1fae",
+      "bytecodeHash": "0x366617c364ee8cd0560c8d3ca7ccac29373af8ad5bf0f3293db15d0396285a6b",
       "scriptPath": "script/deploy/DeployMathUtils.s.sol",
       "gitCommit": ""
     },
@@ -43,7 +43,7 @@
     "deploymentStrategy": {
       "method": "CREATE3",
       "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600ec6c51eaf1f1b3e4a499fa",
-      "initCodeHash": "0xd583f5f20f1a5f921c5df824566d151230db4132cc4940ef06dfa2674edb315c",
+      "initCodeHash": "0x51dbca03848e00824635f860c9203b7f783d3f7b275c762dfe8bbb931b24136a",
       "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
       "constructorArgs": "0x",
       "entropy": "default/src/TestWithNewLib.sol:TestWithNewLib"
@@ -52,7 +52,7 @@
     "artifact": {
       "path": "src/TestWithNewLib.sol",
       "compilerVersion": "0.8.30+commit.73712a01",
-      "bytecodeHash": "0xd583f5f20f1a5f921c5df824566d151230db4132cc4940ef06dfa2674edb315c",
+      "bytecodeHash": "0x51dbca03848e00824635f860c9203b7f783d3f7b275c762dfe8bbb931b24136a",
       "scriptPath": "script/deploy/DeployTestWithNewLib.s.sol",
       "gitCommit": ""
     },

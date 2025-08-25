@@ -9,7 +9,6 @@ fs_permissions = [{ access = "read-write", path = "./" }]
 
 [rpc_endpoints]
 celo-alfajores = "https://alfajores-forno.celo-testnet.org"
-mainnet = "https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_API_KEY}"
 polygon = "https://polygon-rpc.com"
 celo = "https://forno.celo.org"
 anvil-31337 = "http://localhost:8545"

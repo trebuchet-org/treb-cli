@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.30;
 
 contract UpgradeableCounter {
     uint256 private _count;
@@ -7,7 +7,10 @@ contract UpgradeableCounter {
     bool private _initialized;
 
     event CountIncremented(uint256 newCount);
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event OwnershipTransferred(
+        address indexed previousOwner,
+        address indexed newOwner
+    );
 
     modifier onlyOwner() {
         require(msg.sender == _owner, "Not the owner");
@@ -41,3 +44,4 @@ contract UpgradeableCounter {
         emit OwnershipTransferred(oldOwner, newOwner);
     }
 }
+

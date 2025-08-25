@@ -11,7 +11,7 @@
     "deploymentStrategy": {
       "method": "CREATE3",
       "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600d535a44479bfecd16a9d09",
-      "initCodeHash": "0xbfef1fac43b3d9f8fd8aea430f7f1251ad57abc23e6ef75dd3d3a4ec76463530",
+      "initCodeHash": "0x2ffc3d8e50da568b2a2e8f1043ed8c99c27c41b0292bae564dca40ea49a8b79b",
       "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
       "constructorArgs": "0x",
       "entropy": "production/src/Counter.sol:Counter"
@@ -20,7 +20,7 @@
     "artifact": {
       "path": "src/Counter.sol",
       "compilerVersion": "0.8.30+commit.73712a01",
-      "bytecodeHash": "0xbfef1fac43b3d9f8fd8aea430f7f1251ad57abc23e6ef75dd3d3a4ec76463530",
+      "bytecodeHash": "0x2ffc3d8e50da568b2a2e8f1043ed8c99c27c41b0292bae564dca40ea49a8b79b",
       "scriptPath": "script/deploy/DeployCounter.s.sol",
       "gitCommit": ""
     },
