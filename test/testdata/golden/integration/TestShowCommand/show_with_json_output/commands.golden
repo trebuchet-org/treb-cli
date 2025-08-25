@@ -1,0 +1,12 @@
+=== cmd 0: [show Counter --json] ===
+Error: unknown flag: --json
+Usage:
+  treb show <deployment> [flags]
+
+Flags:
+  -h, --help               help for show
+      --namespace string   Namespace to use for deployment lookup
+      --network string     Network to use for deployment lookup
+
+Global Flags:
+      --non-interactive   Disable interactive prompts

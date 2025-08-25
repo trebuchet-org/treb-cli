@@ -1,0 +1,87 @@
+=== cmd 0: [run script/deploy/DeployCounter.s.sol] ===
+
+🚀 Running Deployment Script
+──────────────────────────────────────────────────
+  Script:    DeployCounter
+  Network:   anvil-31337 (31337)
+  Namespace: default
+  Mode:      LIVE
+  Senders:   [anvil]
+──────────────────────────────────────────────────
+
+🔄 Transactions:
+──────────────────────────────────────────────────
+
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ new 0xDaFaC68f7D2133e3CE0229fAddcd2b1C96D8Eb83()
+│  └─ [return] 0xDaFaC68f7D2133e3CE0229fAddcd2b1C96D8Eb83
+├─ Create3ProxyContractCreation(newContract: 0xDaFa...Eb83, salt: 0x78714809...)
+├─ 0xDaFaC68f7D2133e3CE0229fAddcd2b1C96D8Eb83::unknown()
+│  └─ 🚀 new Counter()
+│     └─ [return] 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
+└─ ContractCreation(newContract: Counter: [0x74148047D6bDf624C...)
+   Tx: 0x<HASH> | Block: 1 | Gas: 197581
+
+📦 Deployment Summary:
+──────────────────────────────────────────────────
+Counter at 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
+
+
+📝 Script Logs:
+────────────────────────────────────────
+  Registry: failed to load registry from .treb/registry.json
+
+✓ Updated registry for anvil-31337 network in namespace default
+✓ Script execution completed successfully
+
+
+=== cmd 1: [run script/deploy/DeploySampleToken.s.sol] ===
+
+🚀 Running Deployment Script
+──────────────────────────────────────────────────
+  Script:    DeploySampleToken
+  Network:   anvil-31337 (31337)
+  Namespace: default
+  Mode:      LIVE
+  Senders:   [anvil]
+──────────────────────────────────────────────────
+
+🔄 Transactions:
+──────────────────────────────────────────────────
+
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ new 0xb60D32127E2e36c9C417885183464cd2848Cc6fd()
+│  └─ [return] 0xb60D32127E2e36c9C417885183464cd2848Cc6fd
+├─ Create3ProxyContractCreation(newContract: 0xb60D...c6fd, salt: 0x77d5e876...)
+├─ 0xb60D32127E2e36c9C417885183464cd2848Cc6fd::unknown()
+│  └─ 🚀 new SampleToken(
+│     │    _name:: "",
+│     │    _symbol:: "",
+│     │    _totalSupply:: 0
+│     │  )
+│     └─ [return] 0x793f69C1702a0E900a142D8575E44F9E4DA86fFf
+└─ ContractCreation(newContract: SampleToken: [0x793f69C1702a0...)
+   Tx: 0x<HASH> | Block: 2 | Gas: 395961
+
+📦 Deployment Summary:
+──────────────────────────────────────────────────
+SampleToken at 0x793f69C1702a0E900a142D8575E44F9E4DA86fFf
+
+
+📝 Script Logs:
+────────────────────────────────────────
+  Registry: failed to load registry from .treb/registry.json
+
+✓ Updated registry for anvil-31337 network in namespace default
+✓ Script execution completed successfully
+
+
+=== cmd 2: [list] ===
+   ◎ namespace:   DEFAULT                       
+└─ ⛓ chain:       31337                         
+  
+  SINGLETONS
+  SampleToken     0x793f69C1702a0E900a142D8575E44F9E4DA86fFf   🅔 ? 🅢 ?         <TIMESTAMP>   
+  Counter         0x74148047D6bDf624C94eFc07F60cEE7b6052FB29   🅔 ? 🅢 ?         <TIMESTAMP>   
+
+Total deployments: 2

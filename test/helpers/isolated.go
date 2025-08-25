@@ -5,9 +5,10 @@ import (
 )
 
 // IsolatedTest runs a test with full isolation
-func IsolatedTest(t *testing.T, name string, fn func(t *testing.T, ctx *TrebContext)) {
+func IsolatedTest(t *testing.T, name string, fn func(t *testing.T, ctx *TestContext)) {
 	t.Run(name, func(t *testing.T) {
-		// Always use pool-based isolation for consistency
+		t.Parallel()
+
 		pool := GetGlobalPool()
 		if pool == nil {
 			t.Fatal("Test pool not initialized")
@@ -24,6 +25,6 @@ func IsolatedTest(t *testing.T, name string, fn func(t *testing.T, ctx *TrebCont
 		}
 
 		// Run the test
-		fn(t, testCtx.TrebContext)
+		fn(t, testCtx)
 	})
 }

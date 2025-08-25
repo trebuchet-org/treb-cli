@@ -1,0 +1,98 @@
+{
+  "default/31337/Counter": {
+    "id": "default/31337/Counter",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "Counter",
+    "label": "",
+    "address": "0x74148047D6bDf624C94eFc07F60cEE7b6052FB29",
+    "type": "SINGLETON",
+    "transactionId": "tx-<ID>",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600bc0af06a84bc65cc2a2b7f",
+      "initCodeHash": "0x52871868cfdeb8a374a4a2bdb675825c2c173217da5698e2a7a3b8725a41346d",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x",
+      "entropy": "default/src/Counter.sol:Counter"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/Counter.sol",
+      "compilerVersion": "0.8.30+commit.73712a01",
+      "bytecodeHash": "0x52871868cfdeb8a374a4a2bdb675825c2c173217da5698e2a7a3b8725a41346d",
+      "scriptPath": "script/deploy/DeployCounter.s.sol",
+      "gitCommit": ""
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": null,
+    "createdAt": "<TIMESTAMP>+03:00",
+    "updatedAt": "<TIMESTAMP>+03:00"
+  },
+  "default/31337/MyToken": {
+    "id": "default/31337/MyToken",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "MyToken",
+    "label": "",
+    "address": "0x6c8D83F62F83A8D46F091094BA15B75F35A8E85E",
+    "type": "SINGLETON",
+    "transactionId": "tx-<ID>",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600b502eb8feed7af152d3bfe",
+      "initCodeHash": "0x32d1352d4eca773b772beec28e025b866ccf690e6fc553f86bcae39ade349f8b",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x00000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "entropy": "default/src/other/MyToken.sol:MyToken"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/other/MyToken.sol",
+      "compilerVersion": "0.8.30+commit.73712a01",
+      "bytecodeHash": "0x0512dba591a47296b7b4d80ca50a70f09efb585fd0e753ae17047005decb2f0b",
+      "scriptPath": "script/deploy/DeployMyToken.s.sol",
+      "gitCommit": ""
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": null,
+    "createdAt": "<TIMESTAMP>+03:00",
+    "updatedAt": "<TIMESTAMP>+03:00"
+  },
+  "default/31337/SimpleStorage": {
+    "id": "default/31337/SimpleStorage",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "SimpleStorage",
+    "label": "",
+    "address": "0x2d99D60F162771aE558c2331769a45d2204128a6",
+    "type": "SINGLETON",
+    "transactionId": "tx-<ID>",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600b94ab8fb8a011c73ccb7f9",
+      "initCodeHash": "0x432b9f0c3a2e6009a0d7fc3137c583f883d980b09d308678457c6a2655a257e7",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "entropy": "default/src/test-dir/SimpleStorage.sol:SimpleStorage"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/test-dir/SimpleStorage.sol",
+      "compilerVersion": "0.8.30+commit.73712a01",
+      "bytecodeHash": "0x9454b09ac6bc892a63f61f2c3ff928d3cfb47ffbbce9bb476c677173656da04d",
+      "scriptPath": "script/deploy/DeploySimpleStorage.s.sol",
+      "gitCommit": ""
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": null,
+    "createdAt": "<TIMESTAMP>+03:00",
+    "updatedAt": "<TIMESTAMP>+03:00"
+  }
+}

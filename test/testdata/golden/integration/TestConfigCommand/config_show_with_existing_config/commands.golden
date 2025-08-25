@@ -1,0 +1,6 @@
+=== cmd 0: [config] ===
+📋 Current config:
+Namespace: staging
+Network:   polygon
+
+📁 config file: .treb/config.local.json

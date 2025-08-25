@@ -1,0 +1,12 @@
+=== cmd 0: [tag Counter --add v<VERSION>] ===
+ℹ Added tag 'v<VERSION>' to deployment default/31337/Counter
+✅ Added tag 'v<VERSION>' to default/31337/Counter
+
+Current tags: v<VERSION>
+
+
+=== cmd 1: [tag Counter] ===
+
+Deployment: default/31337/Counter
+Address: 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
+Tags:    v<VERSION>

@@ -1,0 +1,6 @@
+=== cmd 0: [gen deploy src/UpgradeableCounter.sol:UpgradeableCounter] ===
+
+✅ Generated deployment script: script/deploy/DeployUpgradeableCounter.s.sol
+
+To deploy, run:
+  treb run script/deploy/DeployUpgradeableCounter.s.sol --network <network>

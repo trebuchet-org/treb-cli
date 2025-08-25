@@ -1,7 +1,0 @@
-  (
-  	"""
-  	=== cmd 0: [tag NonExisting] ===
-- 	Error: no deployment found matching 'NonExisting'
-+ 	Error: not found
-  	"""
-  )

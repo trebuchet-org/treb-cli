@@ -1,0 +1,3 @@
+=== cmd 0: [config set invalid value] ===
+Error: unknown config key: invalid
+Available keys: namespace (ns), network

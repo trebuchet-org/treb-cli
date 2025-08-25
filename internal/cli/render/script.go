@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"sort"
 	"strings"
 
 	"github.com/fatih/color"
@@ -249,14 +250,18 @@ func (r *ScriptRenderer) PrintDeploymentBanner(config *usecase.RunScriptConfig) 
 	}
 
 	if len(config.Parameters) > 0 {
+		keys := make([]string, 0, len(config.Parameters))
+		for k, _ := range config.Parameters {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+
 		fmt.Fprintf(r.out, "  Env Vars:  ")
-		var i = 0
-		for k, v := range config.Parameters {
+		for i, param := range keys {
 			if i > 0 {
 				fmt.Fprintf(r.out, "             ")
 			}
-			fmt.Fprintf(r.out, "%s=%s\n", yellow.Sprint(k), green.Sprint(v))
-			i++
+			fmt.Fprintf(r.out, "%s=%s\n", yellow.Sprint(param), green.Sprint(config.Parameters[param]))
 		}
 	}
 

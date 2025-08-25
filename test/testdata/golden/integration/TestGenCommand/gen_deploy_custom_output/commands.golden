@@ -1,0 +1,6 @@
+=== cmd 0: [gen deploy src/Counter.sol:Counter --script-path script/custom/DeployMyCounter.s.sol] ===
+
+✅ Generated deployment script: script/custom/DeployMyCounter.s.sol
+
+To deploy, run:
+  treb run script/custom/DeployMyCounter.s.sol --network <network>

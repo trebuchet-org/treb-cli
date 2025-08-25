@@ -76,15 +76,7 @@ func buildBinaries() error {
 	cmd.Dir = projectRoot
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to build v1 binary: %w\nOutput: %s", err, output)
-	}
-
-	// Build v2 binary if it exists
-	cmd = exec.Command("make", "build-v2")
-	cmd.Dir = projectRoot
-	output, err = cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to build v2 binary: %w\nOutput: %s", err, output)
+		return fmt.Errorf("failed to build binary: %w\nOutput: %s", err, output)
 	}
 
 	return nil

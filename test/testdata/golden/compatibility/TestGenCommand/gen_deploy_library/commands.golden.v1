@@ -1,8 +1,0 @@
-=== cmd 0: [gen deploy src/StringUtils.sol:StringUtils] ===
-
-✅ Generated deployment script: script/deploy/DeployStringUtils.s.sol
-
-This library will be deployed with CREATE2 for deterministic addresses.
-
-To deploy, run:
-  treb run script/deploy/DeployStringUtils.s.sol --network <network>

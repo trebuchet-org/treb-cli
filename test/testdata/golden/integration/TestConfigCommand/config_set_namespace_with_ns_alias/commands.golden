@@ -1,0 +1,11 @@
+=== cmd 0: [config set ns testing] ===
+✅ Set namespace to: testing
+📁 config saved to: .treb/config.local.json
+
+
+=== cmd 1: [config] ===
+📋 Current config:
+Namespace: testing
+Network:   (not set)
+
+📁 config file: .treb/config.local.json

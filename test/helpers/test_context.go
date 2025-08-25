@@ -19,10 +19,11 @@ import (
 
 // TestContext represents an isolated test environment
 type TestContext struct {
-	ID          string
-	WorkDir     string
-	AnvilNodes  map[string]*AnvilNode
-	Snapshots   map[string]string // chainID -> snapshotID for reverting state
+	ID         string
+	WorkDir    string
+	AnvilNodes map[string]*AnvilNode
+	// snapshotRef -> node -> snapshotId for reverting state
+	Snapshots   map[string]map[string]string
 	TrebContext *TrebContext
 	inUse       bool
 	mu          sync.Mutex
@@ -189,45 +190,42 @@ func (p *TestContextPool) createContext() (*TestContext, error) {
 	}
 
 	// Initialize snapshots map
-	ctx.Snapshots = make(map[string]string)
+	ctx.Snapshots = make(map[string]map[string]string)
 	return ctx, nil
 }
 
-func (ctx *TestContext) TakeSnapshots() error {
-	if snapshot1, err := takeSnapshot(ctx.AnvilNodes["anvil-31337"].URL); err == nil {
-		ctx.Snapshots["31337"] = snapshot1
-	} else {
-		return fmt.Errorf("Failed to create snapshot: %v", err)
+func (ctx *TestContext) TakeSnapshots(ref string) error {
+	if _, exists := ctx.Snapshots[ref]; exists {
+		return fmt.Errorf("Snapshot %s already exists", ref)
 	}
 
-	if snapshot2, err := takeSnapshot(ctx.AnvilNodes["anvil-31338"].URL); err == nil {
-		ctx.Snapshots["31338"] = snapshot2
-	} else {
-		return fmt.Errorf("Failed to create snapshot: %v", err)
+	ctx.Snapshots[ref] = map[string]string{}
+
+	for name, node := range ctx.AnvilNodes {
+		if snapshotId, err := takeSnapshot(node.URL); err != nil {
+			return fmt.Errorf("Failed to create snapshot: %v", err)
+		} else {
+			ctx.Snapshots[ref][name] = snapshotId
+		}
 	}
+
 	return nil
 }
 
-func (ctx *TestContext) RevertSnapshots() error {
-	for chainID, snapshotID := range ctx.Snapshots {
-		var nodeURL string
-		switch chainID {
-		case "31337":
-			if node, ok := ctx.AnvilNodes["anvil-31337"]; ok {
-				nodeURL = node.URL
-			}
-		case "31338":
-			if node, ok := ctx.AnvilNodes["anvil-31338"]; ok {
-				nodeURL = node.URL
-			}
-		}
+func (ctx *TestContext) RevertSnapshots(ref string) error {
+	var snapshot map[string]string
+	var exists bool
+	if snapshot, exists = ctx.Snapshots[ref]; !exists {
+		return fmt.Errorf("Snapshot %s does not exist", ref)
+	}
 
-		if nodeURL != "" && snapshotID != "" {
-			if err := revertSnapshot(nodeURL, snapshotID); err != nil {
-				return fmt.Errorf("Failed to revert snapshot for chain %s: %v\n", chainID, err)
-			}
+	for name, node := range ctx.AnvilNodes {
+		if err := revertSnapshot(node.URL, snapshot[name]); err != nil {
+			return fmt.Errorf("Failed to revert snapshot for node %s: %v\n", name, err)
 		}
 	}
+
+	delete(ctx.Snapshots, ref)
 	return nil
 }
 
@@ -282,7 +280,7 @@ func (p *TestContextPool) Acquire(t *testing.T) *TestContext {
 		for _, ctx := range p.contexts {
 			if !ctx.inUse {
 				ctx.inUse = true
-				err := ctx.TakeSnapshots()
+				err := ctx.TakeSnapshots("%clean%")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -309,21 +307,19 @@ func (p *TestContextPool) Release(ctx *TestContext) error {
 	defer p.mu.Unlock()
 
 	// Log work directory if skip cleanup is enabled
-	if ShouldSkipCleanup() && ctx.TrebContext != nil {
+	if ShouldSkipCleanup() {
 		ctx.TrebContext.t.Logf("🔍 Test work directory preserved at: %s", ctx.WorkDir)
-	}
-
-	// Clean up the context (unless skip cleanup is enabled)
-	if !ShouldSkipCleanup() {
+	} else {
 		if err := ctx.Clean(); err != nil {
 			return err
 		}
-	}
-	ctx.inUse = false
-	ctx.TrebContext = nil
+		ctx.inUse = false
+		ctx.TrebContext = nil
 
-	// Signal that a context is available
-	p.cond.Signal()
+		// Signal that a context is available
+		p.cond.Signal()
+	}
+
 	return nil
 }
 
@@ -331,7 +327,8 @@ func (p *TestContextPool) Release(ctx *TestContext) error {
 func (ctx *TestContext) Clean() error {
 	// First, revert Anvil nodes to their initial snapshots
 	// This ensures blockchain state is clean for the next test
-	ctx.RevertSnapshots()
+	ctx.RevertSnapshots("%clean%")
+
 	// Clean test artifacts (these are real directories we created)
 	cleanDirs := []string{".treb", "broadcast", "cache", "out"}
 	for _, dir := range cleanDirs {

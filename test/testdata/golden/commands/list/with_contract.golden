@@ -1,8 +1,0 @@
-=== cmd 0: [list --contract Counter] ===
-   ◎ namespace:   DEFAULT                       
-└─ ⛓ chain:       31337                         
-  
-  SINGLETONS
-  Counter     0x74148047D6bDf624C94eFc07F60cEE7b6052FB29   🅔 ? 🅢 ?         <TIMESTAMP>   
-
-Total deployments: 1

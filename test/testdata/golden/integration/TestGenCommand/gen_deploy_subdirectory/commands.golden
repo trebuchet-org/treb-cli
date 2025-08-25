@@ -1,0 +1,6 @@
+=== cmd 0: [gen deploy src/other/MyToken.sol:MyToken] ===
+
+✅ Generated deployment script: script/deploy/DeployMyToken.s.sol
+
+To deploy, run:
+  treb run script/deploy/DeployMyToken.s.sol --network <network>

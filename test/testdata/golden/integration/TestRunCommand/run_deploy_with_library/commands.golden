@@ -1,0 +1,73 @@
+=== cmd 0: [run script/deploy/DeployTestWithNewLib.s.sol] ===
+
+🚀 Running Deployment Script
+──────────────────────────────────────────────────
+  Script:    DeployTestWithNewLib
+  Network:   anvil-31337 (31337)
+  Namespace: default
+  Mode:      LIVE
+  Senders:   [anvil]
+──────────────────────────────────────────────────
+
+🔄 Transactions:
+──────────────────────────────────────────────────
+
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ new 0x77dc2Bc2Eee2b210B1989211ED5F7eEeDB95e77f()
+│  └─ [return] 0x77dc2Bc2Eee2b210B1989211ED5F7eEeDB95e77f
+├─ Create3ProxyContractCreation(newContract: 0x77dc...e77f, salt: 0x0d69d750...)
+├─ 0x77dc2Bc2Eee2b210B1989211ED5F7eEeDB95e77f::unknown()
+│  └─ 🚀 new TestWithNewLib()
+│     └─ [return] 0x65aB2088Cb7bBA70f99EA2105Ed99525991c2CB4
+└─ ContractCreation(newContract: TestWithNewLib: [0x65aB2088Cb...)
+   Tx: 0x<HASH> | Block: 2 | Gas: 269171
+
+📦 Deployment Summary:
+──────────────────────────────────────────────────
+TestWithNewLib at 0x65aB2088Cb7bBA70f99EA2105Ed99525991c2CB4
+
+
+📝 Script Logs:
+────────────────────────────────────────
+  Registry: failed to load registry from .treb/registry.json
+
+✓ Updated registry for anvil-31337 network in namespace default
+✓ Script execution completed successfully
+
+
+=== cmd 1: [show TestWithNewLib] ===
+Deployment: default/31337/TestWithNewLib
+================================================================================
+
+Basic Information:
+  Contract: TestWithNewLib
+  Address: 0x65aB2088Cb7bBA70f99EA2105Ed99525991c2CB4
+  Type: SINGLETON
+  Namespace: default
+  Network: 31337
+
+Deployment Strategy:
+  Method: CREATE3
+  Factory: 0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed
+  Salt: 0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600ec6c51eaf1f1b3e4a499fa
+  Entropy: default/src/TestWithNewLib.sol:TestWithNewLib
+  Init Code Hash: 0x<HASH>
+
+Artifact Information:
+  Path: src/TestWithNewLib.sol
+  Compiler: 0.8.30+commit.73712a01
+  Bytecode Hash: 0x<HASH>
+  Script: script/deploy/DeployTestWithNewLib.s.sol
+
+Verification Status:
+  Status: UNVERIFIED
+
+Transaction Information:
+  Hash: 0x<HASH>
+  Status: EXECUTED
+  Sender: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+  Block: 2
+
+Timestamps:
+  Created: <TIMESTAMP>
+  Updated: <TIMESTAMP>

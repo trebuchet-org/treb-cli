@@ -9,7 +9,9 @@ import (
 
 // TestMain handles setup/teardown for all tests
 func TestMain(m *testing.M) {
-	helpers.Setup()
+	if err := helpers.Setup(); err != nil {
+		panic(err)
+	}
 	defer helpers.Cleanup()
 	// Run tests
 	code := m.Run()

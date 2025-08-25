@@ -1,2 +1,0 @@
-=== cmd 0: [show NonExistent] ===
-Error: failed to resolve deployment: no deployments found matching 'NonExistent'

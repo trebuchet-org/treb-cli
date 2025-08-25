@@ -1,0 +1,70 @@
+{
+  "default/31337/Counter": {
+    "id": "default/31337/Counter",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "Counter",
+    "label": "",
+    "address": "0x74148047D6bDf624C94eFc07F60cEE7b6052FB29",
+    "type": "SINGLETON",
+    "transactionId": "tx-<ID>",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600bc0af06a84bc65cc2a2b7f",
+      "initCodeHash": "0x52871868cfdeb8a374a4a2bdb675825c2c173217da5698e2a7a3b8725a41346d",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x",
+      "entropy": "default/src/Counter.sol:Counter"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/Counter.sol",
+      "compilerVersion": "0.8.30+commit.73712a01",
+      "bytecodeHash": "0x52871868cfdeb8a374a4a2bdb675825c2c173217da5698e2a7a3b8725a41346d",
+      "scriptPath": "script/deploy/DeployCounter.s.sol",
+      "gitCommit": ""
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": [
+      "v<VERSION>"
+    ],
+    "createdAt": "<TIMESTAMP>+03:00",
+    "updatedAt": "<TIMESTAMP>+03:00"
+  },
+  "default/31337/SampleToken": {
+    "id": "default/31337/SampleToken",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "SampleToken",
+    "label": "",
+    "address": "0x793f69C1702a0E900a142D8575E44F9E4DA86fFf",
+    "type": "SINGLETON",
+    "transactionId": "tx-<ID>",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266008c17bb5b7d947ee29414d1",
+      "initCodeHash": "0xdaab8de37cf4f0853b468fc2e6a1c3a12f91d2f1b0cc1c978d9e8a5342deddc3",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x00000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "entropy": "default/src/SampleToken.sol:SampleToken"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/SampleToken.sol",
+      "compilerVersion": "0.8.30+commit.73712a01",
+      "bytecodeHash": "0xd0b64551d1ac84f34f7db6df72bba128bbf0e0f052d8748a014ce5cf596ea1c9",
+      "scriptPath": "script/deploy/DeploySampleToken.s.sol",
+      "gitCommit": ""
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": [
+      "token-v1"
+    ],
+    "createdAt": "<TIMESTAMP>+03:00",
+    "updatedAt": "<TIMESTAMP>+03:00"
+  }
+}

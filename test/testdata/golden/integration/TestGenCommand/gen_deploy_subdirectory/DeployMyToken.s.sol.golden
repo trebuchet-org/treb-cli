@@ -1,0 +1,36 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import {TrebScript} from "treb-sol/src/TrebScript.sol";
+import {Senders} from "treb-sol/src/internal/sender/Senders.sol";
+import {Deployer} from "treb-sol/src/internal/sender/Deployer.sol";
+
+contract DeployMyToken is TrebScript {
+    using Senders for Senders.Sender;
+    using Deployer for Senders.Sender;
+    using Deployer for Deployer.Deployment;
+
+    /**
+     * @custom:env {sender:optional} deployer
+     * @custom:senders anvil
+     */
+    function run() public broadcast {
+        Senders.Sender storage deployer = sender(
+            vm.envOr("deployer", string("anvil"))
+        );
+
+        // Deploy MyToken
+        deployer.create3("src/other/MyToken.sol:MyToken")
+            .setLabel(vm.envOr("LABEL", string("")))
+            .deploy(_getConstructorArgs());
+    }
+
+    /// @notice Get constructor arguments
+    function _getConstructorArgs() internal pure returns (bytes memory) {
+        // TODO: Update these constructor arguments
+        string memory _name = "";
+        string memory _symbol = "";
+        uint256 _totalSupply = 0;
+        return abi.encode(_name, _symbol, _totalSupply);
+    }
+}

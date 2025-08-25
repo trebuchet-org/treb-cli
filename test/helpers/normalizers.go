@@ -126,13 +126,14 @@ type RepositoryHormalizer struct{}
 
 func (n RepositoryHormalizer) Normalize(output string) string {
 	output = regexp.MustCompile(`tx-0x[a-fA-F0-9]{64}`).ReplaceAllString(output, `tx-<ID>`)
+	output = regexp.MustCompile(`tx-internal-[a-fA-F0-9]{64}`).ReplaceAllString(output, `tx-internal-<ID>`)
 	return output
 }
 
 type DebugNormalizer struct{}
 
 func (n DebugNormalizer) Normalize(output string) string {
-	output = regexp.MustCompile(`(?mi)^\s*DEBUG:.*\n`).ReplaceAllString(output, "")
+	output = regexp.MustCompile(`(?mi)^level=DEBUG.*\n`).ReplaceAllString(output, "")
 	return output
 }
 

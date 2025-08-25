@@ -1,0 +1,36 @@
+=== cmd 0: [show StringUtils] ===
+Deployment: default/31337/StringUtils
+================================================================================
+
+Basic Information:
+  Contract: StringUtils
+  Address: 0xdD10fA4C0bA77087503D28eEeEbCC6832b625E3C
+  Type: LIBRARY
+  Namespace: default
+  Network: 31337
+
+Deployment Strategy:
+  Method: CREATE2
+  Factory: 0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed
+  Salt: 0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600025d1cfe8c1c98f1d353f0
+  Entropy: default/src/StringUtils.sol:StringUtils
+  Init Code Hash: 0x<HASH>
+
+Artifact Information:
+  Path: src/StringUtils.sol
+  Compiler: 0.8.30+commit.73712a01
+  Bytecode Hash: 0x<HASH>
+  Script: script/deploy/DeployStringUtils.s.sol
+
+Verification Status:
+  Status: UNVERIFIED
+
+Transaction Information:
+  Hash: 0x<HASH>
+  Status: EXECUTED
+  Sender: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+  Block: 1
+
+Timestamps:
+  Created: <TIMESTAMP>
+  Updated: <TIMESTAMP>

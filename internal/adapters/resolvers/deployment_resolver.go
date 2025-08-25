@@ -3,6 +3,7 @@ package resolvers
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -64,6 +65,7 @@ func (r *DeploymentResolver) ResolveDeployment(ctx context.Context, query domain
 			dep.ID, dep.ChainID, dep.Namespace, dep.ContractDisplayName(), dep.Address)
 		suggestions = append(suggestions, suggestion)
 	}
+	sort.Strings(suggestions)
 	return nil, fmt.Errorf("multiple deployments found matching '%s', please be more specific:\n%s",
 		query.Reference, strings.Join(suggestions, "\n"))
 }
@@ -198,3 +200,4 @@ func parseChainID(s string) uint64 {
 
 // Ensure the adapter implements the interface
 var _ usecase.DeploymentResolver = (*DeploymentResolver)(nil)
+

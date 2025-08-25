@@ -1,9 +1,0 @@
-  strings.Join({
-  	"=== cmd 0: [gen deploy src/StringUtils.sol:StringUtils] ===\n\n✅",
-  	" Generated deployment script: script/deploy/DeployStringUtils.s.",
-  	"sol\n",
-- 	"\n",
-  	"This library will be deployed with CREATE2 for deterministic add",
-  	"resses.\n\nTo deploy, run:\n  treb run script/deploy/DeployStringUt",
-  	"ils.s.sol --network <network>\n",
-  }, "")

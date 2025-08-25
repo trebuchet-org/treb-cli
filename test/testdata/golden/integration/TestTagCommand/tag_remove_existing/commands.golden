@@ -1,0 +1,12 @@
+=== cmd 0: [tag Counter --remove v<VERSION>] ===
+ℹ Removed tag 'v<VERSION>' from deployment default/31337/Counter
+✅ Removed tag 'v<VERSION>' from default/31337/Counter
+
+Remaining tags: v<VERSION>
+
+
+=== cmd 1: [tag Counter] ===
+
+Deployment: default/31337/Counter
+Address: 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
+Tags:    v<VERSION>

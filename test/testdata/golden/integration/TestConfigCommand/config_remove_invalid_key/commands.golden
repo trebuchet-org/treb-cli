@@ -1,0 +1,3 @@
+=== cmd 0: [config remove invalid] ===
+Error: unknown config key: invalid
+Available keys: namespace (ns), network

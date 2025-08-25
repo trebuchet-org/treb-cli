@@ -60,7 +60,7 @@ func (s *SyncRegistry) Sync(ctx context.Context, options SyncOptions) (*SyncResu
 	})
 
 	// Sync pending Safe transactions
-	safeSyncResult, err := s.syncPendingSafeTransactions(ctx, options.Debug)
+	safeSyncResult, err := s.syncPendingSafeTransactions(ctx)
 	if err != nil {
 		result.Errors = append(result.Errors, fmt.Sprintf("Failed to sync Safe transactions: %v", err))
 	} else {
@@ -89,7 +89,7 @@ type SafeSyncResult struct {
 }
 
 // syncPendingSafeTransactions checks pending Safe transactions and updates their status
-func (s *SyncRegistry) syncPendingSafeTransactions(ctx context.Context, debug bool) (*SafeSyncResult, error) {
+func (s *SyncRegistry) syncPendingSafeTransactions(ctx context.Context) (*SafeSyncResult, error) {
 	result := &SafeSyncResult{}
 
 	// Get all Safe transactions

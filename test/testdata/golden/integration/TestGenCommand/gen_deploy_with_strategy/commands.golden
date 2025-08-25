@@ -1,0 +1,6 @@
+=== cmd 0: [gen deploy src/Counter.sol:Counter --strategy CREATE3] ===
+
+✅ Generated deployment script: script/deploy/DeployCounter.s.sol
+
+To deploy, run:
+  treb run script/deploy/DeployCounter.s.sol --network <network>

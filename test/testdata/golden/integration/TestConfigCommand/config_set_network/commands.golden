@@ -1,0 +1,11 @@
+=== cmd 0: [config set network celo] ===
+✅ Set network to: celo
+📁 config saved to: .treb/config.local.json
+
+
+=== cmd 1: [config] ===
+📋 Current config:
+Namespace: default
+Network:   celo
+
+📁 config file: .treb/config.local.json
