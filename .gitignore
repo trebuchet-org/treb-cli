@@ -21,7 +21,6 @@ test/testdata/golden/**/*.actual
 *.dylib
 *.test
 *.out
-go.work
 
 # Binaries
 bin/
