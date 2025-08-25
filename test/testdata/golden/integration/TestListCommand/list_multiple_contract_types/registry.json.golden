@@ -3,7 +3,7 @@
     "default": {
       "Counter": "0x74148047D6bDf624C94eFc07F60cEE7b6052FB29",
       "SampleToken": "0x793f69C1702a0E900a142D8575E44F9E4DA86fFf",
-      "StringUtils": "0xdD10fA4C0bA77087503D28eEeEbCC6832b625E3C",
+      "StringUtils": "0x8759D6E3523Ee1c76E6642103d87d09A164EFe23",
       "UpgradeableCounter": "0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903"
     }
   }

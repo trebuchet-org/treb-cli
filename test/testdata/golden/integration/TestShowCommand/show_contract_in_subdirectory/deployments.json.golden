@@ -11,7 +11,7 @@
     "deploymentStrategy": {
       "method": "CREATE3",
       "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600b502eb8feed7af152d3bfe",
-      "initCodeHash": "0x32d1352d4eca773b772beec28e025b866ccf690e6fc553f86bcae39ade349f8b",
+      "initCodeHash": "0x9b910cc850120df12bd0ac6b0cc5abb3c566c3353a5dbb3ed2e5ac61bac72d51",
       "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
       "constructorArgs": "0x00000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
       "entropy": "default/src/other/MyToken.sol:MyToken"
@@ -20,7 +20,7 @@
     "artifact": {
       "path": "src/other/MyToken.sol",
       "compilerVersion": "0.8.30+commit.73712a01",
-      "bytecodeHash": "0x0512dba591a47296b7b4d80ca50a70f09efb585fd0e753ae17047005decb2f0b",
+      "bytecodeHash": "0xed390b0fc9c225d8eee6ec5b08af0d53d0ce50b068938d834c57df7bc9b0373e",
       "scriptPath": "script/deploy/DeployMyToken.s.sol",
       "gitCommit": ""
     },

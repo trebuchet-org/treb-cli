@@ -14,13 +14,13 @@
 
 executed  anvil → CreateX::deployCreate2(salt: 0xf39fd6e5..., initCode: 0x61074d61...)
 ├─ 🚀 new StringUtils()
-│  └─ [return] 0xdD10fA4C0bA77087503D28eEeEbCC6832b625E3C
-└─ ContractCreation(newContract: StringUtils.0.8.30: [0xdD10fA..., salt: 0xb3...)
+│  └─ [return] 0x8759D6E3523Ee1c76E6642103d87d09A164EFe23
+└─ ContractCreation(newContract: StringUtils.0.8.30: [0x8759D6..., salt: 0xb3...)
    Tx: 0x<HASH> | Block: 1 | Gas: 461383
 
 📦 Deployment Summary:
 ──────────────────────────────────────────────────
-StringUtils at 0xdD10fA4C0bA77087503D28eEeEbCC6832b625E3C
+StringUtils at 0x8759D6E3523Ee1c76E6642103d87d09A164EFe23
 
 
 📝 Script Logs:
@@ -37,7 +37,7 @@ Deployment: default/31337/StringUtils
 
 Basic Information:
   Contract: StringUtils
-  Address: 0xdD10fA4C0bA77087503D28eEeEbCC6832b625E3C
+  Address: 0x8759D6E3523Ee1c76E6642103d87d09A164EFe23
   Type: LIBRARY
   Namespace: default
   Network: 31337
