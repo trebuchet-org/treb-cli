@@ -64,7 +64,7 @@ func TestGenCommand(t *testing.T) {
 		{
 			Name: "gen_deploy_with_specific_proxy",
 			TestCmds: [][]string{
-				{"gen", "deploy", "src/UpgradeableCounter.sol:UpgradeableCounter", "--proxy", "--proxy-contract", "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"},
+				{"gen", "deploy", "src/UpgradeableCounter.sol:UpgradeableCounter", "--proxy", "--proxy-contract", "ERC1967Proxy"},
 			},
 			OutputArtifacts: append(
 				[]string{"script/deploy/DeployUpgradeableCounterProxy.s.sol"},

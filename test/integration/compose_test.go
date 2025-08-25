@@ -22,7 +22,7 @@ func TestComposeCommand(t *testing.T) {
 		{
 			Name: "with_config",
 			SetupCmds: [][]string{
-				{"gen", "deploy", "src/UpgradeableCounter.sol:UpgradeableCounter", "--proxy", "--proxy-contract", "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"},
+				{"gen", "deploy", "src/UpgradeableCounter.sol:UpgradeableCounter", "--proxy", "--proxy-contract", "ERC1967Proxy"},
 			},
 			TestCmds: [][]string{
 				{"compose", "compose.yaml", "--network", "anvil-31337"},

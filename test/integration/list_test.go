@@ -42,7 +42,7 @@ func TestListCommand(t *testing.T) {
 		{
 			Name: "list_with_proxy_relationships",
 			SetupCmds: [][]string{
-				{"gen", "deploy", "UpgradeableCounter", "--proxy", "--proxy-contract", "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"},
+				{"gen", "deploy", "UpgradeableCounter", "--proxy", "--proxy-contract", "ERC1967Proxy.sol:ERC1967Proxy"},
 				{"run", "DeployUpgradeableCounterProxy"},
 			},
 			TestCmds: [][]string{{"list"}},

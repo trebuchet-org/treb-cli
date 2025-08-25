@@ -221,7 +221,7 @@ contract Deploy{{.ContractName}}Proxy is TrebScript {
 
         // Deploy proxy
         deployer
-            .{{.StrategyMethod}}("{{.ProxyInfo.ProxyArtifact}}")
+            .{{.StrategyMethod}}("{{.ProxyInfo.ProxyName}}")
             .setLabel(vm.envOr("proxyLabel", string("{{.ContractName}}")))
             .deploy(_getProxyConstructorArgs(implementation));
     }

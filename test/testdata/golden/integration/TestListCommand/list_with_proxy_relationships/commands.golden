@@ -3,7 +3,7 @@
 └─ ⛓ chain:       31337                         
   
   PROXIES
-  ERC1967Proxy:UpgradeableCounter     0x96d21Cdb263D7561b953Cd5A0F0591b6000501D5   🅔 ? 🅢 ?         <TIMESTAMP>   
+  ERC1967Proxy:UpgradeableCounter     0x20C1EF3EFA51FC15592BEFff06471E21FfDCDD06   🅔 ? 🅢 ?         <TIMESTAMP>   
   └─ 0xD63F2d37...                    0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903                                         
   
   SINGLETONS

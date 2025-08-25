@@ -41,24 +41,24 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
    Tx: 0x<HASH> | Block: 1 | Gas: 488602
 
 executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
-├─ new 0x6B1928081d2115B1F1b2C5fd444c6e1Bda26c062()
-│  └─ [return] 0x6B1928081d2115B1F1b2C5fd444c6e1Bda26c062
-├─ Create3ProxyContractCreation(newContract: 0x6B19...c062, salt: 0x244b3bd5...)
-├─ 0x6B1928081d2115B1F1b2C5fd444c6e1Bda26c062::unknown()
+├─ new 0xf9dEc8a180913A52DacBFA2B2F499f56c8bF6B6c()
+│  └─ [return] 0xf9dEc8a180913A52DacBFA2B2F499f56c8bF6B6c
+├─ Create3ProxyContractCreation(newContract: 0xf9dE...6B6c, salt: 0x5974aa56...)
+├─ 0xf9dEc8a180913A52DacBFA2B2F499f56c8bF6B6c::unknown()
 │  └─ 🚀 new ERC1967Proxy(
 │     │    implementation:: 0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903,
 │     │    _data:: 0xc4d66de8000000000000000000000000...(36 bytes)
 │     │  )
 │     ├─ Upgraded(implementation: UpgradeableCounter: [0xD63F2d...)
 │     ├─ UpgradeableCounter::initialize(initialOwner: 0x0000...0000)
-│     └─ [return] 0xc9d037F1Edb9cA9ABA54E706F21be5CAbC263f43
-└─ ContractCreation(newContract: ERC1967Proxy: [0xc9d037F1Edb9...)
+│     └─ [return] 0xc265543Dbc777F9D29FbF9EA9E063B962dd447b9
+└─ ContractCreation(newContract: ERC1967Proxy: [0xc265543Dbc77...)
    Tx: 0x<HASH> | Block: 2 | Gas: 219319
 
 📦 Deployment Summary:
 ──────────────────────────────────────────────────
 UpgradeableCounter at 0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903
-ERC1967Proxy:v55[UpgradeableCounter] at 0xc9d037F1Edb9cA9ABA54E706F21be5CAbC263f43
+ERC1967Proxy:v55[UpgradeableCounter] at 0xc265543Dbc777F9D29FbF9EA9E063B962dd447b9
 
 
 📝 Script Logs:
@@ -85,18 +85,18 @@ ERC1967Proxy:v55[UpgradeableCounter] at 0xc9d037F1Edb9cA9ABA54E706F21be5CAbC263f
 ──────────────────────────────────────────────────
 
 executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
-├─ new 0xAf99ac0890DfC74a60261D6D23a2a80a2F8ae571()
-│  └─ [return] 0xAf99ac0890DfC74a60261D6D23a2a80a2F8ae571
-├─ Create3ProxyContractCreation(newContract: 0xAf99...e571, salt: 0xddcc43e7...)
-├─ 0xAf99ac0890DfC74a60261D6D23a2a80a2F8ae571::unknown()
+├─ new 0xbf3bf41b3169CFa1e6bB581b862380166C2b4B6f()
+│  └─ [return] 0xbf3bf41b3169CFa1e6bB581b862380166C2b4B6f
+├─ Create3ProxyContractCreation(newContract: 0xbf3b...4B6f, salt: 0x7fab4139...)
+├─ 0xbf3bf41b3169CFa1e6bB581b862380166C2b4B6f::unknown()
 │  └─ 🚀 new ERC1967Proxy(
 │     │    implementation:: 0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903,
 │     │    _data:: 0xc4d66de8000000000000000000000000...(36 bytes)
 │     │  )
 │     ├─ Upgraded(implementation: 0xD63F...3903)
 │     ├─ UpgradeableCounter::initialize(initialOwner: 0x0000...0000)
-│     └─ [return] 0x0703859657a8F9d33C81fB5Fd8e6471FC449bDF1
-└─ ContractCreation(newContract: ERC1967Proxy: [0x0703859657a8...)
+│     └─ [return] 0xe2Fa450fD6b49c41aFAB7cdA17105e95D1dd22eA
+└─ ContractCreation(newContract: ERC1967Proxy: [0xe2Fa450fD6b4...)
    Tx: 0x<HASH> | Block: 3 | Gas: 219319
 
 ⚠️ Deployment Collisions Detected:
@@ -108,7 +108,7 @@ Note: These contracts were already deployed and deployment was skipped.
 
 📦 Deployment Summary:
 ──────────────────────────────────────────────────
-ERC1967Proxy:v44[UpgradeableCounter] at 0x0703859657a8F9d33C81fB5Fd8e6471FC449bDF1
+ERC1967Proxy:v44[UpgradeableCounter] at 0xe2Fa450fD6b49c41aFAB7cdA17105e95D1dd22eA
 
 
 📝 Script Logs:
@@ -135,18 +135,18 @@ ERC1967Proxy:v44[UpgradeableCounter] at 0x0703859657a8F9d33C81fB5Fd8e6471FC449bD
 ──────────────────────────────────────────────────
 
 executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
-├─ new 0x6cdA68cCD58D7575eEA05A13c0e183dB4a569FE2()
-│  └─ [return] 0x6cdA68cCD58D7575eEA05A13c0e183dB4a569FE2
-├─ Create3ProxyContractCreation(newContract: 0x6cdA...9FE2, salt: 0x84a004c4...)
-├─ 0x6cdA68cCD58D7575eEA05A13c0e183dB4a569FE2::unknown()
+├─ new 0x792C324011262B124d8EBA14935B023B42c1c09d()
+│  └─ [return] 0x792C324011262B124d8EBA14935B023B42c1c09d
+├─ Create3ProxyContractCreation(newContract: 0x792C...c09d, salt: 0xabf168a3...)
+├─ 0x792C324011262B124d8EBA14935B023B42c1c09d::unknown()
 │  └─ 🚀 new ERC1967Proxy(
 │     │    implementation:: 0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903,
 │     │    _data:: 0xc4d66de8000000000000000000000000...(36 bytes)
 │     │  )
 │     ├─ Upgraded(implementation: 0xD63F...3903)
 │     ├─ UpgradeableCounter::initialize(initialOwner: 0x0000...0000)
-│     └─ [return] 0xb9631b9133088a20c7E346b58EC75fb7f2a456bb
-└─ ContractCreation(newContract: ERC1967Proxy: [0xb9631b913308...)
+│     └─ [return] 0x3724061C024d171eF17Cb398825B06326b0c168b
+└─ ContractCreation(newContract: ERC1967Proxy: [0x3724061C024d...)
    Tx: 0x<HASH> | Block: 4 | Gas: 219319
 
 ⚠️ Deployment Collisions Detected:
@@ -158,7 +158,7 @@ Note: These contracts were already deployed and deployment was skipped.
 
 📦 Deployment Summary:
 ──────────────────────────────────────────────────
-ERC1967Proxy:v43[UpgradeableCounter] at 0xb9631b9133088a20c7E346b58EC75fb7f2a456bb
+ERC1967Proxy:v43[UpgradeableCounter] at 0x3724061C024d171eF17Cb398825B06326b0c168b
 
 
 📝 Script Logs:
