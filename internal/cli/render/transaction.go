@@ -459,7 +459,7 @@ func (tr *TransactionRenderer) displayTransactionFooter() {
 	}
 
 	if len(details) > 0 {
-		fmt.Printf("└─ %s\n", gray.Sprint(strings.Join(details, " | ")))
+		fmt.Printf("   %s\n", gray.Sprint(strings.Join(details, " | ")))
 	}
 }
 

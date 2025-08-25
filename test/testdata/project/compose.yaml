@@ -6,17 +6,17 @@ components:
       - UG1
       - UG2
     env:
-      proxyLabel: v33
+      proxyLabel: v43
   UG1:
     script: DeployUpgradeableCounterProxy
     deps:
       - UG2
     env:
-      proxyLabel: v34
+      proxyLabel: v44
   UG2:
     script: DeployUpgradeableCounterProxy
     env:
-      proxyLabel: v35
+      proxyLabel: v55
   
   
 
