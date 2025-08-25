@@ -16,7 +16,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pelletier/go-toml/v2"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/dev"
+	"github.com/trebuchet-org/treb-cli/pkg/anvil"
 )
 
 // TestContext represents an isolated test environment
@@ -187,21 +187,21 @@ func (p *TestContextPool) createContext() (*TestContext, error) {
 	node2Name := fmt.Sprintf("anvil-31338-%s", ctx.ID)
 
 	// Start first node (quietly)
-	if err := dev.StartAnvilInstance(node1Name, fmt.Sprintf("%d", port1), "31337"); err != nil {
+	if err := anvil.StartAnvilInstance(node1Name, fmt.Sprintf("%d", port1), "31337"); err != nil {
 		return nil, fmt.Errorf("failed to start anvil node 1: %w", err)
 	}
 	ctx.AnvilNodes["anvil-31337"] = &AnvilNode{
-		AnvilInstance: dev.NewAnvilInstance(node1Name, fmt.Sprintf("%d", port1)).WithChainID("31337"),
+		AnvilInstance: anvil.NewAnvilInstance(node1Name, fmt.Sprintf("%d", port1)).WithChainID("31337"),
 		URL:           fmt.Sprintf("http://127.0.0.1:%d", port1),
 	}
 
 	// Start second node (quietly)
-	if err := dev.StartAnvilInstance(node2Name, fmt.Sprintf("%d", port2), "31338"); err != nil {
-		dev.StopAnvilInstance(node1Name, fmt.Sprintf("%d", port1))
+	if err := anvil.StartAnvilInstance(node2Name, fmt.Sprintf("%d", port2), "31338"); err != nil {
+		anvil.StopAnvilInstance(node1Name, fmt.Sprintf("%d", port1))
 		return nil, fmt.Errorf("failed to start anvil node 2: %w", err)
 	}
 	ctx.AnvilNodes["anvil-31338"] = &AnvilNode{
-		AnvilInstance: dev.NewAnvilInstance(node2Name, fmt.Sprintf("%d", port2)).WithChainID("31338"),
+		AnvilInstance: anvil.NewAnvilInstance(node2Name, fmt.Sprintf("%d", port2)).WithChainID("31338"),
 		URL:           fmt.Sprintf("http://127.0.0.1:%d", port2),
 	}
 
@@ -376,7 +376,7 @@ func (ctx *TestContext) Clean() error {
 func (ctx *TestContext) Cleanup() {
 	// Stop anvil nodes
 	for name, node := range ctx.AnvilNodes {
-		dev.StopAnvilInstance(node.Name, node.Port)
+		anvil.StopAnvilInstance(node.Name, node.Port)
 		delete(ctx.AnvilNodes, name)
 	}
 
@@ -637,7 +637,7 @@ func startAnvilQuietly(name, port, chainID string) error {
 	os.Stdout = w
 
 	// Start anvil
-	err := dev.StartAnvilInstance(name, port, chainID)
+	err := anvil.StartAnvilInstance(name, port, chainID)
 
 	// Restore stdout
 	w.Close()

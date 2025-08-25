@@ -10,12 +10,12 @@ import (
 	"strings"
 
 	"github.com/pelletier/go-toml/v2"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/dev"
+	"github.com/trebuchet-org/treb-cli/pkg/anvil"
 )
 
-// AnvilNode wraps dev.AnvilInstance with additional test-specific data
+// AnvilNode wraps anvil.AnvilInstance with additional test-specific data
 type AnvilNode struct {
-	*dev.AnvilInstance
+	*anvil.AnvilInstance
 	URL string
 }
 
@@ -78,7 +78,7 @@ func NewAnvilManager() (*AnvilManager, error) {
 			}
 
 			am.nodes[name] = &AnvilNode{
-				AnvilInstance: dev.NewAnvilInstance(name, port).WithChainID(chainID),
+				AnvilInstance: anvil.NewAnvilInstance(name, port).WithChainID(chainID),
 				URL:           endpoint,
 			}
 		}
@@ -90,18 +90,18 @@ func NewAnvilManager() (*AnvilManager, error) {
 // StartAll starts all anvil nodes
 func (am *AnvilManager) StartAll() error {
 	for _, node := range am.nodes {
-		if err := dev.StartAnvilInstance(node.Name, node.Port, node.ChainID); err != nil {
+		if err := anvil.StartAnvilInstance(node.Name, node.Port, node.ChainID); err != nil {
 			return fmt.Errorf("failed to start %s: %w", node.Name, err)
 		}
 	}
-	// CreateX is deployed automatically by dev.StartAnvilInstance
+	// CreateX is deployed automatically by anvil.StartAnvilInstance
 	return nil
 }
 
 // StopAll stops all anvil nodes
 func (am *AnvilManager) StopAll() {
 	for _, node := range am.nodes {
-		if err := dev.StopAnvilInstance(node.Name, node.Port); err != nil {
+		if err := anvil.StopAnvilInstance(node.Name, node.Port); err != nil {
 			fmt.Printf("Failed to stop %s: %v", node.Name, err)
 		}
 	}

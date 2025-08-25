@@ -10,8 +10,8 @@ import (
 	"github.com/trebuchet-org/treb-cli/cli/pkg/script/display"
 )
 
-var orchestrateCmd = &cobra.Command{
-	Use:   "orchestrate <orchestration-file>",
+var composeCmd = &cobra.Command{
+	Use:   "compose <compose-file>",
 	Short: "Execute orchestrated deployments from a YAML configuration",
 	Long: `Execute multiple deployment scripts in dependency order based on a YAML configuration file.
 
@@ -40,13 +40,13 @@ Example orchestration file (deploy.yaml):
 
 This will execute: Broker → Tokens → Reserve → SortedOracles`,
 	Example: `  # Execute orchestration from YAML file
-  treb orchestrate deploy.yaml
+  treb compose protocol.yaml
 
   # Execute with specific network and dry run
-  treb orchestrate deploy.yaml --network sepolia --dry-run
+  treb compose protocol.yaml --network sepolia --dry-run
 
   # Execute with debug output
-  treb orchestrate deploy.yaml --debug --verbose`,
+  treb compose protocol.yaml --debug`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		orchestrationFile := args[0]
@@ -124,15 +124,15 @@ This will execute: Broker → Tokens → Reserve → SortedOracles`,
 }
 
 func init() {
-	rootCmd.AddCommand(orchestrateCmd)
+	rootCmd.AddCommand(composeCmd)
 
 	// Network and namespace flags
-	orchestrateCmd.Flags().StringP("network", "n", "", "Network to deploy to (local, sepolia, mainnet, etc.)")
-	orchestrateCmd.Flags().String("namespace", "", "Deployment namespace (default, staging, production) [also sets foundry profile]")
+	composeCmd.Flags().StringP("network", "n", "", "Network to deploy to (local, sepolia, mainnet, etc.)")
+	composeCmd.Flags().String("namespace", "", "Deployment namespace (default, staging, production) [also sets foundry profile]")
 
 	// Execution flags
-	orchestrateCmd.Flags().Bool("dry-run", false, "Perform a dry run without broadcasting transactions")
-	orchestrateCmd.Flags().Bool("debug", false, "Enable debug mode (shows forge output and saves to file)")
-	orchestrateCmd.Flags().Bool("debug-json", false, "Enable JSON debug mode (shows raw JSON output)")
-	orchestrateCmd.Flags().BoolP("verbose", "v", false, "Show extra detailed information for events and transactions")
+	composeCmd.Flags().Bool("dry-run", false, "Perform a dry run without broadcasting transactions")
+	composeCmd.Flags().Bool("debug", false, "Enable debug mode (shows forge output and saves to file)")
+	composeCmd.Flags().Bool("debug-json", false, "Enable JSON debug mode (shows raw JSON output)")
+	composeCmd.Flags().BoolP("verbose", "v", false, "Show extra detailed information for events and transactions")
 }

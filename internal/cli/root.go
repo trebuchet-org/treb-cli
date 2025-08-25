@@ -85,10 +85,6 @@ smart contract deployments using CreateX factory contracts.`,
 		Title: "Deployment Commands",
 	})
 
-	// Add deployment commands group
-	deploymentCmd := newDeploymentCommands()
-	rootCmd.AddCommand(deploymentCmd)
-
 	// Add main commands
 	initCmd := NewInitCmd()
 	initCmd.GroupID = "main"
@@ -148,17 +144,6 @@ smart contract deployments using CreateX factory contracts.`,
 	rootCmd.AddCommand(versionCmd)
 
 	return rootCmd
-}
-
-// newDeploymentCommands creates the deployment command group
-func newDeploymentCommands() *cobra.Command {
-	deployCmd := &cobra.Command{
-		Use:   "deploy",
-		Short: "Deployment commands",
-		Long:  "Commands for managing smart contract deployments",
-	}
-
-	return deployCmd
 }
 
 // getApp retrieves the app instance from the command context

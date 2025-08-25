@@ -1,0 +1,150 @@
+=== cmd 0: [compose compose.yaml --network anvil-31337] ===
+
+🎯 Orchestrating Protocol
+📋 Execution plan: 3 components
+
+📋 Execution Plan:
+──────────────────────────────────────────────────
+1. UG2 → DeployUpgradeableCounterProxy
+   Env: map[proxyLabel:v55]
+2. UG1 → DeployUpgradeableCounterProxy (depends on: [UG2])
+   Env: map[proxyLabel:v44]
+3. UG0 → DeployUpgradeableCounterProxy (depends on: [UG1 UG2])
+   Env: map[proxyLabel:v43]
+
+[1/3] Executing UG2
+──────────────────────────────────────────────────────────────────────
+
+🚀 Running Deployment Script
+──────────────────────────────────────────────────
+  Script:    DeployUpgradeableCounterProxy.s.sol
+  Network:   anvil-31337
+  Namespace: default
+  Mode:      LIVE
+  Env Vars:  proxyLabel=v55
+──────────────────────────────────────────────────
+
+🔄 Transactions:
+──────────────────────────────────────────────────
+
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ create2(16 bytes)
+│  └─ [return] 0xE38BB57A6D1Fb990963c7cAA4E21aa5E255f336F
+├─ Create3ProxyContractCreation(newContract: 0xE38B...336F, salt: 0x16077564...)
+├─ 0xE38BB57A...::0x60806040...
+│  └─ 🚀 new UpgradeableCounter()
+│     └─ [return] 0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903
+└─ ContractCreation(newContract: UpgradeableCounter: [0xD63F2d...)
+└─ Tx: 0x<HASH> | Block: 1 | Gas: 488602
+
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ create2(16 bytes)
+│  └─ [return] 0xe3CaE8B347e1b17EAD8755b3A54bD7Dc233c5D39
+├─ Create3ProxyContractCreation(newContract: 0xe3Ca...5D39, salt: 0xadcd9453...)
+├─ 0xe3CaE8B3...::0x60806040...
+│  └─ 🚀 new ERC1967Proxy(
+│     │    implementation: 0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903,
+│     │    _data: 0xc4d66de8000000000000000000000000...(36 bytes)
+│     │  )
+│     ├─ Upgraded(implementation: UpgradeableCounter: [0xD63F2d...)
+│     ├─ UpgradeableCounter::initialize(0x0000...0000) (delegate)
+│     └─ [return] 0xf682AAE686865549945b711dE6273E20d8f4d199
+└─ ContractCreation(newContract: ERC1967Proxy: [0xf682AAE68686...)
+└─ Tx: 0x<HASH> | Block: 2 | Gas: 219319
+
+📦 Deployment Summary:
+──────────────────────────────────────────────────
+UpgradeableCounter at 0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903
+ERC1967Proxy[UpgradeableCounter] at 0xf682AAE686865549945b711dE6273E20d8f4d199
+
+
+📝 Script Logs:
+────────────────────────────────────────
+  Registry: failed to load registry from .treb/registry.json
+
+✓ Updated registry for anvil-31337 network in namespace default
+
+[2/3] Executing UG1
+──────────────────────────────────────────────────────────────────────
+
+🚀 Running Deployment Script
+──────────────────────────────────────────────────
+  Script:    DeployUpgradeableCounterProxy.s.sol
+  Network:   anvil-31337
+  Namespace: default
+  Mode:      LIVE
+  Env Vars:  proxyLabel=v44
+──────────────────────────────────────────────────
+
+🔄 Transactions:
+──────────────────────────────────────────────────
+
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ create2(16 bytes)
+│  └─ [return] 0x908f9456b2c922E016Fc0034125757454Aa44668
+├─ Create3ProxyContractCreation(newContract: 0x908f...4668, salt: 0xc0cd5941...)
+├─ 0x908f9456...::0x60806040...
+│  └─ 🚀 new ERC1967Proxy(
+│     │    implementation: 0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903,
+│     │    _data: 0xc4d66de8000000000000000000000000...(36 bytes)
+│     │  )
+│     ├─ Upgraded(implementation: 0xD63F...3903)
+│     ├─ 0xD63F2d37...::initialize(0x0000...0000) (delegate)
+│     └─ [return] 0xB530F60bd75bfe198Cd1274978505cA9A465A8ea
+└─ ContractCreation(newContract: ERC1967Proxy: [0xB530F60bd75b...)
+└─ Tx: 0x<HASH> | Block: 3 | Gas: 219307
+
+⚠️ Deployment Collisions Detected:
+──────────────────────────────────────────────────
+UpgradeableCounter already deployed at 0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903
+Note: These contracts were already deployed and deployment was skipped.
+
+
+📦 Deployment Summary:
+──────────────────────────────────────────────────
+ERC1967Proxy at 0xB530F60bd75bfe198Cd1274978505cA9A465A8ea
+
+✓ Updated registry for anvil-31337 network in namespace default
+
+[3/3] Executing UG0
+──────────────────────────────────────────────────────────────────────
+
+🚀 Running Deployment Script
+──────────────────────────────────────────────────
+  Script:    DeployUpgradeableCounterProxy.s.sol
+  Network:   anvil-31337
+  Namespace: default
+  Mode:      LIVE
+  Env Vars:  proxyLabel=v43
+──────────────────────────────────────────────────
+
+🔄 Transactions:
+──────────────────────────────────────────────────
+
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ create2(16 bytes)
+│  └─ [return] 0xCCfdcEB1906df726302da80B89c82a7ea0d995d9
+├─ Create3ProxyContractCreation(newContract: 0xCCfd...95d9, salt: 0x2f54c989...)
+├─ 0xCCfdcEB1...::0x60806040...
+│  └─ 🚀 new ERC1967Proxy(
+│     │    implementation: 0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903,
+│     │    _data: 0xc4d66de8000000000000000000000000...(36 bytes)
+│     │  )
+│     ├─ Upgraded(implementation: 0xD63F...3903)
+│     ├─ 0xD63F2d37...::initialize(0x0000...0000) (delegate)
+│     └─ [return] 0x66093d5B1C6299F2058181657897fA22129FE1b4
+└─ ContractCreation(newContract: ERC1967Proxy: [0x66093d5B1C62...)
+└─ Tx: 0x<HASH> | Block: 4 | Gas: 219319
+
+⚠️ Deployment Collisions Detected:
+──────────────────────────────────────────────────
+UpgradeableCounter already deployed at 0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903
+Note: These contracts were already deployed and deployment was skipped.
+
+
+📦 Deployment Summary:
+──────────────────────────────────────────────────
+ERC1967Proxy at 0x66093d5B1C6299F2058181657897fA22129FE1b4
+
+✓ Updated registry for anvil-31337 network in namespace default
+✓ 🎉 Successfully orchestrated Protocol deployment

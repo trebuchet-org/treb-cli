@@ -271,7 +271,7 @@ func (tr *TransactionRenderer) displayLogInTree(log *forge.LogEntry, address com
 
 	decodedLog, err := tr.eventDecoder.DecodeEvent(log, address)
 	if err != nil {
-		tr.log.Warn("Could not decode log", "error", err)
+		tr.log.Debug("Could not decode log", "error", err)
 	}
 	// Format the event
 	eventStr := tr.formatLogEvent(decodedLog)
@@ -324,7 +324,7 @@ func (tr *TransactionRenderer) formatLogEvent(log *forge.LogEntry) string {
 	tr.log.Debug("Decoding event", "log", log)
 
 	// Check if forge decoded it
-	if log.Decoded.Name != "" {
+	if log != nil && log.Decoded.Name != "" {
 		eventStr = cyan.Sprintf(log.Decoded.Name)
 
 		// Add args

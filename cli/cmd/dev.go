@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/trebuchet-org/treb-cli/cli/pkg/dev"
+	"github.com/trebuchet-org/treb-cli/pkg/anvil"
 )
 
 var devCmd = &cobra.Command{
@@ -25,7 +25,7 @@ var debugAnvilStartCmd = &cobra.Command{
 		name, _ := cmd.Flags().GetString("name")
 		port, _ := cmd.Flags().GetString("port")
 		chainID, _ := cmd.Flags().GetString("chain-id")
-		if err := dev.StartAnvilInstance(name, port, chainID); err != nil {
+		if err := anvil.StartAnvilInstance(name, port, chainID); err != nil {
 			checkError(err)
 		}
 	},
@@ -38,7 +38,7 @@ var debugAnvilStopCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		name, _ := cmd.Flags().GetString("name")
 		port, _ := cmd.Flags().GetString("port")
-		if err := dev.StopAnvilInstance(name, port); err != nil {
+		if err := anvil.StopAnvilInstance(name, port); err != nil {
 			checkError(err)
 		}
 	},
@@ -52,7 +52,7 @@ var debugAnvilRestartCmd = &cobra.Command{
 		name, _ := cmd.Flags().GetString("name")
 		port, _ := cmd.Flags().GetString("port")
 		chainID, _ := cmd.Flags().GetString("chain-id")
-		if err := dev.RestartAnvilInstance(name, port, chainID); err != nil {
+		if err := anvil.RestartAnvilInstance(name, port, chainID); err != nil {
 			checkError(err)
 		}
 	},
@@ -65,7 +65,7 @@ var debugAnvilLogsCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		name, _ := cmd.Flags().GetString("name")
 		port, _ := cmd.Flags().GetString("port")
-		if err := dev.ShowAnvilLogsInstance(name, port); err != nil {
+		if err := anvil.ShowAnvilLogsInstance(name, port); err != nil {
 			checkError(err)
 		}
 	},
@@ -78,7 +78,7 @@ var debugAnvilStatusCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		name, _ := cmd.Flags().GetString("name")
 		port, _ := cmd.Flags().GetString("port")
-		if err := dev.ShowAnvilStatusInstance(name, port); err != nil {
+		if err := anvil.ShowAnvilStatusInstance(name, port); err != nil {
 			checkError(err)
 		}
 	},

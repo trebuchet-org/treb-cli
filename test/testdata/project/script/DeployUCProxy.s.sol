@@ -23,7 +23,6 @@ contract DeployerUCProxy is TrebScript {
     using Deployer for Deployer.Deployment;
 
     /**
-     * @custom:env {sender} deployer The sender which will deploy the contract
      * @custom:env {string:optional} label Label for the proxy and implementation
      * @custom:env {deployment:optional} implementation Implementation to use for the proxy
      * @custom:senders anvil
@@ -31,15 +30,11 @@ contract DeployerUCProxy is TrebScript {
     function run() public broadcast {
         string memory label = vm.envOr("label", string(""));
         address implementation = vm.envOr("implementation", address(0));
-        Senders.Sender storage deployer = sender(
-            vm.envOr("deployer", string("deployer"))
-        );
-        address myToken = lookup("MyToken:test");
+        Senders.Sender storage deployer = sender("anvil");
 
         if (implementation == address(0)) {
             implementation = deployer
                 .create3("src/UpgradeableCounter.sol:UpgradeableCounter")
-                .setLabel(label)
                 .deploy();
         }
 
@@ -53,16 +48,7 @@ contract DeployerUCProxy is TrebScript {
             )
         );
 
-        deployer.execute(
-            Transaction({
-                to: address(proxy),
-                data: abi.encodeWithSelector(
-                    UpgradeableCounter.increment.selector
-                ),
-                value: 0
-            })
-        );
-
-        // UpgradeableCounter(deployer.harness(proxy)).increment();
+        UpgradeableCounter uc = UpgradeableCounter(deployer.harness(proxy));
+        uc.increment();
     }
 }

@@ -227,7 +227,8 @@ func (i *Repository) GetContractByArtifact(ctx context.Context, artifact string)
 	defer i.mu.RUnlock()
 
 	for _, contract := range i.contracts {
-		if fmt.Sprintf("%s:%s", contract.Path, contract.Name) == artifact {
+		fullArtifact := fmt.Sprintf("%s:%s", contract.Path, contract.Name)
+		if fullArtifact == artifact || contract.Name == artifact {
 			return contract
 		}
 	}

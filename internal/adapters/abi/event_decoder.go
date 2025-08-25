@@ -59,11 +59,7 @@ func (e *EventDecoder) DecodeEvent(log *forge.LogEntry, emitter common.Address) 
 	// Try to find ABI for the emitter address
 	abi, err := e.abiResolver.FindByAddress(context.Background(), emitter)
 	if err != nil {
-		return nil, err
-	}
-	if abi == nil {
-		e.log.Debug("failed to resolve ABI for address", "address", emitter.Hex())
-		return log, nil
+		return log, err
 	}
 	return e.DecodeEventFromABI(log, abi)
 }
