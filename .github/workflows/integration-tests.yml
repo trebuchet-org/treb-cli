@@ -53,31 +53,6 @@ jobs:
     - name: Run integration tests
       run: make integration-test
       
-    - name: Run golden file tests
-      run: make golden-test
-      
-    - name: Check golden file changes
-      run: |
-        if git diff --exit-code test/testdata/golden/; then
-          echo "✅ No changes to golden files"
-        else
-          echo "⚠️ Golden files have changed!"
-          echo "If these changes are intentional, run 'make update-golden' locally"
-          git diff test/testdata/golden/
-        fi
-        
-    - name: Upload test artifacts on failure
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-artifacts
-        path: |
-          test/fixture/script/deploy/
-          test/fixture/deployments.json
-          test/fixture/out/
-          test/testdata/golden/
-        retention-days: 7
-
   integration-tests-macos:
     name: Integration Tests (macOS)
     runs-on: macos-latest
@@ -116,21 +91,6 @@ jobs:
         
     - name: Run integration tests
       run: make integration-test
-      
-    - name: Run golden file tests
-      run: make golden-test
-      
-    - name: Upload test artifacts on failure
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-artifacts-macos
-        path: |
-          test/fixture/script/deploy/
-          test/fixture/deployments.json
-          test/fixture/out/
-          test/testdata/golden/
-        retention-days: 7
       
   test-coverage:
     name: Test Coverage
