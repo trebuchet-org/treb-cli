@@ -175,7 +175,7 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 
 	// Wait for command to finish
 	waitErr := cmd.Wait()
-	processingErr, _ := <-errChan
+	processingErr := <-errChan
 
 	if processingErr != nil {
 		result.Error = fmt.Errorf("output processing error: %w", processingErr)
