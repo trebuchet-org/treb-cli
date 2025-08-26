@@ -63,7 +63,7 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 	f.log.Debug("Running forge script", "args", args, "env", env)
 
 	// Execute the script
-	cmd := exec.Command("forge", args...)
+	cmd := exec.CommandContext(ctx, "forge", args...)
 	cmd.Dir = f.projectRoot
 	cmd.Env = append(os.Environ(), env...)
 
@@ -172,22 +172,17 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 		}
 	}
 
-	// Check for processing errors
-	select {
-	case err := <-errChan:
-		if err != nil {
-			result.Error = fmt.Errorf("output processing error: %w", err)
-		}
-	default:
+	// Wait for command to finish
+	waitErr := cmd.Wait()
+	processingErr := <-errChan
+
+	if processingErr != nil {
+		result.Error = fmt.Errorf("output processing error: %w", processingErr)
+	} else if waitErr != nil {
+		result.Error = fmt.Errorf("forge script failed: %w", waitErr)
 	}
 
-	// Wait for command to finish
-	if err := cmd.Wait(); err != nil {
-		result.Success = false
-		if result.Error == nil {
-			result.Error = fmt.Errorf("forge script failed: %w", err)
-		}
-	}
+	result.Success = (result.Error == nil)
 
 	// Set results
 	result.RawOutput = outputBuffer.Bytes()
