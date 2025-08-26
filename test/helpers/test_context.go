@@ -413,7 +413,10 @@ func createLightweightWorkspace(src, dst string) error {
 			if err := copyDir(srcPath, dstPath); err != nil {
 				return fmt.Errorf("failed to copy src directory: %w", err)
 			}
-
+		case ".env.example":
+			if err := copyFile(srcPath, filepath.Join(dst, ".env")); err != nil {
+				return fmt.Errorf("failed to copy .env file: %w", err)
+			}
 		default:
 			// Skip directories that should be created empty
 			testDirs := []string{".treb", "broadcast", "cache", "out"}
