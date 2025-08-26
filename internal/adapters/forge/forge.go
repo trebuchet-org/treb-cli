@@ -134,7 +134,6 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 		TraceOutputs: []forge.TraceOutput{},
 	}
 
-	waitErr := cmd.Wait()
 	for entity := range entityChan {
 		switch entity.Type {
 		case "ScriptOutput":
@@ -173,14 +172,20 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 		}
 	}
 
-	processingErr := <-errChan
-	if processingErr != nil {
-		result.Error = fmt.Errorf("output processing error: %w", processingErr)
-	} else if waitErr != nil {
-		result.Error = fmt.Errorf("forge script failed: %w", waitErr)
+	select {
+	case err := <-errChan:
+		if err != nil {
+			result.Error = fmt.Errorf("output processing error: %w", err)
+		}
+	default:
 	}
 
-	result.Success = (result.Error == nil)
+	if err := cmd.Wait(); err != nil {
+		result.Success = false
+		if result.Error != nil {
+			result.Error = fmt.Errorf("forge script failed: %w", err)
+		}
+	}
 
 	// Set results
 	result.RawOutput = outputBuffer.Bytes()
