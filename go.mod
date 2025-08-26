@@ -1,8 +1,8 @@
 module github.com/trebuchet-org/treb-cli
 
-go 1.24
+go 1.23.0
 
-toolchain go1.24.6
+toolchain go1.23.9
 
 require (
 	github.com/BurntSushi/toml v1.5.0
