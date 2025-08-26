@@ -80,10 +80,6 @@ smart contract deployments using CreateX factory contracts.`,
 		ID:    "management",
 		Title: "Management Commands",
 	})
-	rootCmd.AddGroup(&cobra.Group{
-		ID:    "deployment",
-		Title: "Deployment Commands",
-	})
 
 	// Add main commands
 	initCmd := NewInitCmd()
