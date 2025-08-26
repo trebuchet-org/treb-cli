@@ -176,8 +176,8 @@ jobs:
           body: |
             # Nightly Build
             
-            **Build Date:** ${{ steps.version.outputs.date }}
-            **Commit:** [`${{ steps.version.outputs.commit }}`](https://github.com/${{ github.repository }}/commit/${{ steps.version.outputs.commit }})
+            **Build Date:** ${{ steps.build-info.outputs.date }}
+            **Commit:** [`${{ steps.build-info.outputs.commit }}`](https://github.com/${{ github.repository }}/commit/${{ steps.version.outputs.commit }})
             
             This is an automated nightly build from the main branch. Use at your own risk.
             

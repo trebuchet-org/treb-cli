@@ -63,7 +63,7 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 	f.log.Debug("Running forge script", "args", args, "env", env)
 
 	// Execute the script
-	cmd := exec.Command("forge", args...)
+	cmd := exec.CommandContext(ctx, "forge", args...)
 	cmd.Dir = f.projectRoot
 	cmd.Env = append(os.Environ(), env...)
 
@@ -173,21 +173,16 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 	}
 
 	// Check for processing errors
-	select {
-	case err := <-errChan:
-		if err != nil {
-			result.Error = fmt.Errorf("output processing error: %w", err)
-		}
-	default:
+	if err := <-errChan; err != nil {
+		result.Error = fmt.Errorf("output processing error: %w", err)
 	}
 
 	// Wait for command to finish
-	if err := cmd.Wait(); err != nil {
-		result.Success = false
-		if result.Error == nil {
-			result.Error = fmt.Errorf("forge script failed: %w", err)
-		}
+	waitErr := cmd.Wait()
+	if waitErr != nil && result.Error == nil {
+		result.Error = fmt.Errorf("forge script failed: %w", waitErr)
 	}
+	result.Success = (result.Error == nil)
 
 	// Set results
 	result.RawOutput = outputBuffer.Bytes()
@@ -213,16 +208,7 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 func (f *ForgeAdapter) buildArgs(config usecase.RunScriptConfig) []string {
 	args := []string{"script", config.Script.Path, "--ffi"}
 
-	// // Add function signature if specified
-	// if opts.FunctionName != "" {
-	// 	args = append(args, "--sig", opts.FunctionName)
-	// 	if len(opts.FunctionArgs) > 0 {
-	// 		args = append(args, opts.FunctionArgs...)
-	// 	}
-	// }
-
 	// Network configuration
-	// Use RPC URL if available, otherwise use network name
 	args = append(args, "--rpc-url", config.Network.Name)
 
 	// Broadcast/dry run
