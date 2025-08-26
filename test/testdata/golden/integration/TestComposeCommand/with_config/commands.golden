@@ -1,0 +1,174 @@
+=== cmd 0: [compose compose.yaml --network anvil-31337] ===
+
+🎯 Orchestrating Protocol
+📋 Execution plan: 3 components
+
+📋 Execution Plan:
+──────────────────────────────────────────────────
+1. UG2 → DeployUpgradeableCounterProxy
+   Env: map[proxyLabel:v55]
+2. UG1 → DeployUpgradeableCounterProxy (depends on: [UG2])
+   Env: map[proxyLabel:v44]
+3. UG0 → DeployUpgradeableCounterProxy (depends on: [UG1 UG2])
+   Env: map[proxyLabel:v43]
+
+
+[1/3] Starting UG2
+
+🚀 Running Deployment Script
+──────────────────────────────────────────────────
+  Script:    DeployUpgradeableCounterProxy
+  Network:   anvil-31337 (31337)
+  Namespace: default
+  Mode:      LIVE
+  Env Vars:  proxyLabel=v55
+  Senders:   [anvil]
+──────────────────────────────────────────────────
+✓ Step completed successfully
+  Created 2 deployment(s)
+
+🔄 Transactions:
+──────────────────────────────────────────────────
+
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ new 0xE38BB57A6D1Fb990963c7cAA4E21aa5E255f336F()
+│  └─ [return] 0xE38BB57A6D1Fb990963c7cAA4E21aa5E255f336F
+├─ Create3ProxyContractCreation(newContract: 0xE38B...336F, salt: 0x16077564...)
+├─ 0xE38BB57A6D1Fb990963c7cAA4E21aa5E255f336F::unknown()
+│  └─ 🚀 new UpgradeableCounter()
+│     └─ [return] 0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903
+└─ ContractCreation(newContract: UpgradeableCounter: [0xD63F2d...)
+   Tx: 0x<HASH> | Block: 1 | Gas: 476959
+
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ new 0xf9dEc8a180913A52DacBFA2B2F499f56c8bF6B6c()
+│  └─ [return] 0xf9dEc8a180913A52DacBFA2B2F499f56c8bF6B6c
+├─ Create3ProxyContractCreation(newContract: 0xf9dE...6B6c, salt: 0x5974aa56...)
+├─ 0xf9dEc8a180913A52DacBFA2B2F499f56c8bF6B6c::unknown()
+│  └─ 🚀 new ERC1967Proxy(
+│     │    implementation:: 0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903,
+│     │    _data:: 0xc4d66de8000000000000000000000000...(36 bytes)
+│     │  )
+│     ├─ Upgraded(implementation: UpgradeableCounter: [0xD63F2d...)
+│     ├─ UpgradeableCounter::initialize(initialOwner: 0x0000...0000)
+│     └─ [return] 0xc265543Dbc777F9D29FbF9EA9E063B962dd447b9
+└─ ContractCreation(newContract: ERC1967Proxy: [0xc265543Dbc77...)
+   Tx: 0x<HASH> | Block: 2 | Gas: 207463
+
+📦 Deployment Summary:
+──────────────────────────────────────────────────
+UpgradeableCounter at 0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903
+ERC1967Proxy:v55[UpgradeableCounter] at 0xc265543Dbc777F9D29FbF9EA9E063B962dd447b9
+
+
+📝 Script Logs:
+────────────────────────────────────────
+  Registry: failed to load registry from .treb/registry.json
+
+✓ Updated registry for anvil-31337 network in namespace default
+
+[2/3] Starting UG1
+
+🚀 Running Deployment Script
+──────────────────────────────────────────────────
+  Script:    DeployUpgradeableCounterProxy
+  Network:   anvil-31337 (31337)
+  Namespace: default
+  Mode:      LIVE
+  Env Vars:  proxyLabel=v44
+  Senders:   [anvil]
+──────────────────────────────────────────────────
+✓ Step completed successfully
+  Created 1 deployment(s)
+
+🔄 Transactions:
+──────────────────────────────────────────────────
+
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ new 0xbf3bf41b3169CFa1e6bB581b862380166C2b4B6f()
+│  └─ [return] 0xbf3bf41b3169CFa1e6bB581b862380166C2b4B6f
+├─ Create3ProxyContractCreation(newContract: 0xbf3b...4B6f, salt: 0x7fab4139...)
+├─ 0xbf3bf41b3169CFa1e6bB581b862380166C2b4B6f::unknown()
+│  └─ 🚀 new ERC1967Proxy(
+│     │    implementation:: 0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903,
+│     │    _data:: 0xc4d66de8000000000000000000000000...(36 bytes)
+│     │  )
+│     ├─ Upgraded(implementation: 0xD63F...3903)
+│     ├─ UpgradeableCounter::initialize(initialOwner: 0x0000...0000)
+│     └─ [return] 0xe2Fa450fD6b49c41aFAB7cdA17105e95D1dd22eA
+└─ ContractCreation(newContract: ERC1967Proxy: [0xe2Fa450fD6b4...)
+   Tx: 0x<HASH> | Block: 3 | Gas: 207463
+
+⚠️ Deployment Collisions Detected:
+──────────────────────────────────────────────────
+UpgradeableCounter already deployed at 0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903
+    Entropy: default/src/UpgradeableCounter.sol:UpgradeableCounter
+Note: These contracts were already deployed and deployment was skipped.
+
+
+📦 Deployment Summary:
+──────────────────────────────────────────────────
+ERC1967Proxy:v44[UpgradeableCounter] at 0xe2Fa450fD6b49c41aFAB7cdA17105e95D1dd22eA
+
+
+📝 Script Logs:
+────────────────────────────────────────
+  Registry: failed to load registry from .treb/registry.json
+
+✓ Updated registry for anvil-31337 network in namespace default
+
+[3/3] Starting UG0
+
+🚀 Running Deployment Script
+──────────────────────────────────────────────────
+  Script:    DeployUpgradeableCounterProxy
+  Network:   anvil-31337 (31337)
+  Namespace: default
+  Mode:      LIVE
+  Env Vars:  proxyLabel=v43
+  Senders:   [anvil]
+──────────────────────────────────────────────────
+✓ Step completed successfully
+  Created 1 deployment(s)
+
+🔄 Transactions:
+──────────────────────────────────────────────────
+
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ new 0x792C324011262B124d8EBA14935B023B42c1c09d()
+│  └─ [return] 0x792C324011262B124d8EBA14935B023B42c1c09d
+├─ Create3ProxyContractCreation(newContract: 0x792C...c09d, salt: 0xabf168a3...)
+├─ 0x792C324011262B124d8EBA14935B023B42c1c09d::unknown()
+│  └─ 🚀 new ERC1967Proxy(
+│     │    implementation:: 0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903,
+│     │    _data:: 0xc4d66de8000000000000000000000000...(36 bytes)
+│     │  )
+│     ├─ Upgraded(implementation: 0xD63F...3903)
+│     ├─ UpgradeableCounter::initialize(initialOwner: 0x0000...0000)
+│     └─ [return] 0x3724061C024d171eF17Cb398825B06326b0c168b
+└─ ContractCreation(newContract: ERC1967Proxy: [0x3724061C024d...)
+   Tx: 0x<HASH> | Block: 4 | Gas: 207463
+
+⚠️ Deployment Collisions Detected:
+──────────────────────────────────────────────────
+UpgradeableCounter already deployed at 0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903
+    Entropy: default/src/UpgradeableCounter.sol:UpgradeableCounter
+Note: These contracts were already deployed and deployment was skipped.
+
+
+📦 Deployment Summary:
+──────────────────────────────────────────────────
+ERC1967Proxy:v43[UpgradeableCounter] at 0x3724061C024d171eF17Cb398825B06326b0c168b
+
+
+📝 Script Logs:
+────────────────────────────────────────
+  Registry: failed to load registry from .treb/registry.json
+
+✓ Updated registry for anvil-31337 network in namespace default
+══════════════════════════════════════════════════════════════════════
+🎉 Successfully orchestrated Protocol deployment
+
+📊 Summary:
+  • Steps executed: 3/3
+  • Total deployments: 4

@@ -1,0 +1,41 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+test = "test"
+script = "script"
+optimizer_runs = 0
+fs_permissions = [{ access = "read-write", path = "./" }]
+bytecode_hash = "none"
+cbor_metadata = false
+
+[rpc_endpoints]
+celo-alfajores = "https://alfajores-forno.celo-testnet.org"
+polygon = "https://polygon-rpc.com"
+celo = "https://forno.celo.org"
+anvil-31337 = "http://localhost:8545"
+anvil-31338 = "http://localhost:9545"
+
+[etherscan]
+sepolia = { key = "${ETHERSCAN_API_KEY}" }
+celo-alfajores = { key = "${ETHERSCAN_API_KEY}", chain = 44787 }
+celo = { key = "${ETHERSCAN_API_KEY}", chain = 42220 }
+
+[profile.default.treb.senders.anvil]
+type = "private_key" # avil user 0
+private_key = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+
+[profile.default.treb.senders.safe]
+type = "safe"
+safe = "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
+signer = "anvil"
+
+[profile.production.treb.senders.anvil]
+type = "private_key" # avil user 0
+private_key = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+
+[profile.production.treb.senders.safe]
+type = "safe"
+safe = "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
+signer = "anvil"
+

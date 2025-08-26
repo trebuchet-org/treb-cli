@@ -1,0 +1,4 @@
+=== cmd 0: [tag Counter --add v<VERSION> --non-interactive] ===
+Error: multiple deployments found matching 'Counter', please be more specific:
+  - default/31337/Counter (chain:31337/default/Counter at 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29)
+  - default/31338/Counter (chain:31338/default/Counter at 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29)

@@ -60,7 +60,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: '1.24.6'
       
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
@@ -92,7 +92,7 @@ jobs:
           make bindings
       
       - name: Get version info
-        id: version
+        id: build-info
         shell: bash
         run: |
           if [[ ${{ github.ref_type }} == "tag" ]]; then
@@ -102,6 +102,7 @@ jobs:
           fi
           echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
           echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+          echo "trebSolCommit=$(cd treb-sol && git rev-parse HEAD)" >> $GITHUB_OUTPUT
       
       - name: Build binary
         env:
@@ -111,7 +112,7 @@ jobs:
         shell: bash
         run: |
           go build \
-            -ldflags="-s -w -X main.version=${{ steps.version.outputs.version }} -X main.commit=${{ steps.version.outputs.commit }} -X main.date=${{ steps.version.outputs.date }}" \
+            -ldflags="-s -w -X main.version=${{ steps.build-info.outputs.version }} -X main.commit=${{ steps.build-info.outputs.commit }} -X main.date=${{ steps.build-info.outputs.date }} -X main.trebSolCommit=${{ steps.build-info.outputs.trebSolCommit }}" \
             -o treb${{ matrix.binary_suffix }} \
             ./cli
       
@@ -226,93 +227,3 @@ jobs:
             
             ### Manual installation
             Download the appropriate binary for your platform from the assets below.
-
-  nightly:
-    name: Nightly Build
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
-    
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # Linux builds
-          - goos: linux
-            goarch: amd64
-          - goos: linux
-            goarch: arm64
-          
-          # macOS builds  
-          - goos: darwin
-            goarch: amd64
-          - goos: darwin
-            goarch: arm64
-          
-          # Windows builds
-          - goos: windows
-            goarch: amd64
-            binary_suffix: .exe
-          - goos: windows
-            goarch: arm64
-            binary_suffix: .exe
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.21'
-      
-      - name: Get version info
-        id: version
-        run: |
-          echo "version=nightly-$(date +%Y%m%d)" >> $GITHUB_OUTPUT
-          echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-          echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
-      
-      - name: Build binary
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-          CGO_ENABLED: 0
-        run: |
-          go build \
-            -ldflags="-s -w -X main.version=${{ steps.version.outputs.version }} -X main.commit=${{ steps.version.outputs.commit }} -X main.date=${{ steps.version.outputs.date }}" \
-            -o treb${{ matrix.binary_suffix }} \
-            ./cli
-      
-      - name: Create archive
-        run: |
-          if [[ "${{ matrix.goos }}" == "windows" ]]; then
-            7z a treb_nightly_${{ matrix.goos }}_${{ matrix.goarch }}.zip treb.exe
-          else
-            tar czf treb_nightly_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz treb
-          fi
-      
-      - name: Upload to nightly release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: nightly
-          name: Nightly Build
-          files: treb_nightly_*
-          draft: false
-          prerelease: true
-          body: |
-            # Nightly Build
-            
-            **Build Date:** ${{ steps.version.outputs.date }}
-            **Commit:** ${{ steps.version.outputs.commit }}
-            
-            This is an automated nightly build from the main branch.
-            
-            ## Installation
-            
-            ### Quick install with trebup
-            ```bash
-            curl -fsSL https://raw.githubusercontent.com/trebuchet-org/treb-cli/main/trebup/install | bash
-            trebup install nightly
-            ```

@@ -1,0 +1,15 @@
+{
+  "31337": {
+    "default": {
+      "MessageStorageV08": "0xD35049AdbF890d4F8DA73994172Be764dC150DCc",
+      "StringUtilsV2": "0xab1b5cC40fDa13B869ABBB5a8209dD21a05190a3"
+    }
+  },
+  "31338": {
+    "default": {
+      "Counter": "0x74148047D6bDf624C94eFc07F60cEE7b6052FB29",
+      "Counter:v2": "0xe0c42922eA868803991F2F0E82D77280A790f446",
+      "Counter:v3": "0xb3212624e288499386394b40A0b60c9b8bA9798E"
+    }
+  }
+}

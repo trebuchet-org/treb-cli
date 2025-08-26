@@ -3,21 +3,16 @@ package main
 import (
 	"os"
 
-	"github.com/trebuchet-org/treb-cli/cli/cmd"
+	"github.com/trebuchet-org/treb-cli/internal/cli"
+	"github.com/trebuchet-org/treb-cli/internal/config"
 )
 
-// Version information - set at build time via ldflags
-var (
-	version = "dev"
-	commit  = "unknown"
-	date    = "unknown"
-)
+var version, commit, date, trebSolCommit string
 
 func main() {
-	// Set version info in cmd package
-	cmd.SetVersionInfo(version, commit, date)
-
-	if err := cmd.Execute(); err != nil {
+	config.SetBuildFlags(version, commit, date, trebSolCommit)
+	rootCmd := cli.NewRootCmd()
+	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
 }

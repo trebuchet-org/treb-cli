@@ -1,0 +1,9 @@
+{
+  "31337": {
+    "default": {
+      "Counter": "0x74148047D6bDf624C94eFc07F60cEE7b6052FB29",
+      "MyToken": "0x6c8D83F62F83A8D46F091094BA15B75F35A8E85E",
+      "SimpleStorage": "0x2d99D60F162771aE558c2331769a45d2204128a6"
+    }
+  }
+}

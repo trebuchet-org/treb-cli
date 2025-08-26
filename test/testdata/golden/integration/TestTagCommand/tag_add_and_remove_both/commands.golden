@@ -1,0 +1,2 @@
+=== cmd 0: [tag Counter --add v<VERSION> --remove v<VERSION>] ===
+Error: cannot use --add and --remove together

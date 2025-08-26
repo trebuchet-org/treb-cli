@@ -1,0 +1,13 @@
+{
+  "31337": {
+    "default": {
+      "Counter": "0x74148047D6bDf624C94eFc07F60cEE7b6052FB29"
+    },
+    "production": {
+      "Counter": "0x9526cB2eC6e5b9E38b5A6949543417F84cc878d5"
+    },
+    "staging": {
+      "Counter": "0x144180Ad5257d58F4AB181af127266Ba3F6Aa042"
+    }
+  }
+}

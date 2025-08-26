@@ -1,0 +1,10 @@
+{
+  "31337": {
+    "default": {
+      "ERC1967Proxy:v43": "0x3724061C024d171eF17Cb398825B06326b0c168b",
+      "ERC1967Proxy:v44": "0xe2Fa450fD6b49c41aFAB7cdA17105e95D1dd22eA",
+      "ERC1967Proxy:v55": "0xc265543Dbc777F9D29FbF9EA9E063B962dd447b9",
+      "UpgradeableCounter": "0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903"
+    }
+  }
+}

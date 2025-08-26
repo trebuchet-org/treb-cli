@@ -1,0 +1,12 @@
+=== cmd 0: [sync --network anvil-31337] ===
+Error: unknown flag: --network
+Usage:
+  treb sync [flags]
+
+Flags:
+      --clean   Remove invalid entries while syncing
+      --debug   Show debug information during sync
+  -h, --help    help for sync
+
+Global Flags:
+      --non-interactive   Disable interactive prompts

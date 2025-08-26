@@ -1,0 +1,8 @@
+=== cmd 0: [gen deploy src/UpgradeableCounter.sol:UpgradeableCounter --proxy --proxy-contract ERC1967Proxy] ===
+
+✅ Generated deployment script: script/deploy/DeployUpgradeableCounterProxy.s.sol
+This script will deploy both the implementation and proxy contracts.
+Make sure to update the initializer parameters if needed.
+
+To deploy, run:
+  treb run script/deploy/DeployUpgradeableCounterProxy.s.sol --network <network>

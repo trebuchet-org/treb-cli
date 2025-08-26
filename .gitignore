@@ -7,12 +7,11 @@ out/
 !/cli/**/*.go
 .env
 
-test/fixture/lib
-!test/fixture/lib/treb-sol
-
-# Test fixture generated files
-test/fixture/script/deploy/
-test/fixture/deployments.json
+# Test fixture generated files and libraries
+test/testdata/project/lib
+test/testdata/project/script/deploy/
+test/testdata/project/.treb
+test/testdata/golden/**/*.actual
 
 # Go
 *.exe
@@ -22,7 +21,6 @@ test/fixture/deployments.json
 *.dylib
 *.test
 *.out
-go.work
 
 # Binaries
 bin/
@@ -43,3 +41,6 @@ main
 # OS
 .DS_Store
 Thumbs.db
+
+# Crush working dir
+.crush/

@@ -1,0 +1,31 @@
+=== cmd 0: [run script/deploy/DeployCounter.s.sol --env LABEL=v1] ===
+
+🚀 Running Deployment Script
+──────────────────────────────────────────────────
+  Script:    DeployCounter
+  Network:   anvil-31337 (31337)
+  Namespace: default
+  Mode:      LIVE
+  Env Vars:  LABEL=v1
+  Senders:   [anvil]
+──────────────────────────────────────────────────
+
+🔄 Transactions:
+──────────────────────────────────────────────────
+No transactions executed (dry run or all deployments skipped)
+
+
+⚠️ Deployment Collisions Detected:
+──────────────────────────────────────────────────
+Counter already deployed at 0xdE06172EB8C24165438479C9b69E3F83832d9EA3
+    Label: v1
+    Entropy: default/src/Counter.sol:Counter:v1
+Note: These contracts were already deployed and deployment was skipped.
+
+
+📝 Script Logs:
+────────────────────────────────────────
+  Registry: failed to load registry from .treb/registry.json
+
+- No registry changes recorded for anvil-31337 network in namespace default
+✓ Script execution completed successfully

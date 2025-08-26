@@ -1,0 +1,26 @@
+=== cmd 0: [tag Counter --add release/2024.01] ===
+ℹ Added tag 'release/2024.01' to deployment default/31337/Counter
+✅ Added tag 'release/2024.01' to default/31337/Counter
+
+Current tags: release/2024.01
+
+
+=== cmd 1: [tag Counter --add hotfix-123] ===
+ℹ Added tag 'hotfix-123' to deployment default/31337/Counter
+✅ Added tag 'hotfix-123' to default/31337/Counter
+
+Current tags: hotfix-123, release/2024.01
+
+
+=== cmd 2: [tag Counter --add RC_1.0.0] ===
+ℹ Added tag 'RC_1.0.0' to deployment default/31337/Counter
+✅ Added tag 'RC_1.0.0' to default/31337/Counter
+
+Current tags: RC_1.0.0, hotfix-123, release/2024.01
+
+
+=== cmd 3: [tag Counter] ===
+
+Deployment: default/31337/Counter
+Address: 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
+Tags:    RC_1.0.0, hotfix-123, release/2024.01

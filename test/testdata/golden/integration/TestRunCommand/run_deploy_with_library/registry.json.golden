@@ -1,0 +1,8 @@
+{
+  "31337": {
+    "default": {
+      "MathUtils": "0xAF6eb1e586413b73e12D682BaDC144043EF4fC60",
+      "TestWithNewLib": "0x65aB2088Cb7bBA70f99EA2105Ed99525991c2CB4"
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "default/31337/Counter": {
+    "id": "default/31337/Counter",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "Counter",
+    "label": "",
+    "address": "0x74148047D6bDf624C94eFc07F60cEE7b6052FB29",
+    "type": "SINGLETON",
+    "transactionId": "tx-<ID>",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600bc0af06a84bc65cc2a2b7f",
+      "initCodeHash": "0x6b4b0d70f62210e7956a96f3bb74f24ec0326d67968691426354cc51d99c27fd",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x",
+      "entropy": "default/src/Counter.sol:Counter"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/Counter.sol",
+      "compilerVersion": "0.8.30+commit.73712a01",
+      "bytecodeHash": "0x6b4b0d70f62210e7956a96f3bb74f24ec0326d67968691426354cc51d99c27fd",
+      "scriptPath": "script/deploy/DeployCounter.s.sol",
+      "gitCommit": ""
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": [
+      "v<VERSION>",
+      "v<VERSION>",
+      "stable"
+    ],
+    "createdAt": "<TIMESTAMP>",
+    "updatedAt": "<TIMESTAMP>"
+  }
+}

@@ -5,37 +5,39 @@ VERSION ?= $(shell git describe --tags --always --dirty)
 COMMIT ?= $(shell git rev-parse HEAD)
 DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 TREB_SOL_COMMIT ?= $(shell cd treb-sol 2>/dev/null && git rev-parse HEAD || echo "unknown")
-LDFLAGS = -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE) -X github.com/trebuchet-org/treb-cli/cli/pkg/version.TrebSolCommit=$(TREB_SOL_COMMIT)
+LDFLAGS = -X main.version=$(VERSION) \
+					-X main.commit=$(COMMIT) \
+					-X main.date=$(DATE) \
+					-X main.trebSolCommit=$(TREB_SOL_COMMIT)
 
 # Build the CLI binary
 build: bindings
 	@echo "🔨 Building treb..."
-	@go build -ldflags="$(LDFLAGS)" -tags dev -o bin/treb ./cli 
+	@go build -ldflags="$(LDFLAGS)" -tags dev -o bin/treb ./cli
 
 bindings: forge_build
 	@echo "🔨 Building bindings..."
-	@cat treb-sol/out/ITrebEvents.sol/ITrebEvents.json | jq ".abi" | abigen --v2 --pkg bindings --type Treb --out cli/pkg/abi/bindings/treb.go --abi -
-	@cat treb-sol/out/ICreateX.sol/ICreateX.json | jq ".abi" | abigen --v2 --pkg bindings --type CreateX --out cli/pkg/abi/bindings/createx.go --abi -
+	@cat treb-sol/out/ITrebEvents.sol/ITrebEvents.json | jq ".abi" | abigen --v2 --pkg bindings --type Treb --out internal/domain/bindings/treb.go --abi -
+	@cat treb-sol/out/ICreateX.sol/ICreateX.json | jq ".abi" | abigen --v2 --pkg bindings --type CreateX --out internal/domain/bindings/createx.go --abi -
 
 forge_build:
 	@echo ">> forge build"
 	@cd treb-sol && forge build
 
 # Install globally
-install: build
-	@echo "📦 Installing treb..."
-	@cp bin/treb /usr/local/bin/treb
-	@echo "✅ treb installed to /usr/local/bin/treb"
+install: 
+	@trebup --path $(pwd)
 
 # Run tests
-test:
+unit-test:
 	@echo "🧪 Running tests..."
 	@go test -v ./...
 
 # Setup integration test dependencies
 setup-integration-test:
 	@echo "🔧 Setting up integration test dependencies..."
-	@cd test/fixture && \
+	@go install gotest.tools/gotestsum@latest
+	@cd test/testdata/project && \
 	if [ ! -d "lib/forge-std" ]; then \
 		echo "Installing forge-std..."; \
 		forge install foundry-rs/forge-std --no-git; \
@@ -50,21 +52,14 @@ setup-integration-test:
 	fi && \
 	if [ ! -L "lib/treb-sol" ]; then \
 		echo "Creating treb-sol symlink..."; \
-		ln -sf ../../../treb-sol lib/treb-sol; \
+		ln -sf ../../../../treb-sol lib/treb-sol; \
 	fi
 	@echo "✅ Integration test dependencies ready"
 
 # Run integration tests  
-integration-test: build setup-integration-test
+integration-test: setup-integration-test
 	@echo "🔗 Running integration tests..."
-	@cd test && go mod download && go test -v -timeout=10m
-
-# Run integration tests with coverage
-integration-test-coverage: build setup-integration-test
-	@echo "🔗 Running integration tests with coverage..."
-	@cd test && go test -v -timeout=10m -coverprofile=coverage.out
-	@cd test && go tool cover -html=coverage.out -o coverage.html
-	@echo "✅ Coverage report generated: test/coverage.html"
+	@gotestsum --format=testname --no-summary=output ./test/... -v -timeout=10m
 
 # Clean build artifacts
 clean:
@@ -100,7 +95,7 @@ watch: build
 	done
 
 # Release build targets
-RELEASE_LDFLAGS = -s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE) -X github.com/trebuchet-org/treb-cli/cli/pkg/version.TrebSolCommit=$(TREB_SOL_COMMIT)
+RELEASE_LDFLAGS = -s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE) -X main.trebSolCommit=$(TREB_SOL_COMMIT)
 
 # Build all platform binaries for release
 release-build: release-clean

@@ -1,0 +1,28 @@
+=== cmd 0: [list --all] ===
+Error: unknown flag: --all
+Usage:
+  treb list [flags]
+
+Aliases:
+  list, ls
+
+Examples:
+  # List all deployments
+  treb list
+
+  # List all Counter deployments
+  treb list --contract Counter
+
+  # List proxy deployments only
+  treb list --type proxy
+
+Flags:
+      --contract string    Filter by contract name
+  -h, --help               help for list
+      --label string       Filter by label
+  -s, --namespace string   Namespace to use (defaults to current context namespace) [also sets foundry profile]
+  -n, --network string     Network to run on (e.g., mainnet, sepolia, local)
+      --type string        Filter by deployment type (singleton, proxy, library)
+
+Global Flags:
+      --non-interactive   Disable interactive prompts

@@ -1,0 +1,34 @@
+=== cmd 0: [run script/deploy/DeployCounter.s.sol --debug-json] ===
+
+🚀 Running Deployment Script
+──────────────────────────────────────────────────
+  Script:    DeployCounter
+  Network:   anvil-31337 (31337)
+  Namespace: default
+  Mode:      LIVE
+  Senders:   [anvil]
+──────────────────────────────────────────────────
+
+🔄 Transactions:
+──────────────────────────────────────────────────
+
+simulated anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ new 0xDaFaC68f7D2133e3CE0229fAddcd2b1C96D8Eb83()
+│  └─ [return] 0xDaFaC68f7D2133e3CE0229fAddcd2b1C96D8Eb83
+├─ Create3ProxyContractCreation(newContract: 0xDaFa...Eb83, salt: 0x78714809...)
+├─ 0xDaFaC68f7D2133e3CE0229fAddcd2b1C96D8Eb83::unknown()
+│  └─ 🚀 new Counter()
+│     └─ [return] 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
+└─ ContractCreation(newContract: Counter: [0x74148047D6bDf624C...)
+
+📦 Deployment Summary:
+──────────────────────────────────────────────────
+Counter at 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
+
+
+📝 Script Logs:
+────────────────────────────────────────
+  Registry: failed to load registry from .treb/registry.json
+
+✓ Updated registry for anvil-31337 network in namespace default
+✓ Script execution completed successfully

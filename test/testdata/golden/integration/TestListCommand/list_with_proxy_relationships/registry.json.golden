@@ -1,0 +1,8 @@
+{
+  "31337": {
+    "default": {
+      "ERC1967Proxy:UpgradeableCounter": "0x20C1EF3EFA51FC15592BEFff06471E21FfDCDD06",
+      "UpgradeableCounter": "0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903"
+    }
+  }
+}

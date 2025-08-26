@@ -1,0 +1,12 @@
+=== cmd 0: [sync --dry-run] ===
+Error: unknown flag: --dry-run
+Usage:
+  treb sync [flags]
+
+Flags:
+      --clean   Remove invalid entries while syncing
+      --debug   Show debug information during sync
+  -h, --help    help for sync
+
+Global Flags:
+      --non-interactive   Disable interactive prompts

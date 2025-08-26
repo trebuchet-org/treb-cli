@@ -1,0 +1,5 @@
+=== cmd 0: [version] ===
+treb v<VERSION>
+
+commit: <COMMIT>
+built:  <TIMESTAMP> UTC

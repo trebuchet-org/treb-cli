@@ -1,0 +1,12 @@
+=== cmd 0: [tag Counter --add prod-v1 --namespace production] ===
+ℹ Added tag 'prod-v1' to deployment production/31337/Counter
+✅ Added tag 'prod-v1' to production/31337/Counter
+
+Current tags: prod-v1
+
+
+=== cmd 1: [tag Counter --namespace production] ===
+
+Deployment: production/31337/Counter
+Address: 0x9526cB2eC6e5b9E38b5A6949543417F84cc878d5
+Tags:    prod-v1

@@ -1,0 +1,32 @@
+=== cmd 0: [prune --network anvil-31337] ===
+🔍 Checking registry entries against on-chain state...
+
+🗑️  Found 2 items to prune:
+
+Deployments (1):
+  - default/31337/Counter at 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29 (reason: no code at address)
+
+Transactions (1):
+  - tx-<ID> [EXECUTED] (reason: transaction not found on-chain)
+
+⚠️  Running in non-interactive mode. Proceeding with prune...
+
+🔧 Pruning registry entries...
+✅ Successfully pruned 2 items from the registry.
+
+
+=== cmd 1: [prune --network anvil-31338] ===
+🔍 Checking registry entries against on-chain state...
+
+🗑️  Found 2 items to prune:
+
+Deployments (1):
+  - default/31338/Counter at 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29 (reason: no code at address)
+
+Transactions (1):
+  - tx-<ID> [EXECUTED] (reason: transaction not found on-chain)
+
+⚠️  Running in non-interactive mode. Proceeding with prune...
+
+🔧 Pruning registry entries...
+✅ Successfully pruned 2 items from the registry.

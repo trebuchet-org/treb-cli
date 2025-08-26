@@ -1,0 +1,162 @@
+{
+  "default/31337/MessageStorageV08": {
+    "id": "default/31337/MessageStorageV08",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "MessageStorageV08",
+    "label": "",
+    "address": "0xD35049AdbF890d4F8DA73994172Be764dC150DCc",
+    "type": "SINGLETON",
+    "transactionId": "tx-<ID>",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb922660050b9d96b19e23559ae503c",
+      "initCodeHash": "0x17e9624bb50469c1ddf1a1066f177d348ef5dcdf687f8d298d48f340f1aece02",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x",
+      "entropy": "default/src/MessageStorageV08.sol:MessageStorageV08"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/MessageStorageV08.sol",
+      "compilerVersion": "0.8.30+commit.73712a01",
+      "bytecodeHash": "0x17e9624bb50469c1ddf1a1066f177d348ef5dcdf687f8d298d48f340f1aece02",
+      "scriptPath": "script/deploy/DeployMessageStorageV08.s.sol",
+      "gitCommit": ""
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": null,
+    "createdAt": "<TIMESTAMP>",
+    "updatedAt": "<TIMESTAMP>"
+  },
+  "default/31337/StringUtilsV2": {
+    "id": "default/31337/StringUtilsV2",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "StringUtilsV2",
+    "label": "",
+    "address": "0xab1b5cC40fDa13B869ABBB5a8209dD21a05190a3",
+    "type": "LIBRARY",
+    "transactionId": "tx-<ID>",
+    "deploymentStrategy": {
+      "method": "CREATE2",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb922660086ead71707bea2ddc34394",
+      "initCodeHash": "0x2e96b5f8f6edd69221c39cac27dea4f64bc46f8e8d566b4599cbc5a02f2fd215",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x",
+      "entropy": "default/src/StringUtilsV2.sol:StringUtilsV2"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/StringUtilsV2.sol",
+      "compilerVersion": "0.8.30+commit.73712a01",
+      "bytecodeHash": "0x2e96b5f8f6edd69221c39cac27dea4f64bc46f8e8d566b4599cbc5a02f2fd215",
+      "scriptPath": "script/deploy/DeployStringUtilsV2.s.sol",
+      "gitCommit": ""
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": null,
+    "createdAt": "<TIMESTAMP>",
+    "updatedAt": "<TIMESTAMP>"
+  },
+  "default/31338/Counter": {
+    "id": "default/31338/Counter",
+    "namespace": "default",
+    "chainId": 31338,
+    "contractName": "Counter",
+    "label": "",
+    "address": "0x74148047D6bDf624C94eFc07F60cEE7b6052FB29",
+    "type": "SINGLETON",
+    "transactionId": "tx-<ID>",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600bc0af06a84bc65cc2a2b7f",
+      "initCodeHash": "0x6b4b0d70f62210e7956a96f3bb74f24ec0326d67968691426354cc51d99c27fd",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x",
+      "entropy": "default/src/Counter.sol:Counter"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/Counter.sol",
+      "compilerVersion": "0.8.30+commit.73712a01",
+      "bytecodeHash": "0x6b4b0d70f62210e7956a96f3bb74f24ec0326d67968691426354cc51d99c27fd",
+      "scriptPath": "script/deploy/DeployCounter.s.sol",
+      "gitCommit": ""
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": null,
+    "createdAt": "<TIMESTAMP>",
+    "updatedAt": "<TIMESTAMP>"
+  },
+  "default/31338/Counter:v2": {
+    "id": "default/31338/Counter:v2",
+    "namespace": "default",
+    "chainId": 31338,
+    "contractName": "Counter",
+    "label": "v2",
+    "address": "0xe0c42922eA868803991F2F0E82D77280A790f446",
+    "type": "SINGLETON",
+    "transactionId": "tx-<ID>",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600dca24d6c64cc96d9c57322",
+      "initCodeHash": "0x6b4b0d70f62210e7956a96f3bb74f24ec0326d67968691426354cc51d99c27fd",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x",
+      "entropy": "default/src/Counter.sol:Counter:v2"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/Counter.sol",
+      "compilerVersion": "0.8.30+commit.73712a01",
+      "bytecodeHash": "0x6b4b0d70f62210e7956a96f3bb74f24ec0326d67968691426354cc51d99c27fd",
+      "scriptPath": "script/deploy/DeployCounter.s.sol",
+      "gitCommit": ""
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": null,
+    "createdAt": "<TIMESTAMP>",
+    "updatedAt": "<TIMESTAMP>"
+  },
+  "default/31338/Counter:v3": {
+    "id": "default/31338/Counter:v3",
+    "namespace": "default",
+    "chainId": 31338,
+    "contractName": "Counter",
+    "label": "v3",
+    "address": "0xb3212624e288499386394b40A0b60c9b8bA9798E",
+    "type": "SINGLETON",
+    "transactionId": "tx-<ID>",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266003fae0c47dc1a631f39f28d",
+      "initCodeHash": "0x6b4b0d70f62210e7956a96f3bb74f24ec0326d67968691426354cc51d99c27fd",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x",
+      "entropy": "default/src/Counter.sol:Counter:v3"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/Counter.sol",
+      "compilerVersion": "0.8.30+commit.73712a01",
+      "bytecodeHash": "0x6b4b0d70f62210e7956a96f3bb74f24ec0326d67968691426354cc51d99c27fd",
+      "scriptPath": "script/deploy/DeployCounter.s.sol",
+      "gitCommit": ""
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": null,
+    "createdAt": "<TIMESTAMP>",
+    "updatedAt": "<TIMESTAMP>"
+  }
+}

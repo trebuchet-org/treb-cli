@@ -1,0 +1,27 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import {TrebScript} from "treb-sol/src/TrebScript.sol";
+import {Senders} from "treb-sol/src/internal/sender/Senders.sol";
+import {Deployer} from "treb-sol/src/internal/sender/Deployer.sol";
+
+contract DeployCounter is TrebScript {
+    using Senders for Senders.Sender;
+    using Deployer for Senders.Sender;
+    using Deployer for Deployer.Deployment;
+
+    /**
+     * @custom:env {sender:optional} deployer
+     * @custom:senders anvil
+     */
+    function run() public broadcast {
+        Senders.Sender storage deployer = sender(
+            vm.envOr("deployer", string("anvil"))
+        );
+
+        // Deploy Counter
+        deployer.create3("src/Counter.sol:Counter")
+            .setLabel(vm.envOr("LABEL", string("")))
+            .deploy();
+    }
+}

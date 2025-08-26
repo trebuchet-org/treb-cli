@@ -1,0 +1,16 @@
+=== cmd 0: [dev --help] ===
+Development utilities for troubleshooting treb configuration and environment.
+
+Usage:
+  treb dev [command]
+
+Available Commands:
+  anvil       Manage local anvil node
+
+Flags:
+  -h, --help   help for dev
+
+Global Flags:
+      --non-interactive   Disable interactive prompts
+
+Use "treb dev [command] --help" for more information about a command.

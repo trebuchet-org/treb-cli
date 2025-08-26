@@ -1,0 +1,6 @@
+=== cmd 0: [gen deploy src/TestWithNewLib.sol:TestWithNewLib] ===
+
+✅ Generated deployment script: script/deploy/DeployTestWithNewLib.s.sol
+
+To deploy, run:
+  treb run script/deploy/DeployTestWithNewLib.s.sol --network <network>

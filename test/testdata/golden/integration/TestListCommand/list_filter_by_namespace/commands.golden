@@ -1,0 +1,18 @@
+=== cmd 0: [list --namespace staging] ===
+   ◎ namespace:   STAGING                       
+└─ ⛓ chain:       31337                         
+  
+  SINGLETONS
+  Counter     0x144180Ad5257d58F4AB181af127266Ba3F6Aa042   🅔 ? 🅢 ?         <TIMESTAMP>   
+
+Total deployments: 1
+
+
+=== cmd 1: [list --namespace production] ===
+   ◎ namespace:   PRODUCTION                    
+└─ ⛓ chain:       31337                         
+  
+  SINGLETONS
+  Counter     0x9526cB2eC6e5b9E38b5A6949543417F84cc878d5   🅔 ? 🅢 ?         <TIMESTAMP>   
+
+Total deployments: 1

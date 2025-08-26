@@ -54,7 +54,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: '1.24.6'
       
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
@@ -85,13 +85,14 @@ jobs:
         run: |
           make bindings
       
-      - name: Get version info
-        id: version
+      - name: Get build info
+        id: build-info
         shell: bash
         run: |
           echo "version=nightly-$(date +%Y%m%d)" >> $GITHUB_OUTPUT
           echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
           echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+          echo "trebSolCommit=$(cd treb-sol && git rev-parse HEAD)" >> $GITHUB_OUTPUT
       
       - name: Build binary
         env:
@@ -101,7 +102,7 @@ jobs:
         shell: bash
         run: |
           go build \
-            -ldflags="-s -w -X main.version=${{ steps.version.outputs.version }} -X main.commit=${{ steps.version.outputs.commit }} -X main.date=${{ steps.version.outputs.date }}" \
+            -ldflags="-s -w -X main.version=${{ steps.build-info.outputs.version }} -X main.commit=${{ steps.build-info.outputs.commit }} -X main.date=${{ steps.build-info.outputs.date }} -X main.trebSolCommit${{ steps.build-info.outputs.trebSolCommit }} "\
             -o treb${{ matrix.binary_suffix }} \
             ./cli
       
@@ -175,8 +176,8 @@ jobs:
           body: |
             # Nightly Build
             
-            **Build Date:** ${{ steps.version.outputs.date }}
-            **Commit:** [`${{ steps.version.outputs.commit }}`](https://github.com/${{ github.repository }}/commit/${{ steps.version.outputs.commit }})
+            **Build Date:** ${{ steps.build-info.outputs.date }}
+            **Commit:** [`${{ steps.build-info.outputs.commit }}`](https://github.com/${{ github.repository }}/commit/${{ steps.version.outputs.commit }})
             
             This is an automated nightly build from the main branch. Use at your own risk.
             

@@ -1,0 +1,83 @@
+=== cmd 0: [run script/deploy/DeployCounter.s.sol] ===
+
+🚀 Running Deployment Script
+──────────────────────────────────────────────────
+  Script:    DeployCounter
+  Network:   anvil-31337 (31337)
+  Namespace: default
+  Mode:      LIVE
+  Senders:   [anvil]
+──────────────────────────────────────────────────
+
+🔄 Transactions:
+──────────────────────────────────────────────────
+
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ new 0xDaFaC68f7D2133e3CE0229fAddcd2b1C96D8Eb83()
+│  └─ [return] 0xDaFaC68f7D2133e3CE0229fAddcd2b1C96D8Eb83
+├─ Create3ProxyContractCreation(newContract: 0xDaFa...Eb83, salt: 0x78714809...)
+├─ 0xDaFaC68f7D2133e3CE0229fAddcd2b1C96D8Eb83::unknown()
+│  └─ 🚀 new Counter()
+│     └─ [return] 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
+└─ ContractCreation(newContract: Counter: [0x74148047D6bDf624C...)
+   Tx: 0x<HASH> | Block: 1 | Gas: 185932
+
+📦 Deployment Summary:
+──────────────────────────────────────────────────
+Counter at 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
+
+
+📝 Script Logs:
+────────────────────────────────────────
+  Registry: failed to load registry from .treb/registry.json
+
+✓ Updated registry for anvil-31337 network in namespace default
+✓ Script execution completed successfully
+
+
+=== cmd 1: [ls] ===
+   ◎ namespace:   DEFAULT                       
+└─ ⛓ chain:       31337                         
+  
+  SINGLETONS
+  Counter     0x74148047D6bDf624C94eFc07F60cEE7b6052FB29   🅔 ? 🅢 ?         <TIMESTAMP>   
+
+Total deployments: 1
+
+
+=== cmd 2: [show Counter] ===
+Deployment: default/31337/Counter
+================================================================================
+
+Basic Information:
+  Contract: Counter
+  Address: 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
+  Type: SINGLETON
+  Namespace: default
+  Network: 31337
+
+Deployment Strategy:
+  Method: CREATE3
+  Factory: 0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed
+  Salt: 0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600bc0af06a84bc65cc2a2b7f
+  Entropy: default/src/Counter.sol:Counter
+  Init Code Hash: 0x<HASH>
+
+Artifact Information:
+  Path: src/Counter.sol
+  Compiler: 0.8.30+commit.73712a01
+  Bytecode Hash: 0x<HASH>
+  Script: script/deploy/DeployCounter.s.sol
+
+Verification Status:
+  Status: UNVERIFIED
+
+Transaction Information:
+  Hash: 0x<HASH>
+  Status: EXECUTED
+  Sender: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+  Block: 1
+
+Timestamps:
+  Created: <TIMESTAMP>
+  Updated: <TIMESTAMP>

@@ -1,0 +1,34 @@
+{
+  "default/31337/SampleToken": {
+    "id": "default/31337/SampleToken",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "SampleToken",
+    "label": "",
+    "address": "0x793f69C1702a0E900a142D8575E44F9E4DA86fFf",
+    "type": "SINGLETON",
+    "transactionId": "tx-<ID>",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266008c17bb5b7d947ee29414d1",
+      "initCodeHash": "0xd64461a8d4fd08f0328abba8ea8419072dfbbe251f12c163ec210446f2313861",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x00000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "entropy": "default/src/SampleToken.sol:SampleToken"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/SampleToken.sol",
+      "compilerVersion": "0.8.30+commit.73712a01",
+      "bytecodeHash": "0x03705a5ead96a2618c6f402e955ed4c111d5b7de9222f7c24a2ab8fc31290c64",
+      "scriptPath": "script/deploy/DeploySampleToken.s.sol",
+      "gitCommit": ""
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": null,
+    "createdAt": "<TIMESTAMP>",
+    "updatedAt": "<TIMESTAMP>"
+  }
+}

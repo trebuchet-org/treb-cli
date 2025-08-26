@@ -1,0 +1,5 @@
+=== cmd 0: [dev anvil status] ===
+📊 Anvil Status ('anvil0'):
+Status: 🔴 Not running
+PID file: /tmp/treb-anvil0.pid
+Log file: /tmp/treb-anvil0.log
