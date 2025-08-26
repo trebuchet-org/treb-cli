@@ -143,9 +143,7 @@ type VersionNormalizer struct{}
 func (n VersionNormalizer) Normalize(output string) string {
 	// Treb version: v1.0.0-beta.1-95-g6a2e70e
 	output = regexp.MustCompile(`v\d+\.\d+\.\d+(-[a-zA-Z0-9\.\-]+)?`).ReplaceAllString(output, "v<VERSION>")
-	output = regexp.MustCompile(
-		`(?im)^(treb)\s+(?:v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?|[0-9A-Fa-f]{7,40}(?:-dirty)?)(?:\s.*)?\r?$`,
-	).ReplaceAllString(output, "$1 v<VERSION>\n")
+	output = regexp.MustCompile(`(?m:^treb [a-z0-9]{7}$)`).ReplaceAllString(output, "treb v<VERSION>")
 
 	// Git commit in version strings
 	output = regexp.MustCompile(`-g[a-f0-9]{7,}`).ReplaceAllString(output, "-g<COMMIT>")
@@ -163,10 +161,6 @@ func GetDefaultNormalizers() []Normalizer {
 		TargetedHashNormalizer{},
 		RepositoryHormalizer{},
 		DebugNormalizer{},
-		// AddressNormalizer{}, // We don't normalize addresses as they should be deterministic
-		// PathNormalizer{},    // Often we want to see actual paths
-		// BlockNumberNormalizer{},
-		// GasNormalizer{},
 	}
 }
 
