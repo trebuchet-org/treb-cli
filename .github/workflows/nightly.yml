@@ -102,7 +102,7 @@ jobs:
         shell: bash
         run: |
           go build \
-            -ldflags="-s -w -X main.version=${{ steps.build-info.outputs.version }} -X main.commit=${{ steps.build-info.outputs.commit }} -X main.date=${{ steps.build-info.outputs.date }} -X main.trebSolCommit${{ steps.build-info.outputs.trebSolCommit }} "\
+            -ldflags="-s -w -X main.version=${{ steps.build-info.outputs.version }} -X main.commit=${{ steps.build-info.outputs.commit }} -X main.date=${{ steps.build-info.outputs.date }} -X main.trebSolCommit=${{ steps.build-info.outputs.trebSolCommit }}"\
             -o treb${{ matrix.binary_suffix }} \
             ./cli
       
