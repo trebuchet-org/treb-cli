@@ -325,7 +325,7 @@ func (tr *TransactionRenderer) formatLogEvent(log *forge.LogEntry) string {
 
 	// Check if forge decoded it
 	if log != nil && log.Decoded.Name != "" {
-		eventStr = cyan.Sprintf(log.Decoded.Name)
+		eventStr = cyan.Sprint(log.Decoded.Name)
 
 		// Add args
 		if len(log.Decoded.Params) > 0 {
