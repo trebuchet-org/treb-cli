@@ -22,7 +22,7 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 │  └─ 🚀 new Counter()
 │     └─ [return] 0x90cb4109a5a6E383d5135c5c68c8e723F1d96955
 └─ ContractCreation(newContract: Counter: [0x90cb4109a5a6E383d...)
-   Tx: 0x<HASH> | Block: 1 | Gas: 197581
+   Tx: 0x<HASH> | Block: 1 | Gas: 185932
 
 📦 Deployment Summary:
 ──────────────────────────────────────────────────

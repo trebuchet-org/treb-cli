@@ -20,7 +20,7 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 │  └─ 🚀 new TestWithNewLib()
 │     └─ [return] 0x65aB2088Cb7bBA70f99EA2105Ed99525991c2CB4
 └─ ContractCreation(newContract: TestWithNewLib: [0x65aB2088Cb...)
-   Tx: 0x<HASH> | Block: 2 | Gas: 269171
+   Tx: 0x<HASH> | Block: 2 | Gas: 257310
 
 📦 Deployment Summary:
 ──────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity =0.8.30;
 
-import "./StringUtilsV2.sol";
+import {StringUtilsV2} from "./StringUtilsV2.sol";
 
 contract MessageStorageV08 {
     using StringUtilsV2 for string;

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity =0.8.30;
 
 library MathUtils {
     function add(uint256 a, uint256 b) public pure returns (uint256) {

@@ -6,8 +6,6 @@ import {Senders} from "treb-sol/src/internal/sender/Senders.sol";
 import {Deployer} from "treb-sol/src/internal/sender/Deployer.sol";
 
 import {Counter} from "../src/Counter.sol";
-import {SampleToken} from "../src/SampleToken.sol";
-import {console} from "forge-std/console.sol";
 
 contract DeployWithTrebScript is TrebScript {
     using Deployer for Senders.Sender;

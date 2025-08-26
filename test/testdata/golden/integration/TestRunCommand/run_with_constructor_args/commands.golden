@@ -24,7 +24,7 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 │     │  )
 │     └─ [return] 0x793f69C1702a0E900a142D8575E44F9E4DA86fFf
 └─ ContractCreation(newContract: SampleToken: [0x793f69C1702a0...)
-   Tx: 0x<HASH> | Block: 1 | Gas: 395961
+   Tx: 0x<HASH> | Block: 1 | Gas: 384311
 
 📦 Deployment Summary:
 ──────────────────────────────────────────────────

@@ -38,7 +38,7 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 │  └─ 🚀 new UpgradeableCounter()
 │     └─ [return] 0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903
 └─ ContractCreation(newContract: UpgradeableCounter: [0xD63F2d...)
-   Tx: 0x<HASH> | Block: 1 | Gas: 488590
+   Tx: 0x<HASH> | Block: 1 | Gas: 476959
 
 executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
 ├─ new 0xf9dEc8a180913A52DacBFA2B2F499f56c8bF6B6c()
@@ -53,7 +53,7 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 │     ├─ UpgradeableCounter::initialize(initialOwner: 0x0000...0000)
 │     └─ [return] 0xc265543Dbc777F9D29FbF9EA9E063B962dd447b9
 └─ ContractCreation(newContract: ERC1967Proxy: [0xc265543Dbc77...)
-   Tx: 0x<HASH> | Block: 2 | Gas: 219295
+   Tx: 0x<HASH> | Block: 2 | Gas: 207463
 
 📦 Deployment Summary:
 ──────────────────────────────────────────────────
@@ -97,7 +97,7 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 │     ├─ UpgradeableCounter::initialize(initialOwner: 0x0000...0000)
 │     └─ [return] 0xe2Fa450fD6b49c41aFAB7cdA17105e95D1dd22eA
 └─ ContractCreation(newContract: ERC1967Proxy: [0xe2Fa450fD6b4...)
-   Tx: 0x<HASH> | Block: 3 | Gas: 219295
+   Tx: 0x<HASH> | Block: 3 | Gas: 207463
 
 ⚠️ Deployment Collisions Detected:
 ──────────────────────────────────────────────────
@@ -147,7 +147,7 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 │     ├─ UpgradeableCounter::initialize(initialOwner: 0x0000...0000)
 │     └─ [return] 0x3724061C024d171eF17Cb398825B06326b0c168b
 └─ ContractCreation(newContract: ERC1967Proxy: [0x3724061C024d...)
-   Tx: 0x<HASH> | Block: 4 | Gas: 219295
+   Tx: 0x<HASH> | Block: 4 | Gas: 207463
 
 ⚠️ Deployment Collisions Detected:
 ──────────────────────────────────────────────────

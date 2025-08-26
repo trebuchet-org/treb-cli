@@ -6,6 +6,8 @@ test = "test"
 script = "script"
 optimizer_runs = 0
 fs_permissions = [{ access = "read-write", path = "./" }]
+bytecode_hash = "none"
+cbor_metadata = false
 
 [rpc_endpoints]
 celo-alfajores = "https://alfajores-forno.celo-testnet.org"

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
+pragma solidity =0.7.6;
 
 /**
  * @title SimpleTokenV07
@@ -16,7 +16,11 @@ contract SimpleTokenV07 {
     mapping(address => mapping(address => uint256)) public allowance;
 
     event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(address indexed owner, address indexed spender, uint256 value);
+    event Approval(
+        address indexed owner,
+        address indexed spender,
+        uint256 value
+    );
 
     constructor(
         string memory _name,
@@ -63,3 +67,4 @@ contract SimpleTokenV07 {
         return true;
     }
 }
+

@@ -5,13 +5,13 @@
     "chainId": 31337,
     "contractName": "StringUtils",
     "label": "",
-    "address": "0x8759D6E3523Ee1c76E6642103d87d09A164EFe23",
+    "address": "0xEcAbca4de814110d52a03Bedb1Ec96827F579d1a",
     "type": "LIBRARY",
     "transactionId": "tx-<ID>",
     "deploymentStrategy": {
       "method": "CREATE2",
       "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600025d1cfe8c1c98f1d353f0",
-      "initCodeHash": "0x71d6c7f9e76513fb48da8da24332978ab1b9cc58d5bbbde0a1767415f0292792",
+      "initCodeHash": "0x2e96b5f8f6edd69221c39cac27dea4f64bc46f8e8d566b4599cbc5a02f2fd215",
       "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
       "constructorArgs": "0x",
       "entropy": "default/src/StringUtils.sol:StringUtils"
@@ -20,7 +20,7 @@
     "artifact": {
       "path": "src/StringUtils.sol",
       "compilerVersion": "0.8.30+commit.73712a01",
-      "bytecodeHash": "0x71d6c7f9e76513fb48da8da24332978ab1b9cc58d5bbbde0a1767415f0292792",
+      "bytecodeHash": "0x2e96b5f8f6edd69221c39cac27dea4f64bc46f8e8d566b4599cbc5a02f2fd215",
       "scriptPath": "script/deploy/DeployStringUtils.s.sol",
       "gitCommit": ""
     },

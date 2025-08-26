@@ -11,7 +11,7 @@ Deployment: default/31337/StringUtils
 
 Basic Information:
   Contract: StringUtils
-  Address: 0x8759D6E3523Ee1c76E6642103d87d09A164EFe23
+  Address: 0xEcAbca4de814110d52a03Bedb1Ec96827F579d1a
   Type: LIBRARY
   Namespace: default
   Network: 31337

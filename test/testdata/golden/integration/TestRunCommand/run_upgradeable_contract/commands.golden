@@ -20,7 +20,7 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 │  └─ 🚀 new UpgradeableCounter()
 │     └─ [return] 0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903
 └─ ContractCreation(newContract: UpgradeableCounter: [0xD63F2d...)
-   Tx: 0x<HASH> | Block: 1 | Gas: 488590
+   Tx: 0x<HASH> | Block: 1 | Gas: 476959
 
 📦 Deployment Summary:
 ──────────────────────────────────────────────────
