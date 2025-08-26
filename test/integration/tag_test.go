@@ -9,6 +9,7 @@ func TestTagCommand(t *testing.T) {
 		{
 			Name: "tag_show_no_tags",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 				{"list"}, // Add list to see if deployment was created
@@ -18,6 +19,7 @@ func TestTagCommand(t *testing.T) {
 		{
 			Name: "tag_add_single",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 			},
@@ -29,6 +31,7 @@ func TestTagCommand(t *testing.T) {
 		{
 			Name: "tag_add_multiple",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 			},
@@ -42,6 +45,7 @@ func TestTagCommand(t *testing.T) {
 		{
 			Name: "tag_add_duplicate",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 				{"tag", "Counter", "--add", "v1.0.0"},
@@ -53,6 +57,7 @@ func TestTagCommand(t *testing.T) {
 		{
 			Name: "tag_remove_existing",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 				{"tag", "Counter", "--add", "v1.0.0"},
@@ -66,6 +71,7 @@ func TestTagCommand(t *testing.T) {
 		{
 			Name: "tag_remove_non_existing",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 			},
@@ -76,6 +82,7 @@ func TestTagCommand(t *testing.T) {
 		{
 			Name: "tag_by_address",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 			},
@@ -89,6 +96,7 @@ func TestTagCommand(t *testing.T) {
 		{
 			Name: "tag_with_label",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol", "--env", "LABEL=test"},
 			},
@@ -105,6 +113,7 @@ func TestTagCommand(t *testing.T) {
 		{
 			Name: "tag_add_and_remove_both",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 			},
@@ -116,6 +125,7 @@ func TestTagCommand(t *testing.T) {
 		{
 			Name: "tag_with_namespace",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol", "--namespace", "production"},
 			},
@@ -128,7 +138,7 @@ func TestTagCommand(t *testing.T) {
 			Name: "tag_with_multiple_deployments_same_name",
 			SetupCmds: [][]string{
 				{"gen", "deploy", "src/Counter.sol:Counter"},
-				{"run", "script/deploy/DeployCounter.s.sol"},
+				{"run", "script/deploy/DeployCounter.s.sol", "--network", "anvil-31337"},
 				{"run", "script/deploy/DeployCounter.s.sol", "--network", "anvil-31338"},
 			},
 			TestCmds: [][]string{
@@ -142,6 +152,7 @@ func TestTagCommand(t *testing.T) {
 		{
 			Name: "tag_multiple_contracts_different_tags",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 				{"gen", "deploy", "src/SampleToken.sol:SampleToken"},
@@ -156,6 +167,7 @@ func TestTagCommand(t *testing.T) {
 		{
 			Name: "tag_with_special_characters",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 			},
@@ -169,6 +181,7 @@ func TestTagCommand(t *testing.T) {
 		{
 			Name: "tag_deployment_by_id",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 			},
@@ -181,6 +194,7 @@ func TestTagCommand(t *testing.T) {
 		{
 			Name: "tag_cross_namespace",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 				{"run", "script/deploy/DeployCounter.s.sol", "--namespace", "staging"},
@@ -195,6 +209,7 @@ func TestTagCommand(t *testing.T) {
 		{
 			Name: "tag_library_deployment",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/StringUtils.sol:StringUtils"},
 				{"run", "script/deploy/DeployStringUtils.s.sol"},
 			},
@@ -218,6 +233,7 @@ func TestTagCommand(t *testing.T) {
 		{
 			Name: "tag_long_tag_name",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 			},
@@ -229,6 +245,7 @@ func TestTagCommand(t *testing.T) {
 		{
 			Name: "tag_remove_all_tags",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 				{"tag", "Counter", "--add", "v1.0.0"},
@@ -245,6 +262,7 @@ func TestTagCommand(t *testing.T) {
 		{
 			Name: "tag_after_deployment_update",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol", "--env", "LABEL=v1"},
 				{"tag", "Counter:v1", "--add", "initial"},

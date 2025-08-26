@@ -22,6 +22,7 @@ func TestComposeCommand(t *testing.T) {
 		{
 			Name: "with_config",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/UpgradeableCounter.sol:UpgradeableCounter", "--proxy", "--proxy-contract", "ERC1967Proxy"},
 			},
 			TestCmds: [][]string{

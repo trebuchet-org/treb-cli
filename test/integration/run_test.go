@@ -9,6 +9,7 @@ func TestRunCommand(t *testing.T) {
 		{
 			Name: "simple",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 			},
 			TestCmds: [][]string{
@@ -20,6 +21,7 @@ func TestRunCommand(t *testing.T) {
 		{
 			Name: "run_with_env_vars",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 			},
 			TestCmds: [][]string{
@@ -30,6 +32,7 @@ func TestRunCommand(t *testing.T) {
 		{
 			Name: "run_dry_run",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 			},
 			TestCmds: [][]string{
@@ -40,6 +43,7 @@ func TestRunCommand(t *testing.T) {
 		{
 			Name: "run_with_namespace",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 			},
 			TestCmds: [][]string{
@@ -50,6 +54,7 @@ func TestRunCommand(t *testing.T) {
 		{
 			Name: "run_with_network",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 			},
 			TestCmds: [][]string{
@@ -60,6 +65,7 @@ func TestRunCommand(t *testing.T) {
 		{
 			Name: "run_multiple_contracts",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"gen", "deploy", "src/SampleToken.sol:SampleToken"},
 			},
@@ -72,6 +78,7 @@ func TestRunCommand(t *testing.T) {
 		{
 			Name: "run_with_constructor_args",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/SampleToken.sol:SampleToken"},
 			},
 			TestCmds: [][]string{
@@ -82,6 +89,7 @@ func TestRunCommand(t *testing.T) {
 		{
 			Name: "run_library_deployment",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/StringUtils.sol:StringUtils"},
 			},
 			TestCmds: [][]string{
@@ -92,6 +100,7 @@ func TestRunCommand(t *testing.T) {
 		{
 			Name: "run_upgradeable_contract",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/UpgradeableCounter.sol:UpgradeableCounter"},
 			},
 			TestCmds: [][]string{
@@ -102,6 +111,7 @@ func TestRunCommand(t *testing.T) {
 		{
 			Name: "run_with_debug",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 			},
 			TestCmds: [][]string{
@@ -111,13 +121,14 @@ func TestRunCommand(t *testing.T) {
 		{
 			Name: "run_nonexistent_script",
 			TestCmds: [][]string{
-				{"run", "script/deploy/NonExistent.s.sol"},
+				s("run script/deploy/NonExistent.s.sol --network anvil-31337"),
 			},
 			ExpectErr: true,
 		},
 		{
 			Name: "run_with_multiple_env_vars",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 			},
 			TestCmds: [][]string{
@@ -128,6 +139,7 @@ func TestRunCommand(t *testing.T) {
 		{
 			Name: "run_subdirectory_contract",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/other/MyToken.sol:MyToken"},
 			},
 			TestCmds: [][]string{
@@ -138,6 +150,7 @@ func TestRunCommand(t *testing.T) {
 		{
 			Name: "run_with_json_output",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 			},
 			TestCmds: [][]string{
@@ -147,6 +160,7 @@ func TestRunCommand(t *testing.T) {
 		{
 			Name: "run_redeployment_same_label",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol", "--env", "LABEL=v1"},
 			},
@@ -157,6 +171,7 @@ func TestRunCommand(t *testing.T) {
 		{
 			Name: "run_deploy_with_library",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/TestWithNewLib.sol:MathUtils"},
 				{"run", "script/deploy/DeployMathUtils.s.sol"},
 				{"gen", "deploy", "src/TestWithNewLib.sol:TestWithNewLib"},

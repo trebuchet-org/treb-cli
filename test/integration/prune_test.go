@@ -17,7 +17,7 @@ func TestPruneCommand(t *testing.T) {
 			},
 			SetupCmds: [][]string{
 				{"gen", "deploy", "src/Counter.sol:Counter"},
-				{"run", "script/deploy/DeployCounter.s.sol"},
+				{"run", "script/deploy/DeployCounter.s.sol", "--network", "anvil-31337"},
 				{"run", "script/deploy/DeployCounter.s.sol", "--network", "anvil-31338"},
 			},
 			PostSetup: func(t *testing.T, ctx *helpers.TestContext) {

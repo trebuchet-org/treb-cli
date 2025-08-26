@@ -9,6 +9,7 @@ func TestShowCommand(t *testing.T) {
 		{
 			Name: "simple",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 			},
@@ -19,6 +20,7 @@ func TestShowCommand(t *testing.T) {
 		{
 			Name: "with_label",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol", "-e", "LABEL=test"},
 			},
@@ -29,6 +31,7 @@ func TestShowCommand(t *testing.T) {
 		{
 			Name: "show_by_address",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 			},
@@ -47,6 +50,7 @@ func TestShowCommand(t *testing.T) {
 		{
 			Name: "show_with_namespace",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol", "--namespace", "production"},
 			},
@@ -57,6 +61,7 @@ func TestShowCommand(t *testing.T) {
 		{
 			Name: "show_with_tags",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 				{"tag", "Counter", "--add", "v1.0.0"},
@@ -69,6 +74,7 @@ func TestShowCommand(t *testing.T) {
 		{
 			Name: "show_library",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/StringUtils.sol:StringUtils"},
 				{"run", "script/deploy/DeployStringUtils.s.sol"},
 			},
@@ -79,6 +85,7 @@ func TestShowCommand(t *testing.T) {
 		{
 			Name: "show_token_with_constructor_args",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/SampleToken.sol:SampleToken"},
 				{"run", "script/deploy/DeploySampleToken.s.sol"},
 			},
@@ -89,6 +96,7 @@ func TestShowCommand(t *testing.T) {
 		{
 			Name: "show_upgradeable_contract",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/UpgradeableCounter.sol:UpgradeableCounter"},
 				{"run", "script/deploy/DeployUpgradeableCounter.s.sol"},
 			},
@@ -99,6 +107,7 @@ func TestShowCommand(t *testing.T) {
 		{
 			Name: "show_by_deployment_id",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 			},
@@ -109,6 +118,7 @@ func TestShowCommand(t *testing.T) {
 		{
 			Name: "show_multiple_deployments_different_networks",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol", "--network", "anvil-31337"},
 				{"run", "script/deploy/DeployCounter.s.sol", "--network", "anvil-31338"},
@@ -121,6 +131,7 @@ func TestShowCommand(t *testing.T) {
 		{
 			Name: "show_contract_in_subdirectory",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/other/MyToken.sol:MyToken"},
 				{"run", "script/deploy/DeployMyToken.s.sol"},
 			},
@@ -131,6 +142,7 @@ func TestShowCommand(t *testing.T) {
 		{
 			Name: "show_with_json_output",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 			},

@@ -13,6 +13,7 @@ func TestListCommand(t *testing.T) {
 		{
 			Name: "list_with_deployments",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 			},
@@ -22,7 +23,7 @@ func TestListCommand(t *testing.T) {
 			Name: "list_with_multiple_chains",
 			SetupCmds: [][]string{
 				{"gen", "deploy", "src/Counter.sol:Counter"},
-				{"run", "script/deploy/DeployCounter.s.sol"},
+				{"run", "script/deploy/DeployCounter.s.sol", "--network", "anvil-31337"},
 				{"run", "script/deploy/DeployCounter.s.sol", "--network", "anvil-31338"},
 			},
 			TestCmds: [][]string{{"list"}},
@@ -31,17 +32,21 @@ func TestListCommand(t *testing.T) {
 			Name: "list_with_multiple_namespaces_and_chains",
 			SetupCmds: [][]string{
 				{"gen", "deploy", "src/Counter.sol:Counter"},
-				{"run", "script/deploy/DeployCounter.s.sol"},
+				{"run", "script/deploy/DeployCounter.s.sol", "--network", "anvil-31337"},
 				{"run", "script/deploy/DeployCounter.s.sol", "--network", "anvil-31338"},
-				{"run", "script/deploy/DeployCounter.s.sol", "--namespace", "production"},
+				{"run", "script/deploy/DeployCounter.s.sol", "--namespace", "production", "--network", "anvil-31337"},
 				{"run", "script/deploy/DeployCounter.s.sol", "--network", "anvil-31338", "--namespace", "production"},
 			},
-			TestCmds:        [][]string{{"list"}},
+			TestCmds: [][]string{
+				s("list --namespace production"),
+				s("list --namespace default"),
+			},
 			OutputArtifacts: []string{},
 		},
 		{
 			Name: "list_with_proxy_relationships",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "UpgradeableCounter", "--proxy", "--proxy-contract", "ERC1967Proxy.sol:ERC1967Proxy"},
 				{"run", "DeployUpgradeableCounterProxy"},
 			},
@@ -50,6 +55,7 @@ func TestListCommand(t *testing.T) {
 		{
 			Name: "list_with_labels",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol", "--env", "LABEL=v1"},
 				{"run", "script/deploy/DeployCounter.s.sol", "--env", "LABEL=v2"},
@@ -60,6 +66,7 @@ func TestListCommand(t *testing.T) {
 		{
 			Name: "list_filter_by_namespace",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 				{"run", "script/deploy/DeployCounter.s.sol", "--namespace", "staging"},
@@ -73,6 +80,7 @@ func TestListCommand(t *testing.T) {
 		{
 			Name: "list_filter_by_chain",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol", "--network", "anvil-31337"},
 				{"run", "script/deploy/DeployCounter.s.sol", "--network", "anvil-31338"},
@@ -85,6 +93,7 @@ func TestListCommand(t *testing.T) {
 		{
 			Name: "list_with_tags",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 				{"tag", "Counter", "--add", "v1.0.0"},
@@ -98,6 +107,7 @@ func TestListCommand(t *testing.T) {
 		{
 			Name: "list_multiple_contract_types",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 				{"gen", "deploy", "src/SampleToken.sol:SampleToken"},
@@ -112,6 +122,7 @@ func TestListCommand(t *testing.T) {
 		{
 			Name: "list_json_output",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 			},
@@ -121,6 +132,7 @@ func TestListCommand(t *testing.T) {
 		{
 			Name: "list_with_mixed_deployment_status",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 				{"gen", "deploy", "src/SampleToken.sol:SampleToken"},
@@ -131,6 +143,7 @@ func TestListCommand(t *testing.T) {
 		{
 			Name: "list_contracts_in_subdirectories",
 			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 				{"gen", "deploy", "src/other/MyToken.sol:MyToken"},

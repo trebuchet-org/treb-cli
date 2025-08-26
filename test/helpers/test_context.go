@@ -284,12 +284,7 @@ func (p *TestContextPool) Acquire(t *testing.T) *TestContext {
 					t.Fatal(err)
 				}
 				// Create TrebContext for the test
-				ctx.TrebContext = &TrebContext{
-					t:         t,
-					Network:   "anvil-31337",
-					Namespace: "default",
-					workDir:   ctx.WorkDir,
-				}
+				ctx.TrebContext = NewTrebContext(t, ctx)
 				// Don't change the global working directory in parallel tests
 				// The TrebContext will use workDir to set cmd.Dir instead
 				return ctx

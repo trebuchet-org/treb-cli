@@ -26,7 +26,7 @@ func TestInitCommand(t *testing.T) {
 			TestCmds: [][]string{
 				{"init"},
 				{"gen", "deploy", "src/Counter.sol:Counter"},
-				{"run", "script/deploy/DeployCounter.s.sol"},
+				{"run", "script/deploy/DeployCounter.s.sol", "-n", "anvil-31337"},
 				{"list"},
 			},
 		},

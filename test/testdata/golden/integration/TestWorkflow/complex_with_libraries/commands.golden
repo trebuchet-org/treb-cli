@@ -1,0 +1,239 @@
+=== cmd 0: [config set network anvil-31337] ===
+✅ Set network to: anvil-31337
+📁 config saved to: .treb/config.local.json
+
+
+=== cmd 1: [gen deploy StringUtilsV2] ===
+
+✅ Generated deployment script: script/deploy/DeployStringUtilsV2.s.sol
+This library will be deployed with CREATE2 for deterministic addresses.
+
+To deploy, run:
+  treb run script/deploy/DeployStringUtilsV2.s.sol --network anvil-31337
+
+
+=== cmd 2: [gen deploy src/Counter.sol:Counter] ===
+
+✅ Generated deployment script: script/deploy/DeployCounter.s.sol
+
+To deploy, run:
+  treb run script/deploy/DeployCounter.s.sol --network anvil-31337
+
+
+=== cmd 3: [gen deploy src/MessageStorageV08] ===
+
+✅ Generated deployment script: script/deploy/DeployMessageStorageV08.s.sol
+
+To deploy, run:
+  treb run script/deploy/DeployMessageStorageV08.s.sol --network anvil-31337
+
+
+=== cmd 4: [run DeployStringUtilsV2] ===
+
+🚀 Running Deployment Script
+──────────────────────────────────────────────────
+  Script:    DeployStringUtilsV2
+  Network:   anvil-31337 (31337)
+  Namespace: default
+  Mode:      LIVE
+  Senders:   [anvil]
+──────────────────────────────────────────────────
+
+🔄 Transactions:
+──────────────────────────────────────────────────
+
+executed  anvil → CreateX::deployCreate2(salt: 0xf39fd6e5..., initCode: 0x61071761...)
+├─ 🚀 new StringUtilsV2()
+│  └─ [return] 0xab1b5cC40fDa13B869ABBB5a8209dD21a05190a3
+└─ ContractCreation(newContract: StringUtils.0.8.30: [0xab1b5c..., salt: 0x40...)
+   Tx: 0x<HASH> | Block: 1 | Gas: 449808
+
+📦 Deployment Summary:
+──────────────────────────────────────────────────
+StringUtilsV2 at 0xab1b5cC40fDa13B869ABBB5a8209dD21a05190a3
+
+
+📝 Script Logs:
+────────────────────────────────────────
+  Registry: failed to load registry from .treb/registry.json
+
+✓ Updated registry for anvil-31337 network in namespace default
+✓ Script execution completed successfully
+
+
+=== cmd 5: [run DeployMessageStorageV08] ===
+
+🚀 Running Deployment Script
+──────────────────────────────────────────────────
+  Script:    DeployMessageStorageV08
+  Network:   anvil-31337 (31337)
+  Namespace: default
+  Mode:      LIVE
+  Senders:   [anvil]
+──────────────────────────────────────────────────
+
+🔄 Transactions:
+──────────────────────────────────────────────────
+
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ new 0xA7ad6AfE7D14855D54E641F779E1dbc848E89945()
+│  └─ [return] 0xA7ad6AfE7D14855D54E641F779E1dbc848E89945
+├─ Create3ProxyContractCreation(newContract: 0xA7ad...9945, salt: 0x7b569f91...)
+├─ 0xA7ad6AfE7D14855D54E641F779E1dbc848E89945::unknown()
+│  └─ 🚀 new MessageStorageV08()
+│     └─ [return] 0xD35049AdbF890d4F8DA73994172Be764dC150DCc
+└─ ContractCreation(newContract: MessageStorageV08: [0xD35049A...)
+   Tx: 0x<HASH> | Block: 2 | Gas: 1693052
+
+📦 Deployment Summary:
+──────────────────────────────────────────────────
+MessageStorageV08 at 0xD35049AdbF890d4F8DA73994172Be764dC150DCc
+
+
+📝 Script Logs:
+────────────────────────────────────────
+  Registry: failed to load registry from .treb/registry.json
+
+✓ Updated registry for anvil-31337 network in namespace default
+✓ Script execution completed successfully
+
+
+=== cmd 6: [ls] ===
+   ◎ namespace:   DEFAULT                       
+└─ ⛓ chain:       31337                         
+  
+  SINGLETONS
+  MessageStorageV08     0xD35049AdbF890d4F8DA73994172Be764dC150DCc   🅔 ? 🅢 ?         <TIMESTAMP>   
+  StringUtilsV2         0xab1b5cC40fDa13B869ABBB5a8209dD21a05190a3   🅔 ? 🅢 ?         <TIMESTAMP>   
+
+Total deployments: 2
+
+
+=== cmd 7: [config set network anvil-31338] ===
+✅ Set network to: anvil-31338
+📁 config saved to: .treb/config.local.json
+
+
+=== cmd 8: [run DeployCounter] ===
+
+🚀 Running Deployment Script
+──────────────────────────────────────────────────
+  Script:    DeployCounter
+  Network:   anvil-31338 (31338)
+  Namespace: default
+  Mode:      LIVE
+  Senders:   [anvil]
+──────────────────────────────────────────────────
+
+🔄 Transactions:
+──────────────────────────────────────────────────
+
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ new 0xDaFaC68f7D2133e3CE0229fAddcd2b1C96D8Eb83()
+│  └─ [return] 0xDaFaC68f7D2133e3CE0229fAddcd2b1C96D8Eb83
+├─ Create3ProxyContractCreation(newContract: 0xDaFa...Eb83, salt: 0x78714809...)
+├─ 0xDaFaC68f7D2133e3CE0229fAddcd2b1C96D8Eb83::unknown()
+│  └─ 🚀 new Counter()
+│     └─ [return] 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
+└─ ContractCreation(newContract: Counter: [0x74148047D6bDf624C...)
+   Tx: 0x<HASH> | Block: 1 | Gas: 185932
+
+📦 Deployment Summary:
+──────────────────────────────────────────────────
+Counter at 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
+
+
+📝 Script Logs:
+────────────────────────────────────────
+  Registry: failed to load registry from .treb/registry.json
+
+✓ Updated registry for anvil-31338 network in namespace default
+✓ Script execution completed successfully
+
+
+=== cmd 9: [run DeployCounter -e LABEL=v2] ===
+
+🚀 Running Deployment Script
+──────────────────────────────────────────────────
+  Script:    DeployCounter
+  Network:   anvil-31338 (31338)
+  Namespace: default
+  Mode:      LIVE
+  Env Vars:  LABEL=v2
+  Senders:   [anvil]
+──────────────────────────────────────────────────
+
+🔄 Transactions:
+──────────────────────────────────────────────────
+
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ new 0x30938f5a528389F9c7fCd5ebc5f91935A6d575C9()
+│  └─ [return] 0x30938f5a528389F9c7fCd5ebc5f91935A6d575C9
+├─ Create3ProxyContractCreation(newContract: 0x3093...75C9, salt: 0xa5b9712d...)
+├─ 0x30938f5a528389F9c7fCd5ebc5f91935A6d575C9::unknown()
+│  └─ 🚀 new Counter()
+│     └─ [return] 0xe0c42922eA868803991F2F0E82D77280A790f446
+└─ ContractCreation(newContract: Counter: [0xe0c42922eA8688039...)
+   Tx: 0x<HASH> | Block: 2 | Gas: 185932
+
+📦 Deployment Summary:
+──────────────────────────────────────────────────
+Counter:v2 at 0xe0c42922eA868803991F2F0E82D77280A790f446
+
+
+📝 Script Logs:
+────────────────────────────────────────
+  Registry: failed to load registry from .treb/registry.json
+
+✓ Updated registry for anvil-31338 network in namespace default
+✓ Script execution completed successfully
+
+
+=== cmd 10: [run DeployCounter -e LABEL=v3] ===
+
+🚀 Running Deployment Script
+──────────────────────────────────────────────────
+  Script:    DeployCounter
+  Network:   anvil-31338 (31338)
+  Namespace: default
+  Mode:      LIVE
+  Env Vars:  LABEL=v3
+  Senders:   [anvil]
+──────────────────────────────────────────────────
+
+🔄 Transactions:
+──────────────────────────────────────────────────
+
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ new 0xc9a4A1f1E134a7Fea25279AFEFdC69EB1F56dadF()
+│  └─ [return] 0xc9a4A1f1E134a7Fea25279AFEFdC69EB1F56dadF
+├─ Create3ProxyContractCreation(newContract: 0xc9a4...dadF, salt: 0xbd8ac887...)
+├─ 0xc9a4A1f1E134a7Fea25279AFEFdC69EB1F56dadF::unknown()
+│  └─ 🚀 new Counter()
+│     └─ [return] 0xb3212624e288499386394b40A0b60c9b8bA9798E
+└─ ContractCreation(newContract: Counter: [0xb3212624e28849938...)
+   Tx: 0x<HASH> | Block: 3 | Gas: 185932
+
+📦 Deployment Summary:
+──────────────────────────────────────────────────
+Counter:v3 at 0xb3212624e288499386394b40A0b60c9b8bA9798E
+
+
+📝 Script Logs:
+────────────────────────────────────────
+  Registry: failed to load registry from .treb/registry.json
+
+✓ Updated registry for anvil-31338 network in namespace default
+✓ Script execution completed successfully
+
+
+=== cmd 11: [ls] ===
+   ◎ namespace:   DEFAULT                       
+└─ ⛓ chain:       31338                         
+  
+  SINGLETONS
+  Counter:v3     0xb3212624e288499386394b40A0b60c9b8bA9798E   🅔 ? 🅢 ?         <TIMESTAMP>   
+  Counter:v2     0xe0c42922eA868803991F2F0E82D77280A790f446   🅔 ? 🅢 ?         <TIMESTAMP>   
+  Counter        0x74148047D6bDf624C94eFc07F60cEE7b6052FB29   🅔 ? 🅢 ?         <TIMESTAMP>   
+
+Total deployments: 3

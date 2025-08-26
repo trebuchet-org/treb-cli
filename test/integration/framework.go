@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -163,4 +164,8 @@ func compareOutput(t *testing.T, test IntegrationTest, output, displayName, gold
 			t.Errorf("Diff on %s (v1) (-golden +output):\n%s", displayName, diff)
 		}
 	}
+}
+
+func s(cmd string) []string {
+	return strings.Split(cmd, " ")
 }

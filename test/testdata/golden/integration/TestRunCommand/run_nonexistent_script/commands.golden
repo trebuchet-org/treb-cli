@@ -1,2 +1,2 @@
-=== cmd 0: [run script/deploy/NonExistent.s.sol] ===
+=== cmd 0: [run script/deploy/NonExistent.s.sol --network anvil-31337] ===
 Error: failed to resolve script: No contracts match query: script/deploy/NonExistent.s.sol and ^script

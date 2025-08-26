@@ -123,8 +123,6 @@ func (i *Repository) processArtifact(artifactPath string) error {
 		return nil
 	}
 
-	i.log.Debug("processing artifact", "path", artifactPath, "compilationTarget", artifact.Metadata.Settings.CompilationTarget)
-
 	// Skip if no bytecode
 	if artifact.Bytecode.Object == "" || artifact.Bytecode.Object == "0x" {
 		return nil
