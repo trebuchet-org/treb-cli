@@ -213,16 +213,7 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 func (f *ForgeAdapter) buildArgs(config usecase.RunScriptConfig) []string {
 	args := []string{"script", config.Script.Path, "--ffi"}
 
-	// // Add function signature if specified
-	// if opts.FunctionName != "" {
-	// 	args = append(args, "--sig", opts.FunctionName)
-	// 	if len(opts.FunctionArgs) > 0 {
-	// 		args = append(args, opts.FunctionArgs...)
-	// 	}
-	// }
-
 	// Network configuration
-	// Use RPC URL if available, otherwise use network name
 	args = append(args, "--rpc-url", config.Network.Name)
 
 	// Broadcast/dry run
