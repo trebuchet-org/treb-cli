@@ -182,7 +182,7 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 
 	if err := cmd.Wait(); err != nil {
 		result.Success = false
-		if result.Error != nil {
+		if result.Error == nil {
 			result.Error = fmt.Errorf("forge script failed: %w", err)
 		}
 	}
