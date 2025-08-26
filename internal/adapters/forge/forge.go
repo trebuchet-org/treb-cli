@@ -124,6 +124,7 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 		if err := processor.ProcessOutput(teeReader, entityChan); err != nil {
 			errChan <- err
 		}
+		errChan <- nil
 		close(entityChan)
 		close(errChan)
 	}()
@@ -174,7 +175,7 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 
 	// Wait for command to finish
 	waitErr := cmd.Wait()
-	processingErr := <-errChan
+	processingErr, _ := <-errChan
 
 	if processingErr != nil {
 		result.Error = fmt.Errorf("output processing error: %w", processingErr)
