@@ -94,10 +94,10 @@ func TestGenCommand(t *testing.T) {
 		{
 			Name: "gen_deploy_custom_output",
 			TestCmds: [][]string{
-				{"gen", "deploy", "src/Counter.sol:Counter", "--script-path", "script/custom/DeployMyCounter.s.sol"},
+				{"gen", "deploy", "src/Counter.sol:Counter", "--script-path", "script/deploy/DeployMyCounter.s.sol"},
 			},
 			OutputArtifacts: append(
-				[]string{"script/custom/DeployMyCounter.s.sol"},
+				[]string{"script/deploy/DeployMyCounter.s.sol"},
 				DefaultOutputArtifacs...,
 			),
 		},
