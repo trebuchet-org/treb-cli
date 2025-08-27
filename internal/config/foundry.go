@@ -46,5 +46,22 @@ func loadFoundryConfig(projectRoot string) (*config.FoundryConfig, error) {
 		ethConfig.Key = os.ExpandEnv(ethConfig.Key)
 	}
 
+	// Process profile sender configs
+	for _, profile := range cfg.Profile {
+		if profile.Treb != nil && profile.Treb.Senders != nil {
+			for senderName, senderConfig := range profile.Treb.Senders {
+				// Expand environment variables in sender configs
+				senderConfig.PrivateKey = os.ExpandEnv(senderConfig.PrivateKey)
+				senderConfig.Safe = os.ExpandEnv(senderConfig.Safe)
+				senderConfig.Address = os.ExpandEnv(senderConfig.Address)
+				senderConfig.Signer = os.ExpandEnv(senderConfig.Signer)
+				senderConfig.DerivationPath = os.ExpandEnv(senderConfig.DerivationPath)
+
+				// Update the map with the expanded config
+				profile.Treb.Senders[senderName] = senderConfig
+			}
+		}
+	}
+
 	return &cfg, nil
 }

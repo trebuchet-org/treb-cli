@@ -22,10 +22,5 @@ Counter already deployed at 0xdE06172EB8C24165438479C9b69E3F83832d9EA3
     Entropy: default/src/Counter.sol:Counter:v1
 Note: These contracts were already deployed and deployment was skipped.
 
-
-📝 Script Logs:
-────────────────────────────────────────
-  Registry: failed to load registry from .treb/registry.json
-
 - No registry changes recorded for anvil-31337 network in namespace default
 ✓ Script execution completed successfully

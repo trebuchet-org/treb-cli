@@ -80,8 +80,9 @@ func (m *SendersManager) BuildSenderScriptConfig(
 		return nil, fmt.Errorf("can not use ledger in both main sender and safe signer, configure @custom:senders")
 	}
 
-	allSenders := append(slices.Clone(senders), safeSigners...)
-	sort.Strings(allSenders)
+	sort.Strings(safeSigners)
+	sort.Strings(senders)
+	allSenders := append(slices.Clone(safeSigners), senders...)
 
 	var senderInitConfigs []config.SenderInitConfig
 	if senderInitConfigs, err = m.buildSenderInitConfigs(allSenders); err != nil {

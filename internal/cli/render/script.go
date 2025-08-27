@@ -68,9 +68,7 @@ func (r *ScriptRenderer) RenderExecution(result *usecase.RunScriptResult) error 
 	}
 
 	// Render script logs
-	// Always show the registry load error that v1 shows
-	logs := []string{"Registry: failed to load registry from .treb/registry.json"}
-	if err := r.renderLogs(logs); err != nil {
+	if err := r.renderLogs(exec); err != nil {
 		return err
 	}
 
@@ -199,7 +197,11 @@ func (r *ScriptRenderer) renderDeploymentSummary(exec *forge.HydratedRunResult) 
 }
 
 // renderLogs displays console.log output from the script
-func (r *ScriptRenderer) renderLogs(logs []string) error {
+func (r *ScriptRenderer) renderLogs(exec *forge.HydratedRunResult) error {
+	if exec.ParsedOutput == nil {
+		return nil
+	}
+	logs := exec.ParsedOutput.ConsoleLogs
 	if len(logs) == 0 {
 		return nil
 	}

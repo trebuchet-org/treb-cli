@@ -182,7 +182,7 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 
 	if err := cmd.Wait(); err != nil {
 		result.Success = false
-		if result.Error != nil {
+		if result.Error == nil {
 			result.Error = fmt.Errorf("forge script failed: %w", err)
 		}
 	}
@@ -255,6 +255,7 @@ func (f *ForgeAdapter) buildEnv(config usecase.RunScriptConfig) []string {
 	// Profile
 	env["FOUNDRY_PROFILE"] = config.Namespace
 	env["NAMESPACE"] = config.Namespace
+	env["NETWORK"] = config.Network.Name
 	env["DRYRUN"] = strconv.FormatBool(config.DryRun || config.Debug || config.DebugJSON)
 	env["SENDER_CONFIGS"] = config.SenderScriptConfig.EncodedConfig
 

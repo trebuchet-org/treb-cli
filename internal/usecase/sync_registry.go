@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/trebuchet-org/treb-cli/internal/adapters/safe"
 	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
+	"github.com/trebuchet-org/treb-cli/pkg/safe"
 )
 
 // SyncRegistry handles syncing the registry with on-chain state

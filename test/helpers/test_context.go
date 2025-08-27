@@ -413,7 +413,14 @@ func createLightweightWorkspace(src, dst string) error {
 			if err := copyDir(srcPath, dstPath); err != nil {
 				return fmt.Errorf("failed to copy src directory: %w", err)
 			}
-
+		case ".env.example":
+			if err := mergeFile(srcPath, filepath.Join(dst, ".env"), "\n\n"); err != nil {
+				return fmt.Errorf("failed to copy .env file: %w", err)
+			}
+		case ".env":
+			if err := mergeFile(srcPath, filepath.Join(dst, ".env"), "\n\n"); err != nil {
+				return fmt.Errorf("failed to copy .env file: %w", err)
+			}
 		default:
 			// Skip directories that should be created empty
 			testDirs := []string{".treb", "broadcast", "cache", "out"}
@@ -464,6 +471,28 @@ func copyFile(src, dst string) error {
 		return err
 	}
 	return os.Chmod(dst, srcInfo.Mode())
+}
+
+// mergeFile merges a file to dst if already exists
+func mergeFile(src, dst, separator string) error {
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer srcFile.Close()
+
+	dstFile, err := os.OpenFile(dst, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+	defer dstFile.Close()
+
+	dstFile.WriteString(separator)
+
+	if _, err := io.Copy(dstFile, srcFile); err != nil {
+		return err
+	}
+	return nil
 }
 
 // copyDir recursively copies a directory

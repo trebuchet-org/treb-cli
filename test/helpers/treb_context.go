@@ -84,7 +84,7 @@ func (tc *TrebContext) Treb(args ...string) (string, error) {
 	cmd.Env = os.Environ()
 	if debugMode {
 		// Pass TREB_TEST_DEBUG to the treb command if debug is enabled
-		cmd.Env = append(cmd.Env, "TREB_TEST_DEBUG=1")
+		cmd.Env = append(cmd.Env, "TREB_LOG_LEVEL=debug")
 	}
 
 	var stdout, stderr bytes.Buffer

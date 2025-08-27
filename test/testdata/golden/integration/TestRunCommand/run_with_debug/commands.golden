@@ -45,10 +45,5 @@ Warning: No transactions to broadcast.
 ──────────────────────────────────────────────────
 No transactions executed (dry run or all deployments skipped)
 
-
-📝 Script Logs:
-────────────────────────────────────────
-  Registry: failed to load registry from .treb/registry.json
-
 - No registry changes recorded for anvil-31337 network in namespace default
 ✓ Script execution completed successfully
