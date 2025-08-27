@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -35,10 +36,12 @@ func (tc *TrebContext) Treb(args ...string) (string, error) {
 	tc.t.Helper()
 
 	// Build the full command with context flags
-	allArgs := []string{"--non-interactive"}
-
+	additionalArgs := []string{"--non-interactive"}
+	if args[0] == "run" || args[0] == "compose" {
+		additionalArgs = append(additionalArgs, "--slow")
+	}
 	// Add the command arguments
-	allArgs = append(allArgs, args...)
+	allArgs := append(slices.Clone(args), additionalArgs...)
 
 	// Check if debug mode is enabled
 	debugMode := IsDebugEnabled()

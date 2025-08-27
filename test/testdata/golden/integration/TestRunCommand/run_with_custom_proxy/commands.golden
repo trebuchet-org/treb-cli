@@ -1,0 +1,73 @@
+=== cmd 0: [run script/DeployCustomProxy.s.sol] ===
+
+🚀 Running Deployment Script
+──────────────────────────────────────────────────
+  Script:    DeployerCustomProxy
+  Network:   anvil-31337 (31337)
+  Namespace: default
+  Mode:      LIVE
+  Senders:   [anvil]
+──────────────────────────────────────────────────
+
+🔄 Transactions:
+──────────────────────────────────────────────────
+
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ new 0xdbDE0B3963c769bb7b9966827E3bA90C0eDfEcAF()
+│  └─ [return] 0xdbDE0B3963c769bb7b9966827E3bA90C0eDfEcAF
+├─ Create3ProxyContractCreation(newContract: 0xdbDE...EcAF, salt: 0x5fc0b6f0...)
+├─ 0xdbDE0B3963c769bb7b9966827E3bA90C0eDfEcAF::unknown()
+│  └─ 🚀 new UpgradeableCounter()
+│     └─ [return] 0xcFd84621988A8243EfEd4C30163d85f5dEdE07Ad
+└─ ContractCreation(newContract: UpgradeableCounter: [0xcFd846...)
+   Tx: 0x<HASH> | Block: 1 | Gas: 476959
+
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ new 0xDf03be92B44e747e5c4a7e7A1A2b91c501265BcB()
+│  └─ [return] 0xDf03be92B44e747e5c4a7e7A1A2b91c501265BcB
+├─ Create3ProxyContractCreation(newContract: 0xDf03...5BcB, salt: 0x433184ff...)
+├─ 0xDf03be92B44e747e5c4a7e7A1A2b91c501265BcB::unknown()
+│  └─ 🚀 new Proxy(
+│     │    initialOwner:: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+│     │  )
+│     ├─ OwnerSet(owner: 0xf39F...2266)
+│     └─ [return] 0x806ca68527807F59Bf2D513889eC6CbD6139BDFf
+└─ ContractCreation(newContract: Proxy: [0x806ca68527807F59Bf2...)
+   Tx: 0x<HASH> | Block: 2 | Gas: 616940
+
+executed  anvil → Proxy::_setAndInitializeImplementation(implementation: 0xcFd8...07Ad, callbackData: 0xc4d66de8...)
+├─ ImplementationSet(implementation: UpgradeableCounter: [0xcFd846...)
+└─ UpgradeableCounter::initialize(initialOwner: 0xf39F...2266)
+   Tx: 0x<HASH> | Block: 3 | Gas: 76781
+
+executed  anvil → Proxy::unknown()
+└─ UpgradeableCounter::increment()
+   └─ CountIncremented(newCount: 1)
+   Tx: 0x<HASH> | Block: 4 | Gas: 52164
+
+📦 Deployment Summary:
+──────────────────────────────────────────────────
+UpgradeableCounter at 0xcFd84621988A8243EfEd4C30163d85f5dEdE07Ad
+Proxy[UpgradeableCounter] at 0x806ca68527807F59Bf2D513889eC6CbD6139BDFf
+
+
+📝 Script Logs:
+────────────────────────────────────────
+  Registry: failed to load registry from .treb/registry.json
+
+✓ Updated registry for anvil-31337 network in namespace default
+✓ Script execution completed successfully
+
+
+=== cmd 1: [list] ===
+   ◎ namespace:   DEFAULT                       
+└─ ⛓ chain:       31337                         
+  
+  PROXIES
+  Proxy                         0x806ca68527807F59Bf2D513889eC6CbD6139BDFf   🅔 ? 🅢 ?         <TIMESTAMP>   
+  └─ UpgradeableCounter         0xcFd84621988A8243EfEd4C30163d85f5dEdE07Ad                                         
+  
+  SINGLETONS
+  UpgradeableCounter            0xcFd84621988A8243EfEd4C30163d85f5dEdE07Ad   🅔 ? 🅢 ?         <TIMESTAMP>   
+
+Total deployments: 2

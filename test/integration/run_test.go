@@ -169,6 +169,16 @@ func TestRunCommand(t *testing.T) {
 			},
 		},
 		{
+			Name: "run_with_custom_proxy",
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+			},
+			TestCmds: [][]string{
+				{"run", "script/DeployCustomProxy.s.sol"},
+				{"list"},
+			},
+		},
+		{
 			Name: "run_deploy_with_library",
 			SetupCmds: [][]string{
 				s("config set network anvil-31337"),

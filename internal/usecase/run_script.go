@@ -19,6 +19,7 @@ type RunScriptParams struct {
 	DebugJSON      bool
 	Verbose        bool
 	NonInteractive bool
+	Slow           bool
 }
 
 // RunScriptResult contains the result of running a script
@@ -157,6 +158,7 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 		DebugJSON:          params.DebugJSON,
 		Progress:           uc.progress,
 		SenderScriptConfig: *senderScriptConfig,
+		Slow:               params.Slow,
 	}
 
 	uc.progress.OnProgress(ctx, ProgressEvent{

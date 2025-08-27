@@ -4,7 +4,7 @@
   
   PROXIES
   ERC1967Proxy:UpgradeableCounter     0x20C1EF3EFA51FC15592BEFff06471E21FfDCDD06   🅔 ? 🅢 ?         <TIMESTAMP>   
-  └─ 0xD63F2d37...                    0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903                                         
+  └─ UpgradeableCounter               0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903                                         
   
   SINGLETONS
   UpgradeableCounter                  0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903   🅔 ? 🅢 ?         <TIMESTAMP>   

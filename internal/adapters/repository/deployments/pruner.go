@@ -35,7 +35,10 @@ func (p *Pruner) CollectPrunableItems(
 	}
 
 	// Check deployments
-	deployments := p.repo.GetAllDeployments(ctx)
+	deployments, err := p.repo.GetAllDeployments(ctx)
+	if err != nil {
+		return nil, err
+	}
 	for _, deployment := range deployments {
 		// Only check deployments on the target chain
 		if deployment.ChainID != chainID {
