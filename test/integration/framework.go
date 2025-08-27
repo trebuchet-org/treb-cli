@@ -20,7 +20,7 @@ type IntegrationTest struct {
 	SetupCmds       [][]string
 	PostSetup       func(t *testing.T, ctx *helpers.TestContext)
 	TestCmds        [][]string
-	Test            func(t *testing.T, ctx *helpers.TestContext, output *helpers.TestOutput)
+	PostTest        func(t *testing.T, ctx *helpers.TestContext, output string)
 	ExpectErr       bool
 	Normalizers     []helpers.Normalizer
 	OutputArtifacts []string
@@ -55,14 +55,17 @@ func RunIntegrationTest(t *testing.T, test IntegrationTest) {
 	}
 
 	helpers.IsolatedTest(t, test.Name, func(t *testing.T, ctx *helpers.TestContext) {
-		// Run v1 test
 		output := runTest(t, test, ctx)
-		// Run v2 test
-		// At this point, Go's testing framework ensures both subtests have completed
-		// before continuing with the parent test
-		compareOutput(t, test, output.testCmdsStdout, "Command Output", "commands.golden")
-		for path, artifact := range output.artifacts {
-			compareOutput(t, test, artifact, path, filepath.Base(path)+".golden")
+
+		if !test.SkipGolden {
+			compareOutput(t, test, output.testCmdsStdout, "Command Output", "commands.golden")
+			for path, artifact := range output.artifacts {
+				compareOutput(t, test, artifact, path, filepath.Base(path)+".golden")
+			}
+		}
+
+		if test.PostTest != nil {
+			test.PostTest(t, ctx, output.testCmdsStdout)
 		}
 	})
 }

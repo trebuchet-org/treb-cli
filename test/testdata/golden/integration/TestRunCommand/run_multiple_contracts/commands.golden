@@ -67,11 +67,6 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 ──────────────────────────────────────────────────
 SampleToken at 0x793f69C1702a0E900a142D8575E44F9E4DA86fFf
 
-
-📝 Script Logs:
-────────────────────────────────────────
-  Registry: failed to load registry from .treb/registry.json
-
 ✓ Updated registry for anvil-31337 network in namespace default
 ✓ Script execution completed successfully
 

@@ -2,7 +2,7 @@
 ✅ Valid Foundry project detected
 ✅ treb-sol library found
 ✅ Created v2 registry structure in .treb/
-✅ .env.example already exists
+✅ Created .env.example
 
 🎉 treb initialized successfully!
 
@@ -64,11 +64,6 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 📦 Deployment Summary:
 ──────────────────────────────────────────────────
 Counter at 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
-
-
-📝 Script Logs:
-────────────────────────────────────────
-  Registry: failed to load registry from .treb/registry.json
 
 ✓ Updated registry for anvil-31337 network in namespace default
 ✓ Script execution completed successfully

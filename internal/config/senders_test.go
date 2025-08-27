@@ -42,7 +42,7 @@ func TestSendersManager_BuildSenderInitConfigs(t *testing.T) {
 				assert.Equal(t, "signer0", configs[0].Name)
 				assert.Equal(t, SENDER_TYPE_IN_MEMORY, configs[0].SenderType)
 				assert.True(t, configs[0].CanBroadcast)
-				
+
 				// Decode the config to check the private key
 				configHex := hex.EncodeToString(configs[0].Config)
 				assert.NotContains(t, configHex, strings.Repeat("00", 32), "Private key should not be all zeros")
@@ -58,7 +58,7 @@ func TestSendersManager_BuildSenderInitConfigs(t *testing.T) {
 						Signer: "signer0",
 					},
 					"signer0": {
-						Type:       "private_key", 
+						Type:       "private_key",
 						PrivateKey: "${TEST_PRIVATE_KEY}",
 					},
 				},
@@ -69,7 +69,7 @@ func TestSendersManager_BuildSenderInitConfigs(t *testing.T) {
 			},
 			validateConfig: func(t *testing.T, configs []config.SenderInitConfig) {
 				require.Len(t, configs, 2) // Should include both safe and signer
-				
+
 				// Find the safe config
 				var safeConfig, signerConfig *config.SenderInitConfig
 				for i := range configs {
@@ -79,18 +79,18 @@ func TestSendersManager_BuildSenderInitConfigs(t *testing.T) {
 						signerConfig = &configs[i]
 					}
 				}
-				
+
 				require.NotNil(t, safeConfig, "Safe config not found")
 				require.NotNil(t, signerConfig, "Signer config not found")
-				
+
 				// Validate safe config
 				assert.Equal(t, SENDER_TYPE_GNOSIS_SAFE, safeConfig.SenderType)
 				assert.Equal(t, common.HexToAddress("0x3D33783D1fd1B6D849d299aD2E711f844fC16d2F"), safeConfig.Account)
-				
+
 				// Validate signer config
 				assert.Equal(t, SENDER_TYPE_IN_MEMORY, signerConfig.SenderType)
 				assert.Equal(t, common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"), signerConfig.Account)
-				
+
 				// Check that the private key is not zero
 				configHex := hex.EncodeToString(signerConfig.Config)
 				assert.NotContains(t, configHex, strings.Repeat("00", 32), "Private key should not be all zeros")
@@ -132,12 +132,12 @@ func TestSendersManager_BuildSenderInitConfigs(t *testing.T) {
 				os.Setenv(k, v)
 				defer os.Unsetenv(k)
 			}
-			
+
 			// Create runtime config with expanded env vars
 			runtimeConfig := &config.RuntimeConfig{
 				TrebConfig: tt.trebConfig,
 			}
-			
+
 			// Expand environment variables in sender configs
 			if runtimeConfig.TrebConfig != nil && runtimeConfig.TrebConfig.Senders != nil {
 				for name, sender := range runtimeConfig.TrebConfig.Senders {
@@ -149,13 +149,13 @@ func TestSendersManager_BuildSenderInitConfigs(t *testing.T) {
 					runtimeConfig.TrebConfig.Senders[name] = sender
 				}
 			}
-			
+
 			// Create sender manager
 			manager := NewSendersManager(runtimeConfig)
-			
+
 			var configs []config.SenderInitConfig
 			var err error
-			
+
 			// For safe senders test, we need to test the full BuildSenderScriptConfig
 			// because buildSenderInitConfigs is called with allSenders internally
 			if tt.name == "safe sender with signer" {
@@ -172,7 +172,7 @@ func TestSendersManager_BuildSenderInitConfigs(t *testing.T) {
 						},
 					},
 				}
-				
+
 				scriptConfig, err := manager.BuildSenderScriptConfig(artifact)
 				if err != nil {
 					t.Fatalf("BuildSenderScriptConfig failed: %v", err)
@@ -182,7 +182,7 @@ func TestSendersManager_BuildSenderInitConfigs(t *testing.T) {
 				// Build sender init configs
 				configs, err = manager.buildSenderInitConfigs(tt.senders)
 			}
-			
+
 			if tt.expectedError != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
@@ -210,11 +210,11 @@ func TestSendersManager_BuildSenderScriptConfig(t *testing.T) {
 			},
 		},
 	}
-	
+
 	// Set up test environment
 	os.Setenv("TEST_PRIVATE_KEY", "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
 	defer os.Unsetenv("TEST_PRIVATE_KEY")
-	
+
 	trebConfig := &config.TrebConfig{
 		Senders: map[string]config.SenderConfig{
 			"safe0": {
@@ -228,34 +228,34 @@ func TestSendersManager_BuildSenderScriptConfig(t *testing.T) {
 			},
 		},
 	}
-	
+
 	// Expand env vars
 	for name, sender := range trebConfig.Senders {
 		sender.PrivateKey = os.ExpandEnv(sender.PrivateKey)
 		trebConfig.Senders[name] = sender
 	}
-	
+
 	runtimeConfig := &config.RuntimeConfig{
 		TrebConfig: trebConfig,
 	}
-	
+
 	manager := NewSendersManager(runtimeConfig)
-	
+
 	// Build sender script config
 	scriptConfig, err := manager.BuildSenderScriptConfig(artifact)
 	require.NoError(t, err)
-	
+
 	// Verify the config
 	assert.Len(t, scriptConfig.Senders, 1)
 	assert.Equal(t, "safe0", scriptConfig.Senders[0])
 	assert.Len(t, scriptConfig.SenderInitConfigs, 2) // safe0 and signer0
 	assert.NotEmpty(t, scriptConfig.EncodedConfig)
-	
+
 	// Decode and verify the encoded config
 	encodedBytes, err := hex.DecodeString(strings.TrimPrefix(scriptConfig.EncodedConfig, "0x"))
 	require.NoError(t, err)
 	assert.NotEmpty(t, encodedBytes)
-	
+
 	// Check that we have both safe0 and signer0 in the configs
 	var foundSafe, foundSigner bool
 	for _, config := range scriptConfig.SenderInitConfigs {
@@ -309,11 +309,11 @@ func TestParsePrivateKey(t *testing.T) {
 			expectError:   true,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := parsePrivateKey(tt.privateKeyHex)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 			} else {

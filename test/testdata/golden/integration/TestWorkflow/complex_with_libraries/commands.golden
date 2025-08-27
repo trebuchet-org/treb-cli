@@ -89,11 +89,6 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 ──────────────────────────────────────────────────
 MessageStorageV08 at 0xD35049AdbF890d4F8DA73994172Be764dC150DCc
 
-
-📝 Script Logs:
-────────────────────────────────────────
-  Registry: failed to load registry from .treb/registry.json
-
 ✓ Updated registry for anvil-31337 network in namespace default
 ✓ Script execution completed successfully
 
@@ -142,11 +137,6 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 ──────────────────────────────────────────────────
 Counter at 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
 
-
-📝 Script Logs:
-────────────────────────────────────────
-  Registry: failed to load registry from .treb/registry.json
-
 ✓ Updated registry for anvil-31338 network in namespace default
 ✓ Script execution completed successfully
 
@@ -180,11 +170,6 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 ──────────────────────────────────────────────────
 Counter:v2 at 0xe0c42922eA868803991F2F0E82D77280A790f446
 
-
-📝 Script Logs:
-────────────────────────────────────────
-  Registry: failed to load registry from .treb/registry.json
-
 ✓ Updated registry for anvil-31338 network in namespace default
 ✓ Script execution completed successfully
 
@@ -217,11 +202,6 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 📦 Deployment Summary:
 ──────────────────────────────────────────────────
 Counter:v3 at 0xb3212624e288499386394b40A0b60c9b8bA9798E
-
-
-📝 Script Logs:
-────────────────────────────────────────
-  Registry: failed to load registry from .treb/registry.json
 
 ✓ Updated registry for anvil-31338 network in namespace default
 ✓ Script execution completed successfully

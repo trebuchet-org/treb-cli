@@ -18,51 +18,54 @@ func TestSafeDirectExecution(t *testing.T) {
 	tests := []i.IntegrationTest{
 		{
 			SkipGolden:  true,
-			Name:        "simple",
+			Name:        "direct_execution",
 			Normalizers: []helpers.Normalizer{},
-			OutputArtifacts: []string{
-				".treb/deployments.json",
-				".treb/transactions.json",
-				".treb/registry.json",
-				".treb/safe-txs.json",
-			},
 			SetupCmds: [][]string{
 				s("config set namespace live"),
 				s("config set network base-sepolia"),
 				s("gen deploy src/UpgradeableCounter.sol:UpgradeableCounter --proxy --proxy-contract ERC1967Proxy"),
 			},
 			PostSetup: func(t *testing.T, ctx *helpers.TestContext) {
-				if err := setDeployer(ctx.WorkDir, "DeployUpgradeableCounterProxy.s.sol", "safe0"); err != nil {
+				if err := setDeployer(ctx.WorkDir, "DeployUpgradeableCounterProxy.s.sol", "anvil", "safe0"); err != nil {
 					t.Fatal(err)
 				}
 			},
 			TestCmds: [][]string{
 				sf("run DeployUpgradeableCounterProxy -e implementationLabel=%s -e proxyLabel=%s", label, label),
 			},
-			Test: func(t *testing.T, ctx *helpers.TestContext, output *helpers.TestOutput) {
-				stdout := output.Get("stdout")
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, stdout string) {
 				assert.Contains(t, stdout, "ContractCreation(newContract: UpgradeableCounter")
 				assert.Contains(t, stdout, "ContractCreation(newContract: ERC1967Proxy")
 				assert.Contains(t, stdout, fmt.Sprintf("UpgradeableCounter:%s", label))
 				assert.Contains(t, stdout, fmt.Sprintf("ERC1967Proxy:%s", label))
 
-				if deploymentIds, err := output.DeploymentIds(); err != nil {
+				treb, err := helpers.NewTrebParser(ctx)
+				if err != nil {
 					t.Fatal(err)
-				} else {
-					assert.Len(t, deploymentIds, 2)
 				}
 
-				if txIds, err := output.TransactionIds(); err != nil {
+				assert.Len(t, treb.Deployments, 2)
+				assert.Len(t, treb.Transactions, 1)
+				assert.Len(t, treb.SafeTransactions, 1)
+
+				uc, err := treb.Deployment("UpgradeableCounter")
+				if err != nil {
 					t.Fatal(err)
-				} else {
-					assert.Len(t, txIds, 1)
 				}
 
-				if safeTxHashes, err := output.SafeTxHashes(); err != nil {
+				ucTxId := uc.TransactionID
+				assert.Equal(t, uc.Label, label)
+				assert.Equal(t, uc.Type, "SINGLETON")
+				assert.Equal(t, treb.Transactions[ucTxId].Status, "EXECUTED")
+
+				proxy, err := treb.Deployment("ERC1967Proxy")
+				if err != nil {
 					t.Fatal(err)
-				} else {
-					assert.Len(t, safeTxHashes, 1)
 				}
+				proxyTxId := proxy.TransactionID
+				assert.Equal(t, proxy.Label, label)
+				assert.Equal(t, proxy.Type, "PROXY")
+				assert.Equal(t, ucTxId, proxyTxId)
 			},
 		},
 	}

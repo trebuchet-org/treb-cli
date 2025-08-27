@@ -17,13 +17,13 @@ func sf(format string, args ...any) []string {
 	return strings.Split(fmt.Sprintf(format, args...), " ")
 }
 
-func setDeployer(workDir, file, newDeployer string) error {
+func setDeployer(workDir, file, oldDeployer, newDeployer string) error {
 	path := filepath.Join(workDir, "script", "deploy", file)
 	script, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
-	newScript := strings.ReplaceAll(string(script), "anvil", newDeployer)
+	newScript := strings.ReplaceAll(string(script), oldDeployer, newDeployer)
 	return os.WriteFile(path, []byte(newScript), 0644)
 }
 
