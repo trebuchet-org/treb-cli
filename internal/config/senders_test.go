@@ -73,9 +73,10 @@ func TestSendersManager_BuildSenderInitConfigs(t *testing.T) {
 				// Find the safe config
 				var safeConfig, signerConfig *config.SenderInitConfig
 				for i := range configs {
-					if configs[i].Name == "safe0" {
+					switch configs[i].Name {
+					case "safe0":
 						safeConfig = &configs[i]
-					} else if configs[i].Name == "signer0" {
+					case "signer0":
 						signerConfig = &configs[i]
 					}
 				}
@@ -130,7 +131,7 @@ func TestSendersManager_BuildSenderInitConfigs(t *testing.T) {
 			// Set environment variables
 			for k, v := range tt.envVars {
 				os.Setenv(k, v)
-				defer os.Unsetenv(k)
+				defer os.Unsetenv(k) // nolint
 			}
 
 			// Create runtime config with expanded env vars
@@ -213,7 +214,7 @@ func TestSendersManager_BuildSenderScriptConfig(t *testing.T) {
 
 	// Set up test environment
 	os.Setenv("TEST_PRIVATE_KEY", "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
-	defer os.Unsetenv("TEST_PRIVATE_KEY")
+	defer os.Unsetenv("TEST_PRIVATE_KEY") // nolint
 
 	trebConfig := &config.TrebConfig{
 		Senders: map[string]config.SenderConfig{
@@ -259,10 +260,11 @@ func TestSendersManager_BuildSenderScriptConfig(t *testing.T) {
 	// Check that we have both safe0 and signer0 in the configs
 	var foundSafe, foundSigner bool
 	for _, config := range scriptConfig.SenderInitConfigs {
-		if config.Name == "safe0" {
+		switch config.Name {
+		case "safe0":
 			foundSafe = true
 			assert.Equal(t, SENDER_TYPE_GNOSIS_SAFE, config.SenderType)
-		} else if config.Name == "signer0" {
+		case "signer0":
 			foundSigner = true
 			assert.Equal(t, SENDER_TYPE_IN_MEMORY, config.SenderType)
 			// Verify private key is not zeros
