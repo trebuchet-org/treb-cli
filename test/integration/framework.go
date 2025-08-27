@@ -20,9 +20,11 @@ type IntegrationTest struct {
 	SetupCmds       [][]string
 	PostSetup       func(t *testing.T, ctx *helpers.TestContext)
 	TestCmds        [][]string
+	Test            func(t *testing.T, ctx *helpers.TestContext, output *helpers.TestOutput)
 	ExpectErr       bool
 	Normalizers     []helpers.Normalizer
 	OutputArtifacts []string
+	SkipGolden      bool
 }
 
 var DefaultOutputArtifacs = []string{

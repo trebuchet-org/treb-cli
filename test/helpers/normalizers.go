@@ -37,6 +37,14 @@ func (n AddressNormalizer) Normalize(output string) string {
 	return regexp.MustCompile(`0x[a-fA-F0-9]{40}`).ReplaceAllString(output, "0x<ADDRESS>")
 }
 
+type LabelNormalizer struct {
+	Label string
+}
+
+func (n LabelNormalizer) Normalize(output string) string {
+	return strings.ReplaceAll(output, n.Label, "<LABEL>")
+}
+
 // HashNormalizer replaces transaction hashes
 type HashNormalizer struct{}
 

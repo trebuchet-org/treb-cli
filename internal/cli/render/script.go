@@ -68,9 +68,7 @@ func (r *ScriptRenderer) RenderExecution(result *usecase.RunScriptResult) error 
 	}
 
 	// Render script logs
-	// Always show the registry load error that v1 shows
-	logs := []string{"Registry: failed to load registry from .treb/registry.json"}
-	if err := r.renderLogs(logs); err != nil {
+	if err := r.renderLogs(exec.ParsedOutput.ConsoleLogs); err != nil {
 		return err
 	}
 
