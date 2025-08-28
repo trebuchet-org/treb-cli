@@ -130,7 +130,7 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 			close(errChan)
 			close(processingDone)
 		}()
-		
+
 		if err := processor.ProcessOutput(teeReader, entityChan); err != nil {
 			errChan <- err
 		}
@@ -182,10 +182,10 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 
 	// Wait for command to finish first
 	cmdErr := cmd.Wait()
-	
+
 	// Wait for processing to complete
 	<-processingDone
-	
+
 	// Check for processing errors
 	select {
 	case err := <-errChan:
@@ -194,7 +194,7 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 		}
 	default:
 	}
-	
+
 	// Handle command error after processing is done
 	if cmdErr != nil {
 		result.Success = false
@@ -211,9 +211,9 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 	// This handles platform differences where forge might exit with 0 even on revert
 	if parsedOutput.TextOutput != "" && result.Error == nil {
 		lowerOutput := strings.ToLower(parsedOutput.TextOutput)
-		if strings.Contains(lowerOutput, "error:") || 
-		   strings.Contains(lowerOutput, "revert") ||
-		   strings.Contains(lowerOutput, "script failed") {
+		if strings.Contains(lowerOutput, "error:") ||
+			strings.Contains(lowerOutput, "revert") ||
+			strings.Contains(lowerOutput, "script failed") {
 			result.Success = false
 			result.Error = fmt.Errorf("script execution failed")
 		}

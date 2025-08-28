@@ -58,7 +58,7 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 executed  anvil → ERC1967Proxy::unknown()
 └─ UpgradeableCounter::increment()
    └─ CountIncremented(newCount: 1)
-   Tx: 0x<HASH> | Block: 2 | Gas: 51985
+   Tx: 0x<HASH> | Block: 3 | Gas: 51985
 
 📦 Deployment Summary:
 ──────────────────────────────────────────────────
