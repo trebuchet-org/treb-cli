@@ -320,7 +320,12 @@ func (r *DeploymentsRenderer) buildDeploymentTable(deployments []*models.Deploym
 
 		// If this is a proxy, add implementation row
 		if deployment.ProxyInfo != nil {
-			implDisplayName := deployment.ProxyInfo.Implementation[:10] + "..." // fallback short address
+			// Safely truncate address for display
+			addr := deployment.ProxyInfo.Implementation
+			implDisplayName := addr
+			if len(addr) > 10 {
+				implDisplayName = addr[:10] + "..."
+			}
 
 			// If we have the implementation deployment loaded, use its name
 			if deployment.Implementation != nil {
