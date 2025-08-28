@@ -21,6 +21,7 @@ func NewComposeCmd() *cobra.Command {
 		verbose        bool
 		nonInteractive bool
 		resume         bool
+		slow           bool
 	)
 
 	cmd := &cobra.Command{
@@ -95,6 +96,7 @@ This will execute: Broker → Tokens → Reserve → SortedOracles`,
 				Verbose:        verbose,
 				NonInteractive: true, // Orchestration should always be non-interactive
 				Resume:         resume,
+				Slow:           slow,
 			}
 
 			ctx := cmd.Context()
@@ -131,6 +133,7 @@ This will execute: Broker → Tokens → Reserve → SortedOracles`,
 	// Execution flags
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Perform a dry run without broadcasting transactions")
 	cmd.Flags().BoolVar(&debug, "debug", false, "Enable debug mode (shows forge output and saves to file)")
+	cmd.Flags().BoolVar(&slow, "slow", false, "Run forge with --slow")
 	cmd.Flags().BoolVar(&debugJSON, "debug-json", false, "Enable JSON debug mode (shows raw JSON output)")
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Show extra detailed information for events and transactions")
 	cmd.Flags().BoolVar(&nonInteractive, "non-interactive", false, "Disable interactive prompts (always non-interactive for orchestration)")

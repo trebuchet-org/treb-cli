@@ -172,6 +172,31 @@ func GetDefaultNormalizers() []Normalizer {
 	}
 }
 
+// LegacySolidityNormalizer handles bytecode differences in legacy Solidity versions
+// 
+// Legacy Solidity versions (< 0.8.0) embed metadata differently than modern versions,
+// causing bytecode to differ between environments even with the same compiler.
+// This normalizer removes these differences for consistent testing across platforms.
+//
+// It normalizes:
+// - bytecodeHash: Different due to metadata embedding
+// - initCodeHash: Different due to constructor bytecode variations  
+// - Gas costs: Minor variations between environments
+type LegacySolidityNormalizer struct{}
+
+func (n LegacySolidityNormalizer) Normalize(output string) string {
+	// Normalize bytecode hashes in JSON
+	output = regexp.MustCompile(`"bytecodeHash":\s*"0x[a-fA-F0-9]{64}"`).ReplaceAllString(output, `"bytecodeHash": "0x<BYTECODE_HASH>"`)
+	
+	// Normalize init code hashes in JSON
+	output = regexp.MustCompile(`"initCodeHash":\s*"0x[a-fA-F0-9]{64}"`).ReplaceAllString(output, `"initCodeHash": "0x<INIT_CODE_HASH>"`)
+	
+	// Normalize gas costs (matches patterns like "Gas: 616952")
+	output = regexp.MustCompile(`Gas:\s*\d+`).ReplaceAllString(output, `Gas: <GAS_AMOUNT>`)
+	
+	return output
+}
+
 func Normalize(text string, normalizers []Normalizer) string {
 	// Apply normalizers
 	normalized := text

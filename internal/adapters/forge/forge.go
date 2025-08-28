@@ -270,6 +270,9 @@ func (f *ForgeAdapter) buildArgs(config usecase.RunScriptConfig) []string {
 		args = append(args, "--json")
 	}
 
+	if config.Slow {
+		args = append(args, "--slow")
+	}
 	args = append(args, "-vvvv")
 
 	return args

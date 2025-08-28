@@ -240,18 +240,7 @@ func (m *FileRepository) GetDeployment(ctx context.Context, id string) (*models.
 		return nil, domain.ErrNotFound
 	}
 
-	// Clone to avoid mutations
-	clone := *dep
-
-	// Link transaction if available
-	if dep.TransactionID != "" {
-		if tx, exists := m.transactions[dep.TransactionID]; exists {
-			txClone := *tx
-			clone.Transaction = &txClone
-		}
-	}
-
-	return &clone, nil
+	return m.hydrateClone(ctx, dep)
 }
 
 // GetDeploymentByAddress retrieves a deployment by chain ID and address
@@ -275,32 +264,24 @@ func (m *FileRepository) GetDeploymentByAddress(ctx context.Context, chainID uin
 		return nil, domain.ErrNotFound
 	}
 
-	// Clone to avoid mutations
-	clone := *dep
-
-	// Link transaction if available
-	if dep.TransactionID != "" {
-		if tx, exists := m.transactions[dep.TransactionID]; exists {
-			txClone := *tx
-			clone.Transaction = &txClone
-		}
-	}
-
-	return &clone, nil
+	return m.hydrateClone(ctx, dep)
 }
 
 // GetAllDeployments returns all deployments
-func (m *FileRepository) GetAllDeployments(ctx context.Context) []*models.Deployment {
+func (m *FileRepository) GetAllDeployments(ctx context.Context) ([]*models.Deployment, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	// Return a slice of cloned deployments
 	result := make([]*models.Deployment, 0, len(m.deployments))
-	for _, v := range m.deployments {
-		clone := *v
-		result = append(result, &clone)
+	for _, dep := range m.deployments {
+		if clone, err := m.hydrateClone(ctx, dep); err != nil {
+			return nil, err
+		} else {
+			result = append(result, clone)
+		}
 	}
-	return result
+	return result, nil
 }
 
 // ListDeployments retrieves deployments matching the filter
@@ -327,15 +308,11 @@ func (m *FileRepository) ListDeployments(ctx context.Context, filter domain.Depl
 			continue
 		}
 
-		// Clone and add to result
-		clone := *dep
-		if dep.TransactionID != "" {
-			if tx, exists := m.transactions[dep.TransactionID]; exists {
-				txClone := *tx
-				clone.Transaction = &txClone
-			}
+		if clone, err := m.hydrateClone(ctx, dep); err != nil {
+			return nil, err
+		} else {
+			result = append(result, clone)
 		}
-		result = append(result, &clone)
 	}
 
 	return result, nil
@@ -366,40 +343,6 @@ func (m *FileRepository) ListTransactions(ctx context.Context, filter domain.Tra
 	}
 
 	return result, nil
-}
-
-// GetAllDeploymentsHydrated returns all deployments with linked data
-func (m *FileRepository) GetAllDeploymentsHydrated() []*models.Deployment {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	var result []*models.Deployment
-	for _, dep := range m.deployments {
-		clone := *dep
-
-		// Link transaction if available
-		if dep.TransactionID != "" {
-			if tx, exists := m.transactions[dep.TransactionID]; exists {
-				txClone := *tx
-				clone.Transaction = &txClone
-			}
-		}
-
-		// Link implementation for proxies
-		if dep.Type == models.ProxyDeployment && dep.ProxyInfo != nil {
-			implID, err := m.findImplementationID(dep.ChainID, dep.ProxyInfo.Implementation)
-			if err == nil && implID != "" {
-				if impl, exists := m.deployments[implID]; exists {
-					implClone := *impl
-					clone.Implementation = &implClone
-				}
-			}
-		}
-
-		result = append(result, &clone)
-	}
-
-	return result
 }
 
 // findImplementationID finds the deployment ID for an implementation address
@@ -703,6 +646,30 @@ func (m *FileRepository) ListSafeTransactions(ctx context.Context, filter domain
 	}
 
 	return result, nil
+}
+
+func (m *FileRepository) hydrateClone(ctx context.Context, dep *models.Deployment) (*models.Deployment, error) {
+	// Clone and add to result
+	clone := *dep
+	if dep.TransactionID != "" {
+		if tx, exists := m.transactions[dep.TransactionID]; exists {
+			txClone := *tx
+			clone.Transaction = &txClone
+		}
+	}
+
+	if dep.Type == models.ProxyDeployment && dep.ProxyInfo != nil {
+		if implID, err := m.findImplementationID(dep.ChainID, dep.ProxyInfo.Implementation); err != nil {
+			return nil, err
+		} else if implID != "" {
+			if impl, exists := m.deployments[implID]; exists {
+				implClone := *impl
+				clone.Implementation = &implClone
+			}
+		}
+	}
+
+	return &clone, nil
 }
 
 // NewFileRepositoryFromConfig creates a new FileRepository from RuntimeConfig

@@ -49,4 +49,5 @@ Flags:
       --non-interactive    Disable interactive prompts (always non-interactive for orchestration)
       --profile string     Foundry profile to use (overrides namespace-based profile)
       --resume             Resume from a previous failed or interrupted compose run
+      --slow               Run forge with --slow
   -v, --verbose            Show extra detailed information for events and transactions
