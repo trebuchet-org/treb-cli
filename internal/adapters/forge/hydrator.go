@@ -56,7 +56,7 @@ func (h *RunResultHydrator) Hydrate(
 	h.proxyRelationships = make(map[common.Address]*forge.ProxyRelationship)
 
 	hydrated := &HydratedRunResult{
-		RunResult:          *runResult,
+		RunResult:          runResult,
 		Transactions:       []*forge.Transaction{},
 		SafeTransactions:   []*forge.SafeTransaction{},
 		Deployments:        []*forge.Deployment{},
