@@ -72,7 +72,10 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 	if err != nil {
 		return nil, fmt.Errorf("failed to start pty: %w", err)
 	}
-	defer ptyFile.Close()
+	defer func() {
+		// Close PTY after command finishes to avoid read errors
+		_ = ptyFile.Close()
+	}()
 
 	result := &forge.RunResult{
 		DryRun:    config.DryRun,
@@ -120,12 +123,17 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 	processor := NewOutputProcessor(debugDir)
 
 	// Process output in goroutine
+	processingDone := make(chan struct{})
 	go func() {
+		defer func() {
+			close(entityChan)
+			close(errChan)
+			close(processingDone)
+		}()
+
 		if err := processor.ProcessOutput(teeReader, entityChan); err != nil {
 			errChan <- err
 		}
-		close(entityChan)
-		close(errChan)
 	}()
 
 	// Collect parsed entities
@@ -172,6 +180,13 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 		}
 	}
 
+	// Wait for command to finish first
+	cmdErr := cmd.Wait()
+
+	// Wait for processing to complete
+	<-processingDone
+
+	// Check for processing errors
 	select {
 	case err := <-errChan:
 		if err != nil {
@@ -180,16 +195,29 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 	default:
 	}
 
-	if err := cmd.Wait(); err != nil {
+	// Handle command error after processing is done
+	if cmdErr != nil {
 		result.Success = false
 		if result.Error == nil {
-			result.Error = fmt.Errorf("forge script failed: %w", err)
+			result.Error = fmt.Errorf("forge script failed: %w", cmdErr)
 		}
 	}
 
 	// Set results
 	result.RawOutput = outputBuffer.Bytes()
 	result.ParsedOutput = parsedOutput
+
+	// Check for script failure in text output even if exit code is 0
+	// This handles platform differences where forge might exit with 0 even on revert
+	if parsedOutput.TextOutput != "" && result.Error == nil {
+		lowerOutput := strings.ToLower(parsedOutput.TextOutput)
+		if strings.Contains(lowerOutput, "error:") ||
+			strings.Contains(lowerOutput, "revert") ||
+			strings.Contains(lowerOutput, "script failed") {
+			result.Success = false
+			result.Error = fmt.Errorf("script execution failed")
+		}
+	}
 
 	// Print text output if script failed or in debug/verbose mode
 	if parsedOutput.TextOutput != "" && (result.Error != nil || config.Debug) {

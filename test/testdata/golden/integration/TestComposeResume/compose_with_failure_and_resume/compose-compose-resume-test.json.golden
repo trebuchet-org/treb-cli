@@ -1,0 +1,70 @@
+{
+  "started_at": "<TIMESTAMP>",
+  "updated_at": "<TIMESTAMP>",
+  "config_path": "compose-resume-test.yaml",
+  "network": "anvil-31337",
+  "namespace": "default",
+  "plan": {
+    "Group": "ResumeTest",
+    "Components": [
+      {
+        "Name": "Step1",
+        "Script": "DeployUCProxy",
+        "Env": {
+          "label": "step1"
+        },
+        "Dependencies": null
+      },
+      {
+        "Name": "Step2",
+        "Script": "DeployFlaky",
+        "Env": {
+          "FLAKY_LABEL": "step2"
+        },
+        "Dependencies": [
+          "Step1"
+        ]
+      },
+      {
+        "Name": "Step3",
+        "Script": "DeployUCProxy",
+        "Env": {
+          "label": "step3"
+        },
+        "Dependencies": [
+          "Step2"
+        ]
+      }
+    ]
+  },
+  "executed_steps": {
+    "Step1": {
+      "step": {
+        "Name": "Step1",
+        "Script": "DeployUCProxy",
+        "Env": {
+          "label": "step1"
+        },
+        "Dependencies": null
+      },
+      "success": true,
+      "deployments": 2
+    },
+    "Step2": {
+      "step": {
+        "Name": "Step2",
+        "Script": "DeployFlaky",
+        "Env": {
+          "FLAKY_LABEL": "step2"
+        },
+        "Dependencies": [
+          "Step1"
+        ]
+      },
+      "success": false
+    }
+  },
+  "current_step_index": 1,
+  "status": "failed",
+  "total_deployments": 2
+}

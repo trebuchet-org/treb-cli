@@ -39,6 +39,14 @@ func (p *ComposeProgress) OnProgress(ctx context.Context, event usecase.Progress
 			p.planRendered = true
 		}
 
+	case "compose_resumed":
+		// Show resume message
+		if resumeInfo, ok := event.Metadata.(map[string]interface{}); ok {
+			fromStep := resumeInfo["from_step"].(int)
+			total := resumeInfo["total"].(int)
+			fmt.Fprintf(p.composeRenderer.GetWriter(), "\n📂 Resuming compose from step %d of %d\n", fromStep+1, total)
+		}
+
 	case "step_starting":
 		// Show step header when starting a new step
 		if stepInfo, ok := event.Metadata.(map[string]interface{}); ok {
