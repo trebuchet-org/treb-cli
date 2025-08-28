@@ -2,6 +2,8 @@ package integration
 
 import (
 	"testing"
+
+	"github.com/trebuchet-org/treb-cli/test/helpers"
 )
 
 func TestRunCommand(t *testing.T) {
@@ -167,6 +169,20 @@ func TestRunCommand(t *testing.T) {
 			TestCmds: [][]string{
 				{"run", "script/deploy/DeployCounter.s.sol", "--env", "LABEL=v1"}, // Should handle gracefully
 			},
+		},
+		{
+			Name: "run_with_custom_proxy",
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+			},
+			TestCmds: [][]string{
+				{"run", "script/DeployCustomProxy.s.sol"},
+				{"list"},
+			},
+			Normalizers: append(
+				helpers.GetDefaultNormalizers(),
+				helpers.LegacySolidityNormalizer{},
+			),
 		},
 		{
 			Name: "run_deploy_with_library",

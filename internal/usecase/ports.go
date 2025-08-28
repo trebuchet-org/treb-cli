@@ -17,7 +17,7 @@ type DeploymentRepository interface {
 	GetDeployment(ctx context.Context, id string) (*models.Deployment, error)
 	GetDeploymentByAddress(ctx context.Context, chainID uint64, address string) (*models.Deployment, error)
 	ListDeployments(ctx context.Context, filter domain.DeploymentFilter) ([]*models.Deployment, error)
-	GetAllDeployments(ctx context.Context) []*models.Deployment
+	GetAllDeployments(ctx context.Context) ([]*models.Deployment, error)
 	SaveDeployment(ctx context.Context, deployment *models.Deployment) error
 	DeleteDeployment(ctx context.Context, id string) error
 	GetTransaction(ctx context.Context, id string) (*models.Transaction, error)
@@ -241,6 +241,7 @@ type RunScriptConfig struct {
 	DryRun             bool
 	Debug              bool
 	DebugJSON          bool
+	Slow               bool
 	Libraries          []string
 	SenderScriptConfig config.SenderScriptConfig
 	Progress           ProgressSink

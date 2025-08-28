@@ -48,4 +48,5 @@ Flags:
   -n, --network string     Network to deploy to (local, sepolia, mainnet, etc.)
       --non-interactive    Disable interactive prompts (always non-interactive for orchestration)
       --profile string     Foundry profile to use (overrides namespace-based profile)
+      --slow               Run forge with --slow
   -v, --verbose            Show extra detailed information for events and transactions
