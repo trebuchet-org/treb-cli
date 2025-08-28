@@ -191,6 +191,18 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 	result.RawOutput = outputBuffer.Bytes()
 	result.ParsedOutput = parsedOutput
 
+	// Check for script failure in text output even if exit code is 0
+	// This handles platform differences where forge might exit with 0 even on revert
+	if parsedOutput.TextOutput != "" && result.Error == nil {
+		lowerOutput := strings.ToLower(parsedOutput.TextOutput)
+		if strings.Contains(lowerOutput, "error:") || 
+		   strings.Contains(lowerOutput, "revert") ||
+		   strings.Contains(lowerOutput, "script failed") {
+			result.Success = false
+			result.Error = fmt.Errorf("script execution failed")
+		}
+	}
+
 	// Print text output if script failed or in debug/verbose mode
 	if parsedOutput.TextOutput != "" && (result.Error != nil || config.Debug) {
 		fmt.Println("\n📝 Forge Output:")
