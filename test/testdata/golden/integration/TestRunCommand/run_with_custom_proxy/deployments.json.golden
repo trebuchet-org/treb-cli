@@ -7,11 +7,11 @@
     "label": "",
     "address": "0x806ca68527807F59Bf2D513889eC6CbD6139BDFf",
     "type": "PROXY",
-    "transactionId": "tx-<ID>",
+    "transactionId": "tx-0xfe538a757e7397dd8c542c9f00a342d89255ce039e3b239f4539737d942051b9",
     "deploymentStrategy": {
       "method": "CREATE3",
       "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600eb2172c14480966679c259",
-      "initCodeHash": "0x2fa2e560c23dc9f6c966cd5372d49d54f918448a755a8da2e3ad6d8bfcaecd78",
+      "initCodeHash": "0x<INIT_CODE_HASH>",
       "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
       "constructorArgs": "0x000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266",
       "entropy": "default/src/Proxy.sol:Proxy"
@@ -24,7 +24,7 @@
     "artifact": {
       "path": "src/Proxy.sol",
       "compilerVersion": "0.5.17+commit.d19bba13",
-      "bytecodeHash": "0xcf992b8cd516eac3b66a46d95c8a7d0377b27bf74e807c8370eb48127988f146",
+      "bytecodeHash": "0x<BYTECODE_HASH>",
       "scriptPath": "script/DeployCustomProxy.s.sol",
       "gitCommit": ""
     },
@@ -32,8 +32,8 @@
       "status": "UNVERIFIED"
     },
     "tags": null,
-    "createdAt": "<TIMESTAMP>",
-    "updatedAt": "<TIMESTAMP>"
+    "createdAt": "2025-08-28T10:38:46.086455+03:00",
+    "updatedAt": "2025-08-28T10:38:46.105104+03:00"
   },
   "default/31337/UpgradeableCounter": {
     "id": "default/31337/UpgradeableCounter",
@@ -43,11 +43,11 @@
     "label": "",
     "address": "0xcFd84621988A8243EfEd4C30163d85f5dEdE07Ad",
     "type": "SINGLETON",
-    "transactionId": "tx-<ID>",
+    "transactionId": "tx-0x94771e82fdd7800a3cff4be953b23417331032de45853535f5b749c7507e76de",
     "deploymentStrategy": {
       "method": "CREATE3",
       "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266008833bca0ee959b6584eba6",
-      "initCodeHash": "0xfcc1922208e5b41b9e53337bcfbe88b2aac805f91b20464d7c3e90ae9fa5766d",
+      "initCodeHash": "0x<INIT_CODE_HASH>",
       "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
       "constructorArgs": "0x",
       "entropy": "default/UpgradeableCounter"
@@ -56,7 +56,7 @@
     "artifact": {
       "path": "src/UpgradeableCounter.sol",
       "compilerVersion": "0.8.30+commit.73712a01",
-      "bytecodeHash": "0xfcc1922208e5b41b9e53337bcfbe88b2aac805f91b20464d7c3e90ae9fa5766d",
+      "bytecodeHash": "0x<BYTECODE_HASH>",
       "scriptPath": "script/DeployCustomProxy.s.sol",
       "gitCommit": ""
     },
@@ -64,7 +64,7 @@
       "status": "UNVERIFIED"
     },
     "tags": null,
-    "createdAt": "<TIMESTAMP>",
-    "updatedAt": "<TIMESTAMP>"
+    "createdAt": "2025-08-28T10:38:46.086455+03:00",
+    "updatedAt": "2025-08-28T10:38:46.105104+03:00"
   }
 }
