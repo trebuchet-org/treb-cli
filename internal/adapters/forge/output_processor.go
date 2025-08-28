@@ -106,6 +106,19 @@ func (op *OutputProcessor) ProcessOutput(reader io.Reader, entityChan chan<- Par
 			if entity.Type == "UnknownJSON" {
 				// Save JSON lines individually for debugging
 				op.saveIgnoredLine(line)
+				
+				// Also add UnknownJSON to text output if it contains error information
+				// This handles cases where forge outputs errors as JSON in CI
+				if data, ok := entity.Data.(string); ok {
+					lowerData := strings.ToLower(data)
+					if strings.Contains(lowerData, "error") || 
+					   strings.Contains(lowerData, "revert") ||
+					   strings.Contains(lowerData, "failed") {
+						op.mu.Lock()
+						op.textOutput = append(op.textOutput, data)
+						op.mu.Unlock()
+					}
+				}
 			}
 
 			// Send parsed entity
