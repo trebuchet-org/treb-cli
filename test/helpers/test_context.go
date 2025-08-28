@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/pelletier/go-toml/v2"
@@ -317,11 +319,23 @@ func (p *TestContextPool) Release(ctx *TestContext) error {
 	return nil
 }
 
+func (ctx *TestContext) forgeClean() error {
+	cmdCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	forgeClean := exec.CommandContext(cmdCtx, "forge", "clean")
+	forgeClean.Dir = ctx.WorkDir
+	return forgeClean.Run()
+}
+
 // Clean cleans up a test context for reuse
 func (ctx *TestContext) Clean() error {
 	// First, revert Anvil nodes to their initial snapshots
 	// This ensures blockchain state is clean for the next test
 	ctx.RevertSnapshots("%clean%")
+
+	if err := ctx.forgeClean(); err != nil {
+		return err
+	}
 
 	// Clean test artifacts (these are real directories we created)
 	cleanDirs := []string{".treb", "broadcast", "cache", "out"}
