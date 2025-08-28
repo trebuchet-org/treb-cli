@@ -20,7 +20,7 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 │  └─ 🚀 new UpgradeableCounter()
 │     └─ [return] 0xcFd84621988A8243EfEd4C30163d85f5dEdE07Ad
 └─ ContractCreation(newContract: UpgradeableCounter: [0xcFd846...)
-   Tx: 0x94771e82fdd7800a3cff4be953b23417331032de45853535f5b749c7507e76de | Block: 1 | Gas: <GAS_AMOUNT>
+   Tx: 0x<HASH> | Block: 1 | Gas: <GAS_AMOUNT>
 
 executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
 ├─ new 0xDf03be92B44e747e5c4a7e7A1A2b91c501265BcB()
@@ -33,17 +33,17 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 │     ├─ OwnerSet(owner: 0xf39F...2266)
 │     └─ [return] 0x806ca68527807F59Bf2D513889eC6CbD6139BDFf
 └─ ContractCreation(newContract: Proxy: [0x806ca68527807F59Bf2...)
-   Tx: 0xfe538a757e7397dd8c542c9f00a342d89255ce039e3b239f4539737d942051b9 | Block: 2 | Gas: <GAS_AMOUNT>
+   Tx: 0x<HASH> | Block: 2 | Gas: <GAS_AMOUNT>
 
 executed  anvil → Proxy::_setAndInitializeImplementation(implementation: 0xcFd8...07Ad, callbackData: 0xc4d66de8...)
 ├─ ImplementationSet(implementation: UpgradeableCounter: [0xcFd846...)
 └─ UpgradeableCounter::initialize(initialOwner: 0xf39F...2266)
-   Tx: 0x88e48b5082076896930e8c5d3bcc7723eb318ad239fb198b8ea501b8563cc005 | Block: 3 | Gas: <GAS_AMOUNT>
+   Tx: 0x<HASH> | Block: 3 | Gas: <GAS_AMOUNT>
 
 executed  anvil → Proxy::unknown()
 └─ UpgradeableCounter::increment()
    └─ CountIncremented(newCount: 1)
-   Tx: 0xeae48c18cceb04d0009b26634b710657d4ab333e9e111e0b71ceac1a70a28b76 | Block: 4 | Gas: <GAS_AMOUNT>
+   Tx: 0x<HASH> | Block: 4 | Gas: <GAS_AMOUNT>
 
 📦 Deployment Summary:
 ──────────────────────────────────────────────────
@@ -56,34 +56,7 @@ Proxy[UpgradeableCounter] at 0x806ca68527807F59Bf2D513889eC6CbD6139BDFf
   Registry: failed to load registry from .treb/registry.json
 
 ✓ Updated registry for anvil-31337 network in namespace default
-[32m✓ Script execution completed successfully[0m
-level=DEBUG msg="Running forge script" component=ForgeAdapter args="[script script/DeployCustomProxy.s.sol --ffi --rpc-url anvil-31337 --broadcast --json --slow -vvvv]" env="[FOUNDRY_PROFILE=default NAMESPACE=default NETWORK=anvil-31337 DRYRUN=false SENDER_CONFIGS=0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb922669bff76f73df2dfba000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000005616e76696c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80]"
-level=DEBUG msg="Parsed event" event="TransactionSimulated: txid=cda5e70d50bf575fdb45ec54e4d303a0aec31936272dfb34b2ef0f931be2fb58 sender=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 to=0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed"
-level=DEBUG msg="Parsed event" event="ContractDeployed: address=0xcFd84621988A8243EfEd4C30163d85f5dEdE07Ad artifact=UpgradeableCounter txid=cda5e70d50bf575fdb45ec54e4d303a0aec31936272dfb34b2ef0f931be2fb58"
-level=DEBUG msg="Parsed event" event="TransactionSimulated: txid=3fa63b330071aad75e1acc5d0fc1aa702aaab443f473686d3b100100307c9eeb sender=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 to=0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed"
-level=DEBUG msg="Parsed event" event="ContractDeployed: address=0x806ca68527807F59Bf2D513889eC6CbD6139BDFf artifact=src/Proxy.sol:Proxy txid=3fa63b330071aad75e1acc5d0fc1aa702aaab443f473686d3b100100307c9eeb"
-level=DEBUG msg="Parsed event" event="Upgraded: proxy=0x806ca685..., impl=0xcFd84621..."
-level=DEBUG msg="Parsed event" event="TransactionSimulated: txid=d484022e9c86c700650274cc394e847fffb76a2f39213cf39b4f2e397942e423 sender=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 to=0x806ca68527807F59Bf2D513889eC6CbD6139BDFf"
-level=DEBUG msg="Parsed event" event="TransactionSimulated: txid=18e4c0a59386a5a443da9d2ad4f97af08bd7319e2a4288c1f2a4ba4ffd06ee9c sender=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 to=0x806ca68527807F59Bf2D513889eC6CbD6139BDFf"
-level=DEBUG msg="Parsed event" event="Upgraded: proxy=0x806ca685..., impl=0xcFd84621..."
-level=DEBUG msg="Extracted proxy relationships" component=RunResultHydrator proxyRel=map[0x806ca68527807F59Bf2D513889eC6CbD6139BDFf:0x140000205a0]
-level=DEBUG msg="Recording proxy" component=FileRepository address=0x806ca68527807f59bf2d513889ec6cbd6139bdff info="&{ProxyAddress:0x806ca68527807F59Bf2D513889eC6CbD6139BDFf ImplementationAddress:0xcFd84621988A8243EfEd4C30163d85f5dEdE07Ad ProxyType:UUPS AdminAddress:<nil> BeaconAddress:<nil>}"
-level=DEBUG msg="Log entry already decoded, skipping" component=TxRenderer component=TxDecoder
-level=DEBUG msg="Decoding event" component=TxRenderer log="&{RawLog:{Topics:[0x2feea65dd4e9f9cbd86b74b7734210c59a1b2981b5b137bd0ee3e208200c9067 0x000000000000000000000000dbde0b3963c769bb7b9966827e3ba90c0edfecaf 0x5fc0b6f0915854aa8d3d3be55558d318e9196ad9e2269f4a0398e8d298bd6a55] Data:0x} Decoded:{Name:Create3ProxyContractCreation Params:[[newContract 0xdbDE0B3963c769bb7b9966827E3bA90C0eDfEcAF] [salt 0x5fc0b6f0915854aa8d3d3be55558d318e9196ad9e2269f4a0398e8d298bd6a55]]} Position:1}"
-level=DEBUG msg="ABI Not Found" component=TxRenderer component=TxDecoder address=0xdbDE0B3963c769bb7b9966827E3bA90C0eDfEcAF err="deployment at address 0xdbDE0B3963c769bb7b9966827E3bA90C0eDfEcAF not found on chain 31337"
-level=DEBUG msg="Log entry already decoded, skipping" component=TxRenderer component=TxDecoder
-level=DEBUG msg="Decoding event" component=TxRenderer log="&{RawLog:{Topics:[0x4db17dd5e4732fb6da34a148104a592783ca119a1e7bb8829eba6cbadef0b511 0x000000000000000000000000cfd84621988a8243efed4c30163d85f5dede07ad] Data:0x} Decoded:{Name:ContractCreation Params:[[newContract UpgradeableCounter: [0xcFd84621988A8243EfEd4C30163d85f5dEdE07Ad]]]} Position:2}"
-level=DEBUG msg="Log entry already decoded, skipping" component=TxRenderer component=TxDecoder
-level=DEBUG msg="Decoding event" component=TxRenderer log="&{RawLog:{Topics:[0x2feea65dd4e9f9cbd86b74b7734210c59a1b2981b5b137bd0ee3e208200c9067 0x000000000000000000000000df03be92b44e747e5c4a7e7a1a2b91c501265bcb 0x433184ff86622b91aa65bdb5ece181e151c231faf907873f2acef07ab9df7481] Data:0x} Decoded:{Name:Create3ProxyContractCreation Params:[[newContract 0xDf03be92B44e747e5c4a7e7A1A2b91c501265BcB] [salt 0x433184ff86622b91aa65bdb5ece181e151c231faf907873f2acef07ab9df7481]]} Position:1}"
-level=DEBUG msg="ABI Not Found" component=TxRenderer component=TxDecoder address=0xDf03be92B44e747e5c4a7e7A1A2b91c501265BcB err="deployment at address 0xDf03be92B44e747e5c4a7e7A1A2b91c501265BcB not found on chain 31337"
-level=DEBUG msg="Log entry already decoded, skipping" component=TxRenderer component=TxDecoder
-level=DEBUG msg="Decoding event" component=TxRenderer log="&{RawLog:{Topics:[0x50146d0e3c60aa1d17a70635b05494f864e86144a2201275021014fbf08bafe2 0x000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266] Data:0x} Decoded:{Name:OwnerSet Params:[[owner 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266]]} Position:0}"
-level=DEBUG msg="Log entry already decoded, skipping" component=TxRenderer component=TxDecoder
-level=DEBUG msg="Decoding event" component=TxRenderer log="&{RawLog:{Topics:[0x4db17dd5e4732fb6da34a148104a592783ca119a1e7bb8829eba6cbadef0b511 0x000000000000000000000000806ca68527807f59bf2d513889ec6cbd6139bdff] Data:0x} Decoded:{Name:ContractCreation Params:[[newContract Proxy: [0x806ca68527807F59Bf2D513889eC6CbD6139BDFf]]]} Position:2}"
-level=DEBUG msg="Log entry already decoded, skipping" component=TxRenderer component=TxDecoder
-level=DEBUG msg="Decoding event" component=TxRenderer log="&{RawLog:{Topics:[0xab64f92ab780ecbf4f3866f57cee465ff36c89450dcce20237ca7a8d81fb7d13 0x000000000000000000000000cfd84621988a8243efed4c30163d85f5dede07ad] Data:0x} Decoded:{Name:ImplementationSet Params:[[implementation UpgradeableCounter: [0xcFd84621988A8243EfEd4C30163d85f5dEdE07Ad]]]} Position:0}"
-level=DEBUG msg="Log entry already decoded, skipping" component=TxRenderer component=TxDecoder
-level=DEBUG msg="Decoding event" component=TxRenderer log="&{RawLog:{Topics:[0x420680a649b45cbb7e97b24365d8ed81598dce543f2a2014d48fe328aa47e8bb] Data:0x0000000000000000000000000000000000000000000000000000000000000001} Decoded:{Name:CountIncremented Params:[[newCount 1]]} Position:0}"
+✓ Script execution completed successfully
 
 
 === cmd 1: [list] ===
@@ -91,10 +64,10 @@ level=DEBUG msg="Decoding event" component=TxRenderer log="&{RawLog:{Topics:[0x4
 └─ ⛓ chain:       31337                         
   
   PROXIES
-  Proxy                         0x806ca68527807F59Bf2D513889eC6CbD6139BDFf   🅔 ? 🅢 ?         2025-08-28 10:38:46   
+  Proxy                         0x806ca68527807F59Bf2D513889eC6CbD6139BDFf   🅔 ? 🅢 ?         <TIMESTAMP>   
   └─ UpgradeableCounter         0xcFd84621988A8243EfEd4C30163d85f5dEdE07Ad                                         
   
   SINGLETONS
-  UpgradeableCounter            0xcFd84621988A8243EfEd4C30163d85f5dEdE07Ad   🅔 ? 🅢 ?         2025-08-28 10:38:46   
+  UpgradeableCounter            0xcFd84621988A8243EfEd4C30163d85f5dEdE07Ad   🅔 ? 🅢 ?         <TIMESTAMP>   
 
 Total deployments: 2

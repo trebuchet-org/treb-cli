@@ -179,9 +179,10 @@ func TestRunCommand(t *testing.T) {
 				{"run", "script/DeployCustomProxy.s.sol"},
 				{"list"},
 			},
-			Normalizers: []helpers.Normalizer{
+			Normalizers: append(
+				helpers.GetDefaultNormalizers(),
 				helpers.LegacySolidityNormalizer{},
-			},
+			),
 		},
 		{
 			Name: "run_deploy_with_library",
