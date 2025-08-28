@@ -168,7 +168,7 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 	})
 
 	runResult, err := uc.forgeScriptRunner.RunScript(ctx, runScriptConfig)
-	result.RunResult = &forge.HydratedRunResult{RunResult: *runResult}
+	result.RunResult = &forge.HydratedRunResult{RunResult: runResult}
 
 	if err != nil {
 		result.Error = fmt.Errorf("script execution failed: %w", err)
