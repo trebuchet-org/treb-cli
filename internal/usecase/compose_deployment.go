@@ -2,9 +2,12 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -37,6 +40,7 @@ type ComposeParams struct {
 	DebugJSON      bool
 	Verbose        bool
 	NonInteractive bool
+	Resume         bool // Resume from previous execution
 }
 
 // ComposeResult contains the result of orchestration
@@ -55,23 +59,101 @@ type StepResult struct {
 	Error     error
 }
 
+// StepStateInfo is a lightweight version of StepResult for state storage
+type StepStateInfo struct {
+	Step        *ExecutionStep `json:"step"`
+	Success     bool           `json:"success"`
+	Error       string         `json:"error,omitempty"`
+	Deployments int            `json:"deployments,omitempty"`
+}
+
+// ComposeState represents the state of a compose execution
+type ComposeState struct {
+	StartedAt        time.Time                 `json:"started_at"`
+	UpdatedAt        time.Time                 `json:"updated_at"`
+	ConfigPath       string                    `json:"config_path"`
+	Network          string                    `json:"network"`
+	Namespace        string                    `json:"namespace"`
+	Plan             *ExecutionPlan            `json:"plan"`
+	ExecutedSteps    map[string]*StepStateInfo `json:"executed_steps"`
+	CurrentStepIndex int                       `json:"current_step_index"`
+	Status           string                    `json:"status"` // "running", "failed", "completed"
+	TotalDeployments int                       `json:"total_deployments"`
+}
+
 // Execute runs the orchestration
 func (o *ComposeDeployment) Execute(ctx context.Context, params ComposeParams) (*ComposeResult, error) {
-	// Parse orchestration file
-	config, err := o.parseComposeFile(params.ConfigPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse orchestration file: %w", err)
-	}
+	var state *ComposeState
+	var plan *ExecutionPlan
+	startIndex := 0
 
-	// Validate configuration
-	if err := config.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid orchestration configuration: %w", err)
-	}
+	// Handle resume mode
+	if params.Resume {
+		// Try to load previous state
+		prevState, err := o.loadState(params.ConfigPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resume: %w", err)
+		}
 
-	// Create execution plan
-	plan, err := o.createExecutionPlan(config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create execution plan: %w", err)
+		// Validate that we're resuming the same configuration
+		if prevState.ConfigPath != params.ConfigPath {
+			return nil, fmt.Errorf("cannot resume: config path changed (was %s, now %s)", prevState.ConfigPath, params.ConfigPath)
+		}
+
+		if prevState.Status == "completed" {
+			return nil, fmt.Errorf("previous run already completed successfully")
+		}
+
+		// Use the existing plan and start from where we left off
+		plan = prevState.Plan
+		state = prevState
+		startIndex = prevState.CurrentStepIndex
+
+		// Emit resume event
+		o.progress.OnProgress(ctx, ProgressEvent{
+			Stage: "compose_resumed",
+			Metadata: map[string]interface{}{
+				"from_step": startIndex,
+				"total":     len(plan.Components),
+			},
+		})
+	} else {
+		// Parse orchestration file
+		config, err := o.parseComposeFile(params.ConfigPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse orchestration file: %w", err)
+		}
+
+		// Validate configuration
+		if err := config.Validate(); err != nil {
+			return nil, fmt.Errorf("invalid orchestration configuration: %w", err)
+		}
+
+		// Create execution plan
+		plan, err = o.createExecutionPlan(config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create execution plan: %w", err)
+		}
+
+		// Initialize new state
+		state = &ComposeState{
+			StartedAt:        time.Now(),
+			UpdatedAt:        time.Now(),
+			ConfigPath:       params.ConfigPath,
+			Network:          params.Network,
+			Namespace:        params.Namespace,
+			Plan:             plan,
+			ExecutedSteps:    make(map[string]*StepStateInfo),
+			CurrentStepIndex: 0,
+			Status:           "running",
+			TotalDeployments: 0,
+		}
+
+		// Save initial state
+		if err := o.saveState(state); err != nil {
+			// Log warning but don't fail
+			fmt.Fprintf(os.Stderr, "Warning: failed to save initial state: %v\n", err)
+		}
 	}
 
 	// Emit plan created event so it can be rendered
@@ -80,14 +162,50 @@ func (o *ComposeDeployment) Execute(ctx context.Context, params ComposeParams) (
 		Metadata: plan,
 	})
 
-	// Execute each step
+	// Build result from state
 	result := &ComposeResult{
-		Plan:          plan,
-		ExecutedSteps: make([]*StepResult, 0),
-		Success:       true,
+		Plan:             plan,
+		ExecutedSteps:    make([]*StepResult, 0),
+		Success:          true,
+		TotalDeployments: state.TotalDeployments,
 	}
 
-	for i, step := range plan.Components {
+	// Add previously executed steps to result - we only have StepStateInfo, not full StepResult
+	// This is fine since we're resuming and these steps were already completed
+	for i := 0; i < startIndex; i++ {
+		if stateInfo, exists := state.ExecutedSteps[plan.Components[i].Name]; exists {
+			// Create a minimal StepResult for display purposes
+			stepResult := &StepResult{
+				Step: stateInfo.Step,
+				RunResult: &RunScriptResult{
+					Success: stateInfo.Success,
+				},
+				Error: nil,
+			}
+			if stateInfo.Error != "" {
+				stepResult.Error = fmt.Errorf("%s", stateInfo.Error)
+			}
+			result.ExecutedSteps = append(result.ExecutedSteps, stepResult)
+
+			// Add the deployment count from the saved state
+			if stateInfo.Deployments > 0 {
+				// We can't recreate the full changeset, but we can track the count
+				result.TotalDeployments += stateInfo.Deployments
+			}
+		}
+	}
+
+	// Execute remaining steps
+	for i := startIndex; i < len(plan.Components); i++ {
+		step := plan.Components[i]
+
+		// Update current step in state
+		state.CurrentStepIndex = i
+		state.Status = "running"
+		if err := o.saveState(state); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to save state: %v\n", err)
+		}
+
 		// Emit step starting event
 		o.progress.OnProgress(ctx, ProgressEvent{
 			Stage: "step_starting",
@@ -103,21 +221,64 @@ func (o *ComposeDeployment) Execute(ctx context.Context, params ComposeParams) (
 		stepResult := o.executeStep(ctx, step, params)
 		result.ExecutedSteps = append(result.ExecutedSteps, stepResult)
 
+		// Convert to lightweight state info for storage
+		stateInfo := &StepStateInfo{
+			Step:    step,
+			Success: stepResult.Error == nil && (stepResult.RunResult == nil || stepResult.RunResult.Success),
+			Error:   "",
+		}
+		if stepResult.Error != nil {
+			stateInfo.Error = stepResult.Error.Error()
+		}
+		if stepResult.RunResult != nil && stepResult.RunResult.Changeset != nil {
+			stateInfo.Deployments = len(stepResult.RunResult.Changeset.Create.Deployments)
+		}
+		state.ExecutedSteps[step.Name] = stateInfo
+
 		// Emit step completed event
 		o.progress.OnProgress(ctx, ProgressEvent{
 			Stage:    "step_completed",
 			Metadata: stepResult,
 		})
 
-		if stepResult.Error != nil {
+		// Check for failure - either error or unsuccessful result
+		if stepResult.Error != nil || (stepResult.RunResult != nil && !stepResult.RunResult.Success) {
 			result.FailedStep = stepResult
 			result.Success = false
+			state.Status = "failed"
+
+			// If there's no error but success is false, create an error
+			if stepResult.Error == nil {
+				stepResult.Error = fmt.Errorf("step '%s' failed", step.Name)
+			}
+
+			// Save failed state
+			if err := o.saveState(state); err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: failed to save failed state: %v\n", err)
+			}
+
 			break
 		}
 
 		// Count deployments
 		if stepResult.RunResult != nil && stepResult.RunResult.Changeset != nil {
-			result.TotalDeployments += len(stepResult.RunResult.Changeset.Create.Deployments)
+			deploymentCount := len(stepResult.RunResult.Changeset.Create.Deployments)
+			result.TotalDeployments += deploymentCount
+			state.TotalDeployments += deploymentCount
+		}
+
+		// Save successful step state
+		if err := o.saveState(state); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to save state after step: %v\n", err)
+		}
+	}
+
+	// Update final state
+	if result.Success {
+		state.Status = "completed"
+		state.CurrentStepIndex = len(plan.Components)
+		if err := o.saveState(state); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to save final state: %v\n", err)
 		}
 	}
 
@@ -127,6 +288,76 @@ func (o *ComposeDeployment) Execute(ctx context.Context, params ComposeParams) (
 	})
 
 	return result, nil
+}
+
+// getStateFilePath returns the path to the compose state file
+func (o *ComposeDeployment) getStateFilePath(configPath string) (string, error) {
+	// Get the working directory
+	workDir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	// Create the out/.treb directory if it doesn't exist
+	stateDir := filepath.Join(workDir, "out", ".treb")
+	if err := os.MkdirAll(stateDir, 0755); err != nil {
+		return "", err
+	}
+
+	// Get the base name of the config file without extension
+	configBase := filepath.Base(configPath)
+	configName := configBase
+	if ext := filepath.Ext(configBase); ext != "" {
+		configName = configBase[:len(configBase)-len(ext)]
+	}
+
+	// Create state file name like "compose-<config-name>.json"
+	stateFileName := fmt.Sprintf("compose-%s.json", configName)
+	return filepath.Join(stateDir, stateFileName), nil
+}
+
+// saveState saves the current compose state to disk
+func (o *ComposeDeployment) saveState(state *ComposeState) error {
+	statePath, err := o.getStateFilePath(state.ConfigPath)
+	if err != nil {
+		return err
+	}
+
+	state.UpdatedAt = time.Now()
+
+	data, err := json.MarshalIndent(state, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal state: %w", err)
+	}
+
+	if err := os.WriteFile(statePath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write state file: %w", err)
+	}
+
+	return nil
+}
+
+// loadState loads a previous compose state from disk
+func (o *ComposeDeployment) loadState(configPath string) (*ComposeState, error) {
+	statePath, err := o.getStateFilePath(configPath)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := os.ReadFile(statePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("no previous compose run found for %s", filepath.Base(configPath))
+		}
+		return nil, fmt.Errorf("failed to read state file: %w", err)
+	}
+
+	var state ComposeState
+	if err := json.Unmarshal(data, &state); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal state: %w", err)
+	}
+
+	return &state, nil
 }
 
 // parseComposeFile parses the YAML orchestration file

@@ -1,0 +1,103 @@
+=== cmd 0: [compose compose-resume-test.yaml --network anvil-31337] ===
+
+🎯 Orchestrating ResumeTest
+📋 Execution plan: 3 components
+
+📋 Execution Plan:
+──────────────────────────────────────────────────
+1. Step1 → DeployUCProxy
+   Env: map[label:step1]
+2. Step2 → DeployFlaky (depends on: [Step1])
+   Env: map[FLAKY_LABEL:step2]
+3. Step3 → DeployUCProxy (depends on: [Step2])
+   Env: map[label:step3]
+
+
+[1/3] Starting Step1
+
+🚀 Running Deployment Script
+──────────────────────────────────────────────────
+  Script:    DeployerUCProxy
+  Network:   anvil-31337 (31337)
+  Namespace: default
+  Mode:      LIVE
+  Env Vars:  label=step1
+  Senders:   [anvil]
+──────────────────────────────────────────────────
+✓ Step completed successfully
+  Created 2 deployment(s)
+
+🔄 Transactions:
+──────────────────────────────────────────────────
+
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ new 0xdbDE0B3963c769bb7b9966827E3bA90C0eDfEcAF()
+│  └─ [return] 0xdbDE0B3963c769bb7b9966827E3bA90C0eDfEcAF
+├─ Create3ProxyContractCreation(newContract: 0xdbDE...EcAF, salt: 0x5fc0b6f0...)
+├─ 0xdbDE0B3963c769bb7b9966827E3bA90C0eDfEcAF::unknown()
+│  └─ 🚀 new UpgradeableCounter()
+│     └─ [return] 0xcFd84621988A8243EfEd4C30163d85f5dEdE07Ad
+└─ ContractCreation(newContract: UpgradeableCounter: [0xcFd846...)
+   Tx: 0x<HASH> | Block: 1 | Gas: 476959
+
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ new 0xE0f564003F747e7BF151cbB75fe5d3f4A6f8077d()
+│  └─ [return] 0xE0f564003F747e7BF151cbB75fe5d3f4A6f8077d
+├─ Create3ProxyContractCreation(newContract: 0xE0f5...077d, salt: 0x978e20a9...)
+├─ 0xE0f564003F747e7BF151cbB75fe5d3f4A6f8077d::unknown()
+│  └─ 🚀 new ERC1967Proxy(
+│     │    implementation:: 0xcFd84621988A8243EfEd4C30163d85f5dEdE07Ad,
+│     │    _data:: 0xc4d66de8000000000000000000000000...(36 bytes)
+│     │  )
+│     ├─ Upgraded(implementation: UpgradeableCounter: [0xcFd846...)
+│     ├─ UpgradeableCounter::initialize(initialOwner: 0xf39F...2266)
+│     └─ [return] 0x067887F5245C17228A4d579991bd398De552c6Bb
+└─ ContractCreation(newContract: ERC1967Proxy: [0x067887F5245C...)
+   Tx: 0x<HASH> | Block: 2 | Gas: 207703
+
+executed  anvil → ERC1967Proxy::unknown()
+└─ UpgradeableCounter::increment()
+   └─ CountIncremented(newCount: 1)
+   Tx: 0x<HASH> | Block: 2 | Gas: 51985
+
+📦 Deployment Summary:
+──────────────────────────────────────────────────
+UpgradeableCounter at 0xcFd84621988A8243EfEd4C30163d85f5dEdE07Ad
+ERC1967Proxy:step1[UpgradeableCounter] at 0x067887F5245C17228A4d579991bd398De552c6Bb
+
+
+📝 Script Logs:
+────────────────────────────────────────
+  Registry: failed to load registry from .treb/registry.json
+
+✓ Updated registry for anvil-31337 network in namespace default
+
+[2/3] Starting Step2
+
+🚀 Running Deployment Script
+──────────────────────────────────────────────────
+  Script:    DeployFlaky
+  Network:   anvil-31337 (31337)
+  Namespace: default
+  Mode:      LIVE
+  Env Vars:  FLAKY_LABEL=step2
+  Senders:   [anvil]
+──────────────────────────────────────────────────
+
+📝 Forge Output:
+──────────────────────────────────────────────────
+Error: script failed: Deployment intentionally failed for testing
+──────────────────────────────────────────────────
+
+🔄 Transactions:
+──────────────────────────────────────────────────
+No transactions executed (dry run or all deployments skipped)
+
+══════════════════════════════════════════════════════════════════════
+❌ Orchestration failed
+
+📊 Summary:
+  • Failed at step: Step2
+  • Steps completed: 1/3
+  • Error: step 'Step2' failed
+Error: compose failed: step 'Step2' failed

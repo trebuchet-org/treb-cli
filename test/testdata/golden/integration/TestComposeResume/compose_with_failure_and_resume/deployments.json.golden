@@ -1,0 +1,70 @@
+{
+  "default/31337/ERC1967Proxy:step1": {
+    "id": "default/31337/ERC1967Proxy:step1",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "ERC1967Proxy",
+    "label": "step1",
+    "address": "0x067887F5245C17228A4d579991bd398De552c6Bb",
+    "type": "PROXY",
+    "transactionId": "tx-<ID>",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb922660003594a4edd909aa263944d",
+      "initCodeHash": "0x1b1bda4cab6a3d7fa38599ee084a2fd12b84842c49725b8ccb3fbfe02448ecfc",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x000000000000000000000000cfd84621988a8243efed4c30163d85f5dede07ad00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000024c4d66de8000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb9226600000000000000000000000000000000000000000000000000000000",
+      "entropy": "default/ERC1967Proxy:step1"
+    },
+    "proxyInfo": {
+      "type": "UUPS",
+      "implementation": "0xcFd84621988A8243EfEd4C30163d85f5dEdE07Ad",
+      "history": []
+    },
+    "artifact": {
+      "path": "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol",
+      "compilerVersion": "0.8.30+commit.73712a01",
+      "bytecodeHash": "0xbbd3799951bbce5d0fef3d4d0ac7b51275f4d7074313155014017539b08c3565",
+      "scriptPath": "script/DeployUCProxy.s.sol",
+      "gitCommit": ""
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": null,
+    "createdAt": "<TIMESTAMP>",
+    "updatedAt": "<TIMESTAMP>"
+  },
+  "default/31337/UpgradeableCounter": {
+    "id": "default/31337/UpgradeableCounter",
+    "namespace": "default",
+    "chainId": 31337,
+    "contractName": "UpgradeableCounter",
+    "label": "",
+    "address": "0xcFd84621988A8243EfEd4C30163d85f5dEdE07Ad",
+    "type": "SINGLETON",
+    "transactionId": "tx-<ID>",
+    "deploymentStrategy": {
+      "method": "CREATE3",
+      "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266008833bca0ee959b6584eba6",
+      "initCodeHash": "0xfcc1922208e5b41b9e53337bcfbe88b2aac805f91b20464d7c3e90ae9fa5766d",
+      "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
+      "constructorArgs": "0x",
+      "entropy": "default/UpgradeableCounter"
+    },
+    "proxyInfo": null,
+    "artifact": {
+      "path": "src/UpgradeableCounter.sol",
+      "compilerVersion": "0.8.30+commit.73712a01",
+      "bytecodeHash": "0xfcc1922208e5b41b9e53337bcfbe88b2aac805f91b20464d7c3e90ae9fa5766d",
+      "scriptPath": "script/DeployUCProxy.s.sol",
+      "gitCommit": ""
+    },
+    "verification": {
+      "status": "UNVERIFIED"
+    },
+    "tags": null,
+    "createdAt": "<TIMESTAMP>",
+    "updatedAt": "<TIMESTAMP>"
+  }
+}

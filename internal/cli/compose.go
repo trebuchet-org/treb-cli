@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -19,6 +20,7 @@ func NewComposeCmd() *cobra.Command {
 		debugJSON      bool
 		verbose        bool
 		nonInteractive bool
+		resume         bool
 	)
 
 	cmd := &cobra.Command{
@@ -58,7 +60,8 @@ This will execute: Broker → Tokens → Reserve → SortedOracles`,
 
   # Execute with debug output
   treb compose deploy.yaml --debug --verbose`,
-		Args: cobra.ExactArgs(1),
+		SilenceUsage: true,
+		Args:         cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app, err := getApp(cmd)
 			if err != nil {
@@ -91,6 +94,7 @@ This will execute: Broker → Tokens → Reserve → SortedOracles`,
 				DebugJSON:      debugJSON,
 				Verbose:        verbose,
 				NonInteractive: true, // Orchestration should always be non-interactive
+				Resume:         resume,
 			}
 
 			ctx := cmd.Context()
@@ -103,7 +107,19 @@ This will execute: Broker → Tokens → Reserve → SortedOracles`,
 
 			// Render the results
 			renderer := render.NewComposeRenderer(cmd.OutOrStdout())
-			return renderer.RenderComposeResult(result)
+			if err := renderer.RenderComposeResult(result); err != nil {
+				return err
+			}
+
+			// Return error if compose failed
+			if !result.Success {
+				if result.FailedStep != nil && result.FailedStep.Error != nil {
+					return fmt.Errorf("compose failed: %w", result.FailedStep.Error)
+				}
+				return fmt.Errorf("compose failed")
+			}
+
+			return nil
 		},
 	}
 
@@ -118,6 +134,7 @@ This will execute: Broker → Tokens → Reserve → SortedOracles`,
 	cmd.Flags().BoolVar(&debugJSON, "debug-json", false, "Enable JSON debug mode (shows raw JSON output)")
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Show extra detailed information for events and transactions")
 	cmd.Flags().BoolVar(&nonInteractive, "non-interactive", false, "Disable interactive prompts (always non-interactive for orchestration)")
+	cmd.Flags().BoolVar(&resume, "resume", false, "Resume from a previous failed or interrupted compose run")
 
 	return cmd
 }

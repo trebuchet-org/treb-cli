@@ -1,0 +1,18 @@
+group: ResumeTest
+components:
+  Step1:
+    script: DeployUCProxy
+    env:
+      label: step1
+  Step2:
+    script: DeployFlaky
+    deps:
+      - Step1
+    env:
+      FLAKY_LABEL: step2
+  Step3:
+    script: DeployUCProxy
+    env:
+      label: step3
+    deps:
+      - Step2

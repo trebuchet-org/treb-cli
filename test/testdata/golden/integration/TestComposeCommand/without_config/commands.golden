@@ -1,25 +1,2 @@
 === cmd 0: [compose nonexistent.yaml] ===
 Error: failed to parse orchestration file: failed to read file: open nonexistent.yaml: no such file or directory
-Usage:
-  treb compose <compose-file> [flags]
-
-Examples:
-  # Execute orchestration from YAML file
-  treb compose deploy.yaml
-
-  # Execute with specific network and dry run
-  treb compose deploy.yaml --network sepolia --dry-run
-
-  # Execute with debug output
-  treb compose deploy.yaml --debug --verbose
-
-Flags:
-      --debug              Enable debug mode (shows forge output and saves to file)
-      --debug-json         Enable JSON debug mode (shows raw JSON output)
-      --dry-run            Perform a dry run without broadcasting transactions
-  -h, --help               help for compose
-  -s, --namespace string   Deployment namespace (default, staging, production) [also sets foundry profile]
-  -n, --network string     Network to deploy to (local, sepolia, mainnet, etc.)
-      --non-interactive    Disable interactive prompts (always non-interactive for orchestration)
-      --profile string     Foundry profile to use (overrides namespace-based profile)
-  -v, --verbose            Show extra detailed information for events and transactions
