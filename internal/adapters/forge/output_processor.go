@@ -72,9 +72,28 @@ func NewOutputProcessor(debugDir string) *OutputProcessor {
 	}
 }
 
+// ptyReader wraps an io.Reader to handle PTY-specific errors gracefully
+type ptyReader struct {
+	io.Reader
+}
+
+// Read implements io.Reader, converting PTY I/O errors to EOF
+func (pr *ptyReader) Read(p []byte) (n int, err error) {
+	n, err = pr.Reader.Read(p)
+	if err != nil {
+		// Convert PTY I/O error to EOF for graceful handling
+		if err.Error() == "read /dev/ptmx: input/output error" {
+			return n, io.EOF
+		}
+	}
+	return n, err
+}
+
 // ProcessOutput processes output in real-time, returning parsed entities via channel
 func (op *OutputProcessor) ProcessOutput(reader io.Reader, entityChan chan<- ParsedEntity) error {
-	scanner := bufio.NewScanner(reader)
+	// Wrap reader to handle PTY closure gracefully
+	safeReader := &ptyReader{Reader: reader}
+	scanner := bufio.NewScanner(safeReader)
 
 	// Start with larger buffer for long lines
 	const maxTokenSize = 200 * 1024 * 1024 // 200MB
@@ -135,6 +154,8 @@ func (op *OutputProcessor) ProcessOutput(reader io.Reader, entityChan chan<- Par
 	}
 
 	if err := scanner.Err(); err != nil {
+		// Since we convert PTY I/O errors to EOF in ptyReader, 
+		// any error here is a real problem
 		return fmt.Errorf("scanner error: %w", err)
 	}
 
