@@ -33,7 +33,7 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 │     ├─ OwnerSet(owner: 0xf39F...2266)
 │     └─ [return] 0x806ca68527807F59Bf2D513889eC6CbD6139BDFf
 └─ ContractCreation(newContract: Proxy: [0x806ca68527807F59Bf2...)
-   Tx: 0x<HASH> | Block: 2 | Gas: 616940
+   Tx: 0x<HASH> | Block: 2 | Gas: 616952
 
 executed  anvil → Proxy::_setAndInitializeImplementation(implementation: 0xcFd8...07Ad, callbackData: 0xc4d66de8...)
 ├─ ImplementationSet(implementation: UpgradeableCounter: [0xcFd846...)
