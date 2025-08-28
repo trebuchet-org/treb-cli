@@ -27,7 +27,7 @@ type RunResult struct {
 
 // HydratedRunResult represents the completely hydrated result of running a script
 type HydratedRunResult struct {
-	RunResult
+	*RunResult
 	// Core execution data
 	Transactions       []*Transaction                                       // All transactions in execution order
 	SafeTransactions   []*SafeTransaction                                   // Safe transaction batches
