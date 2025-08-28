@@ -22,39 +22,202 @@ This is **treb** (Trebuchet) - a Go CLI tool that orchestrates Foundry script ex
 
 ## Development Commands
 
-### Go CLI Development
+### Essential Makefile Commands
 ```bash
-# Build treb CLI
-make build
+# Building and Installation
+make build         # Build treb CLI binary to bin/treb
+make install       # Install treb globally (copies to /usr/local/bin)
+make clean         # Clean build artifacts
 
-# Run tests
-make test
+# Testing
+make test          # Run all unit tests
+make integration   # Run integration tests (builds binaries & contracts first)
+make test-all      # Run both unit and integration tests
+make golden-test   # Update golden test files (UPDATE_GOLDEN=true make golden-test)
 
-# Install globally  
-make install
+# Development Tools
+make fmt           # Format Go code with gofumpt
+make lint          # Run golangci-lint checks
+make dev-setup     # Install required development tools (gofumpt, golangci-lint)
+make watch         # Auto-rebuild on file changes (requires watchman)
 
-# Run locally with arguments
+# Running treb
+make run ARGS="list"                    # Run treb with arguments
 make run ARGS="deploy Counter --network sepolia"
+make run ARGS="show Counter --json"
 
-# Create example project
-make example
+# Foundry Integration
+make install-forge # Install Foundry if not present
+make bindings      # Generate Foundry bindings from treb-sol
 
-# Setup development environment
-make dev-setup
-
-# Clean build artifacts
-make clean
-
-# Watch for changes and rebuild automatically
-make watch
-
-# Install Foundry if not present
-make install-forge
+# Other Commands
+make example       # Create an example project in /tmp
+make coverage      # Generate test coverage report
 
 # IMPORTANT: Always run before committing
-make fmt      # Format code
-make lint     # Check for linting issues
-make test     # Run all tests
+make fmt           # Format code
+make lint          # Check for linting issues  
+make test-all      # Run all tests including integration
+```
+
+### Integration Testing for Feature Development
+
+**IMPORTANT**: When developing features, use integration tests instead of manually running commands. The integration test framework provides a controlled environment with proper setup/teardown, golden file testing, and parallel execution.
+
+#### Why Use Integration Tests?
+
+1. **Isolated Environment**: Each test runs in a temporary directory with fresh state
+2. **Reproducible**: Tests use local Anvil chains, no external dependencies
+3. **Golden Files**: Expected output is automatically compared and updated
+4. **Fast Feedback**: Tests run in parallel with isolated contexts
+5. **Debug Support**: Full command output available with debug flag
+
+#### Running Integration Tests
+
+```bash
+# Run all integration tests
+make integration
+
+# Run specific test suite
+cd test/integration && go test -run TestListCommand -v
+
+# Run specific test case
+go test -run TestListCommand/list_with_all_categories -v
+
+# Run with debug output to see actual command execution
+go test -run TestListCommand/list_with_all_categories -v -treb.debug
+
+# Update golden files when output changes are expected
+go test -run TestListCommand -v -treb.updategolden
+
+# Keep test artifacts for debugging (normally cleaned up)
+go test -run TestListCommand -v -treb.skipcleanup
+
+# Run tests in parallel (faster)
+go test -run TestListCommand -v -parallel=10
+```
+
+#### Creating Integration Tests
+
+Integration tests are located in `test/integration/`. Each test follows this pattern:
+
+```go
+{
+    Name: "test_name",
+    SetupCmds: [][]string{
+        // Commands run before test to set up state
+        s("config set network anvil-31337"),
+        {"gen", "deploy", "Counter"},
+        {"run", "script/deploy/DeployCounter.s.sol"},
+    },
+    TestCmds: [][]string{
+        // Commands to test and capture output
+        {"list"},
+        {"show", "Counter", "--json"},
+    },
+    // Optional: Custom normalizers for test output
+    Normalizers: []helpers.Normalizer{
+        helpers.LegacySolidityNormalizer{}, // For old Solidity versions
+    },
+    // Optional: Additional files to capture
+    OutputArtifacts: []string{".treb/deployments.json"},
+    // Optional: Expect command to fail
+    ExpectErr: true,
+}
+```
+
+#### Integration Test Framework Features
+
+- **Test Context**: Each test gets an isolated `TestContext` with:
+  - Temporary working directory
+  - Fresh Anvil instances (ports 30000-30015)
+  - Clean project copy from `test/testdata/project`
+  - Isolated configuration
+
+- **Golden Files**: Located in `test/testdata/golden/integration/`
+  - Automatically created/updated with `-treb.updategolden`
+  - Normalizers remove dynamic content (timestamps, hashes, etc.)
+  - Separate files for commands output and artifacts
+
+- **Helper Functions**:
+  - `s()`: Marks commands that affect shared state
+  - `RunCommands()`: Execute commands and capture output
+  - `ReadArtifact()`: Read files from test directory
+
+#### Common Test Patterns
+
+```go
+// Deploy a library
+{"gen", "deploy", "src/StringUtils.sol:StringUtils"},
+{"run", "script/deploy/DeployStringUtils.s.sol"},
+
+// Deploy a proxy with implementation
+{"gen", "deploy", "UpgradeableCounter", "--proxy", "--proxy-contract", "ERC1967Proxy.sol:ERC1967Proxy"},
+{"run", "DeployUpgradeableCounterProxy"},
+
+// Deploy with environment variables
+{"run", "script/deploy/DeployCounter.s.sol", "--env", "LABEL=v1"},
+
+// Test with different namespaces
+{"run", "script/deploy/DeployCounter.s.sol", "--namespace", "production"},
+
+// Test JSON output
+{"list", "--json"},
+
+// Test error cases
+{
+    Name: "deploy_already_exists",
+    SetupCmds: [][]string{
+        {"run", "script/deploy/DeployCounter.s.sol"},
+    },
+    TestCmds: [][]string{
+        {"run", "script/deploy/DeployCounter.s.sol"}, // Should fail
+    },
+    ExpectErr: true,
+}
+```
+
+#### Debugging Failed Tests
+
+1. **Run with Debug Flag**: `go test -run TestName -v -treb.debug`
+   - Shows full command execution
+   - Displays stdout/stderr
+   - Shows working directory
+
+2. **Keep Test Artifacts**: `go test -run TestName -v -treb.skipcleanup`
+   - Preserves temporary directory
+   - Allows inspection of generated files
+
+3. **Check Golden Files**: Compare in `test/testdata/golden/`
+   - Look at the diff output
+   - Update with `-treb.updategolden` if changes are expected
+
+4. **Add Custom Normalizers**: For platform-specific differences
+   - `LegacySolidityNormalizer`: For Solidity <0.8 bytecode
+   - `TimestampNormalizer`: Replace timestamps
+   - `AddressNormalizer`: Replace addresses
+
+#### Example: Testing a New Feature
+
+```go
+// test/integration/myfeature_test.go
+func TestMyFeature(t *testing.T) {
+    tests := []IntegrationTest{
+        {
+            Name: "my_feature_basic",
+            SetupCmds: [][]string{
+                s("config set network anvil-31337"),
+                {"gen", "deploy", "MyContract"},
+            },
+            TestCmds: [][]string{
+                {"mycommand", "--flag"},
+                {"list"},
+            },
+        },
+    }
+    
+    RunIntegrationTestSuite(t, tests)
+}
 ```
 
 ### Foundry Library (treb-sol)
@@ -63,22 +226,10 @@ make test     # Run all tests
 cd treb-sol && forge build
 
 # Run library tests
-cd treb-sol && forge test
+cd treb-sol && forge test -vvv
 
 # Test address prediction
 cd treb-sol && forge script script/PredictAddress.s.sol --sig "predict(string,string)" "MyContract" "staging"
-```
-
-### Testing Individual Components
-```bash
-# Run specific Go test
-go test -v ./cli/pkg/safe/
-
-# Run Foundry tests with verbose output
-cd treb-sol && forge test -vvv
-
-# Test deployment locally with fixture project
-cd fixture && treb deploy Counter --network local
 ```
 
 ### Project Setup Workflow

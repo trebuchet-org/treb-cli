@@ -8,5 +8,11 @@
   
   IMPLEMENTATIONS
   UpgradeableCounter                  0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903   🅔 ? 🅢 ?         <TIMESTAMP>   
+  
+  SINGLETONS
+  Counter                             0x74148047D6bDf624C94eFc07F60cEE7b6052FB29   🅔 ? 🅢 ?         <TIMESTAMP>   
+  
+  LIBRARIES
+  StringUtils                         0xEcAbca4de814110d52a03Bedb1Ec96827F579d1a   🅔 ? 🅢 ?         <TIMESTAMP>   
 
-Total deployments: 2
+Total deployments: 4
