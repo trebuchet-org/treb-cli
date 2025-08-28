@@ -72,6 +72,14 @@ func (r *DeploymentsRenderer) displayTableFormat(deployments []*models.Deploymen
 		namespaceChainGroups[dep.Namespace][dep.ChainID] = append(namespaceChainGroups[dep.Namespace][dep.ChainID], dep)
 	}
 
+	// Build a map of implementation addresses to determine which singletons are implementations
+	implementationAddresses := make(map[string]bool)
+	for _, dep := range deployments {
+		if dep.Type == models.ProxyDeployment && dep.ProxyInfo != nil {
+			implementationAddresses[dep.ProxyInfo.Implementation] = true
+		}
+	}
+
 	// Get sorted namespaces
 	namespaces := make([]string, 0, len(namespaceChainGroups))
 	for ns := range namespaceChainGroups {
@@ -92,15 +100,25 @@ func (r *DeploymentsRenderer) displayTableFormat(deployments []*models.Deploymen
 		for _, chainID := range chainIDs {
 			chainDeployments := chains[chainID]
 
-			// Separate proxies and singletons
+			// Separate deployments into 4 categories
 			proxies := make([]*models.Deployment, 0)
+			implementations := make([]*models.Deployment, 0)
 			singletons := make([]*models.Deployment, 0)
+			libraries := make([]*models.Deployment, 0)
 
 			for _, dep := range chainDeployments {
-				if dep.Type == models.ProxyDeployment {
+				switch dep.Type {
+				case models.ProxyDeployment:
 					proxies = append(proxies, dep)
-				} else {
-					singletons = append(singletons, dep)
+				case models.LibraryDeployment:
+					libraries = append(libraries, dep)
+				default:
+					// Check if this singleton is an implementation
+					if implementationAddresses[dep.Address] {
+						implementations = append(implementations, dep)
+					} else {
+						singletons = append(singletons, dep)
+					}
 				}
 			}
 
@@ -108,9 +126,17 @@ func (r *DeploymentsRenderer) displayTableFormat(deployments []*models.Deploymen
 				proxyTable := r.buildDeploymentTable(proxies)
 				allTables = append(allTables, proxyTable)
 			}
+			if len(implementations) > 0 {
+				implTable := r.buildDeploymentTable(implementations)
+				allTables = append(allTables, implTable)
+			}
 			if len(singletons) > 0 {
 				singletonTable := r.buildDeploymentTable(singletons)
 				allTables = append(allTables, singletonTable)
+			}
+			if len(libraries) > 0 {
+				libraryTable := r.buildDeploymentTable(libraries)
+				allTables = append(allTables, libraryTable)
 			}
 		}
 	}
@@ -156,35 +182,76 @@ func (r *DeploymentsRenderer) displayTableFormat(deployments []*models.Deploymen
 			fmt.Fprintln(r.out, chainHeaderRow)
 			fmt.Fprintln(r.out, continuationPrefix)
 
-			// Separate proxies and singletons
+			// Separate deployments into 4 categories
 			proxies := make([]*models.Deployment, 0)
+			implementations := make([]*models.Deployment, 0)
 			singletons := make([]*models.Deployment, 0)
+			libraries := make([]*models.Deployment, 0)
 
 			for _, dep := range chainDeployments {
-				if dep.Type == models.ProxyDeployment {
+				switch dep.Type {
+				case models.ProxyDeployment:
 					proxies = append(proxies, dep)
-				} else {
-					singletons = append(singletons, dep)
+				case models.LibraryDeployment:
+					libraries = append(libraries, dep)
+				default:
+					// Check if this singleton is an implementation
+					if implementationAddresses[dep.Address] {
+						implementations = append(implementations, dep)
+					} else {
+						singletons = append(singletons, dep)
+					}
 				}
 			}
 
+			sectionsDisplayed := 0
+
 			// Display proxies section first
 			if len(proxies) > 0 {
+				if sectionsDisplayed > 0 {
+					fmt.Fprintln(r.out, continuationPrefix)
+				}
 				fmt.Fprintf(r.out, "%s%s\n", continuationPrefix, sectionHeaderStyle.Sprint("PROXIES"))
 				proxyTable := r.buildDeploymentTable(proxies)
 				fmt.Fprint(r.out, renderTableWithWidths(proxyTable, globalColumnWidths, continuationPrefix))
 				fmt.Fprintln(r.out)
+				sectionsDisplayed++
+			}
+
+			// Display implementations section
+			if len(implementations) > 0 {
+				if sectionsDisplayed > 0 {
+					fmt.Fprintln(r.out, continuationPrefix)
+				}
+				fmt.Fprintf(r.out, "%s%s\n", continuationPrefix, sectionHeaderStyle.Sprint("IMPLEMENTATIONS"))
+				implTable := r.buildDeploymentTable(implementations)
+				fmt.Fprint(r.out, renderTableWithWidths(implTable, globalColumnWidths, continuationPrefix))
+				fmt.Fprintln(r.out)
+				sectionsDisplayed++
 			}
 
 			// Display singletons section
 			if len(singletons) > 0 {
-				if len(proxies) > 0 {
+				if sectionsDisplayed > 0 {
 					fmt.Fprintln(r.out, continuationPrefix)
 				}
 				fmt.Fprintf(r.out, "%s%s\n", continuationPrefix, sectionHeaderStyle.Sprint("SINGLETONS"))
 				singletonTable := r.buildDeploymentTable(singletons)
 				fmt.Fprint(r.out, renderTableWithWidths(singletonTable, globalColumnWidths, continuationPrefix))
 				fmt.Fprintln(r.out)
+				sectionsDisplayed++
+			}
+
+			// Display libraries section
+			if len(libraries) > 0 {
+				if sectionsDisplayed > 0 {
+					fmt.Fprintln(r.out, continuationPrefix)
+				}
+				fmt.Fprintf(r.out, "%s%s\n", continuationPrefix, sectionHeaderStyle.Sprint("LIBRARIES"))
+				libraryTable := r.buildDeploymentTable(libraries)
+				fmt.Fprint(r.out, renderTableWithWidths(libraryTable, globalColumnWidths, continuationPrefix))
+				fmt.Fprintln(r.out)
+				sectionsDisplayed++
 			}
 
 			if !isLastNetwork {
@@ -202,9 +269,18 @@ func (r *DeploymentsRenderer) displayTableFormat(deployments []*models.Deploymen
 func (r *DeploymentsRenderer) buildDeploymentTable(deployments []*models.Deployment) TableData {
 	tableData := make(TableData, 0)
 
-	// Sort deployments by timestamp (newest first)
+	// Sort deployments by contract name (alphabetically)
 	sort.Slice(deployments, func(i, j int) bool {
-		return deployments[i].CreatedAt.After(deployments[j].CreatedAt)
+		// Get display names for comparison
+		nameI := deployments[i].ContractDisplayName()
+		nameJ := deployments[j].ContractDisplayName()
+		
+		// If names are the same, sort by timestamp (newest first)
+		if nameI == nameJ {
+			return deployments[i].CreatedAt.After(deployments[j].CreatedAt)
+		}
+		
+		return nameI < nameJ
 	})
 
 	for _, deployment := range deployments {
@@ -244,7 +320,12 @@ func (r *DeploymentsRenderer) buildDeploymentTable(deployments []*models.Deploym
 
 		// If this is a proxy, add implementation row
 		if deployment.ProxyInfo != nil {
-			implDisplayName := deployment.ProxyInfo.Implementation[:10] + "..." // fallback short address
+			// Safely truncate address for display
+			addr := deployment.ProxyInfo.Implementation
+			implDisplayName := addr
+			if len(addr) > 10 {
+				implDisplayName = addr[:10] + "..."
+			}
 
 			// If we have the implementation deployment loaded, use its name
 			if deployment.Implementation != nil {
@@ -252,11 +333,10 @@ func (r *DeploymentsRenderer) buildDeploymentTable(deployments []*models.Deploym
 			}
 
 			implRow := implPrefixStyle.Sprintf("└─ %s", implDisplayName)
-			implAddress := addressStyle.Sprint(deployment.ProxyInfo.Implementation)
 
 			tableData = append(tableData, []string{
 				implRow,
-				implAddress,
+				"", // No address shown for implementation line
 				"",
 				"",
 			})

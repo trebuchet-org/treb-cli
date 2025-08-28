@@ -64,6 +64,22 @@ func TestListCommand(t *testing.T) {
 			TestCmds: [][]string{{"list"}},
 		},
 		{
+			Name: "list_with_all_categories",
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				// Deploy a library
+				{"gen", "deploy", "src/StringUtils.sol:StringUtils"},
+				{"run", "script/deploy/DeployStringUtils.s.sol"},
+				// Deploy a proxy with implementation
+				{"gen", "deploy", "UpgradeableCounter", "--proxy", "--proxy-contract", "ERC1967Proxy.sol:ERC1967Proxy"},
+				{"run", "DeployUpgradeableCounterProxy"},
+				// Deploy a singleton
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"run", "script/deploy/DeployCounter.s.sol"},
+			},
+			TestCmds: [][]string{{"list"}},
+		},
+		{
 			Name: "list_filter_by_namespace",
 			SetupCmds: [][]string{
 				s("config set network anvil-31337"),

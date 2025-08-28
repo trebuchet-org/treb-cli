@@ -65,9 +65,9 @@ Proxy[UpgradeableCounter] at 0x806ca68527807F59Bf2D513889eC6CbD6139BDFf
   
   PROXIES
   Proxy                         0x806ca68527807F59Bf2D513889eC6CbD6139BDFf   🅔 ? 🅢 ?         <TIMESTAMP>   
-  └─ UpgradeableCounter         0xcFd84621988A8243EfEd4C30163d85f5dEdE07Ad                                         
+  └─ UpgradeableCounter                                                                                            
   
-  SINGLETONS
+  IMPLEMENTATIONS
   UpgradeableCounter            0xcFd84621988A8243EfEd4C30163d85f5dEdE07Ad   🅔 ? 🅢 ?         <TIMESTAMP>   
 
 Total deployments: 2
