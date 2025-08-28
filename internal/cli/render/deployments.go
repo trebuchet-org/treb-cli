@@ -269,9 +269,18 @@ func (r *DeploymentsRenderer) displayTableFormat(deployments []*models.Deploymen
 func (r *DeploymentsRenderer) buildDeploymentTable(deployments []*models.Deployment) TableData {
 	tableData := make(TableData, 0)
 
-	// Sort deployments by timestamp (newest first)
+	// Sort deployments by contract name (alphabetically)
 	sort.Slice(deployments, func(i, j int) bool {
-		return deployments[i].CreatedAt.After(deployments[j].CreatedAt)
+		// Get display names for comparison
+		nameI := deployments[i].ContractDisplayName()
+		nameJ := deployments[j].ContractDisplayName()
+		
+		// If names are the same, sort by timestamp (newest first)
+		if nameI == nameJ {
+			return deployments[i].CreatedAt.After(deployments[j].CreatedAt)
+		}
+		
+		return nameI < nameJ
 	})
 
 	for _, deployment := range deployments {
