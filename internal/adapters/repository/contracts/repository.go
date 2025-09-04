@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
@@ -42,10 +43,14 @@ func NewRepository(projectRoot string, log *slog.Logger) *Repository {
 
 // Index discovers all contracts and artifacts
 func (i *Repository) Index() error {
+	start := time.Now()
+	i.log.Debug("starting contract indexing")
+	
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
 	if i.indexed {
+		i.log.Debug("contracts already indexed, skipping")
 		return nil
 	}
 
@@ -54,15 +59,35 @@ func (i *Repository) Index() error {
 	i.contractNames = make(map[string][]*models.Contract)
 	i.bytecodeHashIndex = make(map[string]*models.Contract)
 
-	// Always run forge build to ensure new scripts are compiled
-	if err := i.runForgeBuild(); err != nil {
-		return fmt.Errorf("failed to build contracts: %w", err)
+	// Check if we need to run forge build
+	outDir := filepath.Join(i.projectRoot, "out")
+	needsBuild := false
+	
+	// Check if out directory exists
+	if info, err := os.Stat(outDir); err != nil || !info.IsDir() {
+		i.log.Debug("out directory not found, build needed")
+		needsBuild = true
+	} else {
+		// Check if out directory has any content
+		entries, err := os.ReadDir(outDir)
+		if err != nil || len(entries) == 0 {
+			i.log.Debug("out directory empty, build needed")
+			needsBuild = true
+		}
+	}
+	
+	// Only run forge build if necessary
+	if needsBuild {
+		if err := i.runForgeBuild(); err != nil {
+			return fmt.Errorf("failed to build contracts: %w", err)
+		}
+	} else {
+		i.log.Debug("skipping forge build, artifacts already exist")
 	}
 
-	// Find the 'out' directory
-	outDir := filepath.Join(i.projectRoot, "out")
+	// Verify the 'out' directory exists
 	if _, err := os.Stat(outDir); os.IsNotExist(err) {
-		return fmt.Errorf("out directory not found after forge build")
+		return fmt.Errorf("out directory not found after attempting to index")
 	}
 
 	// Walk through all artifact directories
@@ -89,11 +114,16 @@ func (i *Repository) Index() error {
 	})
 
 	i.indexed = true
+	duration := time.Since(start)
+	i.log.Debug("contract indexing completed", "duration", duration, "contracts_found", len(i.contracts))
 	return err
 }
 
 // runForgeBuild runs forge build command
 func (i *Repository) runForgeBuild() error {
+	start := time.Now()
+	i.log.Debug("running forge build for contract indexing", "dir", i.projectRoot)
+	
 	// Check if we need to rebuild by looking for a cache indicator
 	// For now, always build without --force to improve performance
 	// The --force flag was causing significant slowdowns
@@ -101,10 +131,14 @@ func (i *Repository) runForgeBuild() error {
 	cmd.Dir = i.projectRoot
 
 	output, err := cmd.CombinedOutput()
+	duration := time.Since(start)
+	
 	if err != nil {
+		i.log.Error("forge build failed", "error", err, "duration", duration)
 		return fmt.Errorf("forge build failed: %w\nOutput: %s", err, string(output))
 	}
 
+	i.log.Debug("forge build completed", "duration", duration)
 	return nil
 }
 
