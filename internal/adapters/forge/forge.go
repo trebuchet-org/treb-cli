@@ -35,22 +35,19 @@ func NewForgeAdapter(projectRoot string, log *slog.Logger) *ForgeAdapter {
 
 // Build runs forge build with proper output handling
 func (f *ForgeAdapter) Build() error {
-	start := time.Now()
 	f.log.Debug("running forge build", "dir", f.projectRoot)
 
 	cmd := exec.Command("forge", "build")
 	cmd.Dir = f.projectRoot
 
 	output, err := cmd.CombinedOutput()
-	duration := time.Since(start)
-	
 	if err != nil {
-		f.log.Error("forge build failed", "error", err, "output", string(output), "duration", duration)
+		f.log.Error("forge build failed", "error", err, "output", string(output))
 		// Only print error details if build actually failed
 		return fmt.Errorf("forge build failed: %w\nOutput: %s", err, string(output))
 	}
 
-	f.log.Debug("forge build completed successfully", "duration", duration)
+	f.log.Debug("forge build completed successfully")
 	// Don't print anything on success - let the caller handle UI
 	return nil
 }
