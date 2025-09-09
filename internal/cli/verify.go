@@ -17,7 +17,6 @@ func NewVerifyCmd() *cobra.Command {
 		forceFlag    bool
 		contractPath string
 		debugFlag    bool
-		chainID      uint64
 		namespace    string
 	)
 
@@ -30,13 +29,13 @@ Examples:
   treb verify Counter                      # Verify specific contract
   treb verify Counter:v2                   # Verify specific deployment by label
   treb verify staging/Counter              # Verify by namespace/contract
-  treb verify 11155111/Counter             # Verify by chain/contract
-  treb verify staging/11155111/Counter     # Verify by namespace/chain/contract
-  treb verify 0x1234...                    # Verify by address (requires --chain)
+  treb verify Counter --network sepolia    # Verify by contract on network
+  treb verify staging/Counter              # Verify by namespace/contract
+  treb verify 0x1234... --network sepolia  # Verify by address (requires --network)
   treb verify --all                        # Verify all unverified contracts (skip local)
   treb verify --all --force                # Re-verify all contracts including verified
   treb verify Counter --force              # Re-verify even if already verified
-  treb verify Counter --chain 11155111 --namespace staging  # Verify with filters
+  treb verify Counter --network sepolia --namespace staging  # Verify with filters
   treb verify CounterProxy --contract-path "./src/Counter.sol:Counter"  # Manual contract path`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -54,8 +53,12 @@ Examples:
 
 			// Create filter
 			filter := domain.DeploymentFilter{
-				ChainID:   chainID,
 				Namespace: namespace,
+			}
+			
+			// Get network info from app config if available
+			if app.Config.Network != nil {
+				filter.ChainID = app.Config.Network.ChainID
 			}
 
 			ctx := cmd.Context()
@@ -93,7 +96,7 @@ Examples:
 	cmd.Flags().BoolVar(&forceFlag, "force", false, "Re-verify even if already verified")
 	cmd.Flags().StringVar(&contractPath, "contract-path", "", "Manual contract path (e.g., ./src/Contract.sol:Contract)")
 	cmd.Flags().BoolVar(&debugFlag, "debug", false, "Show debug information including forge verify commands")
-	cmd.Flags().Uint64VarP(&chainID, "chain", "c", 0, "Filter by chain ID")
+	cmd.Flags().StringP("network", "n", "", "Network to run on (e.g., mainnet, sepolia, local)")
 	cmd.Flags().StringVar(&namespace, "namespace", "", "Filter by namespace")
 
 	return cmd
