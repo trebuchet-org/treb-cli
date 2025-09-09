@@ -3,8 +3,6 @@ package usecase
 import (
 	"context"
 	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
@@ -12,9 +10,11 @@ import (
 
 // VerifyDeployment handles contract verification on block explorers
 type VerifyDeployment struct {
-	repo             DeploymentRepository
-	contractVerifier ContractVerifier
-	networkResolver  NetworkResolver
+	repo               DeploymentRepository
+	contractVerifier   ContractVerifier
+	networkResolver    NetworkResolver
+	deploymentResolver DeploymentResolver
+	progress           ProgressSink
 }
 
 // NewVerifyDeployment creates a new verify deployment use case
@@ -22,11 +22,15 @@ func NewVerifyDeployment(
 	repo DeploymentRepository,
 	contractVerifier ContractVerifier,
 	networkResolver NetworkResolver,
+	deploymentResolver DeploymentResolver,
+	progress ProgressSink,
 ) *VerifyDeployment {
 	return &VerifyDeployment{
-		repo:             repo,
-		contractVerifier: contractVerifier,
-		networkResolver:  networkResolver,
+		repo:               repo,
+		contractVerifier:   contractVerifier,
+		networkResolver:    networkResolver,
+		deploymentResolver: deploymentResolver,
+		progress:           progress,
 	}
 }
 
@@ -45,9 +49,15 @@ type VerifyResult struct {
 }
 
 // VerifyAll verifies all unverified deployments
-func (v *VerifyDeployment) VerifyAll(ctx context.Context, options VerifyOptions) (*VerifyAllResult, error) {
-	// Get all deployments
-	deployments, err := v.repo.ListDeployments(ctx, domain.DeploymentFilter{})
+func (v *VerifyDeployment) VerifyAll(ctx context.Context, filter domain.DeploymentFilter, options VerifyOptions) (*VerifyAllResult, error) {
+	v.progress.OnProgress(ctx, ProgressEvent{
+		Stage:   "gathering",
+		Message: "Gathering deployments to verify...",
+		Spinner: true,
+	})
+
+	// Get all deployments matching the filter
+	deployments, err := v.repo.ListDeployments(ctx, filter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list deployments: %w", err)
 	}
@@ -108,7 +118,15 @@ func (v *VerifyDeployment) VerifyAll(ctx context.Context, options VerifyOptions)
 	}
 
 	// Verify each deployment
-	for _, deployment := range result.ToVerify {
+	for i, deployment := range result.ToVerify {
+		v.progress.OnProgress(ctx, ProgressEvent{
+			Stage:   "verifying",
+			Current: i + 1,
+			Total:   len(result.ToVerify),
+			Message: fmt.Sprintf("Verifying %s on chain %d...", deployment.ContractName, deployment.ChainID),
+			Spinner: true,
+		})
+
 		verifyResult := v.verifyDeployment(ctx, deployment, options)
 		result.Results = append(result.Results, verifyResult)
 		if verifyResult.Success {
@@ -121,24 +139,16 @@ func (v *VerifyDeployment) VerifyAll(ctx context.Context, options VerifyOptions)
 
 // VerifySpecific verifies a specific deployment
 func (v *VerifyDeployment) VerifySpecific(ctx context.Context, identifier string, filter domain.DeploymentFilter, options VerifyOptions) (*VerifyResult, error) {
-	var deployment *models.Deployment
-	var err error
+	// Use the deployment resolver for consistent deployment resolution with interactive selection
+	query := domain.DeploymentQuery{
+		Reference: identifier,
+		ChainID:   filter.ChainID,
+		Namespace: filter.Namespace,
+	}
 
-	// Check if identifier is an address
-	if strings.HasPrefix(identifier, "0x") && len(identifier) == 42 {
-		if filter.ChainID == 0 {
-			return nil, fmt.Errorf("--network flag is required when looking up by address")
-		}
-		deployment, err = v.repo.GetDeploymentByAddress(ctx, filter.ChainID, identifier)
-		if err != nil {
-			return nil, fmt.Errorf("deployment not found at address %s on network", identifier)
-		}
-	} else {
-		// Find deployment by identifier
-		deployment, err = v.findDeploymentByIdentifier(ctx, identifier, filter)
-		if err != nil {
-			return nil, err
-		}
+	deployment, err := v.deploymentResolver.ResolveDeployment(ctx, query)
+	if err != nil {
+		return nil, err
 	}
 
 	// Check if already verified
@@ -170,6 +180,18 @@ func (v *VerifyDeployment) VerifySpecific(ctx context.Context, identifier string
 
 // verifyDeployment performs the actual verification
 func (v *VerifyDeployment) verifyDeployment(ctx context.Context, deployment *models.Deployment, options VerifyOptions) *VerifyResult {
+	// Report that we're starting verification for this specific contract
+	displayName := deployment.ContractName
+	if deployment.Label != "" {
+		displayName = fmt.Sprintf("%s:%s", deployment.ContractName, deployment.Label)
+	}
+
+	v.progress.OnProgress(ctx, ProgressEvent{
+		Stage:   "network-resolve",
+		Message: fmt.Sprintf("Resolving network for %s...", displayName),
+		Spinner: true,
+	})
+
 	// Get network name for the deployment's chain ID
 	networkName, err := v.getNetworkNameForChainID(ctx, deployment.ChainID)
 	if err != nil {
@@ -179,7 +201,7 @@ func (v *VerifyDeployment) verifyDeployment(ctx context.Context, deployment *mod
 			Errors:     []string{fmt.Sprintf("failed to resolve network for chain ID %d: %v", deployment.ChainID, err)},
 		}
 	}
-	
+
 	// Get network info
 	networkInfo, err := v.networkResolver.ResolveNetwork(ctx, networkName)
 	if err != nil {
@@ -189,6 +211,12 @@ func (v *VerifyDeployment) verifyDeployment(ctx context.Context, deployment *mod
 			Errors:     []string{fmt.Sprintf("failed to resolve network %s: %v", networkName, err)},
 		}
 	}
+
+	v.progress.OnProgress(ctx, ProgressEvent{
+		Stage:   "verification",
+		Message: fmt.Sprintf("Submitting %s to block explorers...", displayName),
+		Spinner: true,
+	})
 
 	// Perform verification
 	err = v.contractVerifier.Verify(ctx, deployment, networkInfo)
@@ -215,60 +243,6 @@ func (v *VerifyDeployment) verifyDeployment(ctx context.Context, deployment *mod
 	}
 }
 
-// findDeploymentByIdentifier finds a deployment by various identifier formats
-func (v *VerifyDeployment) findDeploymentByIdentifier(ctx context.Context, identifier string, filter domain.DeploymentFilter) (*models.Deployment, error) {
-	// Get all deployments with filter
-	deployments, err := v.repo.ListDeployments(ctx, filter)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list deployments: %w", err)
-	}
-
-	// Look for matches
-	matches := make([]*models.Deployment, 0)
-	parts := strings.Split(identifier, "/")
-
-	for _, d := range deployments {
-		if matchesIdentifier(d, identifier, parts) {
-			matches = append(matches, d)
-		}
-	}
-
-	if len(matches) == 0 {
-		return nil, fmt.Errorf("no deployments found matching '%s'", identifier)
-	} else if len(matches) == 1 {
-		return matches[0], nil
-	} else {
-		// Multiple matches - in the future, we could use an interactive selector here
-		return nil, fmt.Errorf("multiple deployments found matching '%s', please be more specific", identifier)
-	}
-}
-
-// matchesIdentifier checks if a deployment matches the given identifier
-func matchesIdentifier(d *models.Deployment, identifier string, parts []string) bool {
-	// Simple match: contract name or contract:label
-	shortID := d.ContractName
-	if d.Label != "" {
-		shortID = fmt.Sprintf("%s:%s", d.ContractName, d.Label)
-	}
-	if d.ContractName == identifier || shortID == identifier {
-		return true
-	}
-
-	// Match namespace/contract or namespace/contract:label
-	if len(parts) == 2 {
-		namespace := parts[0]
-		contractPart := parts[1]
-
-		// Check if first part is a namespace
-		if d.Namespace == namespace && (d.ContractName == contractPart || shortID == contractPart) {
-			return true
-		}
-	}
-
-	// Match full deployment ID
-	return d.ID == identifier
-}
-
 // shouldVerify checks if a deployment should be verified
 func shouldVerify(deployment *models.Deployment) bool {
 	status := deployment.Verification.Status
@@ -278,20 +252,11 @@ func shouldVerify(deployment *models.Deployment) bool {
 		status == ""
 }
 
-// parseChainID tries to parse a string as a chain ID
-func parseChainID(s string) uint64 {
-	chainID, err := strconv.ParseUint(s, 10, 64)
-	if err != nil {
-		return 0
-	}
-	return chainID
-}
-
 // getNetworkNameForChainID attempts to find a network name for a chain ID
 func (v *VerifyDeployment) getNetworkNameForChainID(ctx context.Context, chainID uint64) (string, error) {
 	// Get all available network names
 	networkNames := v.networkResolver.GetNetworks(ctx)
-	
+
 	// Try to resolve each network to find matching chain ID
 	for _, name := range networkNames {
 		network, err := v.networkResolver.ResolveNetwork(ctx, name)
@@ -299,12 +264,12 @@ func (v *VerifyDeployment) getNetworkNameForChainID(ctx context.Context, chainID
 			// Skip networks that can't be resolved
 			continue
 		}
-		
+
 		if network.ChainID == chainID {
 			return name, nil
 		}
 	}
-	
+
 	// If no network found, return an error
 	return "", fmt.Errorf("no network configuration found for chain ID %d. Please ensure the network is configured in foundry.toml", chainID)
 }

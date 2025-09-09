@@ -19,15 +19,17 @@ type ListDeploymentsParams struct {
 
 // ListDeployments is the use case for listing deployments
 type ListDeployments struct {
-	config *config.RuntimeConfig
-	repo   DeploymentRepository
+	config          *config.RuntimeConfig
+	repo            DeploymentRepository
+	networkResolver NetworkResolver
 }
 
 // NewListDeployments creates a new ListDeployments use case
-func NewListDeployments(cfg *config.RuntimeConfig, repo DeploymentRepository) *ListDeployments {
+func NewListDeployments(cfg *config.RuntimeConfig, repo DeploymentRepository, networkResolver NetworkResolver) *ListDeployments {
 	return &ListDeployments{
-		config: cfg,
-		repo:   repo,
+		config:          cfg,
+		repo:            repo,
+		networkResolver: networkResolver,
 	}
 }
 
@@ -57,9 +59,20 @@ func (uc *ListDeployments) Run(ctx context.Context, params ListDeploymentsParams
 	// Calculate summary
 	summary := calculateSummary(deployments)
 
+	// Build network names map
+	networkNames := make(map[uint64]string)
+	for chainID := range summary.ByChain {
+		// Try to find network name for this chain ID
+		networkName := uc.findNetworkName(ctx, chainID)
+		if networkName != "" {
+			networkNames[chainID] = networkName
+		}
+	}
+
 	return &DeploymentListResult{
-		Deployments: deployments,
-		Summary:     summary,
+		Deployments:  deployments,
+		Summary:      summary,
+		NetworkNames: networkNames,
 	}, nil
 }
 
@@ -107,4 +120,25 @@ func calculateSummary(deployments []*models.Deployment) DeploymentSummary {
 	}
 
 	return summary
+}
+
+// findNetworkName attempts to find a network name for a chain ID
+func (uc *ListDeployments) findNetworkName(ctx context.Context, chainID uint64) string {
+	// Get all available network names
+	networkNames := uc.networkResolver.GetNetworks(ctx)
+	
+	// Try to resolve each network to find matching chain ID
+	for _, name := range networkNames {
+		network, err := uc.networkResolver.ResolveNetwork(ctx, name)
+		if err != nil {
+			continue
+		}
+		
+		if network.ChainID == chainID {
+			return name
+		}
+	}
+	
+	// Return empty string if no network found
+	return ""
 }

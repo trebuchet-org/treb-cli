@@ -65,7 +65,7 @@ Examples:
 
 			if allFlag {
 				// Verify all unverified contracts
-				result, err := app.VerifyDeployment.VerifyAll(ctx, options)
+				result, err := app.VerifyDeployment.VerifyAll(ctx, filter, options)
 				if err != nil {
 					return fmt.Errorf("failed to verify contracts: %w", err)
 				}

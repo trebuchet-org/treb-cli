@@ -56,12 +56,12 @@ func (r *DeploymentsRenderer) RenderDeploymentList(result *usecase.DeploymentLis
 	}
 
 	// Display in tree-style table format
-	r.displayTableFormat(result.Deployments)
+	r.displayTableFormat(result.Deployments, result.NetworkNames)
 	return nil
 }
 
 // displayTableFormat shows deployments in table format
-func (r *DeploymentsRenderer) displayTableFormat(deployments []*models.Deployment) {
+func (r *DeploymentsRenderer) displayTableFormat(deployments []*models.Deployment, networkNames map[uint64]string) {
 	// Group by namespace and chain
 	namespaceChainGroups := make(map[string]map[uint64][]*models.Deployment)
 
@@ -171,9 +171,14 @@ func (r *DeploymentsRenderer) displayTableFormat(deployments []*models.Deploymen
 				continuationPrefix = "  "
 			}
 
-			// Chain header
+			// Chain header - show network name with chain ID in parentheses
 			chainLabel := fmt.Sprintf("%-12s", "chain:")
-			chainValue := fmt.Sprintf("%-30s", fmt.Sprintf("%d", chainID))
+			var chainValue string
+			if networkName, ok := networkNames[chainID]; ok && networkName != "" {
+				chainValue = fmt.Sprintf("%-30s", fmt.Sprintf("%s (%d)", networkName, chainID))
+			} else {
+				chainValue = fmt.Sprintf("%-30s", fmt.Sprintf("%d", chainID))
+			}
 			chainHeaderRow := fmt.Sprintf("%s%s%s",
 				treePrefix,
 				chainHeader.Sprintf(" ⛓ %s ", chainLabel),
@@ -366,7 +371,7 @@ func (r *DeploymentsRenderer) getVerifierStatuses(deployment *models.Deployment)
 			}
 		}
 	}
-	verifierStatuses = append(verifierStatuses, fmt.Sprintf("🅔 %s", etherscanStatus))
+	verifierStatuses = append(verifierStatuses, fmt.Sprintf("e%s", etherscanStatus))
 
 	// Check Sourcify status
 	sourcifyStatus := "?"
@@ -384,7 +389,7 @@ func (r *DeploymentsRenderer) getVerifierStatuses(deployment *models.Deployment)
 			}
 		}
 	}
-	verifierStatuses = append(verifierStatuses, fmt.Sprintf("🅢 %s", sourcifyStatus))
+	verifierStatuses = append(verifierStatuses, fmt.Sprintf("s%s", sourcifyStatus))
 
 	return strings.Join(verifierStatuses, " ")
 }
