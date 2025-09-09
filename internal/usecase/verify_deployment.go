@@ -127,11 +127,11 @@ func (v *VerifyDeployment) VerifySpecific(ctx context.Context, identifier string
 	// Check if identifier is an address
 	if strings.HasPrefix(identifier, "0x") && len(identifier) == 42 {
 		if filter.ChainID == 0 {
-			return nil, fmt.Errorf("--chain flag is required when looking up by address")
+			return nil, fmt.Errorf("--network flag is required when looking up by address")
 		}
 		deployment, err = v.repo.GetDeploymentByAddress(ctx, filter.ChainID, identifier)
 		if err != nil {
-			return nil, fmt.Errorf("deployment not found at address %s on chain %d", identifier, filter.ChainID)
+			return nil, fmt.Errorf("deployment not found at address %s on network", identifier)
 		}
 	} else {
 		// Find deployment by identifier
@@ -170,13 +170,23 @@ func (v *VerifyDeployment) VerifySpecific(ctx context.Context, identifier string
 
 // verifyDeployment performs the actual verification
 func (v *VerifyDeployment) verifyDeployment(ctx context.Context, deployment *models.Deployment, options VerifyOptions) *VerifyResult {
-	// Get network info
-	networkInfo, err := v.networkResolver.ResolveNetwork(ctx, getNetworkName(deployment.ChainID))
+	// Get network name for the deployment's chain ID
+	networkName, err := v.getNetworkNameForChainID(ctx, deployment.ChainID)
 	if err != nil {
 		return &VerifyResult{
 			Deployment: deployment,
 			Success:    false,
-			Errors:     []string{fmt.Sprintf("failed to resolve network: %v", err)},
+			Errors:     []string{fmt.Sprintf("failed to resolve network for chain ID %d: %v", deployment.ChainID, err)},
+		}
+	}
+	
+	// Get network info
+	networkInfo, err := v.networkResolver.ResolveNetwork(ctx, networkName)
+	if err != nil {
+		return &VerifyResult{
+			Deployment: deployment,
+			Success:    false,
+			Errors:     []string{fmt.Sprintf("failed to resolve network %s: %v", networkName, err)},
 		}
 	}
 
@@ -253,24 +263,6 @@ func matchesIdentifier(d *models.Deployment, identifier string, parts []string) 
 		if d.Namespace == namespace && (d.ContractName == contractPart || shortID == contractPart) {
 			return true
 		}
-
-		// Check if first part is a chain ID
-		if chainID := parseChainID(parts[0]); chainID != 0 {
-			if d.ChainID == chainID && (d.ContractName == contractPart || shortID == contractPart) {
-				return true
-			}
-		}
-	}
-
-	// Match namespace/chain/contract
-	if len(parts) == 3 {
-		if d.Namespace == parts[0] {
-			if chainID := parseChainID(parts[1]); chainID != 0 {
-				if d.ChainID == chainID && (d.ContractName == parts[2] || shortID == parts[2]) {
-					return true
-				}
-			}
-		}
 	}
 
 	// Match full deployment ID
@@ -295,26 +287,26 @@ func parseChainID(s string) uint64 {
 	return chainID
 }
 
-// getNetworkName returns network name for a chain ID
-func getNetworkName(chainID uint64) string {
-	// This is a simplified version - the actual implementation
-	// would use the network resolver
-	switch chainID {
-	case 1:
-		return "mainnet"
-	case 11155111:
-		return "sepolia"
-	case 137:
-		return "polygon"
-	case 10:
-		return "optimism"
-	case 42161:
-		return "arbitrum"
-	case 8453:
-		return "base"
-	default:
-		return fmt.Sprintf("chain-%d", chainID)
+// getNetworkNameForChainID attempts to find a network name for a chain ID
+func (v *VerifyDeployment) getNetworkNameForChainID(ctx context.Context, chainID uint64) (string, error) {
+	// Get all available network names
+	networkNames := v.networkResolver.GetNetworks(ctx)
+	
+	// Try to resolve each network to find matching chain ID
+	for _, name := range networkNames {
+		network, err := v.networkResolver.ResolveNetwork(ctx, name)
+		if err != nil {
+			// Skip networks that can't be resolved
+			continue
+		}
+		
+		if network.ChainID == chainID {
+			return name, nil
+		}
 	}
+	
+	// If no network found, return an error
+	return "", fmt.Errorf("no network configuration found for chain ID %d. Please ensure the network is configured in foundry.toml", chainID)
 }
 
 // Result types
