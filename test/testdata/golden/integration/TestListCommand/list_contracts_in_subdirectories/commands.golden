@@ -1,10 +1,10 @@
 === cmd 0: [list] ===
    ◎ namespace:   DEFAULT                       
-└─ ⛓ chain:       31337                         
+└─ ⛓ chain:       anvil-31337 (31337)           
   
   SINGLETONS
-  Counter           0x74148047D6bDf624C94eFc07F60cEE7b6052FB29   🅔 ? 🅢 ?         <TIMESTAMP>   
-  MyToken           0x6c8D83F62F83A8D46F091094BA15B75F35A8E85E   🅔 ? 🅢 ?         <TIMESTAMP>   
-  SimpleStorage     0x2d99D60F162771aE558c2331769a45d2204128a6   🅔 ? 🅢 ?         <TIMESTAMP>   
+  Counter           0x74148047D6bDf624C94eFc07F60cEE7b6052FB29   e? s?   <TIMESTAMP>   
+  MyToken           0x6c8D83F62F83A8D46F091094BA15B75F35A8E85E   e? s?   <TIMESTAMP>   
+  SimpleStorage     0x2d99D60F162771aE558c2331769a45d2204128a6   e? s?   <TIMESTAMP>   
 
 Total deployments: 3

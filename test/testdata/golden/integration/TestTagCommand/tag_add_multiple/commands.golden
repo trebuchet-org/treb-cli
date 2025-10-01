@@ -1,19 +1,19 @@
 === cmd 0: [tag Counter --add v<VERSION>] ===
-ℹ Added tag 'v<VERSION>' to deployment default/31337/Counter
+Added tag 'v<VERSION>' to deployment default/31337/Counter
 ✅ Added tag 'v<VERSION>' to default/31337/Counter
 
 Current tags: v<VERSION>
 
 
 === cmd 1: [tag Counter --add v<VERSION>] ===
-ℹ Added tag 'v<VERSION>' to deployment default/31337/Counter
+Added tag 'v<VERSION>' to deployment default/31337/Counter
 ✅ Added tag 'v<VERSION>' to default/31337/Counter
 
 Current tags: v<VERSION>, v<VERSION>
 
 
 === cmd 2: [tag Counter --add stable] ===
-ℹ Added tag 'stable' to deployment default/31337/Counter
+Added tag 'stable' to deployment default/31337/Counter
 ✅ Added tag 'stable' to default/31337/Counter
 
 Current tags: stable, v<VERSION>, v<VERSION>

@@ -38,10 +38,10 @@ Counter at 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
 
 === cmd 1: [ls] ===
    ◎ namespace:   DEFAULT                       
-└─ ⛓ chain:       31337                         
+└─ ⛓ chain:       anvil-31337 (31337)           
   
   SINGLETONS
-  Counter     0x74148047D6bDf624C94eFc07F60cEE7b6052FB29   🅔 ? 🅢 ?         <TIMESTAMP>   
+  Counter     0x74148047D6bDf624C94eFc07F60cEE7b6052FB29   e? s?   <TIMESTAMP>   
 
 Total deployments: 1
 

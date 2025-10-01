@@ -101,13 +101,13 @@ MessageStorageV08 at 0xD35049AdbF890d4F8DA73994172Be764dC150DCc
 
 === cmd 6: [ls] ===
    ◎ namespace:   DEFAULT                       
-└─ ⛓ chain:       31337                         
+└─ ⛓ chain:       anvil-31337 (31337)           
   
   SINGLETONS
-  MessageStorageV08     0xD35049AdbF890d4F8DA73994172Be764dC150DCc   🅔 ? 🅢 ?         <TIMESTAMP>   
+  MessageStorageV08     0xD35049AdbF890d4F8DA73994172Be764dC150DCc   e? s?   <TIMESTAMP>   
   
   LIBRARIES
-  StringUtilsV2         0xab1b5cC40fDa13B869ABBB5a8209dD21a05190a3   🅔 ? 🅢 ?         <TIMESTAMP>   
+  StringUtilsV2         0xab1b5cC40fDa13B869ABBB5a8209dD21a05190a3   e? s?   <TIMESTAMP>   
 
 Total deployments: 2
 
@@ -232,11 +232,11 @@ Counter:v3 at 0xb3212624e288499386394b40A0b60c9b8bA9798E
 
 === cmd 11: [ls] ===
    ◎ namespace:   DEFAULT                       
-└─ ⛓ chain:       31338                         
+└─ ⛓ chain:       anvil-31338 (31338)           
   
   SINGLETONS
-  Counter        0x74148047D6bDf624C94eFc07F60cEE7b6052FB29   🅔 ? 🅢 ?         <TIMESTAMP>   
-  Counter:v2     0xe0c42922eA868803991F2F0E82D77280A790f446   🅔 ? 🅢 ?         <TIMESTAMP>   
-  Counter:v3     0xb3212624e288499386394b40A0b60c9b8bA9798E   🅔 ? 🅢 ?         <TIMESTAMP>   
+  Counter        0x74148047D6bDf624C94eFc07F60cEE7b6052FB29   e? s?   <TIMESTAMP>   
+  Counter:v2     0xe0c42922eA868803991F2F0E82D77280A790f446   e? s?   <TIMESTAMP>   
+  Counter:v3     0xb3212624e288499386394b40A0b60c9b8bA9798E   e? s?   <TIMESTAMP>   
 
 Total deployments: 3
