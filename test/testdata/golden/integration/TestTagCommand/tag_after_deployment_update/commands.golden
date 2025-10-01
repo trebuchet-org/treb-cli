@@ -1,5 +1,5 @@
 === cmd 0: [tag Counter:v2 --add updated] ===
-ℹ Added tag 'updated' to deployment default/31337/Counter:v2
+Added tag 'updated' to deployment default/31337/Counter:v2
 ✅ Added tag 'updated' to default/31337/Counter:v2
 
 Current tags: updated

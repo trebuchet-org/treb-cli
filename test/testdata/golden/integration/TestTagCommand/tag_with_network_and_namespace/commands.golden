@@ -1,5 +1,5 @@
 === cmd 0: [tag Counter --add v<VERSION> --namespace production --network anvil-31337] ===
-ℹ Added tag 'v<VERSION>' to deployment production/31337/Counter
+Added tag 'v<VERSION>' to deployment production/31337/Counter
 ✅ Added tag 'v<VERSION>' to production/31337/Counter
 
 Current tags: v<VERSION>

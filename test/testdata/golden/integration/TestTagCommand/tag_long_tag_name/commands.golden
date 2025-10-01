@@ -1,5 +1,5 @@
 === cmd 0: [tag Counter --add this-is-a-very-long-tag-name-that-should-still-work-v<VERSION>] ===
-ℹ Added tag 'this-is-a-very-long-tag-name-that-should-still-work-v<VERSION>' to deployment default/31337/Counter
+Added tag 'this-is-a-very-long-tag-name-that-should-still-work-v<VERSION>' to deployment default/31337/Counter
 ✅ Added tag 'this-is-a-very-long-tag-name-that-should-still-work-v<VERSION>' to default/31337/Counter
 
 Current tags: this-is-a-very-long-tag-name-that-should-still-work-v<VERSION>
