@@ -17,7 +17,7 @@ Current tags: staging-v1
 └─ ⛓ chain:       anvil-31337 (31337)           
   
   SINGLETONS
-  Counter (default-v1)     0x74148047D6bDf624C94eFc07F60cEE7b6052FB29   e? s?   <TIMESTAMP>   
+  Counter (default-v1)     0x74148047D6bDf624C94eFc07F60cEE7b6052FB29   e[-] s[-] b[-]   <TIMESTAMP>   
 
 Total deployments: 1
 
@@ -27,6 +27,6 @@ Total deployments: 1
 └─ ⛓ chain:       anvil-31337 (31337)           
   
   SINGLETONS
-  Counter (staging-v1)     0x144180Ad5257d58F4AB181af127266Ba3F6Aa042   e? s?   <TIMESTAMP>   
+  Counter (staging-v1)     0x144180Ad5257d58F4AB181af127266Ba3F6Aa042   e[-] s[-] b[-]   <TIMESTAMP>   
 
 Total deployments: 1
