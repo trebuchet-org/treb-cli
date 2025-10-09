@@ -3,8 +3,8 @@
 └─ ⛓ chain:       anvil-31337 (31337)           
   
   SINGLETONS
-  Counter:v1     0xdE06172EB8C24165438479C9b69E3F83832d9EA3   e? s?   <TIMESTAMP>   
-  Counter:v2     0xe0c42922eA868803991F2F0E82D77280A790f446   e? s?   <TIMESTAMP>   
-  Counter:v3     0xb3212624e288499386394b40A0b60c9b8bA9798E   e? s?   <TIMESTAMP>   
+  Counter:v1     0xdE06172EB8C24165438479C9b69E3F83832d9EA3   e[-] s[-] b[-]   <TIMESTAMP>   
+  Counter:v2     0xe0c42922eA868803991F2F0E82D77280A790f446   e[-] s[-] b[-]   <TIMESTAMP>   
+  Counter:v3     0xb3212624e288499386394b40A0b60c9b8bA9798E   e[-] s[-] b[-]   <TIMESTAMP>   
 
 Total deployments: 3

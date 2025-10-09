@@ -13,20 +13,27 @@ import (
 // NewVerifyCmd creates the verify command using the new architecture
 func NewVerifyCmd() *cobra.Command {
 	var (
-		allFlag      bool
-		forceFlag    bool
-		contractPath string
-		debugFlag    bool
-		namespace    string
+		allFlag               bool
+		forceFlag             bool
+		contractPath          string
+		debugFlag             bool
+		namespace             string
+		etherscan             bool
+		blockscout            bool
+		sourcify              bool
+		blockscoutVerifierURL string
 	)
 
 	cmd := &cobra.Command{
 		Use:   "verify [deployment-id|address]",
 		Short: "Verify contracts on block explorers",
-		Long: `Verify contracts on block explorers (Etherscan and Sourcify) and update registry status.
+		Long: `Verify contracts on block explorers (Etherscan, Blockscout, and Sourcify) and update registry status.
 
 Examples:
-  treb verify Counter                      # Verify specific contract
+  treb verify Counter                      # Verify specific contract (all verifiers)
+  treb verify Counter -e                   # Verify on Etherscan only
+  treb verify Counter -eb                  # Verify on Etherscan and Blockscout
+  treb verify Counter --etherscan --sourcify  # Verify on Etherscan and Sourcify
   treb verify Counter:v2                   # Verify specific deployment by label
   treb verify staging/Counter              # Verify by namespace/contract
   treb verify Counter --network sepolia    # Verify by contract on network
@@ -44,11 +51,30 @@ Examples:
 				return err
 			}
 
+			// Determine which verifiers to use
+			// If none specified, use all
+			verifiers := []string{}
+			if !etherscan && !blockscout && !sourcify {
+				verifiers = []string{"etherscan", "blockscout", "sourcify"}
+			} else {
+				if etherscan {
+					verifiers = append(verifiers, "etherscan")
+				}
+				if blockscout {
+					verifiers = append(verifiers, "blockscout")
+				}
+				if sourcify {
+					verifiers = append(verifiers, "sourcify")
+				}
+			}
+
 			// Create options
 			options := usecase.VerifyOptions{
-				Force:        forceFlag,
-				ContractPath: contractPath,
-				Debug:        debugFlag,
+				Force:                 forceFlag,
+				ContractPath:          contractPath,
+				Debug:                 debugFlag,
+				Verifiers:             verifiers,
+				BlockscoutVerifierURL: blockscoutVerifierURL,
 			}
 
 			// Create filter
@@ -98,6 +124,12 @@ Examples:
 	cmd.Flags().BoolVar(&debugFlag, "debug", false, "Show debug information including forge verify commands")
 	cmd.Flags().StringP("network", "n", "", "Network to run on (e.g., mainnet, sepolia, local)")
 	cmd.Flags().StringVar(&namespace, "namespace", "", "Filter by namespace")
+
+	// Verifier selection flags
+	cmd.Flags().BoolVarP(&etherscan, "etherscan", "e", false, "Verify on Etherscan")
+	cmd.Flags().BoolVarP(&blockscout, "blockscout", "b", false, "Verify on Blockscout")
+	cmd.Flags().BoolVarP(&sourcify, "sourcify", "s", false, "Verify on Sourcify")
+	cmd.Flags().StringVar(&blockscoutVerifierURL, "blockscout-verifier-url", "", "Custom Blockscout API URL (e.g., https://explorer.example.com/api)")
 
 	return cmd
 }

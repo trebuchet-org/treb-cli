@@ -353,45 +353,57 @@ func (r *DeploymentsRenderer) buildDeploymentTable(deployments []*models.Deploym
 
 // getVerifierStatuses returns the formatted verifier status string
 func (r *DeploymentsRenderer) getVerifierStatuses(deployment *models.Deployment) string {
-	verifierStatuses := []string{}
+	// Helper to get status symbol - returns symbol and whether it needs padding
+	getStatusSymbol := func(status string) (string, bool) {
+		switch status {
+		case "verified":
+			return verifiedStyle.Sprint("✔︎"), true // Wide character, needs padding
+		case "failed":
+			return notVerifiedStyle.Sprint("-"), false
+		case "pending":
+			return pendingStyle.Sprint("⏳"), true // Wide character, needs padding
+		default:
+			return "-", false
+		}
+	}
+
+	// Helper to format status with padding
+	formatStatus := func(prefix, status string, needsPadding bool) string {
+		if needsPadding {
+			// Add extra space after wide characters to compensate for visual width
+			return fmt.Sprintf("%s[%s] ", prefix, status)
+		}
+		return fmt.Sprintf("%s[%s]", prefix, status)
+	}
 
 	// Check Etherscan status
-	etherscanStatus := "?"
+	etherscanSymbol, etherscanPad := "-", false
 	if deployment.Verification.Verifiers != nil {
 		if etherscan, exists := deployment.Verification.Verifiers["etherscan"]; exists {
-			switch etherscan.Status {
-			case "verified":
-				etherscanStatus = verifiedStyle.Sprint("✓")
-			case "failed":
-				etherscanStatus = notVerifiedStyle.Sprint("✗")
-			case "pending":
-				etherscanStatus = pendingStyle.Sprint("⏳")
-			default:
-				etherscanStatus = "?"
-			}
+			etherscanSymbol, etherscanPad = getStatusSymbol(etherscan.Status)
 		}
 	}
-	verifierStatuses = append(verifierStatuses, fmt.Sprintf("e%s", etherscanStatus))
+	etherscanStatus := formatStatus("e", etherscanSymbol, etherscanPad)
 
 	// Check Sourcify status
-	sourcifyStatus := "?"
+	sourcifySymbol, sourcifyPad := "-", false
 	if deployment.Verification.Verifiers != nil {
 		if sourcify, exists := deployment.Verification.Verifiers["sourcify"]; exists {
-			switch sourcify.Status {
-			case "verified":
-				sourcifyStatus = verifiedStyle.Sprint("✓")
-			case "failed":
-				sourcifyStatus = notVerifiedStyle.Sprint("✗")
-			case "pending":
-				sourcifyStatus = pendingStyle.Sprint("⏳")
-			default:
-				sourcifyStatus = "?"
-			}
+			sourcifySymbol, sourcifyPad = getStatusSymbol(sourcify.Status)
 		}
 	}
-	verifierStatuses = append(verifierStatuses, fmt.Sprintf("s%s", sourcifyStatus))
+	sourcifyStatus := formatStatus("s", sourcifySymbol, sourcifyPad)
 
-	return strings.Join(verifierStatuses, " ")
+	// Check Blockscout status
+	blockscoutSymbol, blockscoutPad := "-", false
+	if deployment.Verification.Verifiers != nil {
+		if blockscout, exists := deployment.Verification.Verifiers["blockscout"]; exists {
+			blockscoutSymbol, blockscoutPad = getStatusSymbol(blockscout.Status)
+		}
+	}
+	blockscoutStatus := formatStatus("b", blockscoutSymbol, blockscoutPad)
+
+	return fmt.Sprintf("%s %s %s", etherscanStatus, sourcifyStatus, blockscoutStatus)
 }
 
 // getColoredDisplayName returns a colored display name for deployment
@@ -487,7 +499,17 @@ func calculateTableColumnWidths(tables []TableData) []int {
 			for colIdx, cell := range row {
 				if colIdx < len(widths) {
 					// Strip ANSI codes for width calculation
-					cellWidth := len(stripAnsiCodes(cell))
+					stripped := stripAnsiCodes(cell)
+
+					// For the verification column (column 2), use display width accounting for unicode
+					var cellWidth int
+					if colIdx == 2 {
+						// Count display width: unicode checkmark and box drawing chars count as 1
+						cellWidth = displayWidth(stripped)
+					} else {
+						cellWidth = len(stripped)
+					}
+
 					if cellWidth > widths[colIdx] {
 						widths[colIdx] = cellWidth
 					}
@@ -497,4 +519,22 @@ func calculateTableColumnWidths(tables []TableData) []int {
 	}
 
 	return widths
+}
+
+// displayWidth calculates the display width of a string, accounting for wide characters
+func displayWidth(s string) int {
+	width := 0
+	for _, r := range s {
+		// Most unicode symbols and emoji take 2 columns in terminals
+		// Checkmarks and similar symbols are wide characters
+		if r == '✔' || r == 0xFE0E || r == '⏳' {
+			width += 2 // These characters are wide in most terminals
+		} else if r > 127 {
+			// Other unicode characters
+			width += 2
+		} else {
+			width += 1
+		}
+	}
+	return width
 }

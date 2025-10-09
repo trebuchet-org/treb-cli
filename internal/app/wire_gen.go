@@ -85,11 +85,11 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 	runProgress := progress.NewRunProgress(scriptRenderer)
 	forgeAdapter := forge.NewForgeAdapter(string2, logger)
 	runScript := usecase.NewRunScript(runtimeConfig, scriptResolver, parameterResolver, sendersManager, runResultHydrator, fileRepository, libraryResolver, runProgress, forgeAdapter)
-	verifierAdapter, err := verification.NewVerifierAdapter(runtimeConfig)
+	verifier, err := verification.NewVerifier(runtimeConfig)
 	if err != nil {
 		return nil, err
 	}
-	verifyDeployment := usecase.NewVerifyDeployment(fileRepository, verifierAdapter, networkResolver, deploymentResolver, spinnerProgressReporter)
+	verifyDeployment := usecase.NewVerifyDeployment(fileRepository, verifier, networkResolver, deploymentResolver, spinnerProgressReporter)
 	composeRenderer := render.NewComposeRenderer(writer)
 	composeProgress := progress.NewComposeProgress(composeRenderer, scriptRenderer)
 	composeDeployment := usecase.NewComposeDeployment(runScript, composeProgress)
