@@ -36,9 +36,11 @@ func NewVerifyDeployment(
 
 // VerifyOptions contains options for verification
 type VerifyOptions struct {
-	Force        bool   // Re-verify even if already verified
-	ContractPath string // Override contract path
-	Debug        bool   // Show debug information
+	Force                 bool     // Re-verify even if already verified
+	ContractPath          string   // Override contract path
+	Debug                 bool     // Show debug information
+	Verifiers             []string // Which verifiers to use (etherscan, blockscout, sourcify)
+	BlockscoutVerifierURL string   // Custom Blockscout verifier URL
 }
 
 // VerifyResult contains the result of verification
@@ -219,7 +221,12 @@ func (v *VerifyDeployment) verifyDeployment(ctx context.Context, deployment *mod
 	})
 
 	// Perform verification
-	err = v.contractVerifier.Verify(ctx, deployment, networkInfo)
+	verifiers := options.Verifiers
+	if len(verifiers) == 0 {
+		// Default to all verifiers if none specified
+		verifiers = []string{"etherscan", "blockscout", "sourcify"}
+	}
+	err = v.contractVerifier.Verify(ctx, deployment, networkInfo, verifiers, options.BlockscoutVerifierURL)
 	if err != nil {
 		return &VerifyResult{
 			Deployment: deployment,

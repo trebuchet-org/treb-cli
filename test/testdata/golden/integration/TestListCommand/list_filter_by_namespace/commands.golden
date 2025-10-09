@@ -3,7 +3,7 @@
 └─ ⛓ chain:       anvil-31337 (31337)           
   
   SINGLETONS
-  Counter     0x144180Ad5257d58F4AB181af127266Ba3F6Aa042   e? s?   <TIMESTAMP>   
+  Counter     0x144180Ad5257d58F4AB181af127266Ba3F6Aa042   e[-] s[-] b[-]   <TIMESTAMP>   
 
 Total deployments: 1
 
@@ -13,6 +13,6 @@ Total deployments: 1
 └─ ⛓ chain:       anvil-31337 (31337)           
   
   SINGLETONS
-  Counter     0x9526cB2eC6e5b9E38b5A6949543417F84cc878d5   e? s?   <TIMESTAMP>   
+  Counter     0x9526cB2eC6e5b9E38b5A6949543417F84cc878d5   e[-] s[-] b[-]   <TIMESTAMP>   
 
 Total deployments: 1

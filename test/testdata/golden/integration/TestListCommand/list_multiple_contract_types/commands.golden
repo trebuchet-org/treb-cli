@@ -3,11 +3,11 @@
 └─ ⛓ chain:       anvil-31337 (31337)           
   
   SINGLETONS
-  Counter                0x74148047D6bDf624C94eFc07F60cEE7b6052FB29   e? s?   <TIMESTAMP>   
-  SampleToken            0x793f69C1702a0E900a142D8575E44F9E4DA86fFf   e? s?   <TIMESTAMP>   
-  UpgradeableCounter     0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903   e? s?   <TIMESTAMP>   
+  Counter                0x74148047D6bDf624C94eFc07F60cEE7b6052FB29   e[-] s[-] b[-]   <TIMESTAMP>   
+  SampleToken            0x793f69C1702a0E900a142D8575E44F9E4DA86fFf   e[-] s[-] b[-]   <TIMESTAMP>   
+  UpgradeableCounter     0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903   e[-] s[-] b[-]   <TIMESTAMP>   
   
   LIBRARIES
-  StringUtils            0xEcAbca4de814110d52a03Bedb1Ec96827F579d1a   e? s?   <TIMESTAMP>   
+  StringUtils            0xEcAbca4de814110d52a03Bedb1Ec96827F579d1a   e[-] s[-] b[-]   <TIMESTAMP>   
 
 Total deployments: 4

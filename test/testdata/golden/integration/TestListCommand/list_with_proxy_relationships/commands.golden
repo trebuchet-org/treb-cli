@@ -3,10 +3,10 @@
 └─ ⛓ chain:       anvil-31337 (31337)           
   
   PROXIES
-  ERC1967Proxy:UpgradeableCounter     0x20C1EF3EFA51FC15592BEFff06471E21FfDCDD06   e? s?   <TIMESTAMP>   
-  └─ UpgradeableCounter                                                                                          
+  ERC1967Proxy:UpgradeableCounter     0x20C1EF3EFA51FC15592BEFff06471E21FfDCDD06   e[-] s[-] b[-]   <TIMESTAMP>   
+  └─ UpgradeableCounter                                                                                                   
   
   IMPLEMENTATIONS
-  UpgradeableCounter                  0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903   e? s?   <TIMESTAMP>   
+  UpgradeableCounter                  0xD63F2d37AbB6c1A94A6Db9CadCbA622ac78D3903   e[-] s[-] b[-]   <TIMESTAMP>   
 
 Total deployments: 2

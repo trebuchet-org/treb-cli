@@ -40,7 +40,7 @@ type ContractRepository interface {
 
 // ContractVerifier handles contract verification
 type ContractVerifier interface {
-	Verify(ctx context.Context, deployment *models.Deployment, network *config.Network) error
+	Verify(ctx context.Context, deployment *models.Deployment, network *config.Network, verifiers []string, blockscoutVerifierURL string) error
 	GetVerificationStatus(ctx context.Context, deployment *models.Deployment) (*models.VerificationInfo, error)
 }
 
