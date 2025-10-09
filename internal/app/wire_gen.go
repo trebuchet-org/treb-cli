@@ -45,7 +45,8 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	listDeployments := usecase.NewListDeployments(runtimeConfig, fileRepository)
+	networkResolver := config.ProvideNetworkResolver(runtimeConfig)
+	listDeployments := usecase.NewListDeployments(runtimeConfig, fileRepository, networkResolver)
 	deploymentResolver := resolvers.NewDeploymentResolver(runtimeConfig, fileRepository, selectorAdapter)
 	showDeployment := usecase.NewShowDeployment(runtimeConfig, fileRepository, deploymentResolver)
 	string2 := adapters.ProvideProjectPath(runtimeConfig)
@@ -62,7 +63,6 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 		return nil, err
 	}
 	generateDeploymentScript := usecase.NewGenerateDeploymentScript(runtimeConfig, contractResolver, eventParser, abiResolver, scriptGeneratorAdapter, fileWriterAdapter)
-	networkResolver := config.ProvideNetworkResolver(runtimeConfig)
 	listNetworks := usecase.NewListNetworks(networkResolver)
 	checkerAdapter := blockchain.NewCheckerAdapter()
 	pruner := deployments.NewPruner(fileRepository, checkerAdapter)
@@ -85,11 +85,11 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 	runProgress := progress.NewRunProgress(scriptRenderer)
 	forgeAdapter := forge.NewForgeAdapter(string2, logger)
 	runScript := usecase.NewRunScript(runtimeConfig, scriptResolver, parameterResolver, sendersManager, runResultHydrator, fileRepository, libraryResolver, runProgress, forgeAdapter)
-	verifierAdapter, err := verification.NewVerifierAdapter(runtimeConfig)
+	verifier, err := verification.NewVerifier(runtimeConfig)
 	if err != nil {
 		return nil, err
 	}
-	verifyDeployment := usecase.NewVerifyDeployment(fileRepository, verifierAdapter, networkResolver)
+	verifyDeployment := usecase.NewVerifyDeployment(fileRepository, verifier, networkResolver, deploymentResolver, spinnerProgressReporter)
 	composeRenderer := render.NewComposeRenderer(writer)
 	composeProgress := progress.NewComposeProgress(composeRenderer, scriptRenderer)
 	composeDeployment := usecase.NewComposeDeployment(runScript, composeProgress)

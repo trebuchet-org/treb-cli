@@ -1,12 +1,12 @@
 === cmd 0: [tag Counter --add v<VERSION>] ===
-ℹ Added tag 'v<VERSION>' to deployment default/31337/Counter
+Added tag 'v<VERSION>' to deployment default/31337/Counter
 ✅ Added tag 'v<VERSION>' to default/31337/Counter
 
 Current tags: v<VERSION>
 
 
 === cmd 1: [tag SampleToken --add token-v1] ===
-ℹ Added tag 'token-v1' to deployment default/31337/SampleToken
+Added tag 'token-v1' to deployment default/31337/SampleToken
 ✅ Added tag 'token-v1' to default/31337/SampleToken
 
 Current tags: token-v1
@@ -14,10 +14,10 @@ Current tags: token-v1
 
 === cmd 2: [list] ===
    ◎ namespace:   DEFAULT                       
-└─ ⛓ chain:       31337                         
+└─ ⛓ chain:       anvil-31337 (31337)           
   
   SINGLETONS
-  Counter (v<VERSION>)           0x74148047D6bDf624C94eFc07F60cEE7b6052FB29   🅔 ? 🅢 ?         <TIMESTAMP>   
-  SampleToken (token-v1)     0x793f69C1702a0E900a142D8575E44F9E4DA86fFf   🅔 ? 🅢 ?         <TIMESTAMP>   
+  Counter (v<VERSION>)           0x74148047D6bDf624C94eFc07F60cEE7b6052FB29   e[-] s[-] b[-]   <TIMESTAMP>   
+  SampleToken (token-v1)     0x793f69C1702a0E900a142D8575E44F9E4DA86fFf   e[-] s[-] b[-]   <TIMESTAMP>   
 
 Total deployments: 2

@@ -73,16 +73,56 @@ func (r *SpinnerProgressReporter) ReportStage(ctx context.Context, stage usecase
 	r.updateSpinnerDisplay()
 }
 
-// ReportProgress reports progress within a stage
-func (r *SpinnerProgressReporter) ReportProgress(ctx context.Context, event usecase.ProgressEvent) {
+// OnProgress handles progress events
+func (r *SpinnerProgressReporter) OnProgress(ctx context.Context, event usecase.ProgressEvent) {
+	// Handle spinner states
+	if event.Spinner {
+		if !r.spinner.Active() {
+			r.spinner.Start()
+		}
+		r.spinner.Suffix = " " + event.Message
+	} else if r.spinner.Active() {
+		r.spinner.Stop()
+	}
 
 	// Update current stage info if needed
 	if len(r.stages) > 0 {
 		r.stages[len(r.stages)-1].Message = event.Message
 	}
+}
 
-	// Update spinner display
-	r.updateSpinnerDisplay()
+// Info prints an info message
+func (r *SpinnerProgressReporter) Info(message string) {
+	// Stop spinner temporarily
+	wasActive := false
+	if r.spinner != nil && r.spinner.Active() {
+		wasActive = true
+		r.spinner.Stop()
+	}
+
+	color.New(color.FgCyan).Println(message)
+
+	// Restart spinner if it was active
+	if wasActive {
+		r.spinner.Start()
+	}
+}
+
+// Error prints an error message
+func (r *SpinnerProgressReporter) Error(message string) {
+	// Stop spinner temporarily
+	wasActive := false
+	if r.spinner != nil && r.spinner.Active() {
+		wasActive = true
+		r.spinner.Stop()
+	}
+
+	color.New(color.FgRed).Println(message)
+
+	// Restart spinner if it was active
+	if wasActive {
+		r.spinner.Start()
+	}
 }
 
 // completeCurrentStage marks the current stage as completed
@@ -164,49 +204,6 @@ func (r *NopProgressReporter) ReportStage(ctx context.Context, stage usecase.Exe
 
 // ReportProgress does nothing
 func (r *NopProgressReporter) ReportProgress(ctx context.Context, event usecase.ProgressEvent) {}
-
-// Implement ProgressSink methods for SpinnerProgressReporter
-
-// OnProgress handles progress events
-func (r *SpinnerProgressReporter) OnProgress(ctx context.Context, event usecase.ProgressEvent) {
-	r.ReportProgress(ctx, event)
-}
-
-// Info displays an info message
-func (r *SpinnerProgressReporter) Info(message string) {
-	// Stop spinner temporarily if active
-	wasActive := r.spinner.Active()
-	if wasActive {
-		r.spinner.Stop()
-	}
-
-	// Print info message
-	fmt.Println(color.New(color.FgCyan).Sprint("ℹ ") + message)
-
-	// Restart spinner if it was active
-	if wasActive {
-		r.spinner.Start()
-		r.updateSpinnerDisplay()
-	}
-}
-
-// Error displays an error message
-func (r *SpinnerProgressReporter) Error(message string) {
-	// Stop spinner temporarily if active
-	wasActive := r.spinner.Active()
-	if wasActive {
-		r.spinner.Stop()
-	}
-
-	// Print error message
-	fmt.Println(color.New(color.FgRed).Sprint("✗ ") + message)
-
-	// Restart spinner if it was active
-	if wasActive {
-		r.spinner.Start()
-		r.updateSpinnerDisplay()
-	}
-}
 
 // Ensure SpinnerProgressReporter implements ProgressSink
 var _ usecase.ProgressSink = (*SpinnerProgressReporter)(nil)
