@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"regexp"
 	"slices"
 	"sort"
@@ -32,10 +33,11 @@ var (
 	SENDER_TYPE_HARDWARE_WALLET = bitwiseOr(calculateBytes8("hardware-wallet"), SENDER_TYPE_PRIVATE_KEY)
 
 	// Composite types
-	SENDER_TYPE_IN_MEMORY   = bitwiseOr(calculateBytes8("in-memory"), SENDER_TYPE_PRIVATE_KEY)
-	SENDER_TYPE_GNOSIS_SAFE = bitwiseOr(SENDER_TYPE_MULTISIG, calculateBytes8("gnosis-safe"))
-	SENDER_TYPE_LEDGER      = bitwiseOr(calculateBytes8("ledger"), SENDER_TYPE_HARDWARE_WALLET)
-	SENDER_TYPE_TREZOR      = bitwiseOr(calculateBytes8("trezor"), SENDER_TYPE_HARDWARE_WALLET)
+	SENDER_TYPE_IN_MEMORY      = bitwiseOr(calculateBytes8("in-memory"), SENDER_TYPE_PRIVATE_KEY)
+	SENDER_TYPE_GNOSIS_SAFE    = bitwiseOr(SENDER_TYPE_MULTISIG, calculateBytes8("gnosis-safe"))
+	SENDER_TYPE_LEDGER         = bitwiseOr(calculateBytes8("ledger"), SENDER_TYPE_HARDWARE_WALLET)
+	SENDER_TYPE_TREZOR         = bitwiseOr(calculateBytes8("trezor"), SENDER_TYPE_HARDWARE_WALLET)
+	SENDER_TYPE_MENTO_GOVERNANCE = bitwiseOr(SENDER_TYPE_CUSTOM, calculateBytes8("mento-governance"))
 )
 
 func NewSendersManager(config *config.RuntimeConfig) *SendersManager {
@@ -311,6 +313,81 @@ func (m *SendersManager) buildSenderInitConfig(senderKey string) (*config.Sender
 			CanBroadcast: true,
 			Config:       configData,
 		}, nil
+
+	case "mento_governance":
+		// Validate required fields
+		if sender.Governor == "" {
+			return nil, fmt.Errorf("mento_governance sender requires a governor address")
+		}
+		if sender.Timelock == "" {
+			return nil, fmt.Errorf("mento_governance sender requires a timelock address")
+		}
+		if sender.Proposer == "" {
+			return nil, fmt.Errorf("mento_governance sender requires a proposer to be specified")
+		}
+
+		// Parse addresses
+		governorAddr := common.HexToAddress(sender.Governor)
+		if governorAddr == (common.Address{}) {
+			return nil, fmt.Errorf("invalid governor address: %s", sender.Governor)
+		}
+
+		timelockAddr := common.HexToAddress(sender.Timelock)
+		if timelockAddr == (common.Address{}) {
+			return nil, fmt.Errorf("invalid timelock address: %s", sender.Timelock)
+		}
+
+		// Validate that the proposer exists in the sender configs
+		_, exists := m.config.Senders[sender.Proposer]
+		if !exists {
+			return nil, fmt.Errorf("mento_governance proposer '%s' not found in sender configurations", sender.Proposer)
+		}
+
+		// Create the config struct matching MentoGovernance.Config in Solidity
+		// struct Config {
+		//     address governor;
+		//     string proposer;
+		//     uint256 votingDelay;
+		//     uint256 votingPeriod;
+		//     uint256 timelockDelay;
+		// }
+		configTupleType, err := abi.NewType("tuple", "", []abi.ArgumentMarshaling{
+			{Name: "governor", Type: "address"},
+			{Name: "proposer", Type: "string"},
+			{Name: "votingDelay", Type: "uint256"},
+			{Name: "votingPeriod", Type: "uint256"},
+			{Name: "timelockDelay", Type: "uint256"},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create config tuple type: %w", err)
+		}
+
+		args := abi.Arguments{{Type: configTupleType}}
+		configData, err := args.Pack(struct {
+			Governor       common.Address
+			Proposer       string
+			VotingDelay    *big.Int
+			VotingPeriod   *big.Int
+			TimelockDelay  *big.Int
+		}{
+			Governor:       governorAddr,
+			Proposer:       sender.Proposer,
+			VotingDelay:    new(big.Int).SetUint64(sender.VotingDelay),
+			VotingPeriod:   new(big.Int).SetUint64(sender.VotingPeriod),
+			TimelockDelay:  new(big.Int).SetUint64(sender.TimelockDelay),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode MentoGovernance config: %w", err)
+		}
+
+		return &config.SenderInitConfig{
+			Name:         senderKey,
+			Account:      timelockAddr, // The timelock is the actual executor
+			SenderType:   SENDER_TYPE_MENTO_GOVERNANCE,
+			CanBroadcast: true,
+			Config:       configData,
+		}, nil
+
 	default:
 		return nil, fmt.Errorf("unsupported sender type: %s", sender.Type)
 	}

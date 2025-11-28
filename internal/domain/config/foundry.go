@@ -38,10 +38,11 @@ type TrebConfig struct {
 type SenderType string
 
 var (
-	SenderTypeLedger     SenderType = "ledger"
-	SenderTypeTrezor     SenderType = "trezor"
-	SenderTypeSafe       SenderType = "safe"
-	SenderTypePrivateKey SenderType = "private_key"
+	SenderTypeLedger         SenderType = "ledger"
+	SenderTypeTrezor         SenderType = "trezor"
+	SenderTypeSafe           SenderType = "safe"
+	SenderTypePrivateKey     SenderType = "private_key"
+	SenderTypeMentoGovernance SenderType = "mento_governance"
 )
 
 // SenderConfig represents a sender configuration
@@ -52,4 +53,12 @@ type SenderConfig struct {
 	Safe           string     `toml:"safe,omitempty"`
 	Signer         string     `toml:"signer,omitempty"`          // For Safe senders
 	DerivationPath string     `toml:"derivation_path,omitempty"` // For Ledger senders
+
+	// For MentoGovernance senders
+	Governor       string `toml:"governor,omitempty"`        // MentoGovernor proxy address
+	Timelock       string `toml:"timelock,omitempty"`        // TimelockController proxy address
+	Proposer       string `toml:"proposer,omitempty"`        // Reference to proposer sender
+	VotingDelay    uint64 `toml:"voting_delay,omitempty"`    // Blocks before voting starts
+	VotingPeriod   uint64 `toml:"voting_period,omitempty"`   // Blocks for voting period
+	TimelockDelay  uint64 `toml:"timelock_delay,omitempty"`  // Seconds for timelock delay
 }
