@@ -83,6 +83,9 @@ func (p *EventParser) ParseEvent(rawLog *forge.EventLog) (Event, error) {
 		{must(p.trebContract.GetEventID("SafeTransactionExecuted")), func(log *types.Log) (Event, error) {
 			return p.trebContract.UnpackSafeTransactionExecutedEvent(log)
 		}},
+		{must(p.trebContract.GetEventID("GovernorProposalCreated")), func(log *types.Log) (Event, error) {
+			return p.trebContract.UnpackGovernorProposalCreatedEvent(log)
+		}},
 		{must(p.trebContract.GetEventID("TransactionSimulated")), func(log *types.Log) (Event, error) {
 			return p.trebContract.UnpackTransactionSimulatedEvent(log)
 		}},

@@ -1,6 +1,7 @@
 package forge
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -31,6 +32,7 @@ type HydratedRunResult struct {
 	// Core execution data
 	Transactions       []*Transaction                                       // All transactions in execution order
 	SafeTransactions   []*SafeTransaction                                   // Safe transaction batches
+	GovernorProposals  []*GovernorProposal                                  // Governor proposal batches
 	Deployments        []*Deployment                                        // Contract deployments
 	ProxyRelationships map[common.Address]*ProxyRelationship                // Proxy relationships
 	Collisions         map[common.Address]*bindings.TrebDeploymentCollision // Deployment collisions (contracts already deployed)
@@ -69,15 +71,17 @@ type ProxyRelationship struct {
 
 type Transaction struct {
 	bindings.SimulatedTransaction
-	Status          models.TransactionStatus
-	TxHash          *common.Hash
-	BlockNumber     *uint64
-	GasUsed         *uint64
-	SafeTransaction *SafeTransaction
-	SafeBatchIdx    *int
-	Deployments     []DeploymentInfo
-	TraceData       *TraceOutput
-	ReceiptData     *Receipt
+	Status           models.TransactionStatus
+	TxHash           *common.Hash
+	BlockNumber      *uint64
+	GasUsed          *uint64
+	SafeTransaction  *SafeTransaction
+	SafeBatchIdx     *int
+	GovernorProposal *GovernorProposal
+	GovernorBatchIdx *int
+	Deployments      []DeploymentInfo
+	TraceData        *TraceOutput
+	ReceiptData      *Receipt
 }
 
 // DeploymentInfo contains deployment details for a transaction
@@ -108,4 +112,15 @@ type ProxyInfo struct {
 	ProxyType      string
 	Admin          *common.Address
 	Beacon         *common.Address
+}
+
+// GovernorProposal represents a Governor proposal (runtime type)
+type GovernorProposal struct {
+	ProposalId          *big.Int
+	Governor            common.Address
+	Timelock            common.Address // Zero if no timelock
+	Proposer            common.Address
+	TransactionIds      [][32]byte
+	ExecutionTxHash     *common.Hash
+	ExecutionBlockNum   *uint64
 }

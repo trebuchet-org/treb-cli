@@ -1,0 +1,9 @@
+{
+  "31337": {
+    "default": {
+      "GovernanceToken": "0xEbe12C95cC689F0B29e8AACB50c67a6bF3364303",
+      "TrebGovernor": "0x729cc9c01D35C0FF1Cc7c62a924236394Ff8fe54",
+      "TrebTimelock": "0x5Bc6aA67E69DBfBbaE1a7289818bbe20a442E4e2"
+    }
+  }
+}

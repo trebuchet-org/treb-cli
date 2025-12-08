@@ -30,12 +30,14 @@ var (
 	SENDER_TYPE_PRIVATE_KEY     = calculateBytes8("private-key")
 	SENDER_TYPE_MULTISIG        = calculateBytes8("multisig")
 	SENDER_TYPE_HARDWARE_WALLET = bitwiseOr(calculateBytes8("hardware-wallet"), SENDER_TYPE_PRIVATE_KEY)
+	SENDER_TYPE_GOVERNANCE      = calculateBytes8("governance")
 
 	// Composite types
 	SENDER_TYPE_IN_MEMORY   = bitwiseOr(calculateBytes8("in-memory"), SENDER_TYPE_PRIVATE_KEY)
 	SENDER_TYPE_GNOSIS_SAFE = bitwiseOr(SENDER_TYPE_MULTISIG, calculateBytes8("gnosis-safe"))
 	SENDER_TYPE_LEDGER      = bitwiseOr(calculateBytes8("ledger"), SENDER_TYPE_HARDWARE_WALLET)
 	SENDER_TYPE_TREZOR      = bitwiseOr(calculateBytes8("trezor"), SENDER_TYPE_HARDWARE_WALLET)
+	SENDER_TYPE_OZ_GOVERNOR = bitwiseOr(SENDER_TYPE_GOVERNANCE, calculateBytes8("oz-governor"))
 )
 
 func NewSendersManager(config *config.RuntimeConfig) *SendersManager {
@@ -311,6 +313,58 @@ func (m *SendersManager) buildSenderInitConfig(senderKey string) (*config.Sender
 			CanBroadcast: true,
 			Config:       configData,
 		}, nil
+
+	case "oz_governor":
+		// Parse Governor address
+		governor := common.HexToAddress(sender.Governor)
+		if governor == (common.Address{}) {
+			return nil, fmt.Errorf("invalid Governor address: %s", sender.Governor)
+		}
+
+		// Parse optional Timelock address (zero address if not provided)
+		var timelock common.Address
+		if sender.Timelock != "" {
+			timelock = common.HexToAddress(sender.Timelock)
+		}
+
+		// Validate proposer is provided
+		if sender.Proposer == "" {
+			return nil, fmt.Errorf("oz_governor sender requires a proposer to be specified")
+		}
+
+		// Validate that the proposer exists in the sender configs
+		_, exists := m.config.Senders[sender.Proposer]
+		if !exists {
+			return nil, fmt.Errorf("oz_governor proposer '%s' not found in sender configurations", sender.Proposer)
+		}
+
+		// Account is timelock if provided, otherwise governor (for correct vm.prank behavior)
+		account := governor
+		if timelock != (common.Address{}) {
+			account = timelock
+		}
+
+		// For OZGovernor senders, config contains (address governor, address timelock, string proposerName)
+		addressType, _ := abi.NewType("address", "", nil)
+		stringType, _ := abi.NewType("string", "", nil)
+		args := abi.Arguments{
+			{Type: addressType},
+			{Type: addressType},
+			{Type: stringType},
+		}
+		configData, err := args.Pack(governor, timelock, sender.Proposer)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode OZGovernor config: %w", err)
+		}
+
+		return &config.SenderInitConfig{
+			Name:         senderKey,
+			Account:      account,
+			SenderType:   SENDER_TYPE_OZ_GOVERNOR,
+			CanBroadcast: true,
+			Config:       configData,
+		}, nil
+
 	default:
 		return nil, fmt.Errorf("unsupported sender type: %s", sender.Type)
 	}
