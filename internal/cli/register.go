@@ -14,11 +14,12 @@ import (
 // NewRegisterCmd creates the register command
 func NewRegisterCmd() *cobra.Command {
 	var (
-		address      string
-		contractPath string
-		txHash       string
-		label        string
-		skipVerify   bool
+		address       string
+		contractPath  string
+		contractName  string
+		txHash        string
+		label         string
+		skipVerify    bool
 	)
 
 	cmd := &cobra.Command{
@@ -74,10 +75,32 @@ Examples:
 
 			if address != "" {
 				// Single contract with explicit address
+				// Contract name is required
+				if contractName == "" && !app.Config.NonInteractive {
+					prompt := promptui.Prompt{
+						Label:    "Contract name (required, e.g., BiPoolManager, USDm)",
+						Validate: func(input string) error {
+							if input == "" {
+								return fmt.Errorf("contract name is required")
+							}
+							return nil
+						},
+						Default: "",
+					}
+					result, err := prompt.Run()
+					if err != nil {
+						return fmt.Errorf("input cancelled: %w", err)
+					}
+					contractName = result
+				} else if contractName == "" {
+					return fmt.Errorf("contract name is required (use --contract-name flag)")
+				}
+
 				contractsToRegister = []usecase.ContractRegistration{
 					{
 						Address:      address,
 						ContractPath: contractPath,
+						ContractName: contractName,
 						Label:        label,
 					},
 				}
@@ -121,11 +144,11 @@ Examples:
 					}
 					fmt.Printf(color.New(color.FgCyan, color.Bold).Sprintf("\nContract %d of %d: %s (%s)\n", idx+1, len(selectedIndices), creation.Address, contractType))
 
-					// Prompt for contract path
+					// Prompt for contract path (optional)
 					currentContractPath := contractPath
-					if currentContractPath == "" {
+					if currentContractPath == "" && !app.Config.NonInteractive {
 						prompt := promptui.Prompt{
-							Label:    "Contract path (path/to/Contract.sol:ContractName)",
+							Label:    "Contract path (optional, path/to/Contract.sol:ContractName)",
 							Validate: validateContractPath,
 							Default:  "",
 						}
@@ -136,11 +159,42 @@ Examples:
 						currentContractPath = result
 					}
 
-					// Prompt for label
-					currentLabel := label
-					if currentLabel == "" {
+					// Prompt for contract name (required)
+					currentContractName := ""
+					if !app.Config.NonInteractive {
 						prompt := promptui.Prompt{
-							Label:   "Label (optional, e.g., v1, main)",
+							Label:    "Contract name (required, e.g., BiPoolManager, USDm)",
+							Validate: func(input string) error {
+								if input == "" {
+									return fmt.Errorf("contract name is required")
+								}
+								return nil
+							},
+							Default: "",
+						}
+						result, err := prompt.Run()
+						if err != nil {
+							return fmt.Errorf("input cancelled: %w", err)
+						}
+						currentContractName = result
+					} else {
+						// In non-interactive mode, try to extract from path or use a default
+						if currentContractPath != "" {
+							parts := strings.Split(currentContractPath, ":")
+							if len(parts) == 2 {
+								currentContractName = parts[1]
+							}
+						}
+						if currentContractName == "" {
+							return fmt.Errorf("contract name is required (use --contract-name flag in non-interactive mode)")
+						}
+					}
+
+					// Prompt for label (optional)
+					currentLabel := label
+					if currentLabel == "" && !app.Config.NonInteractive {
+						prompt := promptui.Prompt{
+							Label:   "Label (optional, e.g., v1, main, v2.6.5)",
 							Default: "",
 						}
 						result, err := prompt.Run()
@@ -153,6 +207,7 @@ Examples:
 					contractsToRegister = append(contractsToRegister, usecase.ContractRegistration{
 						Address:        creation.Address,
 						ContractPath:   currentContractPath,
+						ContractName:   currentContractName,
 						Label:          currentLabel,
 						Kind:           creation.Kind,
 						IsProxy:        creation.IsProxy,
@@ -217,11 +272,11 @@ Examples:
 					// Prompt for implementation contract details
 					fmt.Printf(color.New(color.FgCyan, color.Bold).Sprintf("\nImplementation contract: %s (%s)\n", implCreation.Address, implCreation.Kind))
 
-					// Prompt for contract path
+					// Prompt for contract path (optional)
 					implContractPath := ""
 					if !app.Config.NonInteractive {
 						prompt := promptui.Prompt{
-							Label:    "Contract path (path/to/Contract.sol:ContractName)",
+							Label:    "Contract path (optional, path/to/Contract.sol:ContractName)",
 							Validate: validateContractPath,
 							Default:  "",
 						}
@@ -232,11 +287,42 @@ Examples:
 						implContractPath = result
 					}
 
-					// Prompt for label
+					// Prompt for contract name (required)
+					implContractName := ""
+					if !app.Config.NonInteractive {
+						prompt := promptui.Prompt{
+							Label:    "Contract name (required, e.g., StableTokenV2, BiPoolManager)",
+							Validate: func(input string) error {
+								if input == "" {
+									return fmt.Errorf("contract name is required")
+								}
+								return nil
+							},
+							Default: "",
+						}
+						result, err := prompt.Run()
+						if err != nil {
+							return fmt.Errorf("input cancelled: %w", err)
+						}
+						implContractName = result
+					} else {
+						// In non-interactive mode, try to extract from path
+						if implContractPath != "" {
+							parts := strings.Split(implContractPath, ":")
+							if len(parts) == 2 {
+								implContractName = parts[1]
+							}
+						}
+						if implContractName == "" {
+							return fmt.Errorf("contract name is required for implementation (use --contract-name flag in non-interactive mode)")
+						}
+					}
+
+					// Prompt for label (optional)
 					implLabel := ""
 					if !app.Config.NonInteractive {
 						prompt := promptui.Prompt{
-							Label:   "Label (optional, e.g., v1, main)",
+							Label:   "Label (optional, e.g., v1, main, v2.6.5)",
 							Default: "",
 						}
 						result, err := prompt.Run()
@@ -250,6 +336,7 @@ Examples:
 					contractsToRegister = append(contractsToRegister, usecase.ContractRegistration{
 						Address:        implCreation.Address,
 						ContractPath:   implContractPath,
+						ContractName:   implContractName,
 						Label:          implLabel,
 						Kind:           implCreation.Kind,
 						IsProxy:        false, // Implementation is not a proxy
@@ -260,12 +347,13 @@ Examples:
 			}
 
 			params := usecase.RegisterDeploymentParams{
-				Address:      address,
-				ContractPath: contractPath,
-				TxHash:       txHash,
-				Label:        label,
-				SkipVerify:   skipVerify,
-				Contracts:    contractsToRegister,
+				Address:       address,
+				ContractPath:  contractPath,
+				ContractName:  contractName,
+				TxHash:        txHash,
+				Label:         label,
+				SkipVerify:    skipVerify,
+				Contracts:     contractsToRegister,
 			}
 
 			result, err := app.RegisterDeployment.Run(cmd.Context(), params)
@@ -307,9 +395,10 @@ Examples:
 	}
 
 	cmd.Flags().StringVar(&address, "address", "", "Contract address to register (optional if tracing transaction)")
-	cmd.Flags().StringVar(&contractPath, "contract", "", "Contract path in format path/to/Contract.sol:ContractName")
+	cmd.Flags().StringVar(&contractPath, "contract", "", "Contract path in format path/to/Contract.sol:ContractName (optional, for artifact info)")
+	cmd.Flags().StringVar(&contractName, "contract-name", "", "Contract name (required, e.g., BiPoolManager, USDm)")
 	cmd.Flags().StringVar(&txHash, "tx-hash", "", "Transaction hash of the deployment (required)")
-	cmd.Flags().StringVar(&label, "label", "", "Optional label for the deployment (e.g., v1, main)")
+	cmd.Flags().StringVar(&label, "label", "", "Optional label for the deployment (e.g., v1, main, v2.6.5)")
 	cmd.Flags().BoolVar(&skipVerify, "skip-verify", false, "Skip bytecode verification (useful for third-party contracts)")
 
 	return cmd
@@ -317,10 +406,10 @@ Examples:
 
 
 // validateContractPath validates a contract path input
-// Contract path is optional - if empty, the label will be used as the contract name
+// Contract path is optional - used for artifact info if provided
 func validateContractPath(input string) error {
 	if input == "" {
-		return nil // Optional - label will be used as contract name
+		return nil // Optional
 	}
 	// Check if it contains a colon (for path:ContractName format)
 	if !strings.Contains(input, ":") {

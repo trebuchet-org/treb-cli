@@ -16,19 +16,21 @@ import (
 
 // RegisterDeploymentParams contains parameters for registering an external deployment
 type RegisterDeploymentParams struct {
-	Address      string   // Contract address (optional if txHash provided)
-	ContractPath string   // Contract path in format "path/to/Contract.sol:ContractName" (optional)
-	TxHash       string   // Transaction hash (required)
-	Label        string   // Optional label for the deployment (for single contract)
-	SkipVerify   bool     // Skip bytecode verification
+	Address      string                 // Contract address (optional if txHash provided)
+	ContractPath string                 // Contract path in format "path/to/Contract.sol:ContractName" (optional, for artifact info)
+	ContractName string                 // Contract name (required for single contract, filled interactively for multiple)
+	TxHash       string                 // Transaction hash (required)
+	Label        string                 // Optional label for the deployment (for single contract)
+	SkipVerify   bool                   // Skip bytecode verification
 	Contracts    []ContractRegistration // Pre-filled contract registrations (for multiple contracts)
 }
 
 // ContractRegistration represents a single contract to register
 type ContractRegistration struct {
 	Address        string
-	ContractPath   string
-	Label          string
+	ContractPath   string // Optional: path/to/Contract.sol:ContractName (for artifact info)
+	ContractName   string // Required: the contract name (e.g., "BiPoolManager")
+	Label          string // Optional: label/version (e.g., "v2.6.5")
 	Kind           string // CREATE, CREATE2, or CREATE3
 	IsProxy        bool   // True if this contract is a proxy
 	Implementation string // Address of the implementation contract (if this is a proxy)
@@ -172,29 +174,30 @@ func (uc *RegisterDeployment) Run(ctx context.Context, params RegisterDeployment
 			{
 				Address:      params.Address,
 				ContractPath: params.ContractPath,
+				ContractName: params.ContractName,
 				Label:        params.Label,
 			},
 		}
 	} else {
-			// Trace transaction to find all contract creations
-			creations, err := adapter.TraceTransaction(ctx, params.TxHash)
-			if err != nil {
-				return nil, fmt.Errorf("failed to trace transaction: %w", err)
-			}
+		// Trace transaction to find all contract creations
+		creations, err := adapter.TraceTransaction(ctx, params.TxHash)
+		if err != nil {
+			return nil, fmt.Errorf("failed to trace transaction: %w", err)
+		}
 
-			if len(creations) == 0 {
-				// Fallback: try to get from receipt
-				if receipt.ContractAddress != (common.Address{}) {
-					creations = []models.ContractCreation{
-						{
-							Address: strings.ToLower(receipt.ContractAddress.Hex()),
-							Kind:    "CREATE",
-						},
-					}
-				} else {
-					return nil, fmt.Errorf("no contract creations found in transaction trace")
+		if len(creations) == 0 {
+			// Fallback: try to get from receipt
+			if receipt.ContractAddress != (common.Address{}) {
+				creations = []models.ContractCreation{
+					{
+						Address: strings.ToLower(receipt.ContractAddress.Hex()),
+						Kind:    "CREATE",
+					},
 				}
+			} else {
+				return nil, fmt.Errorf("no contract creations found in transaction trace")
 			}
+		}
 
 		// Convert creations to registrations
 		contractsToRegister = make([]ContractRegistration, len(creations))
@@ -202,6 +205,7 @@ func (uc *RegisterDeployment) Run(ctx context.Context, params RegisterDeployment
 			contractsToRegister[i] = ContractRegistration{
 				Address:      creation.Address,
 				ContractPath: params.ContractPath, // Will be filled interactively if needed
+				ContractName: params.ContractName, // Will be filled interactively if needed
 				Label:        params.Label,        // Will be filled interactively if needed
 			}
 		}
@@ -233,34 +237,10 @@ func (uc *RegisterDeployment) Run(ctx context.Context, params RegisterDeployment
 			contractTxHash = contract.ImplTxHash
 		}
 
-		// Extract contract name from path
-		contractName := ""
-		if contract.ContractPath != "" {
-			parts := strings.Split(contract.ContractPath, ":")
-			if len(parts) == 2 {
-				contractName = parts[1]
-			} else {
-				pathParts := strings.Split(contract.ContractPath, "/")
-				if len(pathParts) > 0 {
-					lastPart := pathParts[len(pathParts)-1]
-					contractName = strings.TrimSuffix(lastPart, ".sol")
-				}
-			}
-		}
-
-		// If contract name is still empty, use label as fallback
+		// Use the provided contract name (required)
+		contractName := contract.ContractName
 		if contractName == "" {
-			if contract.Label != "" {
-				contractName = contract.Label
-			} else {
-				// Try to infer from contract repository by matching bytecode
-				if !params.SkipVerify {
-					contractName = uc.inferContractName(ctx, contractAddress)
-				}
-				if contractName == "" {
-					return nil, fmt.Errorf("contract name could not be determined for address %s, please provide --contract or --label", contractAddress)
-				}
-			}
+			return nil, fmt.Errorf("contract name is required for address %s", contractAddress)
 		}
 
 		// Verify bytecode if requested
@@ -300,7 +280,7 @@ func (uc *RegisterDeployment) Run(ctx context.Context, params RegisterDeployment
 		// Create deployment record
 		deployment := &models.Deployment{
 			ID:            deploymentID,
-			Namespace:    uc.config.Namespace,
+			Namespace:     uc.config.Namespace,
 			ChainID:       uc.config.Network.ChainID,
 			ContractName:  contractName,
 			Label:         contract.Label,
@@ -543,4 +523,3 @@ func (uc *RegisterDeployment) inferContractName(ctx context.Context, address str
 	// For now, return empty string to require explicit contract path
 	return ""
 }
-
