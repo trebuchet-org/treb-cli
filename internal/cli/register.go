@@ -7,6 +7,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -109,10 +110,16 @@ Examples:
 				}
 
 				// Prompt for details for each selected contract
-				contractsToRegister = make([]usecase.ContractRegistration, len(selectedIndices))
+				contractsToRegister = make([]usecase.ContractRegistration, 0, len(selectedIndices)*2) // May add implementations
+				implementationTxs := make(map[string]string) // Map implementation address to tx hash
+
 				for idx, creationIdx := range selectedIndices {
 					creation := creations[creationIdx]
-					fmt.Printf(color.New(color.FgCyan, color.Bold).Sprintf("\nContract %d of %d: %s (%s)\n", idx+1, len(selectedIndices), creation.Address, creation.Kind))
+					contractType := creation.Kind
+					if creation.IsProxy {
+						contractType = fmt.Sprintf("%s (Proxy → %s)", creation.Kind, creation.Implementation)
+					}
+					fmt.Printf(color.New(color.FgCyan, color.Bold).Sprintf("\nContract %d of %d: %s (%s)\n", idx+1, len(selectedIndices), creation.Address, contractType))
 
 					// Prompt for contract path
 					currentContractPath := contractPath
@@ -143,11 +150,112 @@ Examples:
 						currentLabel = result
 					}
 
-					contractsToRegister[idx] = usecase.ContractRegistration{
-						Address:      creation.Address,
-						ContractPath: currentContractPath,
-						Label:        currentLabel,
+					contractsToRegister = append(contractsToRegister, usecase.ContractRegistration{
+						Address:        creation.Address,
+						ContractPath:   currentContractPath,
+						Label:          currentLabel,
+						Kind:           creation.Kind,
+						IsProxy:        creation.IsProxy,
+						Implementation: creation.Implementation,
+					})
+
+					// If this is a proxy, check if implementation is in the same transaction
+					if creation.IsProxy && creation.Implementation != "" {
+						implInSameTx := false
+						for _, otherCreation := range creations {
+							if strings.EqualFold(otherCreation.Address, creation.Implementation) {
+								implInSameTx = true
+								break
+							}
+						}
+
+						// If implementation is not in the same transaction, ask for its tx hash
+						if !implInSameTx {
+							fmt.Printf(color.New(color.FgYellow).Sprintf("\n⚠ Implementation contract %s not found in this transaction.\n", creation.Implementation))
+							prompt := promptui.Prompt{
+								Label:    fmt.Sprintf("Transaction hash for implementation %s", creation.Implementation),
+								Validate: func(input string) error {
+									if input == "" {
+										return fmt.Errorf("transaction hash is required")
+									}
+									if !strings.HasPrefix(input, "0x") || len(input) != 66 {
+										return fmt.Errorf("invalid transaction hash format")
+									}
+									return nil
+								},
+							}
+							implTxHash, err := prompt.Run()
+							if err != nil {
+								return fmt.Errorf("input cancelled: %w", err)
+							}
+							implementationTxs[strings.ToLower(creation.Implementation)] = implTxHash
+						}
 					}
+				}
+
+				// Now register implementations if needed
+				for implAddr, implTxHash := range implementationTxs {
+					// Trace the implementation transaction to get its details
+					implCreations, err := app.RegisterDeployment.TraceTransaction(cmd.Context(), implTxHash)
+					if err != nil {
+						return fmt.Errorf("failed to trace implementation transaction %s: %w", implTxHash, err)
+					}
+
+					// Find the implementation contract in the trace
+					var implCreation *models.ContractCreation
+					for i := range implCreations {
+						if strings.EqualFold(implCreations[i].Address, implAddr) {
+							implCreation = &implCreations[i]
+							break
+						}
+					}
+
+					if implCreation == nil {
+						return fmt.Errorf("implementation contract %s not found in transaction %s", implAddr, implTxHash)
+					}
+
+					// Prompt for implementation contract details
+					fmt.Printf(color.New(color.FgCyan, color.Bold).Sprintf("\nImplementation contract: %s (%s)\n", implCreation.Address, implCreation.Kind))
+
+					// Prompt for contract path
+					implContractPath := ""
+					if !app.Config.NonInteractive {
+						prompt := promptui.Prompt{
+							Label:    "Contract path (path/to/Contract.sol:ContractName)",
+							Validate: validateContractPath,
+							Default:  "",
+						}
+						result, err := prompt.Run()
+						if err != nil {
+							return fmt.Errorf("input cancelled: %w", err)
+						}
+						implContractPath = result
+					}
+
+					// Prompt for label
+					implLabel := ""
+					if !app.Config.NonInteractive {
+						prompt := promptui.Prompt{
+							Label:   "Label (optional, e.g., v1, main)",
+							Default: "",
+						}
+						result, err := prompt.Run()
+						if err != nil {
+							return fmt.Errorf("input cancelled: %w", err)
+						}
+						implLabel = result
+					}
+
+					// Add implementation to contracts to register
+					contractsToRegister = append(contractsToRegister, usecase.ContractRegistration{
+						Address:        implCreation.Address,
+						ContractPath:   implContractPath,
+						Label:          implLabel,
+						Kind:           implCreation.Kind,
+						IsProxy:        false, // Implementation is not a proxy
+						Implementation: "",
+						ImplTxHash:     implTxHash, // Store the tx hash for this implementation
+					})
 				}
 			}
 

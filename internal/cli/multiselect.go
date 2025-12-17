@@ -109,7 +109,13 @@ func (m multiSelectModel) View() string {
 		address := color.New(color.FgWhite).Sprint(item.creation.Address)
 		kind := color.New(color.FgYellow).Sprintf("(%s)", item.creation.Kind)
 
-		b.WriteString(fmt.Sprintf("%s %s %s %s\n", cursor, checkbox, address, kind))
+		// Add proxy indicator if this is a proxy
+		proxyInfo := ""
+		if item.creation.IsProxy && item.creation.Implementation != "" {
+			proxyInfo = color.New(color.FgMagenta).Sprintf(" → Proxy")
+		}
+
+		b.WriteString(fmt.Sprintf("%s %s %s %s%s\n", cursor, checkbox, address, kind, proxyInfo))
 	}
 
 	b.WriteString("\n")

@@ -26,9 +26,13 @@ type RegisterDeploymentParams struct {
 
 // ContractRegistration represents a single contract to register
 type ContractRegistration struct {
-	Address      string
-	ContractPath string
-	Label        string
+	Address        string
+	ContractPath   string
+	Label          string
+	Kind           string // CREATE, CREATE2, or CREATE3
+	IsProxy        bool   // True if this contract is a proxy
+	Implementation string // Address of the implementation contract (if this is a proxy)
+	ImplTxHash     string // Transaction hash for implementation (if different from proxy tx)
 }
 
 // RegisterDeploymentResult contains the result of registering a deployment
@@ -219,7 +223,14 @@ func (uc *RegisterDeployment) Run(ctx context.Context, params RegisterDeployment
 		// Check if deployment already exists
 		existing, err := uc.repo.GetDeploymentByAddress(ctx, uc.config.Network.ChainID, contractAddress)
 		if err == nil && existing != nil {
-			return nil, fmt.Errorf("deployment already exists at address %s: %s", contractAddress, existing.ID)
+			// If it already exists, skip it (might be implementation already registered)
+			continue
+		}
+
+		// Determine transaction hash for this contract
+		contractTxHash := params.TxHash
+		if contract.ImplTxHash != "" {
+			contractTxHash = contract.ImplTxHash
 		}
 
 		// Extract contract name from path
@@ -262,6 +273,30 @@ func (uc *RegisterDeployment) Run(ctx context.Context, params RegisterDeployment
 		// Generate deployment ID
 		deploymentID := uc.generateDeploymentID(contractName, contract.Label)
 
+		// Determine deployment type and proxy info
+		deploymentType := models.SingletonDeployment
+		var proxyInfo *models.ProxyInfo
+
+		if contract.IsProxy && contract.Implementation != "" {
+			deploymentType = models.ProxyDeployment
+			proxyInfo = &models.ProxyInfo{
+				Type:           "UUPS", // Default to UUPS, could be detected more precisely in the future
+				Implementation: strings.ToLower(contract.Implementation),
+				History:        []models.ProxyUpgrade{},
+			}
+		}
+
+		// Determine deployment method from contract kind
+		var deploymentMethod models.DeploymentMethod
+		switch strings.ToUpper(contract.Kind) {
+		case "CREATE2":
+			deploymentMethod = models.DeploymentMethodCreate2
+		case "CREATE3":
+			deploymentMethod = models.DeploymentMethodCreate3
+		default:
+			deploymentMethod = models.DeploymentMethodCreate
+		}
+
 		// Create deployment record
 		deployment := &models.Deployment{
 			ID:            deploymentID,
@@ -270,11 +305,12 @@ func (uc *RegisterDeployment) Run(ctx context.Context, params RegisterDeployment
 			ContractName:  contractName,
 			Label:         contract.Label,
 			Address:       contractAddress,
-			Type:          models.SingletonDeployment, // Default to singleton, could detect proxy later
-			TransactionID: fmt.Sprintf("tx-%s", params.TxHash),
+			Type:          deploymentType,
+			TransactionID: fmt.Sprintf("tx-%s", contractTxHash),
 			DeploymentStrategy: models.DeploymentStrategy{
-				Method: models.DeploymentMethodCreate, // External deployments are typically CREATE
+				Method: deploymentMethod,
 			},
+			ProxyInfo: proxyInfo,
 			Artifact: models.ArtifactInfo{
 				Path: contract.ContractPath,
 			},
@@ -297,46 +333,129 @@ func (uc *RegisterDeployment) Run(ctx context.Context, params RegisterDeployment
 		result.Labels = append(result.Labels, contract.Label)
 	}
 
-	// Create or update transaction record (only once for all deployments)
-	txID := fmt.Sprintf("tx-%s", params.TxHash)
-	existingTx, _ := uc.repo.GetTransaction(ctx, txID)
-	if existingTx == nil {
-		operations := make([]models.Operation, len(contractsToRegister))
-		deploymentIDs := make([]string, len(contractsToRegister))
-		for i, contract := range contractsToRegister {
-			operations[i] = models.Operation{
-				Type:   "DEPLOY",
-				Target: strings.ToLower(contract.Address),
-				Method: "CREATE",
-				Result: map[string]any{
-					"address": strings.ToLower(contract.Address),
-				},
+	// Create or update transaction records for all unique transaction hashes
+	seenTxHashes := make(map[string]bool)
+	for _, contract := range contractsToRegister {
+		contractTxHash := params.TxHash
+		if contract.ImplTxHash != "" {
+			contractTxHash = contract.ImplTxHash
+		}
+
+		if seenTxHashes[contractTxHash] {
+			continue
+		}
+		seenTxHashes[contractTxHash] = true
+
+		txID := fmt.Sprintf("tx-%s", contractTxHash)
+		existingTx, _ := uc.repo.GetTransaction(ctx, txID)
+		if existingTx == nil {
+			// Fetch transaction and receipt for this hash
+			var txForHash *types.Transaction
+			var receiptForHash *types.Receipt
+			var senderForHash common.Address
+
+			if contractTxHash == params.TxHash {
+				// Use already fetched transaction
+				txForHash = tx
+				receiptForHash = receipt
+				senderForHash = senderAddr
+			} else {
+				// Fetch new transaction
+				txForHash, receiptForHash, err = adapter.GetTransaction(ctx, contractTxHash)
+				if err != nil {
+					return nil, fmt.Errorf("failed to fetch implementation transaction: %w", err)
+				}
+
+				// Extract sender
+				chainID := txForHash.ChainId()
+				if chainID != nil {
+					signer := types.NewLondonSigner(chainID)
+					sender, err := types.Sender(signer, txForHash)
+					if err == nil {
+						senderForHash = sender
+					}
+				} else {
+					signer := types.HomesteadSigner{}
+					sender, err := types.Sender(signer, txForHash)
+					if err == nil {
+						senderForHash = sender
+					}
+				}
 			}
-			deploymentIDs[i] = result.DeploymentIDs[i]
-		}
 
-		transaction := &models.Transaction{
-			ID:          txID,
-			ChainID:     uc.config.Network.ChainID,
-			Hash:        params.TxHash,
-			Status:      models.TransactionStatusExecuted,
-			BlockNumber: receipt.BlockNumber.Uint64(),
-			Sender:      strings.ToLower(senderAddr.Hex()),
-			Nonce:       tx.Nonce(),
-			Deployments: deploymentIDs,
-			Operations:  operations,
-			Environment: uc.config.Namespace,
-			CreatedAt:   time.Now(),
-		}
+			// Collect all contracts for this transaction
+			var txContracts []ContractRegistration
+			for _, c := range contractsToRegister {
+				cTxHash := params.TxHash
+				if c.ImplTxHash != "" {
+					cTxHash = c.ImplTxHash
+				}
+				if cTxHash == contractTxHash {
+					txContracts = append(txContracts, c)
+				}
+			}
 
-		if err := uc.repo.SaveTransaction(ctx, transaction); err != nil {
-			return nil, fmt.Errorf("failed to save transaction: %w", err)
-		}
-	} else {
-		// Update existing transaction with new deployments
-		existingTx.Deployments = append(existingTx.Deployments, result.DeploymentIDs...)
-		if err := uc.repo.SaveTransaction(ctx, existingTx); err != nil {
-			return nil, fmt.Errorf("failed to update transaction: %w", err)
+			operations := make([]models.Operation, len(txContracts))
+			deploymentIDs := make([]string, 0, len(txContracts))
+			for i, c := range txContracts {
+				operations[i] = models.Operation{
+					Type:   "DEPLOY",
+					Target: strings.ToLower(c.Address),
+					Method: strings.ToUpper(c.Kind),
+					Result: map[string]any{
+						"address": strings.ToLower(c.Address),
+					},
+				}
+				// Find deployment ID for this contract
+				for j, addr := range result.Addresses {
+					if strings.EqualFold(addr, c.Address) {
+						deploymentIDs = append(deploymentIDs, result.DeploymentIDs[j])
+						break
+					}
+				}
+			}
+
+			transaction := &models.Transaction{
+				ID:          txID,
+				ChainID:     uc.config.Network.ChainID,
+				Hash:        contractTxHash,
+				Status:      models.TransactionStatusExecuted,
+				BlockNumber: receiptForHash.BlockNumber.Uint64(),
+				Sender:      strings.ToLower(senderForHash.Hex()),
+				Nonce:       txForHash.Nonce(),
+				Deployments: deploymentIDs,
+				Operations:  operations,
+				Environment: uc.config.Namespace,
+				CreatedAt:   time.Now(),
+			}
+
+			if err := uc.repo.SaveTransaction(ctx, transaction); err != nil {
+				return nil, fmt.Errorf("failed to save transaction: %w", err)
+			}
+		} else {
+			// Collect deployment IDs for this transaction
+			var txDeploymentIDs []string
+			for _, c := range contractsToRegister {
+				cTxHash := params.TxHash
+				if c.ImplTxHash != "" {
+					cTxHash = c.ImplTxHash
+				}
+				if cTxHash == contractTxHash {
+					// Find deployment ID for this contract
+					for j, addr := range result.Addresses {
+						if strings.EqualFold(addr, c.Address) {
+							txDeploymentIDs = append(txDeploymentIDs, result.DeploymentIDs[j])
+							break
+						}
+					}
+				}
+			}
+
+			// Update existing transaction with new deployments
+			existingTx.Deployments = append(existingTx.Deployments, txDeploymentIDs...)
+			if err := uc.repo.SaveTransaction(ctx, existingTx); err != nil {
+				return nil, fmt.Errorf("failed to update transaction: %w", err)
+			}
 		}
 	}
 
