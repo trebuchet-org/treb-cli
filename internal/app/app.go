@@ -28,6 +28,7 @@ type App struct {
 	ComposeDeployment        *usecase.ComposeDeployment
 	SyncRegistry             *usecase.SyncRegistry
 	TagDeployment            *usecase.TagDeployment
+	RegisterDeployment       *usecase.RegisterDeployment
 	ManageAnvil              *usecase.ManageAnvil
 	InitProject              *usecase.InitProject
 
@@ -57,6 +58,7 @@ func NewApp(
 	composeDeployment *usecase.ComposeDeployment,
 	syncRegistry *usecase.SyncRegistry,
 	tagDeployment *usecase.TagDeployment,
+	registerDeployment *usecase.RegisterDeployment,
 	manageAnvil *usecase.ManageAnvil,
 	initProject *usecase.InitProject,
 	anvilManager usecase.AnvilManager,
@@ -80,6 +82,7 @@ func NewApp(
 		ComposeDeployment:        composeDeployment,
 		SyncRegistry:             syncRegistry,
 		TagDeployment:            tagDeployment,
+		RegisterDeployment:       registerDeployment,
 		ManageAnvil:              manageAnvil,
 		InitProject:              initProject,
 		AnvilManager:             anvilManager,

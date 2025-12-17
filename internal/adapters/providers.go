@@ -54,8 +54,16 @@ var InteractiveSet = wire.NewSet(
 	wire.Bind(new(usecase.DeploymentSelector), new(*interactive.SelectorAdapter)),
 )
 
+// ProvideCastTracer provides a CastTracer from ForgeAdapter
+// ForgeAdapter is provided by ScriptAdapters, this just binds it to the interface
+func ProvideCastTracer(adapter *forge.ForgeAdapter) blockchain.CastTracer {
+	return adapter
+}
+
 // BlockchainSet provides blockchain-based implementations
 var BlockchainSet = wire.NewSet(
+	// CastTracer is provided from ForgeAdapter in ScriptAdapters
+	ProvideCastTracer,
 	blockchain.NewCheckerAdapter,
 	wire.Bind(new(usecase.BlockchainChecker), new(*blockchain.CheckerAdapter)),
 )
