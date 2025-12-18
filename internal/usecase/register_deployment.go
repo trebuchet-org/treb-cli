@@ -510,4 +510,3 @@ func (uc *RegisterDeployment) verifyBytecode(ctx context.Context, address, contr
 
 	return nil
 }
-

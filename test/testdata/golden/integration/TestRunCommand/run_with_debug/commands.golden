@@ -10,7 +10,8 @@
 ──────────────────────────────────────────────────
 Warning: Found unknown `treb` config for profile `default` defined in foundry.toml.
 Warning: Found unknown `treb` config for profile `live` defined in foundry.toml.
-[⠃] Compiling...[⠊] Compiling...
+[⠃] Compiling...
+
 No files changed, compilation skipped
 Traces:
   [1359154] DeployCounter::run()

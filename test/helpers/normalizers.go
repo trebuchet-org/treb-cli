@@ -162,10 +162,37 @@ func (n VersionNormalizer) Normalize(output string) string {
 	return output
 }
 
+// SpinnerNormalizer normalizes spinner animation output
+// Spinners can have variable numbers of frames depending on timing, so we collapse
+// multiple consecutive spinner lines into a single one
+type SpinnerNormalizer struct{}
+
+func (n SpinnerNormalizer) Normalize(output string) string {
+	// Match spinner patterns: \r\r[spinner_char] Compiling...\r\r[spinner_char] Compiling...
+	// The spinner uses Unicode braille characters in brackets like [⠃], [⠊], [⠒], etc.
+	// We'll collapse ALL consecutive spinner frames into a single normalized one
+
+	// Match one or more consecutive spinner frames
+	// Pattern matches sequences like:
+	//   \r\r[⠃] Compiling...\r\r[⠊] Compiling...\r
+	//   \r\r[⠃] Compiling...\r\r[⠊] Compiling...\r\r[⠒] Compiling...\r
+	//   \r\r[⠃] Compiling...\r\r[⠊] Compiling...\n
+	// The pattern: one or more \r, then [, then any chars (spinner char), then ], then " Compiling...", then \r or \n
+	// This pattern can repeat one or more times (the + at the end of the outer group)
+	spinnerPattern := regexp.MustCompile(`(\r+\[[^\]]+\] Compiling\.\.\.[\r\n])+`)
+
+	// Replace ALL consecutive spinner frames (whether 2, 3, 4, or more) with a SINGLE normalized version
+	// Always normalize to just one frame: \r[⠃] Compiling...\n
+	output = spinnerPattern.ReplaceAllString(output, "\r[⠃] Compiling...\n")
+
+	return output
+}
+
 // getDefaultNormalizers returns the default set of normalizers
 func GetDefaultNormalizers() []Normalizer {
 	return []Normalizer{
 		ColorNormalizer{},
+		SpinnerNormalizer{},
 		TimestampNormalizer{},
 		VersionNormalizer{},
 		TargetedGitCommitNormalizer{},
