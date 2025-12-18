@@ -21,7 +21,7 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6101
 │     ├─ Transfer(from: 0x0000...0000, to: 0x8201...1a25, value: <UNIX_TIME>...)
 │     └─ [return] 0xEbe12C95cC689F0B29e8AACB50c67a6bF3364303
 └─ ContractCreation(newContract: GovernanceToken: [0xEbe12C95c...)
-   Tx: 0x<HASH> | Block: 1 | Gas: 3336523
+   Tx: 0x<HASH> | Block: 1 | Gas: 3325291
 
 executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
 ├─ new 0xdd0A440751Da654406AB7882BC315e72fEf8A4E3()
@@ -40,7 +40,7 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 │     ├─ MinDelayChange(oldDuration: 0, newDuration: 1)
 │     └─ [return] 0x5Bc6aA67E69DBfBbaE1a7289818bbe20a442E4e2
 └─ ContractCreation(newContract: TrebTimelock: [0x5Bc6aA67E69D...)
-   Tx: 0x<HASH> | Block: 2 | Gas: 2552515
+   Tx: 0x<HASH> | Block: 2 | Gas: 2552703
 
 executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x61018060...)
 ├─ new 0x04F5D261B59683189927ca2b891982D2D356e4E8()
@@ -54,7 +54,7 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6101
 │     ├─ TimelockChange(oldTimelock: 0x0000...0000, newTimelock: TrebTimelock: [0...)
 │     └─ [return] 0x729cc9c01D35C0FF1Cc7c62a924236394Ff8fe54
 └─ ContractCreation(newContract: TrebGovernor: [0x729cc9c01D35...)
-   Tx: 0x<HASH> | Block: 3 | Gas: 5451469
+   Tx: 0x<HASH> | Block: 3 | Gas: 5471627
 
 executed  anvil → TrebTimelock::grantRole(role: 0xb09aa5ae..., account: 0x729c...fe54)
 └─ RoleGranted(role: 0xb09aa5ae..., account: TrebGovernor: [0x729cc9c01D...)

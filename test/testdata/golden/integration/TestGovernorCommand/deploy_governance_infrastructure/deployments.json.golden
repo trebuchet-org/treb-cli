@@ -11,7 +11,7 @@
     "deploymentStrategy": {
       "method": "CREATE3",
       "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600ee637d5acc04497e23748c",
-      "initCodeHash": "0xd798a907f6e3580d4d9d3a0c614597cd3df2da2a38fd2c09520d7292534a446a",
+      "initCodeHash": "0xb8566dc1c8581395e0b9db1d37a788d63f0fe2df2720fef86d3a3ba0fbf843fe",
       "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
       "constructorArgs": "0x",
       "entropy": "default/src/governance/GovernanceToken.sol:GovernanceToken"
@@ -20,7 +20,7 @@
     "artifact": {
       "path": "src/governance/GovernanceToken.sol",
       "compilerVersion": "0.8.30+commit.73712a01",
-      "bytecodeHash": "0xd798a907f6e3580d4d9d3a0c614597cd3df2da2a38fd2c09520d7292534a446a",
+      "bytecodeHash": "0xb8566dc1c8581395e0b9db1d37a788d63f0fe2df2720fef86d3a3ba0fbf843fe",
       "scriptPath": "script/DeployGovernance.s.sol",
       "gitCommit": ""
     },
@@ -43,7 +43,7 @@
     "deploymentStrategy": {
       "method": "CREATE3",
       "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266007aa972462f289de37f0650",
-      "initCodeHash": "0x5448b8aae328fc265e8b8278e9300596533f91759d0e8ad5e80f83db1170ff97",
+      "initCodeHash": "0x0fd18ef27996bc7ddde66d4a06769e6fa39f861695078ae7b8c5dac0c9501cde",
       "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
       "constructorArgs": "0x000000000000000000000000ebe12c95cc689f0b29e8aacb50c67a6bf33643030000000000000000000000005bc6aa67e69dbfbbae1a7289818bbe20a442e4e2",
       "entropy": "default/src/governance/TrebGovernor.sol:TrebGovernor"
@@ -52,7 +52,7 @@
     "artifact": {
       "path": "src/governance/TrebGovernor.sol",
       "compilerVersion": "0.8.30+commit.73712a01",
-      "bytecodeHash": "0x86df8465180425ffd40355761d5dae4704b5fa0c61213ba0e85c2c01b9b58c6c",
+      "bytecodeHash": "0x6f9cabdcd523f24baba10c327df1ba69fdf3829010a24669a8638c5edc100f3e",
       "scriptPath": "script/DeployGovernance.s.sol",
       "gitCommit": ""
     },
@@ -75,7 +75,7 @@
     "deploymentStrategy": {
       "method": "CREATE3",
       "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600c828d36240153c8a2ad3e8",
-      "initCodeHash": "0xe9893585d39a23a9540cbd3463ca282eb3a62858557c45f1931475dfd53ba6ef",
+      "initCodeHash": "0x760a5f1d343b943297457063d93c3c0445cf28d79ea1f90b524ec18d11c37a60",
       "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
       "constructorArgs": "0x0000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000",
       "entropy": "default/src/governance/TrebTimelock.sol:TrebTimelock"
@@ -84,7 +84,7 @@
     "artifact": {
       "path": "src/governance/TrebTimelock.sol",
       "compilerVersion": "0.8.30+commit.73712a01",
-      "bytecodeHash": "0xb02a112e65dc63f5ae23bbcffd7d8ca27ca31ab452b3ba9da0bf2a3927ebf779",
+      "bytecodeHash": "0xe8196fdb80175d4a549a8fb2bfd8c7301e1a3c895c4ef6548480f4c95b6db932",
       "scriptPath": "script/DeployGovernance.s.sol",
       "gitCommit": ""
     },

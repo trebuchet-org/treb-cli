@@ -100,7 +100,7 @@ func (TrebContractDeployed) ContractEventName() string {
 // Solidity: event ContractDeployed(address indexed deployer, address indexed location, bytes32 indexed transactionId, (string,string,string,bytes32,bytes32,bytes32,bytes,string) deployment)
 func (treb *Treb) UnpackContractDeployedEvent(log *types.Log) (*TrebContractDeployed, error) {
 	event := "ContractDeployed"
-	if log.Topics[0] != treb.abi.Events[event].ID {
+	if len(log.Topics) == 0 || log.Topics[0] != treb.abi.Events[event].ID {
 		return nil, errors.New("event signature mismatch")
 	}
 	out := new(TrebContractDeployed)
@@ -142,7 +142,7 @@ func (TrebDeploymentCollision) ContractEventName() string {
 // Solidity: event DeploymentCollision(address indexed existingContract, (string,string,string,bytes32,bytes32,bytes32,bytes,string) deploymentDetails)
 func (treb *Treb) UnpackDeploymentCollisionEvent(log *types.Log) (*TrebDeploymentCollision, error) {
 	event := "DeploymentCollision"
-	if log.Topics[0] != treb.abi.Events[event].ID {
+	if len(log.Topics) == 0 || log.Topics[0] != treb.abi.Events[event].ID {
 		return nil, errors.New("event signature mismatch")
 	}
 	out := new(TrebDeploymentCollision)
@@ -186,7 +186,7 @@ func (TrebGovernorProposalCreated) ContractEventName() string {
 // Solidity: event GovernorProposalCreated(uint256 indexed proposalId, address indexed governor, address indexed proposer, bytes32[] transactionIds)
 func (treb *Treb) UnpackGovernorProposalCreatedEvent(log *types.Log) (*TrebGovernorProposalCreated, error) {
 	event := "GovernorProposalCreated"
-	if log.Topics[0] != treb.abi.Events[event].ID {
+	if len(log.Topics) == 0 || log.Topics[0] != treb.abi.Events[event].ID {
 		return nil, errors.New("event signature mismatch")
 	}
 	out := new(TrebGovernorProposalCreated)
@@ -230,7 +230,7 @@ func (TrebSafeTransactionExecuted) ContractEventName() string {
 // Solidity: event SafeTransactionExecuted(bytes32 indexed safeTxHash, address indexed safe, address indexed executor, bytes32[] transactionIds)
 func (treb *Treb) UnpackSafeTransactionExecutedEvent(log *types.Log) (*TrebSafeTransactionExecuted, error) {
 	event := "SafeTransactionExecuted"
-	if log.Topics[0] != treb.abi.Events[event].ID {
+	if len(log.Topics) == 0 || log.Topics[0] != treb.abi.Events[event].ID {
 		return nil, errors.New("event signature mismatch")
 	}
 	out := new(TrebSafeTransactionExecuted)
@@ -274,7 +274,7 @@ func (TrebSafeTransactionQueued) ContractEventName() string {
 // Solidity: event SafeTransactionQueued(bytes32 indexed safeTxHash, address indexed safe, address indexed proposer, bytes32[] transactionIds)
 func (treb *Treb) UnpackSafeTransactionQueuedEvent(log *types.Log) (*TrebSafeTransactionQueued, error) {
 	event := "SafeTransactionQueued"
-	if log.Topics[0] != treb.abi.Events[event].ID {
+	if len(log.Topics) == 0 || log.Topics[0] != treb.abi.Events[event].ID {
 		return nil, errors.New("event signature mismatch")
 	}
 	out := new(TrebSafeTransactionQueued)
@@ -315,7 +315,7 @@ func (TrebTransactionSimulated) ContractEventName() string {
 // Solidity: event TransactionSimulated((bytes32,bytes32,address,bytes,(address,bytes,uint256)) simulatedTx)
 func (treb *Treb) UnpackTransactionSimulatedEvent(log *types.Log) (*TrebTransactionSimulated, error) {
 	event := "TransactionSimulated"
-	if log.Topics[0] != treb.abi.Events[event].ID {
+	if len(log.Topics) == 0 || log.Topics[0] != treb.abi.Events[event].ID {
 		return nil, errors.New("event signature mismatch")
 	}
 	out := new(TrebTransactionSimulated)
