@@ -533,72 +533,99 @@ func filterIntermediateContracts(traceResult interface{}, creations []models.Con
 // detectProxyRelationships detects proxy/implementation relationships by calling _getImplementation()
 // on contracts. If a contract returns an implementation address that matches another contract
 // in the list, it's marked as a proxy.
-func (c *CheckerAdapter) detectProxyRelationships(ctx context.Context, creations []models.ContractCreation) []models.ContractCreation {
+func (c *CheckerAdapter) detectProxyRelationships(
+	ctx context.Context,
+	creations []models.ContractCreation,
+) []models.ContractCreation {
+
 	if c.client == nil {
 		return creations // Can't detect if not connected
 	}
 
-	// Proxy ABI for _getImplementation() call
-	proxyABI := `[{"constant":true,"inputs":[],"name":"_getImplementation","outputs":[{"internalType":"address","name":"implementation","type":"address"}],"payable":false,"stateMutability":"view","type":"function"}]`
+	// ABI with both proxy access patterns
+	proxyABI := `[
+		{
+			"constant":true,
+			"inputs":[],
+			"name":"_getImplementation",
+			"outputs":[
+				{
+					"internalType":"address",
+					"name":"implementation",
+					"type":"address"
+				}
+			],
+			"stateMutability":"view",
+			"type":"function"
+		},
+		{
+			"constant":true,
+			"inputs":[],
+			"name":"implementation",
+			"outputs":[
+				{
+					"internalType":"address",
+					"name":"implementation",
+					"type":"address"
+				}
+			],
+			"stateMutability":"view",
+			"type":"function"
+		}
+	]`
 
 	parsedABI, err := abi.JSON(strings.NewReader(proxyABI))
 	if err != nil {
-		// If ABI parsing fails, return original creations
 		return creations
 	}
 
-	method, ok := parsedABI.Methods["_getImplementation"]
-	if !ok {
-		return creations
+	// Try methods in order
+	methodNames := []string{
+		"_getImplementation",
+		"implementation",
 	}
 
-	// Try calling _getImplementation() on each contract
 	for i := range creations {
 		contractAddr := common.HexToAddress(creations[i].Address)
 
-		// Encode the function call (method.ID is a 4-byte selector)
-		data := method.ID
+		var implementationAddr *common.Address
 
-		// Make the call
-		callCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		result, err := c.client.CallContract(callCtx, ethereum.CallMsg{
-			To:   &contractAddr,
-			Data: data,
-		}, nil)
-		cancel()
-
-		if err != nil {
-			// Contract doesn't support _getImplementation or call failed
-			// This is expected for non-proxy contracts, so we continue silently
-			// fmt.Printf("DEBUG: Call to %s failed: %v\n", creations[i].Address, err)
-			continue
-		}
-
-		// Check if result is empty (contract reverted or returned empty)
-		if len(result) == 0 {
-			continue
-		}
-
-		// Decode the result
-		var implementationAddr common.Address
-		outputs, err := method.Outputs.Unpack(result)
-		if err != nil || len(outputs) == 0 {
-			continue
-		}
-
-		// Extract address from outputs
-		// The output might be a common.Address directly, or wrapped in an interface{}
-		if addr, ok := outputs[0].(common.Address); ok {
-			implementationAddr = addr
-		} else if addrSlice, ok := outputs[0].([]interface{}); ok && len(addrSlice) > 0 {
-			// Sometimes ABI unpacking returns []interface{}
-			if addr, ok := addrSlice[0].(common.Address); ok {
-				implementationAddr = addr
-			} else {
+		for _, methodName := range methodNames {
+			method, ok := parsedABI.Methods[methodName]
+			if !ok {
 				continue
 			}
-		} else {
-			// Try to convert from string or other format
+
+			callCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			result, err := c.client.CallContract(
+				callCtx,
+				ethereum.CallMsg{
+					To:   &contractAddr,
+					Data: method.ID, // 4-byte selector
+				},
+				nil,
+			)
+			cancel()
+
+			if err != nil || len(result) == 0 {
+				continue
+			}
+
+			outputs, err := method.Outputs.Unpack(result)
+			if err != nil || len(outputs) == 0 {
+				continue
+			}
+
+			addr, ok := outputs[0].(common.Address)
+			if !ok {
+				continue
+			}
+
+			implementationAddr = &addr
+			break
+		}
+
+		if implementationAddr == nil {
 			continue
 		}
 
@@ -608,8 +635,6 @@ func (c *CheckerAdapter) detectProxyRelationships(ctx context.Context, creations
 			continue
 		}
 
-		// Mark this contract as a proxy if _getImplementation() returned a valid address
-		// The implementation might be in the same transaction or a different one
 		creations[i].IsProxy = true
 		creations[i].Implementation = implAddrStr
 	}
