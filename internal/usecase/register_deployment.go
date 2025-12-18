@@ -477,10 +477,7 @@ func (uc *RegisterDeployment) verifyBytecode(ctx context.Context, address, contr
 	}
 
 	// Decode deployed bytecode from artifact (remove 0x prefix if present)
-	deployedBytecodeStr := contract.Artifact.DeployedBytecode.Object
-	if strings.HasPrefix(deployedBytecodeStr, "0x") {
-		deployedBytecodeStr = deployedBytecodeStr[2:]
-	}
+	deployedBytecodeStr := strings.TrimPrefix(contract.Artifact.DeployedBytecode.Object, "0x")
 	expectedBytecode, err := hex.DecodeString(deployedBytecodeStr)
 	if err != nil {
 		return fmt.Errorf("failed to decode expected bytecode: %w", err)
@@ -514,12 +511,3 @@ func (uc *RegisterDeployment) verifyBytecode(ctx context.Context, address, contr
 	return nil
 }
 
-// inferContractName tries to infer the contract name by matching bytecode
-func (uc *RegisterDeployment) inferContractName(ctx context.Context, address string) string {
-	// This is a placeholder - in practice, you'd want to:
-	// 1. Get on-chain bytecode
-	// 2. Search through all contracts in the repository
-	// 3. Find the one with matching bytecode hash
-	// For now, return empty string to require explicit contract path
-	return ""
-}

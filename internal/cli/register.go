@@ -14,12 +14,12 @@ import (
 // NewRegisterCmd creates the register command
 func NewRegisterCmd() *cobra.Command {
 	var (
-		address       string
-		contractPath  string
-		contractName  string
-		txHash        string
-		label         string
-		skipVerify    bool
+		address      string
+		contractPath string
+		contractName string
+		txHash       string
+		label        string
+		skipVerify   bool
 	)
 
 	cmd := &cobra.Command{
@@ -78,7 +78,7 @@ Examples:
 				// Contract name is required
 				if contractName == "" && !app.Config.NonInteractive {
 					prompt := promptui.Prompt{
-						Label:    "Contract name (required, e.g., BiPoolManager, USDm)",
+						Label: "Contract name (required, e.g., BiPoolManager, USDm)",
 						Validate: func(input string) error {
 							if input == "" {
 								return fmt.Errorf("contract name is required")
@@ -134,7 +134,7 @@ Examples:
 
 				// Prompt for details for each selected contract
 				contractsToRegister = make([]usecase.ContractRegistration, 0, len(selectedIndices)*2) // May add implementations
-				implementationTxs := make(map[string]string) // Map implementation address to tx hash
+				implementationTxs := make(map[string]string)                                          // Map implementation address to tx hash
 
 				for idx, creationIdx := range selectedIndices {
 					creation := creations[creationIdx]
@@ -142,7 +142,7 @@ Examples:
 					if creation.IsProxy {
 						contractType = fmt.Sprintf("%s (Proxy → %s)", creation.Kind, creation.Implementation)
 					}
-					fmt.Printf(color.New(color.FgCyan, color.Bold).Sprintf("\nContract %d of %d: %s (%s)\n", idx+1, len(selectedIndices), creation.Address, contractType))
+					fmt.Print(color.New(color.FgCyan, color.Bold).Sprintf("\nContract %d of %d: %s (%s)\n", idx+1, len(selectedIndices), creation.Address, contractType))
 
 					// Prompt for contract path (optional)
 					currentContractPath := contractPath
@@ -163,7 +163,7 @@ Examples:
 					currentContractName := ""
 					if !app.Config.NonInteractive {
 						prompt := promptui.Prompt{
-							Label:    "Contract name (required, e.g., BiPoolManager, USDm)",
+							Label: "Contract name (required, e.g., BiPoolManager, USDm)",
 							Validate: func(input string) error {
 								if input == "" {
 									return fmt.Errorf("contract name is required")
@@ -226,9 +226,9 @@ Examples:
 
 						// If implementation is not in the same transaction, ask for its tx hash
 						if !implInSameTx {
-							fmt.Printf(color.New(color.FgYellow).Sprintf("\n⚠ Implementation contract %s not found in this transaction.\n", creation.Implementation))
+							fmt.Print(color.New(color.FgYellow).Sprintf("\n⚠ Implementation contract %s not found in this transaction.\n", creation.Implementation))
 							prompt := promptui.Prompt{
-								Label:    fmt.Sprintf("Transaction hash for implementation %s", creation.Implementation),
+								Label: fmt.Sprintf("Transaction hash for implementation %s", creation.Implementation),
 								Validate: func(input string) error {
 									if input == "" {
 										return fmt.Errorf("transaction hash is required")
@@ -270,7 +270,7 @@ Examples:
 					}
 
 					// Prompt for implementation contract details
-					fmt.Printf(color.New(color.FgCyan, color.Bold).Sprintf("\nImplementation contract: %s (%s)\n", implCreation.Address, implCreation.Kind))
+					fmt.Print(color.New(color.FgCyan, color.Bold).Sprintf("\nImplementation contract: %s (%s)\n", implCreation.Address, implCreation.Kind))
 
 					// Prompt for contract path (optional)
 					implContractPath := ""
@@ -291,7 +291,7 @@ Examples:
 					implContractName := ""
 					if !app.Config.NonInteractive {
 						prompt := promptui.Prompt{
-							Label:    "Contract name (required, e.g., StableTokenV2, BiPoolManager)",
+							Label: "Contract name (required, e.g., StableTokenV2, BiPoolManager)",
 							Validate: func(input string) error {
 								if input == "" {
 									return fmt.Errorf("contract name is required")
@@ -347,13 +347,13 @@ Examples:
 			}
 
 			params := usecase.RegisterDeploymentParams{
-				Address:       address,
-				ContractPath:  contractPath,
-				ContractName:  contractName,
-				TxHash:        txHash,
-				Label:         label,
-				SkipVerify:    skipVerify,
-				Contracts:     contractsToRegister,
+				Address:      address,
+				ContractPath: contractPath,
+				ContractName: contractName,
+				TxHash:       txHash,
+				Label:        label,
+				SkipVerify:   skipVerify,
+				Contracts:    contractsToRegister,
 			}
 
 			result, err := app.RegisterDeployment.Run(cmd.Context(), params)
@@ -376,7 +376,7 @@ Examples:
 			}
 
 			// Human-readable output
-			fmt.Printf(color.New(color.FgGreen, color.Bold).Sprintf("✓ Successfully registered %d deployment(s)\n\n", len(result.DeploymentIDs)))
+			fmt.Print(color.New(color.FgGreen, color.Bold).Sprintf("✓ Successfully registered %d deployment(s)\n\n", len(result.DeploymentIDs)))
 			for i := range result.DeploymentIDs {
 				fmt.Printf("  Deployment %d:\n", i+1)
 				fmt.Printf("    Deployment ID: %s\n", result.DeploymentIDs[i])
@@ -403,7 +403,6 @@ Examples:
 
 	return cmd
 }
-
 
 // validateContractPath validates a contract path input
 // Contract path is optional - used for artifact info if provided

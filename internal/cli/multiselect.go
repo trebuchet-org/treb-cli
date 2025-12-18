@@ -99,7 +99,7 @@ func (m multiSelectModel) View() string {
 			cursor = color.New(color.FgCyan).Sprint("▸")
 		}
 
-		checkbox := " "
+		var checkbox string
 		if m.selected[i] {
 			checkbox = color.New(color.FgGreen).Sprint("✓")
 		} else {
