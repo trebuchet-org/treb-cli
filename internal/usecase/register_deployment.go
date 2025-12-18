@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"strings"
 	"time"
 
@@ -224,11 +225,24 @@ func (uc *RegisterDeployment) Run(ctx context.Context, params RegisterDeployment
 		contractAddr := common.HexToAddress(contract.Address)
 		contractAddress := strings.ToLower(contractAddr.Hex())
 
-		// Check if deployment already exists
-		existing, err := uc.repo.GetDeploymentByAddress(ctx, uc.config.Network.ChainID, contractAddress)
-		if err == nil && existing != nil {
-			// If it already exists, skip it (might be implementation already registered)
-			continue
+		// Check if deployment already exists IN THIS NAMESPACE (duplicates across namespaces are allowed)
+		existingInNamespace, err := uc.repo.ListDeployments(ctx, domain.DeploymentFilter{
+			Namespace: uc.config.Namespace,
+			ChainID:   uc.config.Network.ChainID,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to check existing deployments: %w", err)
+		}
+		for _, dep := range existingInNamespace {
+			if strings.EqualFold(dep.Address, contractAddress) {
+				return nil, fmt.Errorf(
+					"deployment at address %s is already registered in namespace %s (chain %d) as %s",
+					contractAddress,
+					uc.config.Namespace,
+					uc.config.Network.ChainID,
+					dep.ID,
+				)
+			}
 		}
 
 		// Determine transaction hash for this contract
