@@ -916,7 +916,7 @@ func (CreateXContractCreation) ContractEventName() string {
 // Solidity: event ContractCreation(address indexed newContract, bytes32 indexed salt)
 func (createX *CreateX) UnpackContractCreationEvent(log *types.Log) (*CreateXContractCreation, error) {
 	event := "ContractCreation"
-	if log.Topics[0] != createX.abi.Events[event].ID {
+	if len(log.Topics) == 0 || log.Topics[0] != createX.abi.Events[event].ID {
 		return nil, errors.New("event signature mismatch")
 	}
 	out := new(CreateXContractCreation)
@@ -957,7 +957,7 @@ func (CreateXContractCreation0) ContractEventName() string {
 // Solidity: event ContractCreation(address indexed newContract)
 func (createX *CreateX) UnpackContractCreation0Event(log *types.Log) (*CreateXContractCreation0, error) {
 	event := "ContractCreation0"
-	if log.Topics[0] != createX.abi.Events[event].ID {
+	if len(log.Topics) == 0 || log.Topics[0] != createX.abi.Events[event].ID {
 		return nil, errors.New("event signature mismatch")
 	}
 	out := new(CreateXContractCreation0)
@@ -999,7 +999,7 @@ func (CreateXCreate3ProxyContractCreation) ContractEventName() string {
 // Solidity: event Create3ProxyContractCreation(address indexed newContract, bytes32 indexed salt)
 func (createX *CreateX) UnpackCreate3ProxyContractCreationEvent(log *types.Log) (*CreateXCreate3ProxyContractCreation, error) {
 	event := "Create3ProxyContractCreation"
-	if log.Topics[0] != createX.abi.Events[event].ID {
+	if len(log.Topics) == 0 || log.Topics[0] != createX.abi.Events[event].ID {
 		return nil, errors.New("event signature mismatch")
 	}
 	out := new(CreateXCreate3ProxyContractCreation)

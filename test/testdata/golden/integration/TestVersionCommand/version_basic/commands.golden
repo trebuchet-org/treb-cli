@@ -1,5 +1,5 @@
 === cmd 0: [version] ===
-treb v<VERSION>
+treb nightly-2-g<COMMIT>-dirty
 
 commit: <COMMIT>
 built:  <TIMESTAMP> UTC

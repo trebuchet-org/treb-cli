@@ -56,6 +56,9 @@ func loadFoundryConfig(projectRoot string) (*config.FoundryConfig, error) {
 				senderConfig.Address = os.ExpandEnv(senderConfig.Address)
 				senderConfig.Signer = os.ExpandEnv(senderConfig.Signer)
 				senderConfig.DerivationPath = os.ExpandEnv(senderConfig.DerivationPath)
+				senderConfig.Governor = os.ExpandEnv(senderConfig.Governor)
+				senderConfig.Timelock = os.ExpandEnv(senderConfig.Timelock)
+				senderConfig.Proposer = os.ExpandEnv(senderConfig.Proposer)
 
 				// Update the map with the expanded config
 				profile.Treb.Senders[senderName] = senderConfig

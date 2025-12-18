@@ -81,3 +81,16 @@ func (e *TrebSafeTransactionQueued) String() string {
 		}),
 	)
 }
+
+func (e *TrebGovernorProposalCreated) String() string {
+	return fmt.Sprintf(
+		"%s: proposalId=%s governor=%s proposer=%s txids=%v",
+		e.ContractEventName(),
+		e.ProposalId.String(),
+		e.Governor.String(),
+		e.Proposer.String(),
+		lo.Map(e.TransactionIds, func(v [32]byte, i int) string {
+			return fmt.Sprintf("%x", v)
+		}),
+	)
+}

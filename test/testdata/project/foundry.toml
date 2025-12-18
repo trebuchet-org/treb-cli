@@ -26,6 +26,13 @@ celo = { key = "${ETHERSCAN_API_KEY}", chain = 42220 }
 type = "private_key" # anvil user 0
 private_key = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 
+# Governor sender configuration - addresses are set after governance deployment
+[profile.default.treb.senders.governor]
+type = "oz_governor"
+governor = "${GOVERNOR_ADDRESS}"
+timelock = "${TIMELOCK_ADDRESS}"
+proposer = "anvil"
+
 [profile.live.treb.senders.safe0]
 type = "safe"
 safe = "0x3D33783D1fd1B6D849d299aD2E711f844fC16d2F"

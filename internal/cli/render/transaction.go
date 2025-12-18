@@ -450,6 +450,10 @@ func (tr *TransactionRenderer) displayTransactionFooter() {
 		details = append(details, fmt.Sprintf("Safe Tx: %s", common.Hash(tx.SafeTransaction.SafeTxHash).Hex()))
 	}
 
+	if tx.GovernorProposal != nil {
+		details = append(details, fmt.Sprintf("Proposal: %s", tx.GovernorProposal.ProposalId.String()))
+	}
+
 	if tx.BlockNumber != nil {
 		details = append(details, fmt.Sprintf("Block: %d", *tx.BlockNumber))
 	}

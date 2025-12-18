@@ -31,6 +31,7 @@ var DefaultOutputArtifacs = []string{
 	".treb/deployments.json",
 	".treb/registry.json",
 	".treb/safe-txs.json",
+	".treb/governor-txs.json",
 }
 
 type testOutput struct {

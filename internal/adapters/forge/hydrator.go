@@ -59,6 +59,7 @@ func (h *RunResultHydrator) Hydrate(
 		RunResult:          runResult,
 		Transactions:       []*forge.Transaction{},
 		SafeTransactions:   []*forge.SafeTransaction{},
+		GovernorProposals:  []*forge.GovernorProposal{},
 		Deployments:        []*forge.Deployment{},
 		ProxyRelationships: make(map[common.Address]*forge.ProxyRelationship),
 		Collisions:         make(map[common.Address]*bindings.TrebDeploymentCollision),
@@ -83,6 +84,8 @@ func (h *RunResultHydrator) Hydrate(
 				h.processSafeTransactionQueued(e, hydrated)
 			case *bindings.TrebSafeTransactionExecuted:
 				h.processSafeTransactionExecuted(e, hydrated)
+			case *bindings.TrebGovernorProposalCreated:
+				h.processGovernorProposalCreated(e, hydrated)
 			case *bindings.TrebContractDeployed:
 				deployment := &forge.Deployment{
 					TransactionID: e.TransactionId,
@@ -194,6 +197,28 @@ func (h *RunResultHydrator) processSafeTransactionExecuted(event *bindings.TrebS
 			tx.SafeTransaction = safeTx
 			batchIdx := idx
 			tx.SafeBatchIdx = &batchIdx
+		}
+	}
+}
+
+// processGovernorProposalCreated processes a GovernorProposalCreated event
+func (h *RunResultHydrator) processGovernorProposalCreated(event *bindings.TrebGovernorProposalCreated, hydrated *HydratedRunResult) {
+	// Create Governor proposal record
+	proposal := &forge.GovernorProposal{
+		ProposalId:     event.ProposalId,
+		Governor:       event.Governor,
+		Proposer:       event.Proposer,
+		TransactionIds: event.TransactionIds,
+	}
+	hydrated.GovernorProposals = append(hydrated.GovernorProposals, proposal)
+
+	// Update all referenced transactions to QUEUED status
+	for idx, txID := range event.TransactionIds {
+		if tx, exists := h.transactions[txID]; exists {
+			tx.Status = models.TransactionStatusQueued
+			tx.GovernorProposal = proposal
+			batchIdx := idx
+			tx.GovernorBatchIdx = &batchIdx
 		}
 	}
 }

@@ -42,6 +42,7 @@ var (
 	SenderTypeTrezor     SenderType = "trezor"
 	SenderTypeSafe       SenderType = "safe"
 	SenderTypePrivateKey SenderType = "private_key"
+	SenderTypeOZGovernor SenderType = "oz_governor"
 )
 
 // SenderConfig represents a sender configuration
@@ -52,4 +53,7 @@ type SenderConfig struct {
 	Safe           string     `toml:"safe,omitempty"`
 	Signer         string     `toml:"signer,omitempty"`          // For Safe senders
 	DerivationPath string     `toml:"derivation_path,omitempty"` // For Ledger senders
+	Governor       string     `toml:"governor,omitempty"`        // For OZ Governor senders
+	Timelock       string     `toml:"timelock,omitempty"`        // For OZ Governor senders (optional)
+	Proposer       string     `toml:"proposer,omitempty"`        // For OZ Governor senders
 }

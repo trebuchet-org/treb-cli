@@ -5,5 +5,5 @@
   ✅ anvil-31338 - Chain ID: 31338
   ✅ base-sepolia - Chain ID: 84532
   ✅ celo - Chain ID: 42220
-  ✅ celo-alfajores - Chain ID: 44787
+  ❌ celo-alfajores - Error: failed to fetch chain ID for network celo-alfajores: failed to make RPC request: Post "https://alfajores-forno.celo-testnet.org": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
   ✅ polygon - Chain ID: 137

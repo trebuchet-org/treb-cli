@@ -1,0 +1,91 @@
+=== cmd 0: [run script/DeployGovernance.s.sol] ===
+
+🚀 Running Deployment Script
+──────────────────────────────────────────────────
+  Script:    DeployGovernanceScript
+  Network:   anvil-31337 (31337)
+  Namespace: default
+  Mode:      LIVE
+  Senders:   [anvil]
+──────────────────────────────────────────────────
+
+🔄 Transactions:
+──────────────────────────────────────────────────
+
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x61016060...)
+├─ new 0x820124Aaf285C161d65F4EBB8d65Cce0D2BC1a25()
+│  └─ [return] 0x820124Aaf285C161d65F4EBB8d65Cce0D2BC1a25
+├─ Create3ProxyContractCreation(newContract: 0x8201...1a25, salt: 0xacb6a465...)
+├─ 0x820124Aaf285C161d65F4EBB8d65Cce0D2BC1a25::unknown()
+│  └─ 🚀 new GovernanceToken()
+│     ├─ Transfer(from: 0x0000...0000, to: 0x8201...1a25, value: <UNIX_TIME>...)
+│     └─ [return] 0xEbe12C95cC689F0B29e8AACB50c67a6bF3364303
+└─ ContractCreation(newContract: GovernanceToken: [0xEbe12C95c...)
+   Tx: 0x<HASH> | Block: 1 | Gas: 3325291
+
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
+├─ new 0xdd0A440751Da654406AB7882BC315e72fEf8A4E3()
+│  └─ [return] 0xdd0A440751Da654406AB7882BC315e72fEf8A4E3
+├─ Create3ProxyContractCreation(newContract: 0xdd0A...A4E3, salt: 0x4c830254...)
+├─ 0xdd0A440751Da654406AB7882BC315e72fEf8A4E3::unknown()
+│  └─ 🚀 new TrebTimelock(
+│     │    minDelay:: 1,
+│     │    proposers:: [],
+│     │    executors:: ["0x0000000000000000000000000000000000000000"],
+│     │    admin:: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+│     │  )
+│     ├─ RoleGranted(role: 0x00000000..., account: TrebTimelock: [0x5Bc6aA67E6...)
+│     ├─ RoleGranted(role: 0x00000000..., account: 0xf39F...2266, sender: 0xdd...)
+│     ├─ RoleGranted(role: 0xd8aa0f31..., account: 0x0000...0000, sender: 0xdd...)
+│     ├─ MinDelayChange(oldDuration: 0, newDuration: 1)
+│     └─ [return] 0x5Bc6aA67E69DBfBbaE1a7289818bbe20a442E4e2
+└─ ContractCreation(newContract: TrebTimelock: [0x5Bc6aA67E69D...)
+   Tx: 0x<HASH> | Block: 2 | Gas: 2552703
+
+executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x61018060...)
+├─ new 0x04F5D261B59683189927ca2b891982D2D356e4E8()
+│  └─ [return] 0x04F5D261B59683189927ca2b891982D2D356e4E8
+├─ Create3ProxyContractCreation(newContract: 0x04F5...e4E8, salt: 0xebe08330...)
+├─ 0x04F5D261B59683189927ca2b891982D2D356e4E8::unknown()
+│  └─ 🚀 new TrebGovernor(
+│     │    _token:: 0xEbe12C95cC689F0B29e8AACB50c67a6bF3364303,
+│     │    _timelock:: 0x5Bc6aA67E69DBfBbaE1a7289818bbe20a442E4e2
+│     │  )
+│     ├─ TimelockChange(oldTimelock: 0x0000...0000, newTimelock: TrebTimelock: [0...)
+│     └─ [return] 0x729cc9c01D35C0FF1Cc7c62a924236394Ff8fe54
+└─ ContractCreation(newContract: TrebGovernor: [0x729cc9c01D35...)
+   Tx: 0x<HASH> | Block: 3 | Gas: 5471627
+
+executed  anvil → TrebTimelock::grantRole(role: 0xb09aa5ae..., account: 0x729c...fe54)
+└─ RoleGranted(role: 0xb09aa5ae..., account: TrebGovernor: [0x729cc9c01D...)
+   Tx: 0x<HASH> | Block: 4 | Gas: 52128
+
+executed  anvil → GovernanceToken::delegate(delegatee: 0xf39F...2266)
+└─ DelegateChanged(delegator: 0xf39F...2266, fromDelegate: 0x0000...0000, to...)
+   Tx: 0x<HASH> | Block: 5 | Gas: 48977
+
+📦 Deployment Summary:
+──────────────────────────────────────────────────
+GovernanceToken at 0xEbe12C95cC689F0B29e8AACB50c67a6bF3364303
+TrebTimelock at 0x5Bc6aA67E69DBfBbaE1a7289818bbe20a442E4e2
+TrebGovernor at 0x729cc9c01D35C0FF1Cc7c62a924236394Ff8fe54
+
+
+📝 Script Logs:
+────────────────────────────────────────
+  Registry: failed to load registry from .treb/registry.json
+
+✓ Updated registry for anvil-31337 network in namespace default
+✓ Script execution completed successfully
+
+
+=== cmd 1: [list] ===
+   ◎ namespace:   DEFAULT                       
+└─ ⛓ chain:       31337                         
+  
+  SINGLETONS
+  GovernanceToken     0xEbe12C95cC689F0B29e8AACB50c67a6bF3364303   🅔 ? 🅢 ?         <TIMESTAMP>   
+  TrebGovernor        0x729cc9c01D35C0FF1Cc7c62a924236394Ff8fe54   🅔 ? 🅢 ?         <TIMESTAMP>   
+  TrebTimelock        0x5Bc6aA67E69DBfBbaE1a7289818bbe20a442E4e2   🅔 ? 🅢 ?         <TIMESTAMP>   
+
+Total deployments: 3
