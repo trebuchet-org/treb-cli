@@ -26,7 +26,7 @@ forge_build:
 
 # Install globally
 install: 
-	@trebup --path $(pwd)
+	@trebup --path $(shell pwd)
 
 # Run tests
 unit-test:

@@ -60,9 +60,11 @@ func (n HashNormalizer) Normalize(output string) string {
 type ColorNormalizer struct{}
 
 func (n ColorNormalizer) Normalize(output string) string {
-	// Remove all ANSI escape sequences (color codes, line clearing, cursor movement, etc.)
-	// Matches: \x1b[ followed by numbers/semicolons and ending with a letter (m, K, H, F, G, etc.)
-	return regexp.MustCompile(`\x1b\[[0-9;]*[mGKHF]`).ReplaceAllString(output, "")
+	// Remove all ANSI escape sequences including:
+	// - Color codes: \x1b[0-9;]*m
+	// - Line clearing: \x1b[2K
+	// - Cursor movement and other control sequences: \x1b[0-9;]*[A-Za-z]
+	return regexp.MustCompile(`\x1b\[[0-9;]*[A-Za-z]`).ReplaceAllString(output, "")
 }
 
 // GitCommitNormalizer replaces git commit hashes

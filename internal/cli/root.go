@@ -118,6 +118,10 @@ smart contract deployments using CreateX factory contracts.`,
 	tagCmd.GroupID = "management"
 	rootCmd.AddCommand(tagCmd)
 
+	registerCmd := NewRegisterCmd()
+	registerCmd.GroupID = "management"
+	rootCmd.AddCommand(registerCmd)
+
 	devCmd := NewDevCmd()
 	devCmd.GroupID = "management"
 	rootCmd.AddCommand(devCmd)

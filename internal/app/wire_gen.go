@@ -64,7 +64,9 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 	generateDeploymentScript := usecase.NewGenerateDeploymentScript(runtimeConfig, contractResolver, eventParser, abiResolver, scriptGeneratorAdapter, fileWriterAdapter)
 	networkResolver := config.ProvideNetworkResolver(runtimeConfig)
 	listNetworks := usecase.NewListNetworks(networkResolver)
-	checkerAdapter := blockchain.NewCheckerAdapter()
+	forgeAdapter := forge.NewForgeAdapter(string2, logger)
+	castTracer := adapters.ProvideCastTracer(forgeAdapter)
+	checkerAdapter := blockchain.NewCheckerAdapter(castTracer, string2)
 	pruner := deployments.NewPruner(fileRepository, checkerAdapter)
 	spinnerProgressReporter := progress.NewSpinnerProgressReporter()
 	pruneRegistry := usecase.NewPruneRegistry(networkResolver, checkerAdapter, pruner, fileRepository, spinnerProgressReporter)
@@ -83,7 +85,6 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 	writer := render.ProvideIO(cmd)
 	scriptRenderer := render.NewScriptRenderer(writer, fileRepository, abiResolver, logger)
 	runProgress := progress.NewRunProgress(scriptRenderer)
-	forgeAdapter := forge.NewForgeAdapter(string2, logger)
 	runScript := usecase.NewRunScript(runtimeConfig, scriptResolver, parameterResolver, sendersManager, runResultHydrator, fileRepository, libraryResolver, runProgress, forgeAdapter)
 	verifierAdapter, err := verification.NewVerifierAdapter(runtimeConfig)
 	if err != nil {
@@ -95,11 +96,12 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 	composeDeployment := usecase.NewComposeDeployment(runScript, composeProgress)
 	syncRegistry := usecase.NewSyncRegistry(runtimeConfig, fileRepository, spinnerProgressReporter)
 	tagDeployment := usecase.NewTagDeployment(fileRepository, deploymentResolver, spinnerProgressReporter)
+	registerDeployment := usecase.NewRegisterDeployment(runtimeConfig, fileRepository, checkerAdapter, repository)
 	manager := anvil.NewManager()
 	manageAnvil := usecase.NewManageAnvil(manager, spinnerProgressReporter)
 	initProject := usecase.NewInitProject(fileWriterAdapter, spinnerProgressReporter)
 	renderer := render.NewGenerateRenderer()
-	app, err := NewApp(runtimeConfig, selectorAdapter, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, showConfig, setConfig, removeConfig, runScript, verifyDeployment, composeDeployment, syncRegistry, tagDeployment, manageAnvil, initProject, manager, renderer, scriptRenderer, composeRenderer)
+	app, err := NewApp(runtimeConfig, selectorAdapter, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, showConfig, setConfig, removeConfig, runScript, verifyDeployment, composeDeployment, syncRegistry, tagDeployment, registerDeployment, manageAnvil, initProject, manager, renderer, scriptRenderer, composeRenderer)
 	if err != nil {
 		return nil, err
 	}

@@ -321,3 +321,20 @@ func (f *ForgeAdapter) saveDebugOutput(output []byte) {
 		fmt.Printf("Debug output saved to: %s\n", debugDir)
 	}
 }
+
+// RunCastTrace runs `cast run` to trace a transaction and returns the JSON output
+func (f *ForgeAdapter) RunCastTrace(ctx context.Context, rpcURL string, txHash string) ([]byte, error) {
+	f.log.Debug("running cast run", "rpc", rpcURL, "tx", txHash)
+
+	cmd := exec.CommandContext(ctx, "cast", "run", "--json", "--rpc-url", rpcURL, txHash)
+	cmd.Dir = f.projectRoot
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		f.log.Error("cast run failed", "error", err, "output", string(output))
+		return nil, fmt.Errorf("cast run failed: %w\nOutput: %s", err, string(output))
+	}
+
+	f.log.Debug("cast run completed successfully")
+	return output, nil
+}
