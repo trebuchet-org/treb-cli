@@ -75,7 +75,7 @@ func (n FoundryWarningsNormalizer) Normalize(output string) string {
 	// Example:
 	// Warning: Found unknown `treb` config for profile `default` defined in foundry.toml.
 	// Warning: Found unknown `treb` config for profile `live` defined in foundry.toml.
-	output = regexp.MustCompile(`(?m)^Warning: Found unknown ` + "`" + `treb` + "`" + ` config for profile ` + "`" + `[^` + "`" + `]+` + "`" + ` defined in foundry\.toml\.?\s*$\n?`).ReplaceAllString(output, "")
+	output = regexp.MustCompile(`(?m)^Warning: Found unknown `+"`"+`treb`+"`"+` config for profile `+"`"+`[^`+"`"+`]+`+"`"+` defined in foundry\.toml\.?\s*$\n?`).ReplaceAllString(output, "")
 	return output
 }
 

@@ -20,6 +20,7 @@ type RunScriptParams struct {
 	Verbose        bool
 	NonInteractive bool
 	Slow           bool
+	DumpCommand    bool
 }
 
 // RunScriptResult contains the result of running a script
@@ -28,6 +29,7 @@ type RunScriptResult struct {
 	Changeset *models.Changeset
 	Success   bool
 	Error     error
+	DumpedCommand string
 }
 
 // RunScript is the main use case for running deployment scripts
@@ -159,6 +161,22 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 		Progress:           uc.progress,
 		SenderScriptConfig: *senderScriptConfig,
 		Slow:               params.Slow,
+	}
+
+	if params.DumpCommand {
+		dumper, ok := uc.forgeScriptRunner.(interface {
+			DumpScriptCommand(config RunScriptConfig) (string, error)
+		})
+		if !ok {
+			return result, fmt.Errorf("forge runner does not support dumping command")
+		}
+		cmdLine, err := dumper.DumpScriptCommand(runScriptConfig)
+		if err != nil {
+			return result, err
+		}
+		result.DumpedCommand = cmdLine
+		result.Success = true
+		return result, nil
 	}
 
 	uc.progress.OnProgress(ctx, ProgressEvent{
