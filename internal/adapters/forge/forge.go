@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -233,6 +234,25 @@ func (f *ForgeAdapter) RunScript(ctx context.Context, config usecase.RunScriptCo
 	}
 
 	return result, nil
+}
+
+// DumpScriptCommand returns a shell-ish command line that includes all env vars treb injects
+// along with the underlying forge arguments it would run.
+func (f *ForgeAdapter) DumpScriptCommand(config usecase.RunScriptConfig) (string, error) {
+	args := f.buildArgs(config)
+	env := f.buildEnv(config)
+
+	// Sort for determinism in output
+	sort.Strings(env)
+
+	parts := make([]string, 0, len(env)+1+len(args))
+	for _, kv := range env {
+		parts = append(parts, kv)
+	}
+	parts = append(parts, "forge")
+	parts = append(parts, args...)
+
+	return strings.Join(parts, " ") + "\n", nil
 }
 
 // buildArgs builds the forge script command arguments
