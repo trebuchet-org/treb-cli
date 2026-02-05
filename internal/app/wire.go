@@ -44,6 +44,7 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 		usecase.NewGenerateDeploymentScript,
 		usecase.NewListNetworks,
 		usecase.NewPruneRegistry,
+		usecase.NewResetRegistry,
 		usecase.NewShowConfig,
 		usecase.NewSetConfig,
 		usecase.NewRemoveConfig,

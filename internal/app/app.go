@@ -20,6 +20,7 @@ type App struct {
 	GenerateDeploymentScript *usecase.GenerateDeploymentScript
 	ListNetworks             *usecase.ListNetworks
 	PruneRegistry            *usecase.PruneRegistry
+	ResetRegistry            *usecase.ResetRegistry
 	ShowConfig               *usecase.ShowConfig
 	SetConfig                *usecase.SetConfig
 	RemoveConfig             *usecase.RemoveConfig
@@ -50,6 +51,7 @@ func NewApp(
 	generateDeploymentScript *usecase.GenerateDeploymentScript,
 	listNetworks *usecase.ListNetworks,
 	pruneRegistry *usecase.PruneRegistry,
+	resetRegistry *usecase.ResetRegistry,
 	showConfig *usecase.ShowConfig,
 	setConfig *usecase.SetConfig,
 	removeConfig *usecase.RemoveConfig,
@@ -74,6 +76,7 @@ func NewApp(
 		GenerateDeploymentScript: generateDeploymentScript,
 		ListNetworks:             listNetworks,
 		PruneRegistry:            pruneRegistry,
+		ResetRegistry:            resetRegistry,
 		ShowConfig:               showConfig,
 		SetConfig:                setConfig,
 		RemoveConfig:             removeConfig,
