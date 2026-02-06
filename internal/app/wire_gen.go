@@ -70,6 +70,7 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 	pruner := deployments.NewPruner(fileRepository, checkerAdapter)
 	spinnerProgressReporter := progress.NewSpinnerProgressReporter()
 	pruneRegistry := usecase.NewPruneRegistry(networkResolver, checkerAdapter, pruner, fileRepository, spinnerProgressReporter)
+	resetRegistry := usecase.NewResetRegistry(runtimeConfig, fileRepository, fileRepository)
 	localConfigStoreAdapter := fs.NewLocalConfigStoreAdapter(runtimeConfig)
 	showConfig := usecase.NewShowConfig(localConfigStoreAdapter)
 	setConfig := usecase.NewSetConfig(localConfigStoreAdapter)
@@ -101,7 +102,7 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 	manageAnvil := usecase.NewManageAnvil(manager, spinnerProgressReporter)
 	initProject := usecase.NewInitProject(fileWriterAdapter, spinnerProgressReporter)
 	renderer := render.NewGenerateRenderer()
-	app, err := NewApp(runtimeConfig, selectorAdapter, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, showConfig, setConfig, removeConfig, runScript, verifyDeployment, composeDeployment, syncRegistry, tagDeployment, registerDeployment, manageAnvil, initProject, manager, renderer, scriptRenderer, composeRenderer)
+	app, err := NewApp(runtimeConfig, selectorAdapter, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, resetRegistry, showConfig, setConfig, removeConfig, runScript, verifyDeployment, composeDeployment, syncRegistry, tagDeployment, registerDeployment, manageAnvil, initProject, manager, renderer, scriptRenderer, composeRenderer)
 	if err != nil {
 		return nil, err
 	}

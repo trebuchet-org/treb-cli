@@ -24,7 +24,7 @@ var TransactionServiceURLs = map[uint64]string{
 	43114:    "https://safe-transaction-avalanche.safe.global",
 	324:      "https://safe-transaction-zksync.safe.global",
 	42220:    "https://safe-transaction-celo.safe.global",
-	44787:    "https://safe-transaction-alfajores.safe.global", // Celo Alfajores testnet
+	11142220: "https://safe-transaction-celo-sepolia.safe.global", // Celo Sepolia testnet
 }
 
 // MultisigTransaction represents a Safe multisig transaction

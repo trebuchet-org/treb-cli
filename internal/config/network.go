@@ -189,8 +189,8 @@ func (r *NetworkResolver) getExplorerURL(networkName string, chainID uint64) str
 		return "https://explorer.zksync.io"
 	case 42220:
 		return "https://celoscan.io"
-	case 44787:
-		return "https://alfajores.celoscan.io"
+	case 11142220:
+		return "https://celo-sepolia.celoscan.io"
 	default:
 		return ""
 	}
