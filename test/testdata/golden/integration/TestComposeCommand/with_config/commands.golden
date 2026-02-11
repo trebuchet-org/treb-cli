@@ -53,7 +53,7 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 │     ├─ UpgradeableCounter::initialize(initialOwner: 0x0000...0000)
 │     └─ [return] 0xc265543Dbc777F9D29FbF9EA9E063B962dd447b9
 └─ ContractCreation(newContract: ERC1967Proxy: [0xc265543Dbc77...)
-   Tx: 0x<HASH> | Block: 2 | Gas: 206858
+   Tx: 0x<HASH> | Block: 2 | Gas: 205385
 
 📦 Deployment Summary:
 ──────────────────────────────────────────────────
@@ -97,7 +97,7 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 │     ├─ UpgradeableCounter::initialize(initialOwner: 0x0000...0000)
 │     └─ [return] 0xe2Fa450fD6b49c41aFAB7cdA17105e95D1dd22eA
 └─ ContractCreation(newContract: ERC1967Proxy: [0xe2Fa450fD6b4...)
-   Tx: 0x<HASH> | Block: 3 | Gas: 206858
+   Tx: 0x<HASH> | Block: 3 | Gas: 205385
 
 ⚠️ Deployment Collisions Detected:
 ──────────────────────────────────────────────────
@@ -142,7 +142,7 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 │     ├─ UpgradeableCounter::initialize(initialOwner: 0x0000...0000)
 │     └─ [return] 0x3724061C024d171eF17Cb398825B06326b0c168b
 └─ ContractCreation(newContract: ERC1967Proxy: [0x3724061C024d...)
-   Tx: 0x<HASH> | Block: 4 | Gas: 206858
+   Tx: 0x<HASH> | Block: 4 | Gas: 205385
 
 ⚠️ Deployment Collisions Detected:
 ──────────────────────────────────────────────────

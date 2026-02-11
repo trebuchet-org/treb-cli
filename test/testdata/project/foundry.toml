@@ -9,6 +9,9 @@ fs_permissions = [{ access = "read-write", path = "./" }]
 bytecode_hash = "none"
 cbor_metadata = false
 
+[lint]
+lint_on_build = false
+
 [rpc_endpoints]
 celo-sepolia = "https://forno.celo-sepolia.celo-testnet.org"
 base-sepolia = "https://sepolia.base.org"
