@@ -165,8 +165,8 @@ func compareOutput(t *testing.T, test IntegrationTest, output, displayName, gold
 			t.Fatalf("Golden file missing, run with -treb.updategolden")
 			golden = []byte{}
 		}
-		// normalize := cmp.Transformer("normalize", func(s string) string { return norm(s) })
-		if diff := cmp.Diff(string(golden), output); diff != "" {
+		goldenNormalized := helpers.Normalize(string(golden), test.Normalizers)
+		if diff := cmp.Diff(goldenNormalized, output); diff != "" {
 			t.Errorf("Diff on %s (v1) (-golden +output):\n%s", displayName, diff)
 		}
 	}

@@ -67,6 +67,29 @@ func (n ColorNormalizer) Normalize(output string) string {
 	return regexp.MustCompile(`\x1b\[[0-9;]*[A-Za-z]`).ReplaceAllString(output, "")
 }
 
+// FoundryWarningsNormalizer removes noisy Foundry warnings that are not relevant to behavior
+// and can vary between environments/toolchain versions.
+type FoundryWarningsNormalizer struct{}
+
+func (n FoundryWarningsNormalizer) Normalize(output string) string {
+	// Example:
+	// Warning: Found unknown `treb` config for profile `default` defined in foundry.toml.
+	// Warning: Found unknown `treb` config for profile `live` defined in foundry.toml.
+	output = regexp.MustCompile(`(?m)^Warning: Found unknown `+"`"+`treb`+"`"+` config for profile `+"`"+`[^`+"`"+`]+`+"`"+` defined in foundry\.toml\.?\s*$\n?`).ReplaceAllString(output, "")
+	return output
+}
+
+// LineClearArtifactNormalizer removes occasional line-clear artifacts that can leak into
+// captured output depending on how control codes are rendered/escaped.
+type LineClearArtifactNormalizer struct{}
+
+func (n LineClearArtifactNormalizer) Normalize(output string) string {
+	// Some environments render the escape sequence "\033[2K" as a literal "3[2K".
+	// Strip it if it appears.
+	output = regexp.MustCompile(`\r?3\[2K`).ReplaceAllString(output, "")
+	return output
+}
+
 // GitCommitNormalizer replaces git commit hashes
 type GitCommitNormalizer struct{}
 
@@ -172,17 +195,12 @@ func (n SpinnerNormalizer) Normalize(output string) string {
 	// The spinner uses Unicode braille characters in brackets like [⠃], [⠊], [⠒], etc.
 	// We'll collapse ALL consecutive spinner frames into a single normalized one
 
-	// Match one or more consecutive spinner frames
-	// Pattern matches sequences like:
-	//   \r\r[⠃] Compiling...\r\r[⠊] Compiling...\r
-	//   \r\r[⠃] Compiling...\r\r[⠊] Compiling...\r\r[⠒] Compiling...\r
-	//   \r\r[⠃] Compiling...\r\r[⠊] Compiling...\n
-	// The pattern: one or more \r, then [, then any chars (spinner char), then ], then " Compiling...", then \r or \n
-	// This pattern can repeat one or more times (the + at the end of the outer group)
-	spinnerPattern := regexp.MustCompile(`(\r+\[[^\]]+\] Compiling\.\.\.[\r\n])+`)
+	// Some toolchains print multiple frames on separate lines (no leading \r), e.g.:
+	//   \r[⠃] Compiling...\n[⠊] Compiling...\n
+	// So we match sequences where each frame may optionally be prefixed with one or more \r.
+	spinnerPattern := regexp.MustCompile(`((?:\r)*\[[^\]]+\] Compiling\.\.\.\s*(?:\r?\n|\r))+`)
 
 	// Replace ALL consecutive spinner frames (whether 2, 3, 4, or more) with a SINGLE normalized version
-	// Always normalize to just one frame: \r[⠃] Compiling...\n
 	output = spinnerPattern.ReplaceAllString(output, "\r[⠃] Compiling...\n")
 
 	return output
@@ -192,6 +210,8 @@ func (n SpinnerNormalizer) Normalize(output string) string {
 func GetDefaultNormalizers() []Normalizer {
 	return []Normalizer{
 		ColorNormalizer{},
+		FoundryWarningsNormalizer{},
+		LineClearArtifactNormalizer{},
 		SpinnerNormalizer{},
 		TimestampNormalizer{},
 		VersionNormalizer{},

@@ -16,6 +16,7 @@ func NewRunCmd() *cobra.Command {
 		debug     bool
 		debugJSON bool
 		slow      bool
+		dumpCmd   bool
 	)
 
 	cmd := &cobra.Command{
@@ -92,10 +93,15 @@ Examples:
 				Debug:      debug,
 				DebugJSON:  debugJSON,
 				Slow:       slow,
+				DumpCommand: dumpCmd,
 			}
 			result, err := app.RunScript.Run(cmd.Context(), params)
 			if err != nil {
 				return err
+			}
+			if params.DumpCommand {
+				fmt.Print(result.DumpedCommand)
+				return nil
 			}
 			if result.Error != nil {
 				return result.Error
@@ -122,6 +128,7 @@ Examples:
 	cmd.Flags().BoolVar(&slow, "slow", false, "Run forge with --slow")
 	cmd.Flags().BoolVar(&debug, "debug", false, "Enable debug mode (shows forge output and saves to file)")
 	cmd.Flags().BoolVar(&debugJSON, "debug-json", false, "Enable JSON debug mode (shows raw JSON output)")
+	cmd.Flags().BoolVar(&dumpCmd, "dump-command", false, "Print the underlying forge command (with injected env vars) without executing")
 	cmd.Flags().BoolP("verbose", "v", false, "Show extra detailed information for events and transactions")
 
 	return cmd

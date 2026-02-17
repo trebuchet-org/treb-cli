@@ -10,7 +10,7 @@ bytecode_hash = "none"
 cbor_metadata = false
 
 [rpc_endpoints]
-celo-alfajores = "https://alfajores-forno.celo-testnet.org"
+celo-sepolia = "https://forno.celo-sepolia.celo-testnet.org"
 base-sepolia = "https://sepolia.base.org"
 polygon = "https://polygon-rpc.com"
 celo = "https://forno.celo.org"
@@ -19,7 +19,7 @@ anvil-31338 = "http://localhost:9545"
 
 [etherscan]
 sepolia = { key = "${ETHERSCAN_API_KEY}" }
-celo-alfajores = { key = "${ETHERSCAN_API_KEY}", chain = 44787 }
+celo-sepolia = { key = "${ETHERSCAN_API_KEY}", chain = 11142220 }
 celo = { key = "${ETHERSCAN_API_KEY}", chain = 42220 }
 
 [profile.default.treb.senders.anvil]

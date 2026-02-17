@@ -9,7 +9,7 @@ This is **treb** (Trebuchet) - a Go CLI tool that orchestrates Foundry script ex
 ## Architecture
 
 ### Core Components
-- **Go CLI** (`cli/`): Orchestration layer with commands for init, deploy, predict, verify, and registry management
+- **Go CLI** (`internal/`): Orchestration layer with commands for init, run, generate, list, show, verify, and registry management
 - **Foundry Library** (`treb-sol/`): Git submodule containing Solidity base contracts and utilities
 - **Registry System**: JSON-based deployment tracking with enhanced metadata (versions, verification status, salt/address tracking)
 - **CreateX Integration**: Deterministic deployments across chains using CreateX factory
@@ -30,34 +30,21 @@ make install       # Install treb globally (copies to /usr/local/bin)
 make clean         # Clean build artifacts
 
 # Testing
-make test          # Run all unit tests
-make integration   # Run integration tests (builds binaries & contracts first)
-make test-all      # Run both unit and integration tests
-make golden-test   # Update golden test files (UPDATE_GOLDEN=true make golden-test)
+make unit-test       # Run all unit tests
+make integration-test # Run integration tests (builds binaries & contracts first)
 
 # Development Tools
 make fmt           # Format Go code with gofumpt
 make lint          # Run golangci-lint checks
 make dev-setup     # Install required development tools (gofumpt, golangci-lint)
-make watch         # Auto-rebuild on file changes (requires watchman)
-
-# Running treb
-make run ARGS="list"                    # Run treb with arguments
-make run ARGS="deploy Counter --network sepolia"
-make run ARGS="show Counter --json"
-
-# Foundry Integration
-make install-forge # Install Foundry if not present
-make bindings      # Generate Foundry bindings from treb-sol
-
-# Other Commands
-make example       # Create an example project in /tmp
-make coverage      # Generate test coverage report
+make watch         # Auto-rebuild on file changes (requires fswatch)
+make bindings      # Generate Go bindings from treb-sol ABIs
 
 # IMPORTANT: Always run before committing
-make fmt           # Format code
-make lint          # Check for linting issues  
-make test-all      # Run all tests including integration
+make fmt             # Format code
+make lint            # Check for linting issues
+make unit-test       # Run unit tests
+make integration-test # Run integration tests
 ```
 
 ### Integration Testing for Feature Development
@@ -76,7 +63,7 @@ make test-all      # Run all tests including integration
 
 ```bash
 # Run all integration tests
-make integration
+make integration-test
 
 # Run specific test suite
 cd test/integration && go test -run TestListCommand -v
@@ -257,19 +244,19 @@ cp .env.example .env && edit .env
 
 ## Deployment Workflow
 
-The `treb deploy` command follows this flow:
+The `treb run` command follows this flow:
 
-1. **Validation**: Check deploy configuration in `foundry.toml` under `[deploy.contracts]`
-2. **Build**: Execute `forge build` to compile contracts
-3. **Script Generation**: Check/generate deploy script in `script/deploy/`
-4. **Network Resolution**: Load network config from environment or CLI flags
-5. **Script Execution**: Run forge script with proper environment variables
-6. **Broadcast Parsing**: Extract deployment results from broadcast files
-7. **Registry Update**: Record deployment in `deployments.json` with full metadata
+1. **Script Resolution**: Resolve the script reference to a contract artifact
+2. **Parameter Resolution**: Extract parameters from natspec annotations and resolve values
+3. **Network Resolution**: Load network config from configuration context or CLI flags
+4. **Sender Resolution**: Build sender configuration from foundry.toml profiles
+5. **Script Execution**: Run forge script with proper environment variables and parameters
+6. **Result Hydration**: Parse script output and broadcast files into domain models
+7. **Registry Update**: Record deployments and transactions in `.treb/` registry files
 
 ## Registry Schema
 
-The registry (`deployments.json`) is a comprehensive JSON structure tracking:
+The registry (`.treb/deployments.json`) is a comprehensive JSON structure tracking:
 - Project metadata (name, version, commit, timestamp)
 - Per-network deployments with:
   - Contract addresses and deployment type (implementation/proxy)
@@ -281,24 +268,23 @@ The registry (`deployments.json`) is a comprehensive JSON structure tracking:
 
 ## Configuration
 
-### foundry.toml Deploy Profiles
+### foundry.toml Sender Profiles
 ```toml
-# Default profile with private key deployment
-[profile.default.deployer]
+# Default profile with private key sender
+[profile.default.treb.senders.deployer]
 type = "private_key"
 private_key = "${DEPLOYER_PRIVATE_KEY}"
 
-# Staging profile with Safe multisig
-[profile.staging.deployer]
+# Production profile with Safe multisig sender
+[profile.production.treb.senders.safe]
 type = "safe"
 safe = "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
-proposer = { type = "private_key", private_key = "${DEPLOYER_PRIVATE_KEY}" }
+signer = "proposer"
 
-# Production profile with hardware wallet
-[profile.production.deployer]
-type = "safe"
-safe = "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
-proposer = { type = "ledger", derivation_path = "${PROD_PROPOSER_DERIVATION_PATH}" }
+# Hardware wallet proposer
+[profile.production.treb.senders.proposer]
+type = "ledger"
+derivation_path = "${PROD_PROPOSER_DERIVATION_PATH}"
 ```
 
 ### Environment Variables
@@ -309,47 +295,57 @@ ETHERSCAN_API_KEY=...                # For contract verification
 RPC_URL=...                          # Network RPC endpoint
 ```
 
-### Deploy Command Options
+### Run Command Options
 ```bash
-# Deploy with specific profile
-treb deploy Counter --profile staging
+# Run a deployment script
+treb run script/deploy/DeployCounter.s.sol
 
-# Deploy with custom label (affects salt/address)
-treb deploy Counter --label v2
+# Run with environment variables
+treb run DeployCounter --env LABEL=v1
 
-# Deploy with version tag (metadata only)
-treb deploy Counter --tag 1.0.0
+# Run with specific network and namespace
+treb run DeployCounter --network sepolia --namespace production
+
+# Dry run (simulate without broadcasting)
+treb run DeployCounter --dry-run
 ```
 
 ## CLI Commands
 
 ### Main Commands
-- `treb init <project-name>`: Initialize a new treb project with deployment configuration
-- `treb deploy <contract>`: Deploy a contract using its deployment script
+- `treb init`: Initialize a new treb project with deployment configuration
+- `treb run <script>`: Run a Foundry script with treb infrastructure
+- `treb gen deploy <contract>`: Generate a deployment script for a contract
 - `treb list`: List all deployments in the registry
 - `treb show <contract>`: Show detailed deployment information for a contract
 - `treb verify <contract>`: Verify deployed contracts on block explorers
-- `treb generate <contract>`: Generate deployment script for a contract
+- `treb compose`: Execute orchestrated deployments from a YAML configuration
 
-### Management Commands  
-- `treb tag <contract> <tag>`: Tag a deployment with a version or label
+### Management Commands
+- `treb config`: Manage treb local configuration (`set`, `remove` subcommands)
 - `treb sync`: Sync deployment registry with on-chain state
-- `treb config`: Manage deployment configuration
-
-### Additional Commands
-- `treb debug <command>`: Debug deployment issues
+- `treb tag <contract> <tag>`: Tag a deployment with a version or label
+- `treb register`: Register an existing contract deployment in the registry
+- `treb networks`: List available networks from foundry.toml
+- `treb prune`: Prune registry entries that no longer exist on-chain
+- `treb reset`: Reset all registry entries for the current namespace and network
+- `treb dev`: Development utilities (`dev anvil start/stop/restart/status/logs`)
 - `treb version`: Show treb version information
 
 ## Important File Locations
 
 ### Go CLI Structure
-- `cli/cmd/`: Command implementations (deploy.go, init.go, etc.)
-- `cli/pkg/deployment/`: Core deployment logic and execution
-- `cli/pkg/forge/`: Forge command execution and integration
-- `cli/pkg/registry/`: Deployment registry management
-- `cli/pkg/broadcast/`: Broadcast file parsing
-- `cli/pkg/verification/`: Contract verification logic
-- `cli/pkg/safe/`: Safe multisig integration
+- `cli/`: CLI entrypoint
+- `internal/cli/`: Cobra command implementations (run.go, list.go, show.go, etc.)
+- `internal/cli/render/`: Presentation/rendering layer
+- `internal/cli/interactive/`: Interactive selection components
+- `internal/usecase/`: Use case implementations (business logic)
+- `internal/usecase/ports.go`: Port interfaces for adapters
+- `internal/domain/`: Domain models, filters, and configuration types
+- `internal/adapters/`: Adapter implementations (forge, blockchain, repository, etc.)
+- `internal/app/`: Application wiring (DI with Wire)
+- `internal/config/`: Configuration resolution and network management
+- `pkg/safe/`: Safe multisig API client
 
 ### Solidity Base Contracts (treb-sol/)
 - `src/Deployment.sol`: Base deployment contract with structured logging
@@ -358,6 +354,8 @@ treb deploy Counter --tag 1.0.0
 - `src/internal/`: Internal utilities and registry contracts
 
 ### Configuration Files
-- `foundry.toml`: Foundry configuration with deploy profiles
-- `deployments.json`: Deployment registry tracking all deployments
+- `foundry.toml`: Foundry configuration with sender profiles and RPC endpoints
+- `.treb/deployments.json`: Deployment registry tracking all deployments
+- `.treb/transactions.json`: Transaction registry tracking script executions
+- `.treb/config.json`: Local project configuration (namespace, network)
 - `.env`: Environment variables for RPC URLs, keys, etc.
