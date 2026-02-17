@@ -127,22 +127,26 @@ treb show Token
 
 ## 📋 Commands
 
-### Core Commands
+### Main Commands
 
-- `treb run <script>` - Run a deployment script with automatic parameter handling
+- `treb init` - Initialize a new treb project
+- `treb run <script>` - Run a Foundry script with treb infrastructure
 - `treb gen deploy <contract>` - Generate a deployment script for a contract
 - `treb list` - List all deployments in the registry
 - `treb show <contract>` - Show detailed deployment information
 - `treb verify <contract>` - Verify contracts on block explorers
+- `treb compose` - Execute orchestrated deployments from a YAML configuration
 
-### Script Commands
+### Management Commands
 
+- `treb config` - Manage treb local configuration
 - `treb sync` - Sync registry with on-chain state
 - `treb tag <contract> <tag>` - Tag a deployment version
-
-### Development Commands
-
-- `treb init` - Initialize a new treb project
+- `treb register` - Register an existing contract deployment in the registry
+- `treb networks` - List available networks from foundry.toml
+- `treb prune` - Prune registry entries that no longer exist on-chain
+- `treb reset` - Reset all registry entries for the current namespace and network
+- `treb dev` - Development utilities (anvil management)
 - `treb version` - Show version information
 
 ## 🎯 Script Parameters

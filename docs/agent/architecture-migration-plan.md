@@ -18,8 +18,10 @@ The treb CLI currently has the following commands:
 - `config` - Manage treb configuration
 - `sync` - Sync registry with on-chain state
 - `tag` - Tag deployments with versions/labels
-- `orchestrate` - Execute deployment orchestration from YAML
-- `prune` - Remove deployments from registry
+- `compose` - Execute orchestrated deployments from YAML configuration
+- `register` - Register an existing contract deployment in the registry
+- `prune` - Prune registry entries that no longer exist on-chain
+- `reset` - Reset all registry entries for the current namespace and network
 - `networks` - List available networks
 - `dev` - Development tools (anvil management)
 - `version` - Show version information
@@ -98,7 +100,7 @@ Current interfaces found:
 - `cmd/config.go` → `usecase/manage_config.go`
 - `cmd/sync.go` → `usecase/sync_registry.go`
 - `cmd/tag.go` → `usecase/tag_deployment.go`
-- `cmd/orchestrate.go` → `usecase/orchestrate_deployment.go`
+- `cmd/compose.go` → `usecase/compose_deployment.go`
 
 ### Ports (Interfaces) (`internal/usecase/ports.go`)
 ```go
