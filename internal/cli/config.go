@@ -42,11 +42,12 @@ func NewConfigSetCmd() *cobra.Command {
 		Use:   "set <key> <value>",
 		Short: "Set a config value",
 		Long: `Set a config value in the .treb file.
-Available keys: namespace (ns), network
+Available keys: namespace (ns), network, fork.setup
 
 Examples:
   treb config set namespace production
-  treb config set network sepolia`,
+  treb config set network sepolia
+  treb config set fork.setup script/SetupFork.s.sol`,
 		Args:         cobra.ExactArgs(2),
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {

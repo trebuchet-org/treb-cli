@@ -11,6 +11,7 @@ import (
 
 	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"github.com/trebuchet-org/treb-cli/internal/domain/config"
+	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
 // EnterFork handles entering fork mode for a network
@@ -19,6 +20,8 @@ type EnterFork struct {
 	forkState    ForkStateStore
 	forkFiles    ForkFileManager
 	anvilManager AnvilManager
+	localConfig  LocalConfigRepository
+	forgeRunner  ForgeScriptRunner
 }
 
 // NewEnterFork creates a new EnterFork use case
@@ -27,12 +30,16 @@ func NewEnterFork(
 	forkState ForkStateStore,
 	forkFiles ForkFileManager,
 	anvilManager AnvilManager,
+	localConfig LocalConfigRepository,
+	forgeRunner ForgeScriptRunner,
 ) *EnterFork {
 	return &EnterFork{
 		cfg:          cfg,
 		forkState:    forkState,
 		forkFiles:    forkFiles,
 		anvilManager: anvilManager,
+		localConfig:  localConfig,
+		forgeRunner:  forgeRunner,
 	}
 }
 
@@ -46,8 +53,9 @@ type EnterForkParams struct {
 
 // EnterForkResult contains the result of entering fork mode
 type EnterForkResult struct {
-	ForkEntry *domain.ForkEntry
-	Message   string
+	ForkEntry      *domain.ForkEntry
+	Message        string
+	SetupScriptRan bool
 }
 
 // Execute enters fork mode for the specified network
@@ -100,13 +108,26 @@ func (uc *EnterFork) Execute(ctx context.Context, params EnterForkParams) (*Ente
 		return nil, fmt.Errorf("fork anvil started but is not healthy")
 	}
 
-	// Backup registry files to snapshot 0
+	// Build fork env overrides for setup script execution
+	forkURL := fmt.Sprintf("http://127.0.0.1:%d", port)
+	forkEnvOverrides := map[string]string{
+		params.EnvVarName: forkURL,
+	}
+
+	// Execute SetupFork script if configured
+	setupScriptRan, err := uc.executeSetupFork(ctx, params, forkEnvOverrides)
+	if err != nil {
+		_ = uc.anvilManager.Stop(ctx, instance)
+		return nil, fmt.Errorf("setup fork script failed: %w", err)
+	}
+
+	// Backup registry files to snapshot 0 (AFTER SetupFork so snapshot captures setup state)
 	if err := uc.forkFiles.BackupFiles(ctx, params.Network, 0); err != nil {
 		_ = uc.anvilManager.Stop(ctx, instance)
 		return nil, fmt.Errorf("failed to backup registry files: %w", err)
 	}
 
-	// Take initial EVM snapshot
+	// Take initial EVM snapshot (AFTER SetupFork so snapshot captures setup state)
 	snapshotID, err := uc.anvilManager.TakeSnapshot(ctx, instance)
 	if err != nil {
 		_ = uc.anvilManager.Stop(ctx, instance)
@@ -114,7 +135,6 @@ func (uc *EnterFork) Execute(ctx context.Context, params EnterForkParams) (*Ente
 	}
 
 	// Build fork entry
-	forkURL := fmt.Sprintf("http://127.0.0.1:%d", port)
 	entry := &domain.ForkEntry{
 		Network:     params.Network,
 		ChainID:     params.ChainID,
@@ -149,9 +169,73 @@ func (uc *EnterFork) Execute(ctx context.Context, params EnterForkParams) (*Ente
 	}
 
 	return &EnterForkResult{
-		ForkEntry: entry,
-		Message:   fmt.Sprintf("Fork mode entered for network '%s'", params.Network),
+		ForkEntry:      entry,
+		Message:        fmt.Sprintf("Fork mode entered for network '%s'", params.Network),
+		SetupScriptRan: setupScriptRan,
 	}, nil
+}
+
+// executeSetupFork runs the configured fork setup script if it exists.
+// Returns (true, nil) if a script was executed successfully,
+// (false, nil) if no script is configured or file doesn't exist,
+// (false, error) if execution failed.
+func (uc *EnterFork) executeSetupFork(ctx context.Context, params EnterForkParams, forkEnvOverrides map[string]string) (bool, error) {
+	// Load local config to check for fork.setup
+	localCfg, err := uc.localConfig.Load(ctx)
+	if err != nil {
+		// No config file - skip silently
+		return false, nil
+	}
+
+	if localCfg.ForkSetup == "" {
+		return false, nil
+	}
+
+	// Check if the script file exists
+	scriptPath := localCfg.ForkSetup
+	if !filepath.IsAbs(scriptPath) {
+		scriptPath = filepath.Join(uc.cfg.ProjectRoot, scriptPath)
+	}
+
+	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
+		// Script file doesn't exist - skip silently
+		return false, nil
+	}
+
+	// Build minimal network config for the script
+	network := &config.Network{
+		Name:    params.Network,
+		ChainID: params.ChainID,
+		RPCURL:  params.RPCURL,
+	}
+
+	// Build minimal contract for the script (just needs the path)
+	script := &models.Contract{
+		Name: filepath.Base(localCfg.ForkSetup),
+		Path: localCfg.ForkSetup,
+	}
+
+	// Execute the setup script with fork env overrides
+	runConfig := RunScriptConfig{
+		Script:           script,
+		Network:          network,
+		Namespace:        uc.cfg.Namespace,
+		Parameters:       map[string]string{},
+		DryRun:           false,
+		Debug:            false,
+		ForkEnvOverrides: forkEnvOverrides,
+	}
+
+	result, err := uc.forgeRunner.RunScript(ctx, runConfig)
+	if err != nil {
+		return false, fmt.Errorf("failed to execute setup script '%s': %w", localCfg.ForkSetup, err)
+	}
+
+	if !result.Success {
+		return false, fmt.Errorf("setup script '%s' failed", localCfg.ForkSetup)
+	}
+
+	return true, nil
 }
 
 // getAvailablePort finds an available TCP port

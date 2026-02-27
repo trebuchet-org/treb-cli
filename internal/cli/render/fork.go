@@ -25,6 +25,9 @@ func (r *ForkRenderer) RenderEnter(result *usecase.EnterForkResult) error {
 	fmt.Printf("  Fork URL:     %s\n", entry.ForkURL)
 	fmt.Printf("  Anvil PID:    %d\n", entry.AnvilPID)
 	fmt.Printf("  Env Override: %s=%s\n", entry.EnvVarName, entry.ForkURL)
+	if result.SetupScriptRan {
+		fmt.Printf("  Setup:        executed successfully\n")
+	}
 	fmt.Println()
 	fmt.Println("Run 'treb fork status' to check fork state")
 	fmt.Println("Run 'treb fork exit' to stop fork and restore original state")

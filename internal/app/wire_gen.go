@@ -103,7 +103,7 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 	registerDeployment := usecase.NewRegisterDeployment(runtimeConfig, fileRepository, checkerAdapter, repository)
 	manageAnvil := usecase.NewManageAnvil(manager, spinnerProgressReporter)
 	initProject := usecase.NewInitProject(fileWriterAdapter, spinnerProgressReporter)
-	enterFork := usecase.NewEnterFork(runtimeConfig, forkStateStoreAdapter, forkFileManagerAdapter, manager)
+	enterFork := usecase.NewEnterFork(runtimeConfig, forkStateStoreAdapter, forkFileManagerAdapter, manager, localConfigStoreAdapter, forgeAdapter)
 	exitFork := usecase.NewExitFork(runtimeConfig, forkStateStoreAdapter, forkFileManagerAdapter, manager)
 	revertFork := usecase.NewRevertFork(runtimeConfig, forkStateStoreAdapter, forkFileManagerAdapter, manager)
 	renderer := render.NewGenerateRenderer()

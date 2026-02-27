@@ -85,6 +85,9 @@ func (uc *RemoveConfig) Run(ctx context.Context, params RemoveConfigParams) (*Re
 	case config.ConfigKeyNetwork:
 		removedValue = localConfig.Network
 		localConfig.Network = ""
+	case config.ConfigKeyForkSetup:
+		removedValue = localConfig.ForkSetup
+		localConfig.ForkSetup = ""
 	}
 
 	// Save the updated config

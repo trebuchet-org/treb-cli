@@ -550,6 +550,127 @@ func TestForkPreRunSnapshots(t *testing.T) {
 	RunIntegrationTests(t, tests)
 }
 
+// ethGetBalance makes an eth_getBalance RPC call and returns the balance as a hex string
+func ethGetBalance(t *testing.T, rpcURL, address string) string {
+	t.Helper()
+
+	reqBody, err := json.Marshal(map[string]interface{}{
+		"jsonrpc": "2.0",
+		"method":  "eth_getBalance",
+		"params":  []interface{}{address, "latest"},
+		"id":      1,
+	})
+	require.NoError(t, err)
+
+	resp, err := http.Post(rpcURL, "application/json", bytes.NewBuffer(reqBody)) //nolint:gosec
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	var rpcResp struct {
+		Result string `json:"result"`
+	}
+	require.NoError(t, json.Unmarshal(body, &rpcResp))
+
+	return rpcResp.Result
+}
+
+func TestForkSetupScript(t *testing.T) {
+	tests := []IntegrationTest{
+		{
+			Name: "fork_enter_with_setup_script",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				s("config set fork.setup script/setup/SetupFork.s.sol"),
+			},
+			TestCmds: [][]string{
+				{"fork", "enter", "anvil-31337"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				// Verify fork entered successfully
+				assert.Contains(t, output, "Fork mode entered")
+				assert.Contains(t, output, "Setup")
+
+				// Read fork state to get the fork URL
+				state := readForkState(t, ctx)
+				fork := state.Forks["anvil-31337"]
+				require.NotNil(t, fork, "fork entry should exist")
+
+				// Verify the setup script ran by checking that the known address has 100 ETH
+				// The SetupFork script calls vm.deal(0x1234...7890, 100 ether)
+				balance := ethGetBalance(t, fork.ForkURL, "0x1234567890123456789012345678901234567890")
+				assert.NotEqual(t, "0x0", balance, "test address should have ETH after setup script")
+				// 100 ether = 100 * 10^18 = 0x56bc75e2d63100000
+				assert.Equal(t, "0x56bc75e2d63100000", balance,
+					"test address should have exactly 100 ETH")
+			},
+		},
+		{
+			Name: "fork_enter_with_failing_setup_script",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				s("config set fork.setup script/setup/SetupForkFailing.s.sol"),
+			},
+			TestCmds: [][]string{
+				{"fork", "enter", "anvil-31337"},
+			},
+			ExpectErr:  true,
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				// Verify error message mentions setup script failure
+				assert.Contains(t, output, "setup fork script failed")
+
+				workDir := ctx.TrebContext.GetWorkDir()
+
+				// Verify no fork state file created (fork was aborted)
+				statePath := filepath.Join(workDir, ".treb", "priv", "fork-state.json")
+				_, err := os.Stat(statePath)
+				assert.True(t, os.IsNotExist(err), "fork-state.json should not exist after failed setup")
+			},
+		},
+		{
+			Name: "fork_enter_without_setup_config",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				// No fork.setup configured
+			},
+			TestCmds: [][]string{
+				{"fork", "enter", "anvil-31337"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				// Verify fork entered successfully without setup
+				assert.Contains(t, output, "Fork mode entered")
+				assert.NotContains(t, output, "Setup")
+
+				// Verify fork state exists and is valid
+				state := readForkState(t, ctx)
+				fork := state.Forks["anvil-31337"]
+				require.NotNil(t, fork, "fork entry should exist")
+				assert.Len(t, fork.Snapshots, 1, "should have initial snapshot")
+			},
+		},
+	}
+
+	RunIntegrationTests(t, tests)
+}
+
 func TestForkRevertCommand(t *testing.T) {
 	tests := []IntegrationTest{
 		{
