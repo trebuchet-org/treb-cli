@@ -274,12 +274,12 @@ func (r *DeploymentsRenderer) buildDeploymentTable(deployments []*models.Deploym
 		// Get display names for comparison
 		nameI := deployments[i].ContractDisplayName()
 		nameJ := deployments[j].ContractDisplayName()
-		
+
 		// If names are the same, sort by timestamp (newest first)
 		if nameI == nameJ {
 			return deployments[i].CreatedAt.After(deployments[j].CreatedAt)
 		}
-		
+
 		return nameI < nameJ
 	})
 

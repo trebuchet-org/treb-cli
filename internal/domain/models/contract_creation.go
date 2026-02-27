@@ -8,5 +8,3 @@ type ContractCreation struct {
 	IsProxy        bool   // True if this contract is a proxy
 	Implementation string // Address of the implementation contract (if this is a proxy)
 }
-
-

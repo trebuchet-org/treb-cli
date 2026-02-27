@@ -25,10 +25,10 @@ type RunScriptParams struct {
 
 // RunScriptResult contains the result of running a script
 type RunScriptResult struct {
-	RunResult *forge.HydratedRunResult
-	Changeset *models.Changeset
-	Success   bool
-	Error     error
+	RunResult     *forge.HydratedRunResult
+	Changeset     *models.Changeset
+	Success       bool
+	Error         error
 	DumpedCommand string
 }
 

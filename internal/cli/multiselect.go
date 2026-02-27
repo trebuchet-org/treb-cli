@@ -115,7 +115,7 @@ func (m multiSelectModel) View() string {
 			proxyInfo = color.New(color.FgMagenta).Sprintf(" → Proxy")
 		}
 
-		b.WriteString(fmt.Sprintf("%s %s %s %s%s\n", cursor, checkbox, address, kind, proxyInfo))
+		fmt.Fprintf(&b, "%s %s %s %s%s\n", cursor, checkbox, address, kind, proxyInfo)
 	}
 
 	b.WriteString("\n")
@@ -157,4 +157,3 @@ func SelectContracts(creations []models.ContractCreation, title string) ([]int, 
 
 	return selectedIndices, nil
 }
-
