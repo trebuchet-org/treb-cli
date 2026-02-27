@@ -41,3 +41,15 @@ func (r *ForkRenderer) RenderExit(result *usecase.ExitForkResult) error {
 	}
 	return nil
 }
+
+// RenderRevert renders the result of fork revert
+func (r *ForkRenderer) RenderRevert(result *usecase.RevertForkResult) error {
+	fmt.Println(result.Message)
+	fmt.Println()
+	if result.RevertedCommand != "" {
+		fmt.Printf("  Reverted:   %s\n", result.RevertedCommand)
+	}
+	fmt.Printf("  Reverted:   %d snapshot(s)\n", result.RevertedCount)
+	fmt.Printf("  Remaining:  %d snapshot(s)\n", result.RemainingSnapshots)
+	return nil
+}

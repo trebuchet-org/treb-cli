@@ -549,3 +549,161 @@ func TestForkPreRunSnapshots(t *testing.T) {
 
 	RunIntegrationTests(t, tests)
 }
+
+func TestForkRevertCommand(t *testing.T) {
+	tests := []IntegrationTest{
+		{
+			Name: "fork_revert_restores_last_run",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"fork", "enter", "anvil-31337"},
+				{"run", "script/deploy/DeployCounter.s.sol"},
+			},
+			TestCmds: [][]string{
+				{"fork", "revert", "anvil-31337"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				workDir := ctx.TrebContext.GetWorkDir()
+
+				// Verify output
+				assert.Contains(t, output, "Reverted")
+				assert.Contains(t, output, "DeployCounter")
+
+				// Verify Counter no longer in deployments.json
+				deploymentsPath := filepath.Join(workDir, ".treb", "deployments.json")
+				data, err := os.ReadFile(deploymentsPath)
+				if err == nil {
+					assert.NotContains(t, string(data), "Counter",
+						"Counter deployment should be reverted")
+				}
+
+				// Verify fork state has only initial snapshot
+				state := readForkState(t, ctx)
+				fork := state.Forks["anvil-31337"]
+				require.NotNil(t, fork, "fork entry should still exist")
+				assert.Len(t, fork.Snapshots, 1, "should have only initial snapshot after revert")
+				assert.Equal(t, 0, fork.Snapshots[0].Index)
+				assert.Equal(t, "fork enter", fork.Snapshots[0].Command)
+
+				// Verify snapshot 1 directory is cleaned up
+				snapshot1Dir := filepath.Join(workDir, ".treb", "priv", "fork", "anvil-31337", "snapshots", "1")
+				_, err = os.Stat(snapshot1Dir)
+				assert.True(t, os.IsNotExist(err), "snapshot 1 directory should be removed after revert")
+			},
+		},
+		{
+			Name: "fork_revert_partial_keeps_earlier_deploy",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"gen", "deploy", "src/SampleToken.sol:SampleToken"},
+				{"fork", "enter", "anvil-31337"},
+				{"run", "script/deploy/DeployCounter.s.sol"},
+				{"run", "script/deploy/DeploySampleToken.s.sol"},
+			},
+			TestCmds: [][]string{
+				{"fork", "revert", "anvil-31337"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				workDir := ctx.TrebContext.GetWorkDir()
+
+				// Verify output mentions SampleToken (the reverted command)
+				assert.Contains(t, output, "DeploySampleToken")
+
+				// Counter should still be deployed (only SampleToken was reverted)
+				deploymentsPath := filepath.Join(workDir, ".treb", "deployments.json")
+				data, err := os.ReadFile(deploymentsPath)
+				require.NoError(t, err, "deployments.json should exist")
+				assert.Contains(t, string(data), "Counter",
+					"Counter should still be in deployments after partial revert")
+				assert.NotContains(t, string(data), "SampleToken",
+					"SampleToken should be reverted from deployments")
+
+				// Verify fork state has 2 snapshots (initial + Counter's pre-run)
+				state := readForkState(t, ctx)
+				fork := state.Forks["anvil-31337"]
+				require.NotNil(t, fork)
+				assert.Len(t, fork.Snapshots, 2, "should have 2 snapshots (initial + first run)")
+			},
+		},
+		{
+			Name: "fork_revert_all_restores_initial_state",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"gen", "deploy", "src/SampleToken.sol:SampleToken"},
+				{"fork", "enter", "anvil-31337"},
+				{"run", "script/deploy/DeployCounter.s.sol"},
+				{"run", "script/deploy/DeploySampleToken.s.sol"},
+			},
+			TestCmds: [][]string{
+				{"fork", "revert", "--all", "anvil-31337"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				workDir := ctx.TrebContext.GetWorkDir()
+
+				// Verify output
+				assert.Contains(t, output, "Reverted 2 run(s)")
+				assert.Contains(t, output, "initial fork state")
+
+				// Both deployments should be gone
+				deploymentsPath := filepath.Join(workDir, ".treb", "deployments.json")
+				data, err := os.ReadFile(deploymentsPath)
+				if err == nil {
+					assert.NotContains(t, string(data), "Counter",
+						"Counter should be reverted after --all")
+					assert.NotContains(t, string(data), "SampleToken",
+						"SampleToken should be reverted after --all")
+				}
+
+				// Verify fork state has only initial snapshot
+				state := readForkState(t, ctx)
+				fork := state.Forks["anvil-31337"]
+				require.NotNil(t, fork)
+				assert.Len(t, fork.Snapshots, 1, "should have only initial snapshot after revert --all")
+				assert.Equal(t, 0, fork.Snapshots[0].Index)
+			},
+		},
+		{
+			Name: "fork_revert_nothing_to_revert",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"fork", "enter", "anvil-31337"},
+			},
+			TestCmds: [][]string{
+				{"fork", "revert", "anvil-31337"},
+			},
+			ExpectErr:  true,
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				assert.Contains(t, output, "nothing to revert")
+			},
+		},
+	}
+
+	RunIntegrationTests(t, tests)
+}

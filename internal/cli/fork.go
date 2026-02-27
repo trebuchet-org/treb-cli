@@ -20,6 +20,7 @@ func NewForkCmd() *cobra.Command {
 
 	cmd.AddCommand(newForkEnterCmd())
 	cmd.AddCommand(newForkExitCmd())
+	cmd.AddCommand(newForkRevertCmd())
 
 	return cmd
 }
@@ -168,4 +169,57 @@ func runForkExit(cmd *cobra.Command, args []string) error {
 
 	renderer := render.NewForkRenderer()
 	return renderer.RenderExit(result)
+}
+
+// newForkRevertCmd creates the fork revert subcommand
+func newForkRevertCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "revert [network]",
+		Short: "Revert the last treb run on a fork",
+		Long: `Undo the last treb run by restoring EVM state and registry files from the
+most recent snapshot.
+
+Use --all to revert all runs and restore to the initial fork state.
+If no network is specified, uses the currently configured network.`,
+		Args:         cobra.MaximumNArgs(1),
+		SilenceUsage: true,
+		RunE:         runForkRevert,
+	}
+
+	cmd.Flags().Bool("all", false, "Revert all runs to initial fork state")
+
+	return cmd
+}
+
+func runForkRevert(cmd *cobra.Command, args []string) error {
+	app, err := getApp(cmd)
+	if err != nil {
+		return err
+	}
+
+	ctx := cmd.Context()
+	allFlag, _ := cmd.Flags().GetBool("all")
+
+	network := ""
+	if len(args) > 0 {
+		network = args[0]
+	} else {
+		// Use current configured network
+		if app.Config.Network != nil {
+			network = app.Config.Network.Name
+		}
+	}
+
+	params := usecase.RevertForkParams{
+		Network: network,
+		All:     allFlag,
+	}
+
+	result, err := app.RevertFork.Execute(ctx, params)
+	if err != nil {
+		return err
+	}
+
+	renderer := render.NewForkRenderer()
+	return renderer.RenderRevert(result)
 }
