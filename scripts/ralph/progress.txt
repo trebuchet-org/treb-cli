@@ -24,6 +24,7 @@ Started: Fri Feb 27 04:32:59 PM CET 2026
 - Forge cheatcodes (vm.deal, vm.store) don't persist on fork nodes via `forge script --broadcast`; use actual transactions or Anvil RPC methods for setup scripts
 - Integration test framework prepends `=== cmd N: [...] ===\n` before stdout; use `extractJSONArray()` helper to parse JSON from framework-wrapped output
 - `loadDeploymentIDs` in usecase package is reusable for any fork vs. baseline deployment comparison
+- Integration tests that need to kill processes and run commands after use `PostTest` with empty `TestCmds` and manual `Treb()` calls
 
 ---
 
@@ -273,4 +274,26 @@ Started: Fri Feb 27 04:32:59 PM CET 2026
   - `isForkDeployment` method follows the exact same pattern as `computeForkDeploymentIDs` in ListDeployments but checks a single deployment ID instead of computing the full set
   - The `RenderDeployment` function uses `color.New(...).Fprint` (not Fprintf) for the header to avoid ANSI codes wrapping the `[fork]` indicator which uses a different color style
   - Pre-existing gosec lint issue in verifier.go (G702) continues to be the only lint failure - not related to fork mode
+---
+
+## 2026-02-27 - US-015
+- Implemented anvil crash detection in RunScript use case: pre-run health check before fork mode runs
+- Created RestartFork use case in `internal/usecase/restart_fork.go`:
+  - Stops dead anvil process, restores files from initial backup (snapshot 0)
+  - Starts fresh fork from original RPC, re-runs SetupFork if configured
+  - Takes new initial EVM snapshot, updates fork state with new entry
+- Added `treb fork restart [network]` CLI command in `internal/cli/fork.go`
+- Added `RenderRestart` method in `internal/cli/render/fork.go`
+- Wired DI: added RestartFork to app.go, wire.go, wire_gen.go
+- `checkForkHealth` method on RunScript: checks PID alive + RPC responsive via GetStatus, returns actionable error with suggested commands
+- `treb fork status` already shows 'dead' for crashed forks (implemented in US-011)
+- `treb fork exit` already handles dead anvil gracefully (implemented in US-006)
+- Integration tests: fork_run_detects_crashed_anvil, fork_status_shows_dead_for_crashed_anvil, fork_exit_cleans_up_crashed_anvil, fork_restart_after_crash_restores_state
+- Files changed: `internal/usecase/run_script.go`, `internal/usecase/restart_fork.go`, `internal/cli/fork.go`, `internal/cli/render/fork.go`, `internal/app/app.go`, `internal/app/wire.go`, `internal/app/wire_gen.go`, `test/integration/fork_test.go`
+- **Learnings for future iterations:**
+  - RestartFork reuses the same dependencies as EnterFork (localConfig, forgeRunner for SetupFork) - it's essentially "exit + enter" in a single use case
+  - `killForkAnvil` test helper uses SIGKILL (not SIGTERM) to simulate a true crash - SIGTERM would be caught by anvil
+  - Integration tests that kill processes and then run more commands need `PostTest` pattern (empty TestCmds, manual Treb() calls in PostTest) since the test framework runs TestCmds before PostTest
+  - The `checkForkHealth` method reloads fork state from disk (not cached) to get the latest fork entry - this is correct since fork state may have been modified by other commands
+  - `getAvailablePort()` in enter_fork.go is reusable by restart_fork.go since it's a package-level function
 ---
