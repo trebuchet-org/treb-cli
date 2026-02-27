@@ -31,6 +31,7 @@ Counter:v1 at 0xdE06172EB8C24165438479C9b69E3F83832d9EA3
 📝 Script Logs:
 ────────────────────────────────────────
   Registry: failed to load registry from .treb/registry.json
+  Registry: failed to load addressbook from .treb/addressbook.json
 
 ✓ Updated registry for anvil-31337 network in namespace default
 ✓ Script execution completed successfully

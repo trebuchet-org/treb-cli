@@ -15,7 +15,7 @@ lint_on_build = false
 [rpc_endpoints]
 celo-sepolia = "https://forno.celo-sepolia.celo-testnet.org"
 base-sepolia = "https://sepolia.base.org"
-polygon = "https://polygon-rpc.com"
+polygon = "https://polygon-bor-rpc.publicnode.com"
 celo = "https://forno.celo.org"
 anvil-31337 = "http://localhost:8545"
 anvil-31338 = "http://localhost:9545"

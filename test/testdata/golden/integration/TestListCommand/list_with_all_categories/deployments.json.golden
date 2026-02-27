@@ -43,7 +43,7 @@
     "deploymentStrategy": {
       "method": "CREATE3",
       "salt": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226600f6b6fafac5c50203ad95f7",
-      "initCodeHash": "0xb0fccddd5348f57df97b2e20d22db6f44325984b05d906a4dff966964e534969",
+      "initCodeHash": "0x0fa166b4acc0e7ccfaad64b1ac7d2191fadc77ff66fd0f99c7663e7236597fed",
       "factory": "0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed",
       "constructorArgs": "0x000000000000000000000000d63f2d37abb6c1a94a6db9cadcba622ac78d390300000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000024c4d66de8000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
       "entropy": "default/ERC1967Proxy:UpgradeableCounter"
@@ -56,7 +56,7 @@
     "artifact": {
       "path": "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol",
       "compilerVersion": "0.8.30+commit.73712a01",
-      "bytecodeHash": "0x0341fab13b37e7542be1925237d158daf474e173eeb8023145615d521423545b",
+      "bytecodeHash": "0xa079aca2697e34288327e361d91f6b643bb88b87f8cdd162399b5ae065833af4",
       "scriptPath": "script/deploy/DeployUpgradeableCounterProxy.s.sol",
       "gitCommit": ""
     },

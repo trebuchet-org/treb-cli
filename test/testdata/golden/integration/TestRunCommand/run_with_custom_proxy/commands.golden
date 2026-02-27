@@ -54,6 +54,7 @@ Proxy[UpgradeableCounter] at 0x806ca68527807F59Bf2D513889eC6CbD6139BDFf
 📝 Script Logs:
 ────────────────────────────────────────
   Registry: failed to load registry from .treb/registry.json
+  Registry: failed to load addressbook from .treb/addressbook.json
 
 ✓ Updated registry for anvil-31337 network in namespace default
 ✓ Script execution completed successfully
