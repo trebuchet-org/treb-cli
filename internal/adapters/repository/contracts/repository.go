@@ -59,38 +59,16 @@ func (i *Repository) Index() error {
 	i.contractNames = make(map[string][]*models.Contract)
 	i.bytecodeHashIndex = make(map[string]*models.Contract)
 
-	// Check if we need to run forge build
-	outDir := filepath.Join(i.projectRoot, "out")
-	needsBuild := false
-	
-	// Check if out directory exists
-	if info, err := os.Stat(outDir); err != nil || !info.IsDir() {
-		i.log.Debug("out directory not found, build needed")
-		needsBuild = true
-	} else {
-		// Check if out directory has actual artifact JSONs (not just build-info or other non-artifact files)
-		hasArtifacts, scanErr := hasArtifactFiles(outDir)
-		if scanErr != nil {
-			i.log.Debug("failed to scan out directory, build needed", "error", scanErr)
-			needsBuild = true
-		} else if !hasArtifacts {
-			i.log.Debug("no artifact files found in out directory, build needed")
-			needsBuild = true
-		}
-	}
-	
-	// Only run forge build if necessary
-	if needsBuild {
-		if err := i.runForgeBuild(); err != nil {
-			return fmt.Errorf("failed to build contracts: %w", err)
-		}
-	} else {
-		i.log.Debug("skipping forge build, artifacts already exist")
+	// Always run forge build to ensure newly generated scripts are compiled.
+	// Forge's internal cache makes this fast when nothing changed (no --force).
+	if err := i.runForgeBuild(); err != nil {
+		return fmt.Errorf("failed to build contracts: %w", err)
 	}
 
-	// Verify artifacts exist after potential build
-	if ok, _ := hasArtifactFiles(outDir); !ok {
-		return fmt.Errorf("no artifacts found in out directory after build: %s", outDir)
+	// Verify the 'out' directory exists after build
+	outDir := filepath.Join(i.projectRoot, "out")
+	if _, err := os.Stat(outDir); os.IsNotExist(err) {
+		return fmt.Errorf("out directory not found after forge build")
 	}
 
 	// Walk through all artifact directories
@@ -145,28 +123,6 @@ func (i *Repository) runForgeBuild() error {
 
 	i.log.Debug("forge build completed", "duration", duration)
 	return nil
-}
-
-// hasArtifactFiles checks if outDir contains at least one artifact JSON (excluding build-info).
-func hasArtifactFiles(outDir string) (bool, error) {
-	var found bool
-	err := filepath.WalkDir(outDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			if d.Name() == "build-info" {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if filepath.Ext(path) == ".json" {
-			found = true
-			return filepath.SkipAll
-		}
-		return nil
-	})
-	return found, err
 }
 
 // processArtifact processes a single artifact file
