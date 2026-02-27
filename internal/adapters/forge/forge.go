@@ -291,7 +291,7 @@ func (f *ForgeAdapter) buildArgs(config usecase.RunScriptConfig) []string {
 		args = append(args, "--json")
 	}
 
-	if config.Slow {
+	if config.Slow || len(config.ForkEnvOverrides) > 0 {
 		args = append(args, "--slow")
 	}
 	args = append(args, "-vvvv")

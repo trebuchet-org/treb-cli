@@ -92,6 +92,37 @@ func TestBuildEnv_ForkOverrideForDifferentNetwork(t *testing.T) {
 	assert.False(t, hasSepolia, "sepolia var should not exist")
 }
 
+func TestBuildArgs_SlowInForkMode(t *testing.T) {
+	adapter := newTestForgeAdapter()
+	cfg := baseRunScriptConfig()
+	cfg.ForkEnvOverrides = map[string]string{
+		"SEPOLIA_RPC_URL": "http://127.0.0.1:54321",
+	}
+
+	args := adapter.buildArgs(cfg)
+
+	assert.Contains(t, args, "--slow", "fork mode should automatically enable --slow")
+}
+
+func TestBuildArgs_NoSlowWithoutFork(t *testing.T) {
+	adapter := newTestForgeAdapter()
+	cfg := baseRunScriptConfig()
+
+	args := adapter.buildArgs(cfg)
+
+	assert.NotContains(t, args, "--slow", "should not have --slow without fork or explicit flag")
+}
+
+func TestBuildArgs_SlowWithExplicitFlag(t *testing.T) {
+	adapter := newTestForgeAdapter()
+	cfg := baseRunScriptConfig()
+	cfg.Slow = true
+
+	args := adapter.buildArgs(cfg)
+
+	assert.Contains(t, args, "--slow", "explicit --slow flag should work")
+}
+
 func TestBuildEnv_NilForkOverrides(t *testing.T) {
 	adapter := newTestForgeAdapter()
 	cfg := baseRunScriptConfig()
