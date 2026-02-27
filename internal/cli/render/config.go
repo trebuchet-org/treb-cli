@@ -58,9 +58,10 @@ func (r *ConfigRenderer) RenderConfig(result *usecase.ShowConfigResult) error {
 	}
 
 	// Show config source
-	if result.ConfigSource == "treb.toml" {
+	switch result.ConfigSource {
+	case "treb.toml":
 		fmt.Fprintf(r.out, "\n📦 Config source: treb.toml\n")
-	} else if result.ConfigSource == "foundry.toml" {
+	case "foundry.toml":
 		fmt.Fprintf(r.out, "\n📦 Config source: foundry.toml (legacy)\n")
 	}
 
