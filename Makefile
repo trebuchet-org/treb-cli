@@ -9,20 +9,28 @@ LDFLAGS = -X main.version=$(VERSION) \
 					-X main.commit=$(COMMIT) \
 					-X main.date=$(DATE) \
 					-X main.trebSolCommit=$(TREB_SOL_COMMIT)
+# Setup the repo
+setup: 
+	@echo "🔨 Getting submodules"
+	@git submodule init
+	@git submodule update
+	@echo "🔨 Installing forge deps"
+	@cd treb-sol && forge install
 
-# Build the CLI binary
-build: bindings
-	@echo "🔨 Building treb..."
-	@go build -ldflags="$(LDFLAGS)" -tags dev -o bin/treb ./cli
+forge_build:
+	@echo ">> forge build"
+	@cd treb-sol && forge build
 
 bindings: forge_build
 	@echo "🔨 Building bindings..."
 	@cat treb-sol/out/ITrebEvents.sol/ITrebEvents.json | jq ".abi" | abigen --v2 --pkg bindings --type Treb --out internal/domain/bindings/treb.go --abi -
 	@cat treb-sol/out/ICreateX.sol/ICreateX.json | jq ".abi" | abigen --v2 --pkg bindings --type CreateX --out internal/domain/bindings/createx.go --abi -
 
-forge_build:
-	@echo ">> forge build"
-	@cd treb-sol && forge build
+# Build the CLI binary
+build: setup bindings
+	@echo "🔨 Building treb..."
+	@go build -ldflags="$(LDFLAGS)" -tags dev -o bin/treb ./cli
+
 
 # Install globally
 install: 
