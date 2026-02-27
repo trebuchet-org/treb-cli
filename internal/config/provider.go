@@ -37,50 +37,27 @@ func Provider(v *viper.Viper) (*config.RuntimeConfig, error) {
 		DryRun:         v.GetBool("dry_run"),
 	}
 
-	// Load foundry config
+	// Load foundry config (always needed for network resolution etc.)
 	foundryConfig, err := loadFoundryConfig(projectRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load foundry config: %w", err)
 	}
 	cfg.FoundryConfig = foundryConfig
 
-	// Load profile-specific treb config with merging strategy
-	// Start with default profile if it exists
-	var mergedTrebConfig *config.TrebConfig
-	if defaultProfile, ok := foundryConfig.Profile["default"]; ok {
-		// Create a copy of default config
-		mergedTrebConfig = &config.TrebConfig{
-			Senders: make(map[string]config.SenderConfig),
-		}
-		if defaultProfile.Treb != nil && defaultProfile.Treb.Senders != nil {
-			for k, v := range defaultProfile.Treb.Senders {
-				mergedTrebConfig.Senders[k] = v
-			}
-		}
+	// Try treb.toml first; fall back to foundry.toml profiles
+	trebFileConfig, err := loadTrebConfig(projectRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load treb config: %w", err)
 	}
 
-	// If requesting a specific profile, merge it with default
-	if cfg.Namespace != "default" {
-		if profile, ok := foundryConfig.Profile[cfg.Namespace]; ok {
-			if mergedTrebConfig == nil {
-				// No default, use profile directly
-				mergedTrebConfig = profile.Treb
-			} else {
-				// Merge profile with default
-				if profile.Treb != nil {
-					// Override senders - complete replacement per key
-					if profile.Treb.Senders != nil {
-						for k, v := range profile.Treb.Senders {
-							mergedTrebConfig.Senders[k] = v
-						}
-					}
-				}
-			}
-		}
-		// If profile doesn't exist but we have default, use default
+	if trebFileConfig != nil {
+		cfg.ConfigSource = "treb.toml"
+		cfg.TrebConfig, cfg.FoundryProfile = mergeTrebFileConfig(trebFileConfig, cfg.Namespace)
+	} else {
+		cfg.ConfigSource = "foundry.toml"
+		cfg.FoundryProfile = cfg.Namespace
+		cfg.TrebConfig = mergeFoundryTrebConfig(foundryConfig, cfg.Namespace)
 	}
-
-	cfg.TrebConfig = mergedTrebConfig
 
 	if os.Getenv("TREB_DEBUG") != "" {
 		fmt.Printf("DEBUG: Loaded TrebConfig for profile %s\n", cfg.Namespace)
@@ -163,6 +140,72 @@ func SetupViper(projectRoot string, cmd *cobra.Command) *viper.Viper {
 	})
 
 	return v
+}
+
+// mergeTrebFileConfig builds a merged TrebConfig from treb.toml namespaces.
+// It starts with ns.default senders, then overlays ns.<namespace> senders.
+// Returns the merged TrebConfig and the resolved Foundry profile name.
+func mergeTrebFileConfig(trebFile *config.TrebFileConfig, namespace string) (*config.TrebConfig, string) {
+	merged := &config.TrebConfig{
+		Senders: make(map[string]config.SenderConfig),
+	}
+
+	// Start with default namespace senders
+	if defaultNs, ok := trebFile.Ns["default"]; ok {
+		for k, v := range defaultNs.Senders {
+			merged.Senders[k] = v
+		}
+	}
+
+	// Resolve foundry profile: default to namespace name
+	foundryProfile := namespace
+
+	// Overlay active namespace senders (if not "default")
+	if namespace != "default" {
+		if activeNs, ok := trebFile.Ns[namespace]; ok {
+			for k, v := range activeNs.Senders {
+				merged.Senders[k] = v
+			}
+			foundryProfile = activeNs.Profile
+		}
+	} else if defaultNs, ok := trebFile.Ns["default"]; ok {
+		foundryProfile = defaultNs.Profile
+	}
+
+	return merged, foundryProfile
+}
+
+// mergeFoundryTrebConfig builds a merged TrebConfig from foundry.toml profiles.
+// This preserves the legacy behavior: start with profile.default.treb, overlay profile.<namespace>.treb.
+func mergeFoundryTrebConfig(foundryConfig *config.FoundryConfig, namespace string) *config.TrebConfig {
+	var merged *config.TrebConfig
+
+	// Start with default profile if it exists
+	if defaultProfile, ok := foundryConfig.Profile["default"]; ok {
+		merged = &config.TrebConfig{
+			Senders: make(map[string]config.SenderConfig),
+		}
+		if defaultProfile.Treb != nil && defaultProfile.Treb.Senders != nil {
+			for k, v := range defaultProfile.Treb.Senders {
+				merged.Senders[k] = v
+			}
+		}
+	}
+
+	// If requesting a specific profile, merge it with default
+	if namespace != "default" {
+		if profile, ok := foundryConfig.Profile[namespace]; ok {
+			if merged == nil {
+				merged = profile.Treb
+			} else if profile.Treb != nil && profile.Treb.Senders != nil {
+				for k, v := range profile.Treb.Senders {
+					merged.Senders[k] = v
+				}
+			}
+		}
+	}
+
+	return merged
 }
 
 // ProvideNetworkResolver creates a NetworkResolver for Wire dependency injection

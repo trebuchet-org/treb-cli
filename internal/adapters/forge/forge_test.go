@@ -22,9 +22,10 @@ func baseRunScriptConfig() usecase.RunScriptConfig {
 			ChainID: 11155111,
 			RPCURL:  "https://sepolia.example.com",
 		},
-		Namespace:  "default",
-		Script:     &models.Contract{Name: "DeployCounter", Path: "script/deploy/DeployCounter.s.sol"},
-		Parameters: map[string]string{"LABEL": "v1"},
+		Namespace:      "default",
+		FoundryProfile: "default",
+		Script:         &models.Contract{Name: "DeployCounter", Path: "script/deploy/DeployCounter.s.sol"},
+		Parameters:     map[string]string{"LABEL": "v1"},
 		SenderScriptConfig: config.SenderScriptConfig{
 			EncodedConfig: "encoded",
 		},

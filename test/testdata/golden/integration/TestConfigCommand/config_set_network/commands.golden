@@ -8,4 +8,5 @@
 Namespace: default
 Network:   celo
 
+📦 Config source: treb.toml
 📁 config file: .treb/config.local.json

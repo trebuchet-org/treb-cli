@@ -20,9 +20,9 @@ func TestVerifyDeployment_UsesDeploymentResolver(t *testing.T) {
 			networkResolver    NetworkResolver
 			deploymentResolver DeploymentResolver
 		)
-		
+
 		var progress ProgressSink
-		
+
 		uc := NewVerifyDeployment(repo, contractVerifier, networkResolver, deploymentResolver, progress)
 		assert.NotNil(t, uc)
 	})
@@ -38,18 +38,18 @@ func TestVerifyDeployment_UsesDeploymentResolver(t *testing.T) {
 		}
 
 		uc := NewVerifyDeployment(nil, nil, nil, mockResolver, NopProgress{})
-		
+
 		// Test that the filter parameters are properly passed to the query
 		filter := domain.DeploymentFilter{
 			ChainID:   31337,
 			Namespace: "production",
 		}
-		
+
 		_, err := uc.VerifySpecific(context.Background(), "Counter:v2", filter, VerifyOptions{})
-		
+
 		// Error is expected since mock returns not found
 		assert.Error(t, err)
-		
+
 		// Verify the deployment resolver was called with correct query
 		assert.Equal(t, "Counter:v2", capturedQuery.Reference)
 		assert.Equal(t, uint64(31337), capturedQuery.ChainID)

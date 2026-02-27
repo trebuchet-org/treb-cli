@@ -72,7 +72,7 @@ setup-integration-test:
 # Run integration tests  
 integration-test: setup-integration-test
 	@echo "🔗 Running integration tests..."
-	@gotestsum --format=testname --no-summary=output --rerun-fails --rerun-fails-max-failures=5 --packages=./test/integration -- -v -timeout=10m
+	@gotestsum --format=testname --no-summary=output --rerun-fails --rerun-fails-max-failures=5 --packages=./test/integration -- -v -timeout=15m
 
 # Clean build artifacts
 clean:

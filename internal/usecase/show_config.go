@@ -8,9 +8,10 @@ import (
 
 // ShowConfigResult contains the result of showing configuration
 type ShowConfigResult struct {
-	Config     *config.LocalConfig
-	ConfigPath string
-	Exists     bool
+	Config       *config.LocalConfig
+	ConfigPath   string
+	Exists       bool
+	ConfigSource string // "treb.toml" or "foundry.toml"
 }
 
 // ShowConfig is a use case for showing configuration

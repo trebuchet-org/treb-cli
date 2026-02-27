@@ -24,6 +24,10 @@ type RuntimeConfig struct {
 	// Command-specific settings (only populated for relevant commands)
 	DryRun bool
 
+	// Config source tracking
+	FoundryProfile string // Foundry profile name to use (from treb.toml or namespace)
+	ConfigSource   string // "treb.toml" or "foundry.toml"
+
 	// Resolved configurations
 	FoundryConfig *FoundryConfig
 	TrebConfig    *TrebConfig // Profile-specific treb config

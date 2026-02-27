@@ -44,7 +44,7 @@ func (f *ForgeAdapter) Build() error {
 
 	output, err := cmd.CombinedOutput()
 	duration := time.Since(start)
-	
+
 	if err != nil {
 		f.log.Error("forge build failed", "error", err, "output", string(output), "duration", duration)
 		// Only print error details if build actually failed
@@ -305,7 +305,7 @@ func (f *ForgeAdapter) buildEnv(config usecase.RunScriptConfig) []string {
 	maps.Copy(env, config.Parameters)
 
 	// Profile
-	env["FOUNDRY_PROFILE"] = config.Namespace
+	env["FOUNDRY_PROFILE"] = config.FoundryProfile
 	env["NAMESPACE"] = config.Namespace
 	env["NETWORK"] = config.Network.Name
 	env["DRYRUN"] = strconv.FormatBool(config.DryRun || config.Debug || config.DebugJSON)

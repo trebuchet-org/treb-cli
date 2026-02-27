@@ -3,10 +3,13 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/internal/app"
 	"github.com/trebuchet-org/treb-cli/internal/config"
+	domainconfig "github.com/trebuchet-org/treb-cli/internal/domain/config"
 )
 
 // contextKey is the type for context keys
@@ -48,6 +51,9 @@ smart contract deployments using CreateX factory contracts.`,
 			if err != nil {
 				return fmt.Errorf("failed to initialize app: %w", err)
 			}
+
+			// Show deprecation warning for legacy foundry.toml config
+			showLegacyConfigWarning(cmd, app.Config)
 
 			// Store app in context
 			ctx := context.WithValue(cmd.Context(), appKey, app)
@@ -147,6 +153,10 @@ smart contract deployments using CreateX factory contracts.`,
 	configCmd.GroupID = "management"
 	rootCmd.AddCommand(configCmd)
 
+	migrateConfigCmd := NewMigrateConfigCmd()
+	migrateConfigCmd.GroupID = "management"
+	rootCmd.AddCommand(migrateConfigCmd)
+
 	// Version command
 	versionCmd := NewVersionCmd()
 	rootCmd.AddCommand(versionCmd)
@@ -165,6 +175,53 @@ func isForkActiveForCurrentNetwork(ctx context.Context, a *app.App) (bool, strin
 		return false, ""
 	}
 	return state.IsForkActive(a.Config.Network.Name), a.Config.Network.Name
+}
+
+// suppressedCommands are commands that should not show the deprecation warning
+var suppressedCommands = map[string]bool{
+	"version":        true,
+	"help":           true,
+	"completion":     true,
+	"init":           true,
+	"migrate-config": true,
+}
+
+// showLegacyConfigWarning prints a deprecation warning to stderr when
+// sender config is detected in foundry.toml and treb.toml does not exist.
+func showLegacyConfigWarning(cmd *cobra.Command, cfg *domainconfig.RuntimeConfig) {
+	if !shouldShowDeprecationWarning(cmd.Name(), cfg) {
+		return
+	}
+	yellow := color.New(color.FgYellow)
+	_, _ = yellow.Fprintln(os.Stderr, "Warning: treb config detected in foundry.toml — this is deprecated.")
+	_, _ = yellow.Fprintln(os.Stderr, "Run `treb migrate-config` to move your config to treb.toml.")
+}
+
+// shouldShowDeprecationWarning determines if the deprecation warning should be shown.
+func shouldShowDeprecationWarning(cmdName string, cfg *domainconfig.RuntimeConfig) bool {
+	if suppressedCommands[cmdName] {
+		return false
+	}
+	if cfg.JSON {
+		return false
+	}
+	if cfg.ConfigSource != "foundry.toml" {
+		return false
+	}
+	return hasLegacyTrebConfig(cfg.FoundryConfig)
+}
+
+// hasLegacyTrebConfig returns true if any foundry.toml profile has treb sender config.
+func hasLegacyTrebConfig(fc *domainconfig.FoundryConfig) bool {
+	if fc == nil {
+		return false
+	}
+	for _, profile := range fc.Profile {
+		if profile.Treb != nil {
+			return true
+		}
+	}
+	return false
 }
 
 // getApp retrieves the app instance from the command context

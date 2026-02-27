@@ -57,7 +57,15 @@ func (r *ConfigRenderer) RenderConfig(result *usecase.ShowConfigResult) error {
 		fmt.Fprintf(r.out, "Network:   %s\n", "(not set)")
 	}
 
-	fmt.Fprintf(r.out, "\n📁 config file: %s\n", getRelativePath(result.ConfigPath))
+	// Show config source
+	switch result.ConfigSource {
+	case "treb.toml":
+		fmt.Fprintf(r.out, "\n📦 Config source: treb.toml\n")
+	case "foundry.toml":
+		fmt.Fprintf(r.out, "\n📦 Config source: foundry.toml (legacy)\n")
+	}
+
+	fmt.Fprintf(r.out, "📁 config file: %s\n", getRelativePath(result.ConfigPath))
 
 	return nil
 }

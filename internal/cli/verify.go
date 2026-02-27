@@ -86,7 +86,7 @@ Examples:
 			filter := domain.DeploymentFilter{
 				Namespace: namespace,
 			}
-			
+
 			// Get network info from app config if available
 			if app.Config.Network != nil {
 				filter.ChainID = app.Config.Network.ChainID

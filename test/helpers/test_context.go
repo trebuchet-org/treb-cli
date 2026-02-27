@@ -344,6 +344,34 @@ func (ctx *TestContext) Clean() error {
 		os.MkdirAll(dirPath, 0755)
 	}
 
+	// Restore treb.toml from fixture (tests may modify or remove it via PreSetup)
+	fixtureTrebToml := filepath.Join(GetFixtureDir(), "treb.toml")
+	workTrebToml := filepath.Join(ctx.WorkDir, "treb.toml")
+	if _, err := os.Stat(fixtureTrebToml); err == nil {
+		copyFile(fixtureTrebToml, workTrebToml)
+	} else {
+		os.Remove(workTrebToml)
+	}
+
+	// Restore foundry.toml from fixture and re-apply port config
+	// (tests may modify foundry.toml via PreSetup, e.g., migrate-config tests)
+	fixtureFoundryToml := filepath.Join(GetFixtureDir(), "foundry.toml")
+	workFoundryToml := filepath.Join(ctx.WorkDir, "foundry.toml")
+	copyFile(fixtureFoundryToml, workFoundryToml)
+	var port1, port2 int
+	for name, node := range ctx.AnvilNodes {
+		p := 0
+		fmt.Sscanf(node.Port, "%d", &p)
+		if strings.Contains(name, "31337") {
+			port1 = p
+		} else {
+			port2 = p
+		}
+	}
+	if port1 > 0 && port2 > 0 {
+		updateFoundryConfig(workFoundryToml, port1, port2)
+	}
+
 	// Clean generated scripts except .gitkeep
 	scriptDir := filepath.Join(ctx.WorkDir, "script", "deploy")
 	if entries, err := os.ReadDir(scriptDir); err == nil {
@@ -412,6 +440,12 @@ func createLightweightWorkspace(src, dst string) error {
 			// Copy foundry.toml (we'll modify it later)
 			if err := copyFile(srcPath, dstPath); err != nil {
 				return fmt.Errorf("failed to copy foundry.toml: %w", err)
+			}
+
+		case "treb.toml":
+			// Copy treb.toml (tests may modify it via PreSetup)
+			if err := copyFile(srcPath, dstPath); err != nil {
+				return fmt.Errorf("failed to copy treb.toml: %w", err)
 			}
 
 		case "script":
