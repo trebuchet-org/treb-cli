@@ -106,7 +106,7 @@ func initializeTestPool(poolSize int) error {
 	for result := range resultChan {
 		if result.err != nil {
 			// Clean up already created contexts
-			for _, c := range pool.contexts {
+			for _, c := range results {
 				if c != nil {
 					c.Cleanup()
 				}
@@ -302,21 +302,19 @@ func (p *TestContextPool) Release(ctx *TestContext) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	// Log work directory if skip cleanup is enabled
+	var cleanErr error
+
 	if ShouldSkipCleanup() {
 		ctx.TrebContext.t.Logf("🔍 Test work directory preserved at: %s", ctx.WorkDir)
 	} else {
-		if err := ctx.Clean(); err != nil {
-			return err
-		}
-		ctx.inUse = false
-		ctx.TrebContext = nil
-
-		// Signal that a context is available
-		p.cond.Signal()
+		cleanErr = ctx.Clean()
 	}
 
-	return nil
+	ctx.inUse = false
+	ctx.TrebContext = nil
+	p.cond.Signal()
+
+	return cleanErr
 }
 
 func (ctx *TestContext) forgeClean() error {

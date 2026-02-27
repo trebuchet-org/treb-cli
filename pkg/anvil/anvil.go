@@ -169,6 +169,20 @@ func StopAnvilInstance(name, port string) error {
 		}
 	}
 
+	// Wait for process to actually exit (with timeout).
+	// We poll with Signal(0) because Wait() only works for child processes.
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if err := process.Signal(syscall.Signal(0)); err != nil {
+			break // process has exited
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	// Force kill if still alive
+	if err := process.Signal(syscall.Signal(0)); err == nil {
+		_ = process.Kill()
+	}
+
 	if err := os.Remove(inst.PidFile); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove PID file: %w", err)
 	}

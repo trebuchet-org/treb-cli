@@ -415,7 +415,7 @@ func (op *OutputProcessor) saveIgnoredLine(line string) {
 	op.mu.Unlock()
 
 	filename := filepath.Join(op.debugDir, fmt.Sprintf("ignored-line%d.txt", count))
-	if err := os.WriteFile(filename, []byte(line), 0644); err != nil {
+	if err := os.WriteFile(filename, []byte(line), 0644); err != nil { //nolint:gosec // path is constructed from internal debugDir and a counter
 		// Silently ignore write errors
 		return
 	}

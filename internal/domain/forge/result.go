@@ -116,11 +116,11 @@ type ProxyInfo struct {
 
 // GovernorProposal represents a Governor proposal (runtime type)
 type GovernorProposal struct {
-	ProposalId          *big.Int
-	Governor            common.Address
-	Timelock            common.Address // Zero if no timelock
-	Proposer            common.Address
-	TransactionIds      [][32]byte
-	ExecutionTxHash     *common.Hash
-	ExecutionBlockNum   *uint64
+	ProposalId        *big.Int
+	Governor          common.Address
+	Timelock          common.Address // Zero if no timelock
+	Proposer          common.Address
+	TransactionIds    [][32]byte
+	ExecutionTxHash   *common.Hash
+	ExecutionBlockNum *uint64
 }

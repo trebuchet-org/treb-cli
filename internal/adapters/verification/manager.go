@@ -189,7 +189,7 @@ func (s *Service) verifyOnBlockscout(ctx context.Context, params VerificationPar
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := s.client.Do(req)
+	resp, err := s.client.Do(req) //nolint:gosec // URL is constructed from configured explorer endpoint
 	if err != nil {
 		return nil, fmt.Errorf("failed to submit verification: %w", err)
 	}

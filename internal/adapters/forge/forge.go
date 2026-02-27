@@ -246,9 +246,7 @@ func (f *ForgeAdapter) DumpScriptCommand(config usecase.RunScriptConfig) (string
 	sort.Strings(env)
 
 	parts := make([]string, 0, len(env)+1+len(args))
-	for _, kv := range env {
-		parts = append(parts, kv)
-	}
+	parts = append(parts, env...)
 	parts = append(parts, "forge")
 	parts = append(parts, args...)
 

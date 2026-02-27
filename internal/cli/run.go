@@ -87,12 +87,12 @@ Examples:
 			}
 
 			params := usecase.RunScriptParams{
-				ScriptRef:  deploymentScriptRef,
-				Parameters: parsedEnvVars,
-				DryRun:     dryRun,
-				Debug:      debug,
-				DebugJSON:  debugJSON,
-				Slow:       slow,
+				ScriptRef:   deploymentScriptRef,
+				Parameters:  parsedEnvVars,
+				DryRun:      dryRun,
+				Debug:       debug,
+				DebugJSON:   debugJSON,
+				Slow:        slow,
 				DumpCommand: dumpCmd,
 			}
 			result, err := app.RunScript.Run(cmd.Context(), params)

@@ -49,7 +49,7 @@ var (
 type SenderConfig struct {
 	Type           SenderType `toml:"type"`
 	Address        string     `toml:"address,omitempty"`
-	PrivateKey     string     `toml:"private_key,omitempty"`
+	PrivateKey     string     `toml:"private_key,omitempty"` //nolint:gosec // holds env var reference, not a literal secret
 	Safe           string     `toml:"safe,omitempty"`
 	Signer         string     `toml:"signer,omitempty"`          // For Safe senders
 	DerivationPath string     `toml:"derivation_path,omitempty"` // For Ledger senders

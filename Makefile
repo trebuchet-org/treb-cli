@@ -10,19 +10,28 @@ LDFLAGS = -X main.version=$(VERSION) \
 					-X main.date=$(DATE) \
 					-X main.trebSolCommit=$(TREB_SOL_COMMIT)
 
-# Build the CLI binary
-build: bindings
-	@echo "🔨 Building treb..."
-	@go build -ldflags="$(LDFLAGS)" -tags dev -o bin/treb ./cli
+setup: 
+	@echo "🔨 Getting submodules"
+	@git submodule init
+	@git submodule update
+	@echo "🔨 Installing forge deps"
+	@cd treb-sol && forge install
+	@echo "🔨 Installing abigen"
+	@go install github.com/ethereum/go-ethereum/cmd/abigen@latest
+
+forge_build:
+	@echo ">> forge build"
+	@cd treb-sol && forge build
 
 bindings: forge_build
 	@echo "🔨 Building bindings..."
 	@cat treb-sol/out/ITrebEvents.sol/ITrebEvents.json | jq ".abi" | abigen --v2 --pkg bindings --type Treb --out internal/domain/bindings/treb.go --abi -
 	@cat treb-sol/out/ICreateX.sol/ICreateX.json | jq ".abi" | abigen --v2 --pkg bindings --type CreateX --out internal/domain/bindings/createx.go --abi -
 
-forge_build:
-	@echo ">> forge build"
-	@cd treb-sol && forge build
+# Build the CLI binary
+build: setup bindings
+	@echo "🔨 Building treb..."
+	@go build -ldflags="$(LDFLAGS)" -tags dev -o bin/treb ./cli
 
 # Install globally
 install: 
@@ -158,7 +167,7 @@ release-clean:
 lint-install:
 	@command -v golangci-lint >/dev/null 2>&1 || { \
 		echo "Installing golangci-lint..."; \
-		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.1.6 \
+		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $$(go env GOPATH)/bin v2.1.6; \
 		echo "✅ golangci-lint installed"; \
 	}
 
@@ -175,6 +184,7 @@ lint:
 lint-fix:
 	@echo "🔧 Fixing linting issues..."
 	@golangci-lint run --fix
+	@gofmt -w .
 	@echo "✅ Linting issues fixed (where possible)"
 
 fmt:
