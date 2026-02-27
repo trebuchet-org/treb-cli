@@ -300,3 +300,10 @@ type ForkStateStore interface {
 	Save(ctx context.Context, state *domain.ForkState) error
 	Delete(ctx context.Context) error
 }
+
+// ForkFileManager handles backup and restore of .treb/ registry files for fork snapshots
+type ForkFileManager interface {
+	BackupFiles(ctx context.Context, network string, snapshotIndex int) error
+	RestoreFiles(ctx context.Context, network string, snapshotIndex int) error
+	CleanupForkDir(ctx context.Context, network string) error
+}
