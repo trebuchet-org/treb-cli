@@ -69,6 +69,7 @@ ERC1967Proxy:step1[UpgradeableCounter] at 0x067887F5245C17228A4d579991bd398De552
 📝 Script Logs:
 ────────────────────────────────────────
   Registry: failed to load registry from .treb/registry.json
+  Registry: failed to load addressbook from .treb/addressbook.json
 
 ✓ Updated registry for anvil-31337 network in namespace default
 
@@ -86,14 +87,17 @@ ERC1967Proxy:step1[UpgradeableCounter] at 0x067887F5245C17228A4d579991bd398De552
 
 📝 Forge Output:
 ──────────────────────────────────────────────────
-Warning: Found unknown `treb` config for profile `default` defined in foundry.toml.
-Warning: Found unknown `treb` config for profile `live` defined in foundry.toml.
 Error: script failed: Deployment intentionally failed for testing
 ──────────────────────────────────────────────────
 
 🔄 Transactions:
 ──────────────────────────────────────────────────
 No transactions executed (dry run or all deployments skipped)
+
+
+📝 Script Logs:
+────────────────────────────────────────
+  Registry: failed to load addressbook from .treb/addressbook.json
 
 ══════════════════════════════════════════════════════════════════════
 ❌ Orchestration failed

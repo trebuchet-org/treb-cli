@@ -30,6 +30,7 @@ Counter at 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
 📝 Script Logs:
 ────────────────────────────────────────
   Registry: failed to load registry from .treb/registry.json
+  Registry: failed to load addressbook from .treb/addressbook.json
 
 ✓ Updated registry for anvil-31337 network in namespace default
 ✓ Script execution completed successfully
@@ -61,11 +62,16 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 │     │  )
 │     └─ [return] 0x793f69C1702a0E900a142D8575E44F9E4DA86fFf
 └─ ContractCreation(newContract: SampleToken: [0x793f69C1702a0...)
-   Tx: 0x<HASH> | Block: 2 | Gas: 384311
+   Tx: 0x<HASH> | Block: 2 | Gas: 384515
 
 📦 Deployment Summary:
 ──────────────────────────────────────────────────
 SampleToken at 0x793f69C1702a0E900a142D8575E44F9E4DA86fFf
+
+
+📝 Script Logs:
+────────────────────────────────────────
+  Registry: failed to load addressbook from .treb/addressbook.json
 
 ✓ Updated registry for anvil-31337 network in namespace default
 ✓ Script execution completed successfully

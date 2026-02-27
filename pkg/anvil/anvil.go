@@ -131,7 +131,17 @@ func StartAnvilInstance(name, port, chainID string) error {
 	// color.New(color.FgYellow).Printf("📋 Logs: %s\n", inst.LogFile)
 	// color.New(color.FgBlue).Printf("🌐 RPC URL: http://localhost:%s\n", inst.Port)
 
-	time.Sleep(200 * time.Millisecond)
+	// Wait for anvil to be ready (up to 5 seconds)
+	var healthErr error
+	for i := 0; i < 25; i++ {
+		time.Sleep(200 * time.Millisecond)
+		if healthErr = inst.checkRPCHealth(); healthErr == nil {
+			break
+		}
+	}
+	if healthErr != nil {
+		return fmt.Errorf("anvil not ready after 5s: %w", healthErr)
+	}
 
 	if err := inst.deployCreateX(); err != nil {
 		return fmt.Errorf("failed to deploy CreateX: %v", err)
@@ -455,7 +465,7 @@ func (a *AnvilInstance) makeRPCCallWithResponse(req RPCRequest, resp *RPCRespons
 		return fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	httpResp, err := http.Post(fmt.Sprintf("http://localhost:%s", a.Port), "application/json", bytes.NewBuffer(jsonData))
+	httpResp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%s", a.Port), "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("failed to make HTTP request: %w", err)
 	}

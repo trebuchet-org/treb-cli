@@ -34,6 +34,7 @@ MyToken at 0x6c8D83F62F83A8D46F091094BA15B75F35A8E85E
 📝 Script Logs:
 ────────────────────────────────────────
   Registry: failed to load registry from .treb/registry.json
+  Registry: failed to load addressbook from .treb/addressbook.json
 
 ✓ Updated registry for anvil-31337 network in namespace default
 ✓ Script execution completed successfully

@@ -21,7 +21,7 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6101
 │     ├─ Transfer(from: 0x0000...0000, to: 0x8201...1a25, value: <UNIX_TIME>...)
 │     └─ [return] 0xEbe12C95cC689F0B29e8AACB50c67a6bF3364303
 └─ ContractCreation(newContract: GovernanceToken: [0xEbe12C95c...)
-   Tx: 0x<HASH> | Block: 1 | Gas: 3325291
+   Tx: 0x<HASH> | Block: 1 | Gas: 3325495
 
 executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x60806040...)
 ├─ new 0xdd0A440751Da654406AB7882BC315e72fEf8A4E3()
@@ -54,7 +54,7 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6101
 │     ├─ TimelockChange(oldTimelock: 0x0000...0000, newTimelock: TrebTimelock: [0...)
 │     └─ [return] 0x729cc9c01D35C0FF1Cc7c62a924236394Ff8fe54
 └─ ContractCreation(newContract: TrebGovernor: [0x729cc9c01D35...)
-   Tx: 0x<HASH> | Block: 3 | Gas: 5471627
+   Tx: 0x<HASH> | Block: 3 | Gas: 5472060
 
 executed  anvil → TrebTimelock::grantRole(role: 0xb09aa5ae..., account: 0x729c...fe54)
 └─ RoleGranted(role: 0xb09aa5ae..., account: TrebGovernor: [0x729cc9c01D...)
@@ -74,6 +74,7 @@ TrebGovernor at 0x729cc9c01D35C0FF1Cc7c62a924236394Ff8fe54
 📝 Script Logs:
 ────────────────────────────────────────
   Registry: failed to load registry from .treb/registry.json
+  Registry: failed to load addressbook from .treb/addressbook.json
 
 ✓ Updated registry for anvil-31337 network in namespace default
 ✓ Script execution completed successfully

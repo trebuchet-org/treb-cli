@@ -8,11 +8,15 @@
   Mode:      LIVE
   Senders:   [anvil]
 ──────────────────────────────────────────────────
-Warning: Found unknown `treb` config for profile `default` defined in foundry.toml.
-Warning: Found unknown `treb` config for profile `live` defined in foundry.toml.
 [⠃] Compiling...
+[*] Solc finished
+Compiler run successful with warnings:
+Warning (9207): 'send' is deprecated and scheduled for removal. Use 'call{value: <amount>}("")' instead.
+   --> lib/treb-sol/lib/safe-utils/lib/safe-smart-account/contracts/Safe.sol:243:21:
+    |
+243 |             require(receiver.send(payment), "GS011");
+    |                     ^^^^^^^^^^^^^
 
-No files changed, compilation skipped
 Traces:
   [1359154] DeployCounter::run()
     ├─ [0] VM::envOr("deployer", "anvil") [staticcall]
@@ -42,6 +46,7 @@ Script ran successfully.
 
 == Logs ==
   Registry: failed to load registry from .treb/registry.json
+  Registry: failed to load addressbook from .treb/addressbook.json
 Warning: No transactions to broadcast.
 
 🔄 Transactions:

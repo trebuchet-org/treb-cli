@@ -64,6 +64,7 @@ ERC1967Proxy:v55[UpgradeableCounter] at 0xc265543Dbc777F9D29FbF9EA9E063B962dd447
 📝 Script Logs:
 ────────────────────────────────────────
   Registry: failed to load registry from .treb/registry.json
+  Registry: failed to load addressbook from .treb/addressbook.json
 
 ✓ Updated registry for anvil-31337 network in namespace default
 
@@ -110,6 +111,11 @@ Note: These contracts were already deployed and deployment was skipped.
 ──────────────────────────────────────────────────
 ERC1967Proxy:v44[UpgradeableCounter] at 0xe2Fa450fD6b49c41aFAB7cdA17105e95D1dd22eA
 
+
+📝 Script Logs:
+────────────────────────────────────────
+  Registry: failed to load addressbook from .treb/addressbook.json
+
 ✓ Updated registry for anvil-31337 network in namespace default
 
 [3/3] Starting UG0
@@ -154,6 +160,11 @@ Note: These contracts were already deployed and deployment was skipped.
 📦 Deployment Summary:
 ──────────────────────────────────────────────────
 ERC1967Proxy:v43[UpgradeableCounter] at 0x3724061C024d171eF17Cb398825B06326b0c168b
+
+
+📝 Script Logs:
+────────────────────────────────────────
+  Registry: failed to load addressbook from .treb/addressbook.json
 
 ✓ Updated registry for anvil-31337 network in namespace default
 ══════════════════════════════════════════════════════════════════════
