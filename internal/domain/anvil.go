@@ -5,6 +5,7 @@ type AnvilInstance struct {
 	Name    string `json:"name"`
 	Port    string `json:"port"`
 	ChainID string `json:"chainId,omitempty"`
+	ForkURL string `json:"forkUrl,omitempty"`
 	PidFile string `json:"pidFile"`
 	LogFile string `json:"logFile"`
 }

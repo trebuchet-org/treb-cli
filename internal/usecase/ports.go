@@ -154,6 +154,8 @@ type AnvilManager interface {
 	Stop(ctx context.Context, instance *domain.AnvilInstance) error
 	GetStatus(ctx context.Context, instance *domain.AnvilInstance) (*domain.AnvilStatus, error)
 	StreamLogs(ctx context.Context, instance *domain.AnvilInstance, writer io.Writer) error
+	TakeSnapshot(ctx context.Context, instance *domain.AnvilInstance) (string, error)
+	RevertSnapshot(ctx context.Context, instance *domain.AnvilInstance, snapshotID string) error
 }
 
 // ContractResolver resolves contract references to actual contracts
