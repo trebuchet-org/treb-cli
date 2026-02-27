@@ -75,8 +75,16 @@ func (m *Manager) Start(ctx context.Context, instance *domain.AnvilInstance) err
 		return fmt.Errorf("failed to write PID file: %w", err)
 	}
 
-	// Wait for anvil to start
-	time.Sleep(200 * time.Millisecond)
+	// Wait for anvil to be ready (forked anvils can take longer to start)
+	maxWait := 5 * time.Second
+	if instance.ForkURL != "" {
+		maxWait = 30 * time.Second
+	}
+	if err := m.waitForReady(instance, maxWait); err != nil {
+		_ = cmd.Process.Kill()
+		_ = os.Remove(instance.PidFile)
+		return fmt.Errorf("anvil failed to become ready: %w", err)
+	}
 
 	// Deploy CreateX
 	if err := m.deployCreateX(instance); err != nil {
@@ -85,6 +93,19 @@ func (m *Manager) Start(ctx context.Context, instance *domain.AnvilInstance) err
 	}
 
 	return nil
+}
+
+// waitForReady polls the anvil RPC endpoint until it responds or the timeout is reached
+func (m *Manager) waitForReady(instance *domain.AnvilInstance, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	interval := 200 * time.Millisecond
+	for time.Now().Before(deadline) {
+		if err := m.checkRPCHealth(instance); err == nil {
+			return nil
+		}
+		time.Sleep(interval)
+	}
+	return fmt.Errorf("anvil not responding after %s", timeout)
 }
 
 // Stop stops an anvil instance
