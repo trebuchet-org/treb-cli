@@ -15,7 +15,11 @@ func IsolatedTest(t *testing.T, name string, fn func(t *testing.T, ctx *TestCont
 		}
 		testCtx := pool.Acquire(t)
 
-		defer pool.Release(testCtx)
+		defer func() {
+			if err := pool.Release(testCtx); err != nil {
+				t.Logf("Warning: failed to release test context: %v", err)
+			}
+		}()
 
 		// Run the test
 		fn(t, testCtx)
