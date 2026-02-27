@@ -1,8 +1,11 @@
 package integration
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -274,12 +277,12 @@ func cleanupForkAnvil(t *testing.T, ctx *helpers.TestContext, network string) {
 
 	// Clean up PID file
 	if entry.PidFile != "" {
-		os.Remove(entry.PidFile)
+		_ = os.Remove(entry.PidFile)
 	}
 
 	// Clean up log file
 	if entry.LogFile != "" {
-		os.Remove(entry.LogFile)
+		_ = os.Remove(entry.LogFile)
 	}
 }
 
@@ -313,10 +316,142 @@ func readForkState(t *testing.T, ctx *helpers.TestContext) *domain.ForkState {
 }
 
 // readPidFromFile reads a PID from a file
-func readPidFromFile(path string) (int, error) {
+func readPidFromFile(path string) (int, error) { //nolint:unused // utility for fork tests
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return 0, err
 	}
 	return strconv.Atoi(strings.TrimSpace(string(data)))
+}
+
+// ethGetCode makes an eth_getCode RPC call and returns the code at the given address
+func ethGetCode(t *testing.T, rpcURL, address string) string {
+	t.Helper()
+
+	reqBody, err := json.Marshal(map[string]interface{}{
+		"jsonrpc": "2.0",
+		"method":  "eth_getCode",
+		"params":  []interface{}{address, "latest"},
+		"id":      1,
+	})
+	require.NoError(t, err)
+
+	resp, err := http.Post(rpcURL, "application/json", bytes.NewBuffer(reqBody)) //nolint:gosec
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	var rpcResp struct {
+		Result string `json:"result"`
+	}
+	require.NoError(t, json.Unmarshal(body, &rpcResp))
+
+	return rpcResp.Result
+}
+
+// getDeploymentAddress extracts the deployment address from deployments.json
+// The file is a flat map keyed by deployment ID (e.g. "default/31337/Counter")
+func getDeploymentAddress(t *testing.T, workDir, contractName string) string {
+	t.Helper()
+
+	deploymentsPath := filepath.Join(workDir, ".treb", "deployments.json")
+	data, err := os.ReadFile(deploymentsPath)
+	require.NoError(t, err, "deployments.json should exist")
+
+	var deployments map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(data, &deployments))
+
+	for _, depRaw := range deployments {
+		var dep struct {
+			ContractName string `json:"contractName"`
+			Address      string `json:"address"`
+		}
+		if err := json.Unmarshal(depRaw, &dep); err != nil {
+			continue
+		}
+		if dep.ContractName == contractName {
+			return dep.Address
+		}
+	}
+	t.Fatalf("deployment for %s not found in deployments.json", contractName)
+	return ""
+}
+
+func TestForkRunCommand(t *testing.T) {
+	tests := []IntegrationTest{
+		{
+			Name: "fork_run_deploys_to_fork_anvil",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"fork", "enter", "anvil-31337"},
+			},
+			TestCmds: [][]string{
+				{"run", "script/deploy/DeployCounter.s.sol"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				workDir := ctx.TrebContext.GetWorkDir()
+
+				// Verify deployment recorded in deployments.json
+				address := getDeploymentAddress(t, workDir, "Counter")
+				assert.NotEmpty(t, address, "Counter address should be recorded")
+
+				// Read fork state to get the fork URL
+				state := readForkState(t, ctx)
+				fork := state.Forks["anvil-31337"]
+				require.NotNil(t, fork, "fork entry should exist")
+
+				// Verify contract deployed to fork anvil (via eth_getCode on fork URL)
+				code := ethGetCode(t, fork.ForkURL, address)
+				assert.NotEqual(t, "0x", code, "contract should have code on fork anvil")
+				assert.True(t, len(code) > 10, "contract code should be non-trivial")
+
+				// Verify the deployment was NOT made to the regular anvil
+				regularNode := ctx.AnvilNodes["anvil-31337"]
+				require.NotNil(t, regularNode, "regular anvil node should exist")
+				regularCode := ethGetCode(t, regularNode.URL, address)
+				assert.Equal(t, "0x", regularCode, "contract should NOT have code on regular anvil")
+			},
+		},
+		{
+			Name: "run_without_fork_deploys_to_regular_anvil",
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+			},
+			TestCmds: [][]string{
+				{"run", "script/deploy/DeployCounter.s.sol"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				workDir := ctx.TrebContext.GetWorkDir()
+
+				// Verify deployment recorded in deployments.json
+				address := getDeploymentAddress(t, workDir, "Counter")
+				assert.NotEmpty(t, address, "Counter address should be recorded")
+
+				// Verify contract deployed to regular anvil
+				regularNode := ctx.AnvilNodes["anvil-31337"]
+				require.NotNil(t, regularNode, "regular anvil node should exist")
+				code := ethGetCode(t, regularNode.URL, address)
+				assert.NotEqual(t, "0x", code, "contract should have code on regular anvil")
+				assert.True(t, len(code) > 10, "contract code should be non-trivial")
+
+				// Verify no fork state file exists (fork mode was never entered)
+				statePath := filepath.Join(workDir, ".treb", "priv", "fork-state.json")
+				_, err := os.Stat(statePath)
+				assert.True(t, os.IsNotExist(err), "fork-state.json should not exist when not in fork mode")
+			},
+		},
+	}
+
+	RunIntegrationTests(t, tests)
 }

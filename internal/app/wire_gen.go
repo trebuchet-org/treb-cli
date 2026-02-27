@@ -86,7 +86,8 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 	writer := render.ProvideIO(cmd)
 	scriptRenderer := render.NewScriptRenderer(writer, fileRepository, abiResolver, logger)
 	runProgress := progress.NewRunProgress(scriptRenderer)
-	runScript := usecase.NewRunScript(runtimeConfig, scriptResolver, parameterResolver, sendersManager, runResultHydrator, fileRepository, libraryResolver, runProgress, forgeAdapter)
+	forkStateStoreAdapter := fs.NewForkStateStoreAdapter(runtimeConfig)
+	runScript := usecase.NewRunScript(runtimeConfig, scriptResolver, parameterResolver, sendersManager, runResultHydrator, fileRepository, libraryResolver, runProgress, forgeAdapter, forkStateStoreAdapter)
 	verifier, err := verification.NewVerifier(runtimeConfig)
 	if err != nil {
 		return nil, err
@@ -101,7 +102,6 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 	manager := anvil.NewManager()
 	manageAnvil := usecase.NewManageAnvil(manager, spinnerProgressReporter)
 	initProject := usecase.NewInitProject(fileWriterAdapter, spinnerProgressReporter)
-	forkStateStoreAdapter := fs.NewForkStateStoreAdapter(runtimeConfig)
 	forkFileManagerAdapter := fs.NewForkFileManagerAdapter(runtimeConfig)
 	enterFork := usecase.NewEnterFork(runtimeConfig, forkStateStoreAdapter, forkFileManagerAdapter, manager)
 	exitFork := usecase.NewExitFork(runtimeConfig, forkStateStoreAdapter, forkFileManagerAdapter, manager)

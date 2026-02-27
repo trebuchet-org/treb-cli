@@ -43,6 +43,7 @@ type RunScript struct {
 	registryUpdater   DeploymentRepositoryUpdater
 	libraryResolver   LibraryResolver
 	progress          RunProgressSink
+	forkStateStore    ForkStateStore
 	// paramPrompter   ParameterPrompter
 }
 
@@ -57,6 +58,7 @@ func NewRunScript(
 	libraryResolver LibraryResolver,
 	progress RunProgressSink,
 	forgeScriptRunner ForgeScriptRunner,
+	forkStateStore ForkStateStore,
 ) *RunScript {
 	return &RunScript{
 		config:            cfg,
@@ -68,6 +70,7 @@ func NewRunScript(
 		registryUpdater:   registryUpdater,
 		libraryResolver:   libraryResolver,
 		progress:          progress,
+		forkStateStore:    forkStateStore,
 		// paramPrompter:   paramPrompter,
 	}
 }
@@ -149,6 +152,19 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 		return result, err
 	}
 
+	// Check for active fork and build env overrides
+	var forkEnvOverrides map[string]string
+	if uc.config.Network != nil {
+		forkState, forkErr := uc.forkStateStore.Load(ctx)
+		if forkErr == nil {
+			if fork := forkState.GetActiveFork(uc.config.Network.Name); fork != nil && fork.EnvVarName != "" {
+				forkEnvOverrides = map[string]string{
+					fork.EnvVarName: fork.ForkURL,
+				}
+			}
+		}
+	}
+
 	runScriptConfig := RunScriptConfig{
 		Network:            uc.config.Network,
 		Namespace:          uc.config.Namespace,
@@ -161,6 +177,7 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 		Progress:           uc.progress,
 		SenderScriptConfig: *senderScriptConfig,
 		Slow:               params.Slow,
+		ForkEnvOverrides:   forkEnvOverrides,
 	}
 
 	if params.DumpCommand {
