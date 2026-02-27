@@ -12,7 +12,6 @@ import (
 // NewListCmd creates the list command using the new architecture
 func NewListCmd() *cobra.Command {
 	var (
-		namespace    string
 		contractName string
 		label        string
 		deployType   string
@@ -38,11 +37,6 @@ The list can be filtered by namespace, chain ID, contract name, label, or deploy
 			app, err := getApp(cmd)
 			if err != nil {
 				return err
-			}
-
-			// Override config if namespace/network flags are provided (same as show/tag/run)
-			if namespace != "" {
-				app.Config.Namespace = namespace
 			}
 
 			// Convert string type to domain type
@@ -80,8 +74,8 @@ The list can be filtered by namespace, chain ID, contract name, label, or deploy
 		},
 	}
 
-	// Add flags (namespace/network can override runtime config when provided)
-	cmd.Flags().StringVarP(&namespace, "namespace", "s", "", "Namespace to use (defaults to current context namespace) [also sets foundry profile]")
+	// Namespace and network flags are bound to viper automatically via SetupViper
+	cmd.Flags().StringP("namespace", "s", "", "Namespace to use (defaults to current context namespace) [also sets foundry profile]")
 	cmd.Flags().StringP("network", "n", "", "Network to run on (e.g., mainnet, sepolia, local)")
 	cmd.Flags().StringVar(&contractName, "contract", "", "Filter by contract name")
 	cmd.Flags().StringVar(&label, "label", "", "Filter by label")

@@ -198,7 +198,7 @@ func (n SpinnerNormalizer) Normalize(output string) string {
 	// Some toolchains print multiple frames on separate lines (no leading \r), e.g.:
 	//   \r[⠃] Compiling...\n[⠊] Compiling...\n
 	// So we match sequences where each frame may optionally be prefixed with one or more \r.
-	spinnerPattern := regexp.MustCompile(`((?:\r)*\[[^\]]+\] Compiling\.\.\.\s*(?:\r?\n|\r))+`)
+	spinnerPattern := regexp.MustCompile(`((?:\r)*\[[^\]]+\] Compiling[^\n\r]*\s*(?:\r?\n|\r))+`)
 
 	// Replace ALL consecutive spinner frames (whether 2, 3, 4, or more) with a SINGLE normalized version
 	output = spinnerPattern.ReplaceAllString(output, "\r[⠃] Compiling...\n")
