@@ -313,3 +313,28 @@ Started: Fri Feb 27 04:32:59 PM CET 2026
   - The `isForkActiveForCurrentNetwork` helper provides a clean CLI-level pattern for fork state checks without needing to inject ForkStateStore into every use case
   - Fork mode checks are best placed at the CLI layer (command RunE) rather than use case layer, since the behavior varies per command (hard block vs. info note vs. no change)
 ---
+
+## 2026-02-27 - US-017
+- Implemented `treb fork diff [network]` CLI command with `--json` flag
+- Created DiffFork use case in `internal/usecase/diff_fork.go`:
+  - Compares current deployments.json against initial backup at snapshot 0
+  - Reports new deployments (IDs in current but not backup), modified deployments (same ID, different data), and new transaction count
+  - Errors if no active fork for the specified network
+- Added `RenderDiff` method to ForkRenderer in `internal/cli/render/fork.go`:
+  - Shows "Fork Diff: <network>" header
+  - Lists new deployments with `+` prefix, modified with `~` prefix
+  - Shows new transaction count
+  - "No changes since fork entered." when no diff
+- Added `--json` flag for JSON output using `json.MarshalIndent`
+- Added `newForkDiffCmd` in `internal/cli/fork.go` with optional network argument
+- Wired DI: added DiffFork to app.go, wire.go, wire_gen.go
+- `loadRawDeployments` reads raw JSON for byte-level comparison of modified entries
+- Reused `loadDeploymentIDs` from fork_status.go for transaction diff
+- Integration tests: fork_diff_shows_new_deployments (2 deploys), fork_diff_no_changes (no runs), fork_diff_after_revert_shows_no_changes (deploy + revert), fork_diff_no_active_fork (error case) - all pass
+- Files changed: `internal/usecase/diff_fork.go`, `internal/cli/fork.go`, `internal/cli/render/fork.go`, `internal/app/app.go`, `internal/app/wire.go`, `internal/app/wire_gen.go`, `test/integration/fork_test.go`
+- **Learnings for future iterations:**
+  - DiffFork is a read-only use case needing only ForkStateStore (no anvil manager) - similar simplicity to ForkHistory
+  - `loadRawDeployments` returns `map[string]json.RawMessage` for byte-level comparison, while `loadDeploymentIDs` returns `map[string]bool` for set operations
+  - The `--json` flag on subcommands is best handled as a local bool flag passed through the RunE closure, avoiding conflicts with global flags
+  - Modified deployments are detected by comparing raw JSON bytes (string comparison of json.RawMessage), which catches any field-level change without needing to define which fields matter
+---

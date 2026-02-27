@@ -396,7 +396,7 @@
         "Integration tests pass"
       ],
       "priority": 17,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
