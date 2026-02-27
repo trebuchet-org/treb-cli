@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/internal/cli/render"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
@@ -28,6 +30,11 @@ This command will:
 			app, err := getApp(cmd)
 			if err != nil {
 				return err
+			}
+
+			// Block sync in fork mode
+			if active, _ := isForkActiveForCurrentNetwork(cmd.Context(), app); active {
+				return fmt.Errorf("cannot sync with a fork")
 			}
 
 			// Create sync options

@@ -154,6 +154,19 @@ smart contract deployments using CreateX factory contracts.`,
 	return rootCmd
 }
 
+// isForkActiveForCurrentNetwork checks if fork mode is active for the currently configured network.
+// Returns true and the network name if a fork is active.
+func isForkActiveForCurrentNetwork(ctx context.Context, a *app.App) (bool, string) {
+	if a.Config.Network == nil {
+		return false, ""
+	}
+	state, err := a.ForkStateStore.Load(ctx)
+	if err != nil {
+		return false, ""
+	}
+	return state.IsForkActive(a.Config.Network.Name), a.Config.Network.Name
+}
+
 // getApp retrieves the app instance from the command context
 func getApp(cmd *cobra.Command) (*app.App, error) {
 	appInstance := cmd.Context().Value(appKey)

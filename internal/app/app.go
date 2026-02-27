@@ -44,6 +44,7 @@ type App struct {
 	// Adapters (needed for special cases like log streaming)
 	AnvilManager    usecase.AnvilManager
 	NetworkResolver usecase.NetworkResolver
+	ForkStateStore  usecase.ForkStateStore
 
 	// Renderers
 	GenerateRenderer render.Renderer[*usecase.GenerateScriptResult]
@@ -80,6 +81,7 @@ func NewApp(
 	forkHistory *usecase.ForkHistory,
 	anvilManager usecase.AnvilManager,
 	networkResolver usecase.NetworkResolver,
+	forkStateStore usecase.ForkStateStore,
 	generateRenderer render.Renderer[*usecase.GenerateScriptResult],
 	scriptRenderer *render.ScriptRenderer,
 	composeRenderer *render.ComposeRenderer,
@@ -112,6 +114,7 @@ func NewApp(
 		ForkHistory:              forkHistory,
 		AnvilManager:             anvilManager,
 		NetworkResolver:          networkResolver,
+		ForkStateStore:           forkStateStore,
 		GenerateRenderer:         generateRenderer,
 		ScriptRenderer:           scriptRenderer,
 		ComposeRenderer:          composeRenderer,

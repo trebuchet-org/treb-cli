@@ -110,7 +110,7 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 	forkStatus := usecase.NewForkStatus(runtimeConfig, forkStateStoreAdapter, manager)
 	forkHistory := usecase.NewForkHistory(runtimeConfig, forkStateStoreAdapter)
 	renderer := render.NewGenerateRenderer()
-	app, err := NewApp(runtimeConfig, selectorAdapter, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, resetRegistry, showConfig, setConfig, removeConfig, runScript, verifyDeployment, composeDeployment, syncRegistry, tagDeployment, registerDeployment, manageAnvil, initProject, enterFork, exitFork, revertFork, restartFork, forkStatus, forkHistory, manager, networkResolver, renderer, scriptRenderer, composeRenderer)
+	app, err := NewApp(runtimeConfig, selectorAdapter, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, resetRegistry, showConfig, setConfig, removeConfig, runScript, verifyDeployment, composeDeployment, syncRegistry, tagDeployment, registerDeployment, manageAnvil, initProject, enterFork, exitFork, revertFork, restartFork, forkStatus, forkHistory, manager, networkResolver, forkStateStoreAdapter, renderer, scriptRenderer, composeRenderer)
 	if err != nil {
 		return nil, err
 	}

@@ -1367,3 +1367,52 @@ func TestForkAwareShow(t *testing.T) {
 
 	RunIntegrationTests(t, tests)
 }
+
+func TestForkCommandGuards(t *testing.T) {
+	tests := []IntegrationTest{
+		{
+			Name: "fork_verify_blocked",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"run", "script/deploy/DeployCounter.s.sol"},
+				{"fork", "enter", "anvil-31337"},
+			},
+			TestCmds: [][]string{
+				{"verify", "Counter"},
+			},
+			ExpectErr:  true,
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				assert.Contains(t, output, "cannot verify contracts on a fork")
+			},
+		},
+		{
+			Name: "fork_sync_blocked",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"fork", "enter", "anvil-31337"},
+			},
+			TestCmds: [][]string{
+				{"sync"},
+			},
+			ExpectErr:  true,
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				assert.Contains(t, output, "cannot sync with a fork")
+			},
+		},
+	}
+
+	RunIntegrationTests(t, tests)
+}

@@ -34,6 +34,11 @@ are preserved. Use --include-pending to also prune these items.`,
 				return err
 			}
 
+			// Inform user if fork mode is active
+			if active, net := isForkActiveForCurrentNetwork(cmd.Context(), app); active {
+				fmt.Fprintf(cmd.OutOrStdout(), "Note: fork mode is active for '%s'. Pruning will affect fork state.\n\n", net)
+			}
+
 			// Network is required
 			if network == "" {
 				return fmt.Errorf("--network flag is required")

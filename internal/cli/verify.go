@@ -51,6 +51,11 @@ Examples:
 				return err
 			}
 
+			// Block verify in fork mode
+			if active, _ := isForkActiveForCurrentNetwork(cmd.Context(), app); active {
+				return fmt.Errorf("cannot verify contracts on a fork")
+			}
+
 			// Determine which verifiers to use
 			// If none specified, use all
 			verifiers := []string{}

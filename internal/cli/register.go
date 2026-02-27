@@ -57,6 +57,11 @@ Examples:
 				return err
 			}
 
+			// Inform user if fork mode is active
+			if active, net := isForkActiveForCurrentNetwork(cmd.Context(), app); active {
+				fmt.Fprintf(cmd.OutOrStdout(), "Note: fork mode is active for '%s'. Registration will affect fork state.\n\n", net)
+			}
+
 			if app.Config.Network == nil {
 				return fmt.Errorf("no active network set in config, --network flag is required")
 			}
