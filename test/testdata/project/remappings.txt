@@ -1,0 +1,7 @@
+forge-std/=lib/forge-std/src/
+treb-sol/=lib/treb-sol/
+createx-forge/=lib/treb-sol/lib/createx-forge/
+safe-utils/=lib/treb-sol/lib/safe-utils/src/
+safe-smart-account/=lib/treb-sol/lib/safe-utils/lib/safe-smart-account/contracts/
+@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
+@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
