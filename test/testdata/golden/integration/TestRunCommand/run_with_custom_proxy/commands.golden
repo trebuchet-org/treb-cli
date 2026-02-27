@@ -37,11 +37,11 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 
 executed  anvil → Proxy::_setAndInitializeImplementation(implementation: 0xcFd8...07Ad, callbackData: 0xc4d66de8...)
 ├─ ImplementationSet(implementation: UpgradeableCounter: [0xcFd846...)
-└─ UpgradeableCounter::initialize(initialOwner: 0xf39F...2266)
+└─ UpgradeableCounter::unknown()
    Tx: 0x<HASH> | Block: 3 | Gas: <GAS_AMOUNT>
 
 executed  anvil → Proxy::unknown()
-└─ UpgradeableCounter::increment()
+└─ UpgradeableCounter::unknown()
    └─ CountIncremented(newCount: 1)
    Tx: 0x<HASH> | Block: 4 | Gas: <GAS_AMOUNT>
 

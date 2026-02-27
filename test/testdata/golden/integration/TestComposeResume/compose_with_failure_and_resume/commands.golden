@@ -50,13 +50,13 @@ executed  anvil → CreateX::deployCreate3(salt: 0xf39fd6e5..., initCode: 0x6080
 │     │    _data:: 0xc4d66de8000000000000000000000000...(36 bytes)
 │     │  )
 │     ├─ Upgraded(implementation: UpgradeableCounter: [0xcFd846...)
-│     ├─ UpgradeableCounter::initialize(initialOwner: 0xf39F...2266)
+│     ├─ UpgradeableCounter::unknown()
 │     └─ [return] 0x067887F5245C17228A4d579991bd398De552c6Bb
 └─ ContractCreation(newContract: ERC1967Proxy: [0x067887F5245C...)
    Tx: 0x<HASH> | Block: 2 | Gas: 207098
 
 executed  anvil → ERC1967Proxy::unknown()
-└─ UpgradeableCounter::increment()
+└─ UpgradeableCounter::unknown()
    └─ CountIncremented(newCount: 1)
    Tx: 0x<HASH> | Block: 3 | Gas: 51985
 

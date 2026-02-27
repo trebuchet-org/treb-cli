@@ -3,6 +3,7 @@ Error: multiple contracts found matching Counter - use full path:contract format
   - Counter (src/Counter.sol)
   - TestCounter (src/TestCounter.sol)
   - UpgradeableCounter (src/UpgradeableCounter.sol)
+  - UpgradeableCounterV2 (src/UpgradeableCounterV2.sol)
   - Counter (src/other/test/Counter.sol)
   - Counter (src/test-dir/Counter.sol)
 Usage:
