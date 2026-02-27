@@ -256,3 +256,21 @@ Started: Fri Feb 27 04:32:59 PM CET 2026
   - Fork deployment detection uses the same pattern as `countForkDeployments` in ForkStatus: compare current deployments.json keys against snapshot 0 backup keys
   - `forkDeploymentIDs` is nil when no fork is active, serving as a clean "not applicable" signal - nil means no fork indicators shown, empty map means fork active but no new deployments
 ---
+
+## 2026-02-27 - US-014
+- Added fork awareness to `treb show` command with `[fork]` indicator in output header
+- Extended ShowDeployment use case with ForkStateStore dependency for fork detection
+- Created `ShowDeploymentResult` struct wrapping Deployment + IsForkDeployment flag
+- Added `--no-fork` flag that errors if the resolved deployment was added during fork mode
+- Updated `RenderDeployment` in `internal/cli/render/deployment.go` to accept and render `isForkDeployment` indicator
+- JSON output includes `fork: true` field when deployment is fork-added
+- `isForkDeployment` method reuses `loadDeploymentIDs` for comparing deployment against snapshot 0 backup
+- Updated DI wiring to pass `forkStateStoreAdapter` to `NewShowDeployment`
+- Integration tests: fork_show_displays_fork_indicator, fork_show_no_fork_indicator_for_pre_fork_deploy
+- Files changed: `internal/usecase/show_deployment.go`, `internal/cli/show.go`, `internal/cli/render/deployment.go`, `internal/app/wire_gen.go`, `test/integration/fork_test.go`
+- **Learnings for future iterations:**
+  - The `ShowDeployment` use case's return type changed from `*models.Deployment` to `*ShowDeploymentResult` - similar pattern to ListDeployments which returns `*DeploymentListResult` with fork metadata
+  - `isForkDeployment` method follows the exact same pattern as `computeForkDeploymentIDs` in ListDeployments but checks a single deployment ID instead of computing the full set
+  - The `RenderDeployment` function uses `color.New(...).Fprint` (not Fprintf) for the header to avoid ANSI codes wrapping the `[fork]` indicator which uses a different color style
+  - Pre-existing gosec lint issue in verifier.go (G702) continues to be the only lint failure - not related to fork mode
+---
