@@ -291,3 +291,10 @@ type LibraryReference struct {
 type SendersManager interface {
 	BuildSenderScriptConfig(script *models.Artifact) (*config.SenderScriptConfig, error)
 }
+
+// ForkStateStore handles persistence of fork mode state
+type ForkStateStore interface {
+	Load(ctx context.Context) (*domain.ForkState, error)
+	Save(ctx context.Context, state *domain.ForkState) error
+	Delete(ctx context.Context) error
+}
