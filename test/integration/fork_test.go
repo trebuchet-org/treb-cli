@@ -1142,3 +1142,61 @@ func TestForkRevertCommand(t *testing.T) {
 
 	RunIntegrationTests(t, tests)
 }
+
+func TestForkAwareShow(t *testing.T) {
+	tests := []IntegrationTest{
+		{
+			Name: "fork_show_displays_fork_indicator",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				// Enter fork mode, then deploy Counter
+				{"fork", "enter", "anvil-31337"},
+				{"run", "script/deploy/DeployCounter.s.sol"},
+			},
+			TestCmds: [][]string{
+				{"show", "Counter"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				// Fork-added deployment should have [fork] indicator
+				assert.Contains(t, output, "[fork]")
+				assert.Contains(t, output, "Counter")
+				assert.Contains(t, output, "Deployment:")
+			},
+		},
+		{
+			Name: "fork_show_no_fork_indicator_for_pre_fork_deploy",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				// Deploy Counter BEFORE fork
+				{"run", "script/deploy/DeployCounter.s.sol"},
+				// Enter fork mode after deploy
+				{"fork", "enter", "anvil-31337"},
+			},
+			TestCmds: [][]string{
+				{"show", "Counter"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				// Pre-fork deployment should NOT have [fork] indicator
+				assert.NotContains(t, output, "[fork]")
+				assert.Contains(t, output, "Counter")
+				assert.Contains(t, output, "Deployment:")
+			},
+		},
+	}
+
+	RunIntegrationTests(t, tests)
+}
