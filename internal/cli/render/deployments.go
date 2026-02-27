@@ -31,6 +31,7 @@ var (
 	notVerifiedStyle   = color.New(color.FgRed)
 	sectionHeaderStyle = color.New(color.Bold, color.FgHiWhite)
 	implPrefixStyle    = color.New(color.Faint)
+	forkIndicatorStyle = color.New(color.FgYellow)
 )
 
 type TableData [][]string
@@ -57,12 +58,12 @@ func (r *DeploymentsRenderer) RenderDeploymentList(result *usecase.DeploymentLis
 	}
 
 	// Display in tree-style table format
-	r.displayTableFormat(result.Deployments, result.NetworkNames)
+	r.displayTableFormat(result.Deployments, result.NetworkNames, result.ForkDeploymentIDs)
 	return nil
 }
 
 // displayTableFormat shows deployments in table format
-func (r *DeploymentsRenderer) displayTableFormat(deployments []*models.Deployment, networkNames map[uint64]string) {
+func (r *DeploymentsRenderer) displayTableFormat(deployments []*models.Deployment, networkNames map[uint64]string, forkDeploymentIDs map[string]bool) {
 	// Group by namespace and chain
 	namespaceChainGroups := make(map[string]map[uint64][]*models.Deployment)
 
@@ -124,19 +125,19 @@ func (r *DeploymentsRenderer) displayTableFormat(deployments []*models.Deploymen
 			}
 
 			if len(proxies) > 0 {
-				proxyTable := r.buildDeploymentTable(proxies)
+				proxyTable := r.buildDeploymentTable(proxies, forkDeploymentIDs)
 				allTables = append(allTables, proxyTable)
 			}
 			if len(implementations) > 0 {
-				implTable := r.buildDeploymentTable(implementations)
+				implTable := r.buildDeploymentTable(implementations, forkDeploymentIDs)
 				allTables = append(allTables, implTable)
 			}
 			if len(singletons) > 0 {
-				singletonTable := r.buildDeploymentTable(singletons)
+				singletonTable := r.buildDeploymentTable(singletons, forkDeploymentIDs)
 				allTables = append(allTables, singletonTable)
 			}
 			if len(libraries) > 0 {
-				libraryTable := r.buildDeploymentTable(libraries)
+				libraryTable := r.buildDeploymentTable(libraries, forkDeploymentIDs)
 				allTables = append(allTables, libraryTable)
 			}
 		}
@@ -218,7 +219,7 @@ func (r *DeploymentsRenderer) displayTableFormat(deployments []*models.Deploymen
 					fmt.Fprintln(r.out, continuationPrefix)
 				}
 				fmt.Fprintf(r.out, "%s%s\n", continuationPrefix, sectionHeaderStyle.Sprint("PROXIES"))
-				proxyTable := r.buildDeploymentTable(proxies)
+				proxyTable := r.buildDeploymentTable(proxies, forkDeploymentIDs)
 				fmt.Fprint(r.out, renderTableWithWidths(proxyTable, globalColumnWidths, continuationPrefix))
 				fmt.Fprintln(r.out)
 				sectionsDisplayed++
@@ -230,7 +231,7 @@ func (r *DeploymentsRenderer) displayTableFormat(deployments []*models.Deploymen
 					fmt.Fprintln(r.out, continuationPrefix)
 				}
 				fmt.Fprintf(r.out, "%s%s\n", continuationPrefix, sectionHeaderStyle.Sprint("IMPLEMENTATIONS"))
-				implTable := r.buildDeploymentTable(implementations)
+				implTable := r.buildDeploymentTable(implementations, forkDeploymentIDs)
 				fmt.Fprint(r.out, renderTableWithWidths(implTable, globalColumnWidths, continuationPrefix))
 				fmt.Fprintln(r.out)
 				sectionsDisplayed++
@@ -242,7 +243,7 @@ func (r *DeploymentsRenderer) displayTableFormat(deployments []*models.Deploymen
 					fmt.Fprintln(r.out, continuationPrefix)
 				}
 				fmt.Fprintf(r.out, "%s%s\n", continuationPrefix, sectionHeaderStyle.Sprint("SINGLETONS"))
-				singletonTable := r.buildDeploymentTable(singletons)
+				singletonTable := r.buildDeploymentTable(singletons, forkDeploymentIDs)
 				fmt.Fprint(r.out, renderTableWithWidths(singletonTable, globalColumnWidths, continuationPrefix))
 				fmt.Fprintln(r.out)
 				sectionsDisplayed++
@@ -254,7 +255,7 @@ func (r *DeploymentsRenderer) displayTableFormat(deployments []*models.Deploymen
 					fmt.Fprintln(r.out, continuationPrefix)
 				}
 				fmt.Fprintf(r.out, "%s%s\n", continuationPrefix, sectionHeaderStyle.Sprint("LIBRARIES"))
-				libraryTable := r.buildDeploymentTable(libraries)
+				libraryTable := r.buildDeploymentTable(libraries, forkDeploymentIDs)
 				fmt.Fprint(r.out, renderTableWithWidths(libraryTable, globalColumnWidths, continuationPrefix))
 				fmt.Fprintln(r.out)
 				sectionsDisplayed++
@@ -272,7 +273,7 @@ func (r *DeploymentsRenderer) displayTableFormat(deployments []*models.Deploymen
 }
 
 // buildDeploymentTable creates a TableData for a list of deployments
-func (r *DeploymentsRenderer) buildDeploymentTable(deployments []*models.Deployment) TableData {
+func (r *DeploymentsRenderer) buildDeploymentTable(deployments []*models.Deployment, forkDeploymentIDs map[string]bool) TableData {
 	tableData := make(TableData, 0)
 
 	// Sort deployments by contract name (alphabetically)
@@ -292,6 +293,9 @@ func (r *DeploymentsRenderer) buildDeploymentTable(deployments []*models.Deploym
 	for _, deployment := range deployments {
 		// Add main deployment row
 		contractCell := r.getColoredDisplayName(deployment)
+		if forkDeploymentIDs != nil && forkDeploymentIDs[deployment.ID] {
+			contractCell += " " + forkIndicatorStyle.Sprint("[fork]")
+		}
 		if len(deployment.Tags) > 0 {
 			contractCell += " " + tagsStyle.Sprintf("(%s)", deployment.Tags[0])
 		}

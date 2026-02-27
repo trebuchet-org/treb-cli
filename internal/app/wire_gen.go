@@ -46,7 +46,8 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 		return nil, err
 	}
 	networkResolver := config.ProvideNetworkResolver(runtimeConfig)
-	listDeployments := usecase.NewListDeployments(runtimeConfig, fileRepository, networkResolver)
+	forkStateStoreAdapter := fs.NewForkStateStoreAdapter(runtimeConfig)
+	listDeployments := usecase.NewListDeployments(runtimeConfig, fileRepository, networkResolver, forkStateStoreAdapter)
 	deploymentResolver := resolvers.NewDeploymentResolver(runtimeConfig, fileRepository, selectorAdapter)
 	showDeployment := usecase.NewShowDeployment(runtimeConfig, fileRepository, deploymentResolver)
 	string2 := adapters.ProvideProjectPath(runtimeConfig)
@@ -86,7 +87,6 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 	writer := render.ProvideIO(cmd)
 	scriptRenderer := render.NewScriptRenderer(writer, fileRepository, abiResolver, logger)
 	runProgress := progress.NewRunProgress(scriptRenderer)
-	forkStateStoreAdapter := fs.NewForkStateStoreAdapter(runtimeConfig)
 	manager := anvil.NewManager()
 	forkFileManagerAdapter := fs.NewForkFileManagerAdapter(runtimeConfig)
 	runScript := usecase.NewRunScript(runtimeConfig, scriptResolver, parameterResolver, sendersManager, runResultHydrator, fileRepository, libraryResolver, runProgress, forgeAdapter, forkStateStoreAdapter, manager, forkFileManagerAdapter)

@@ -830,6 +830,161 @@ func TestForkHistoryCommand(t *testing.T) {
 	RunIntegrationTests(t, tests)
 }
 
+func TestForkAwareList(t *testing.T) {
+	tests := []IntegrationTest{
+		{
+			Name: "fork_list_shows_fork_indicator",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"gen", "deploy", "src/SampleToken.sol:SampleToken"},
+				// Deploy Counter before fork
+				{"run", "script/deploy/DeployCounter.s.sol"},
+				// Enter fork mode
+				{"fork", "enter", "anvil-31337"},
+				// Deploy SampleToken inside fork
+				{"run", "script/deploy/DeploySampleToken.s.sol"},
+			},
+			TestCmds: [][]string{
+				{"list"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				// Counter should NOT have [fork] indicator
+				// SampleToken SHOULD have [fork] indicator
+				assert.Contains(t, output, "SampleToken")
+				assert.Contains(t, output, "[fork]")
+				// Verify Counter doesn't have [fork] - check that [fork] appears after SampleToken (not Counter)
+				assert.Contains(t, output, "Counter")
+			},
+		},
+		{
+			Name: "fork_list_fork_flag_filters",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"gen", "deploy", "src/SampleToken.sol:SampleToken"},
+				{"run", "script/deploy/DeployCounter.s.sol"},
+				{"fork", "enter", "anvil-31337"},
+				{"run", "script/deploy/DeploySampleToken.s.sol"},
+			},
+			TestCmds: [][]string{
+				{"list", "--fork"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				// --fork: should show only SampleToken (fork-added)
+				assert.Contains(t, output, "SampleToken")
+				assert.NotContains(t, output, "Counter")
+			},
+		},
+		{
+			Name: "fork_list_no_fork_flag_filters",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"gen", "deploy", "src/SampleToken.sol:SampleToken"},
+				{"run", "script/deploy/DeployCounter.s.sol"},
+				{"fork", "enter", "anvil-31337"},
+				{"run", "script/deploy/DeploySampleToken.s.sol"},
+			},
+			TestCmds: [][]string{
+				{"list", "--no-fork"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				// --no-fork: should show only Counter (pre-fork)
+				assert.Contains(t, output, "Counter")
+				assert.NotContains(t, output, "SampleToken")
+			},
+		},
+		{
+			Name: "fork_list_json_with_fork_field",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"gen", "deploy", "src/SampleToken.sol:SampleToken"},
+				{"run", "script/deploy/DeployCounter.s.sol"},
+				{"fork", "enter", "anvil-31337"},
+				{"run", "script/deploy/DeploySampleToken.s.sol"},
+			},
+			TestCmds: [][]string{
+				{"list", "--json"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				// Extract JSON from output (framework prepends "=== cmd N: ... ===\n")
+				jsonStr := extractJSONArray(output)
+
+				// Parse JSON output
+				var entries []map[string]interface{}
+				require.NoError(t, json.Unmarshal([]byte(jsonStr), &entries))
+				require.Len(t, entries, 2)
+
+				// Find Counter and SampleToken entries
+				var counterEntry, tokenEntry map[string]interface{}
+				for _, e := range entries {
+					switch e["contractName"] {
+					case "Counter":
+						counterEntry = e
+					case "SampleToken":
+						tokenEntry = e
+					}
+				}
+
+				require.NotNil(t, counterEntry, "Counter should be in JSON output")
+				require.NotNil(t, tokenEntry, "SampleToken should be in JSON output")
+
+				// Counter should NOT have fork: true (omitempty means field absent or false)
+				counterFork, hasFork := counterEntry["fork"]
+				if hasFork {
+					assert.False(t, counterFork.(bool), "Counter should not be marked as fork")
+				}
+
+				// SampleToken SHOULD have fork: true
+				assert.Equal(t, true, tokenEntry["fork"], "SampleToken should be marked as fork")
+			},
+		},
+	}
+
+	RunIntegrationTests(t, tests)
+}
+
+// extractJSONArray extracts a JSON array from output that may contain framework headers.
+// The framework prepends "=== cmd N: [...] ===\n" to command output.
+func extractJSONArray(output string) string {
+	// Find the JSON array start - look for "\n[" to skip the framework header brackets
+	idx := strings.Index(output, "\n[")
+	if idx >= 0 {
+		return strings.TrimSpace(output[idx+1:])
+	}
+	// Fallback: if output starts with "[" directly
+	if strings.HasPrefix(strings.TrimSpace(output), "[") {
+		return strings.TrimSpace(output)
+	}
+	return output
+}
+
 func TestForkRevertCommand(t *testing.T) {
 	tests := []IntegrationTest{
 		{

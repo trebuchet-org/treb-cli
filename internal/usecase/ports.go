@@ -86,9 +86,10 @@ func (NopProgress) Error(string)                              {}
 
 // DeploymentListResult contains the result of listing deployments
 type DeploymentListResult struct {
-	Deployments  []*models.Deployment
-	Summary      DeploymentSummary
-	NetworkNames map[uint64]string // Map of chain ID to network name
+	Deployments      []*models.Deployment
+	Summary          DeploymentSummary
+	NetworkNames     map[uint64]string // Map of chain ID to network name
+	ForkDeploymentIDs map[string]bool   // Set of deployment IDs added during fork mode (nil if fork not active)
 }
 
 // DeploymentSummary provides summary statistics

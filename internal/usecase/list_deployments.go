@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"path/filepath"
 	"sort"
 
 	"github.com/trebuchet-org/treb-cli/internal/domain"
@@ -15,6 +16,8 @@ type ListDeploymentsParams struct {
 	ContractName string
 	Label        string
 	Type         models.DeploymentType
+	ForkOnly     bool // Only show fork-added deployments
+	NoFork       bool // Only show pre-fork deployments
 }
 
 // ListDeployments is the use case for listing deployments
@@ -22,14 +25,16 @@ type ListDeployments struct {
 	config          *config.RuntimeConfig
 	repo            DeploymentRepository
 	networkResolver NetworkResolver
+	forkState       ForkStateStore
 }
 
 // NewListDeployments creates a new ListDeployments use case
-func NewListDeployments(cfg *config.RuntimeConfig, repo DeploymentRepository, networkResolver NetworkResolver) *ListDeployments {
+func NewListDeployments(cfg *config.RuntimeConfig, repo DeploymentRepository, networkResolver NetworkResolver, forkState ForkStateStore) *ListDeployments {
 	return &ListDeployments{
 		config:          cfg,
 		repo:            repo,
 		networkResolver: networkResolver,
+		forkState:       forkState,
 	}
 }
 
@@ -53,6 +58,14 @@ func (uc *ListDeployments) Run(ctx context.Context, params ListDeploymentsParams
 		return nil, err
 	}
 
+	// Check for active fork and compute fork deployment IDs
+	forkDeploymentIDs := uc.computeForkDeploymentIDs(ctx)
+
+	// Filter based on fork flags
+	if forkDeploymentIDs != nil && (params.ForkOnly || params.NoFork) {
+		deployments = filterByFork(deployments, forkDeploymentIDs, params.ForkOnly)
+	}
+
 	// Sort deployments for consistent output
 	sortDeployments(deployments)
 
@@ -70,10 +83,65 @@ func (uc *ListDeployments) Run(ctx context.Context, params ListDeploymentsParams
 	}
 
 	return &DeploymentListResult{
-		Deployments:  deployments,
-		Summary:      summary,
-		NetworkNames: networkNames,
+		Deployments:       deployments,
+		Summary:           summary,
+		NetworkNames:      networkNames,
+		ForkDeploymentIDs: forkDeploymentIDs,
 	}, nil
+}
+
+// computeForkDeploymentIDs determines which deployments were added during fork mode.
+// Returns nil if no fork is active for the current network.
+func (uc *ListDeployments) computeForkDeploymentIDs(ctx context.Context) map[string]bool {
+	state, err := uc.forkState.Load(ctx)
+	if err != nil {
+		return nil
+	}
+
+	// Determine network name
+	networkName := ""
+	if uc.config.Network != nil {
+		networkName = uc.config.Network.Name
+	}
+	if networkName == "" {
+		return nil
+	}
+
+	if !state.IsForkActive(networkName) {
+		return nil
+	}
+
+	// Load current deployment IDs
+	currentPath := filepath.Join(uc.config.DataDir, "deployments.json")
+	currentIDs := loadDeploymentIDs(currentPath)
+
+	// Load initial backup deployment IDs (snapshot 0)
+	backupPath := filepath.Join(uc.config.DataDir, "priv", "fork", networkName, "snapshots", "0", "deployments.json")
+	backupIDs := loadDeploymentIDs(backupPath)
+
+	// Compute fork-added IDs (in current but not in backup)
+	forkIDs := make(map[string]bool)
+	for id := range currentIDs {
+		if !backupIDs[id] {
+			forkIDs[id] = true
+		}
+	}
+
+	return forkIDs
+}
+
+// filterByFork filters deployments based on fork status
+func filterByFork(deployments []*models.Deployment, forkIDs map[string]bool, forkOnly bool) []*models.Deployment {
+	filtered := make([]*models.Deployment, 0, len(deployments))
+	for _, dep := range deployments {
+		isFork := forkIDs[dep.ID]
+		if forkOnly && isFork {
+			filtered = append(filtered, dep)
+		} else if !forkOnly && !isFork {
+			filtered = append(filtered, dep)
+		}
+	}
+	return filtered
 }
 
 // sortDeployments sorts deployments by namespace, chain, contract name, and label

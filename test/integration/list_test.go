@@ -1,7 +1,12 @@
 package integration
 
 import (
+	"encoding/json"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/trebuchet-org/treb-cli/test/helpers"
 )
 
 func TestListCommand(t *testing.T) {
@@ -142,8 +147,19 @@ func TestListCommand(t *testing.T) {
 				{"gen", "deploy", "src/Counter.sol:Counter"},
 				{"run", "script/deploy/DeployCounter.s.sol"},
 			},
-			TestCmds:  [][]string{{"list", "--json"}},
-			ExpectErr: true,
+			TestCmds:   [][]string{{"list", "--json"}},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				// Extract JSON from output (framework prepends "=== cmd N: ... ===\n")
+				jsonStr := extractJSONArray(output)
+
+				// Verify valid JSON output
+				var entries []map[string]interface{}
+				require.NoError(t, json.Unmarshal([]byte(jsonStr), &entries))
+				require.Len(t, entries, 1)
+				assert.Equal(t, "Counter", entries[0]["contractName"])
+				assert.NotEmpty(t, entries[0]["address"])
+			},
 		},
 		{
 			Name: "list_with_mixed_deployment_status",
