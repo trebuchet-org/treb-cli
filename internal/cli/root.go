@@ -153,6 +153,10 @@ smart contract deployments using CreateX factory contracts.`,
 	configCmd.GroupID = "management"
 	rootCmd.AddCommand(configCmd)
 
+	migrateConfigCmd := NewMigrateConfigCmd()
+	migrateConfigCmd.GroupID = "management"
+	rootCmd.AddCommand(migrateConfigCmd)
+
 	// Version command
 	versionCmd := NewVersionCmd()
 	rootCmd.AddCommand(versionCmd)
