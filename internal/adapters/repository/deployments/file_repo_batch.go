@@ -447,8 +447,8 @@ func (f *FileRepository) resolveImplementationID(chainID uint64, implAddr string
 // findUpgradeTxID finds the transaction ID for the upgrade call to a proxy
 func (f *FileRepository) findUpgradeTxID(execution *forge.HydratedRunResult, proxyAddr common.Address) string {
 	for _, tx := range execution.Transactions {
-		if tx.Transaction.To == proxyAddr && tx.TxHash != nil {
-			return fmt.Sprintf("tx-%s", tx.TxHash.Hex())
+		if tx.Transaction.To == proxyAddr {
+			return f.getRegistryTransactionID(tx)
 		}
 	}
 	return ""
