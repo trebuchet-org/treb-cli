@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -24,6 +25,7 @@ func NewForkCmd() *cobra.Command {
 	cmd.AddCommand(newForkRestartCmd())
 	cmd.AddCommand(newForkStatusCmd())
 	cmd.AddCommand(newForkHistoryCmd())
+	cmd.AddCommand(newForkDiffCmd())
 
 	return cmd
 }
@@ -351,4 +353,67 @@ func runForkHistory(cmd *cobra.Command, args []string) error {
 
 	renderer := render.NewForkRenderer()
 	return renderer.RenderHistory(result)
+}
+
+// newForkDiffCmd creates the fork diff subcommand
+func newForkDiffCmd() *cobra.Command {
+	var jsonOutput bool
+
+	cmd := &cobra.Command{
+		Use:   "diff [network]",
+		Short: "Show deployments added or changed during fork mode",
+		Long: `Compare current registry state against the initial fork state to show
+what deployments were added or changed during fork mode.
+
+If no network is specified, uses the currently configured network.`,
+		Args:         cobra.MaximumNArgs(1),
+		SilenceUsage: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runForkDiff(cmd, args, jsonOutput)
+		},
+	}
+
+	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output in JSON format")
+
+	return cmd
+}
+
+func runForkDiff(cmd *cobra.Command, args []string, jsonOutput bool) error {
+	app, err := getApp(cmd)
+	if err != nil {
+		return err
+	}
+
+	ctx := cmd.Context()
+
+	network := ""
+	if len(args) > 0 {
+		network = args[0]
+	}
+
+	params := usecase.DiffForkParams{
+		Network: network,
+	}
+
+	result, err := app.DiffFork.Execute(ctx, params)
+	if err != nil {
+		return err
+	}
+
+	if jsonOutput {
+		return renderForkDiffJSON(result)
+	}
+
+	renderer := render.NewForkRenderer()
+	return renderer.RenderDiff(result)
+}
+
+// renderForkDiffJSON outputs fork diff as JSON
+func renderForkDiffJSON(result *usecase.ForkDiffResult) error {
+	data, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(data))
+	return nil
 }

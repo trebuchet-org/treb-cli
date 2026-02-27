@@ -40,6 +40,7 @@ type App struct {
 	RestartFork *usecase.RestartFork
 	ForkStatus  *usecase.ForkStatus
 	ForkHistory *usecase.ForkHistory
+	DiffFork    *usecase.DiffFork
 
 	// Adapters (needed for special cases like log streaming)
 	AnvilManager    usecase.AnvilManager
@@ -79,6 +80,7 @@ func NewApp(
 	restartFork *usecase.RestartFork,
 	forkStatus *usecase.ForkStatus,
 	forkHistory *usecase.ForkHistory,
+	diffFork *usecase.DiffFork,
 	anvilManager usecase.AnvilManager,
 	networkResolver usecase.NetworkResolver,
 	forkStateStore usecase.ForkStateStore,
@@ -112,6 +114,7 @@ func NewApp(
 		RestartFork:              restartFork,
 		ForkStatus:               forkStatus,
 		ForkHistory:              forkHistory,
+		DiffFork:                 diffFork,
 		AnvilManager:             anvilManager,
 		NetworkResolver:          networkResolver,
 		ForkStateStore:           forkStateStore,

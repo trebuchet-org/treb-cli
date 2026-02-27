@@ -143,3 +143,37 @@ func (r *ForkRenderer) RenderHistory(result *usecase.ForkHistoryResult) error {
 	fmt.Println()
 	return nil
 }
+
+// RenderDiff renders the result of fork diff
+func (r *ForkRenderer) RenderDiff(result *usecase.ForkDiffResult) error {
+	fmt.Printf("Fork Diff: %s\n", result.Network)
+	fmt.Println()
+
+	if !result.HasChanges {
+		fmt.Println("No changes since fork entered.")
+		return nil
+	}
+
+	if len(result.NewDeployments) > 0 {
+		fmt.Printf("New Deployments (%d):\n", len(result.NewDeployments))
+		for _, dep := range result.NewDeployments {
+			fmt.Printf("  + %-20s %s  %s\n", dep.ContractName, dep.Address, dep.Type)
+		}
+		fmt.Println()
+	}
+
+	if len(result.ModifiedDeployments) > 0 {
+		fmt.Printf("Modified Deployments (%d):\n", len(result.ModifiedDeployments))
+		for _, dep := range result.ModifiedDeployments {
+			fmt.Printf("  ~ %-20s %s  %s\n", dep.ContractName, dep.Address, dep.Type)
+		}
+		fmt.Println()
+	}
+
+	if result.NewTransactionCount > 0 {
+		fmt.Printf("New Transactions: %d\n", result.NewTransactionCount)
+		fmt.Println()
+	}
+
+	return nil
+}

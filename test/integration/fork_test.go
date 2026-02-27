@@ -1368,6 +1368,97 @@ func TestForkAwareShow(t *testing.T) {
 	RunIntegrationTests(t, tests)
 }
 
+func TestForkDiffCommand(t *testing.T) {
+	tests := []IntegrationTest{
+		{
+			Name: "fork_diff_shows_new_deployments",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"gen", "deploy", "src/SampleToken.sol:SampleToken"},
+				{"fork", "enter", "anvil-31337"},
+				{"run", "script/deploy/DeployCounter.s.sol"},
+				{"run", "script/deploy/DeploySampleToken.s.sol"},
+			},
+			TestCmds: [][]string{
+				{"fork", "diff"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				// Should show 2 new deployments
+				assert.Contains(t, output, "Fork Diff: anvil-31337")
+				assert.Contains(t, output, "New Deployments (2)")
+				assert.Contains(t, output, "Counter")
+				assert.Contains(t, output, "SampleToken")
+			},
+		},
+		{
+			Name: "fork_diff_no_changes",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"fork", "enter", "anvil-31337"},
+			},
+			TestCmds: [][]string{
+				{"fork", "diff"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				assert.Contains(t, output, "Fork Diff: anvil-31337")
+				assert.Contains(t, output, "No changes since fork entered")
+			},
+		},
+		{
+			Name: "fork_diff_after_revert_shows_no_changes",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"fork", "enter", "anvil-31337"},
+				{"run", "script/deploy/DeployCounter.s.sol"},
+				{"fork", "revert", "anvil-31337"},
+			},
+			TestCmds: [][]string{
+				{"fork", "diff"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				assert.Contains(t, output, "Fork Diff: anvil-31337")
+				assert.Contains(t, output, "No changes since fork entered")
+			},
+		},
+		{
+			Name: "fork_diff_no_active_fork",
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+			},
+			TestCmds: [][]string{
+				{"fork", "diff"},
+			},
+			ExpectErr:  true,
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				assert.Contains(t, output, "no active fork")
+			},
+		},
+	}
+
+	RunIntegrationTests(t, tests)
+}
+
 func TestForkCommandGuards(t *testing.T) {
 	tests := []IntegrationTest{
 		{
