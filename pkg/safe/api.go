@@ -83,7 +83,7 @@ func (c *SafeClient) GetTransaction(safeTxHash common.Hash) (*MultisigTransactio
 
 	req.Header.Set("Accept", "application/json")
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.httpClient.Do(req) //nolint:gosec // URL is constructed from configured Safe service endpoint
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
@@ -129,7 +129,7 @@ func (c *SafeClient) GetPendingTransactions(safeAddress common.Address) ([]*Mult
 
 	req.Header.Set("Accept", "application/json")
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.httpClient.Do(req) //nolint:gosec // URL is constructed from configured Safe service endpoint
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}

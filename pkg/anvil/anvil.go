@@ -172,7 +172,7 @@ func StopAnvilInstance(name, port string) error {
 	// Wait for process to actually exit (with timeout)
 	done := make(chan struct{})
 	go func() {
-		process.Wait()
+		_, _ = process.Wait()
 		close(done)
 	}()
 	select {
