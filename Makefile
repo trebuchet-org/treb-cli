@@ -9,13 +9,15 @@ LDFLAGS = -X main.version=$(VERSION) \
 					-X main.commit=$(COMMIT) \
 					-X main.date=$(DATE) \
 					-X main.trebSolCommit=$(TREB_SOL_COMMIT)
-# Setup the repo
+
 setup: 
 	@echo "🔨 Getting submodules"
 	@git submodule init
 	@git submodule update
 	@echo "🔨 Installing forge deps"
 	@cd treb-sol && forge install
+	@echo "🔨 Installing abigen"
+	@go install github.com/ethereum/go-ethereum/cmd/abigen@latest
 
 forge_build:
 	@echo ">> forge build"
@@ -30,7 +32,6 @@ bindings: forge_build
 build: setup bindings
 	@echo "🔨 Building treb..."
 	@go build -ldflags="$(LDFLAGS)" -tags dev -o bin/treb ./cli
-
 
 # Install globally
 install: 
