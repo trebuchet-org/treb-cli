@@ -671,6 +671,78 @@ func TestForkSetupScript(t *testing.T) {
 	RunIntegrationTests(t, tests)
 }
 
+func TestForkStatusCommand(t *testing.T) {
+	tests := []IntegrationTest{
+		{
+			Name: "fork_status_shows_active_fork",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"fork", "enter", "anvil-31337"},
+			},
+			TestCmds: [][]string{
+				{"fork", "status"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				// Verify output shows fork info
+				assert.Contains(t, output, "Active Forks")
+				assert.Contains(t, output, "anvil-31337")
+				assert.Contains(t, output, "31337")
+				assert.Contains(t, output, "healthy")
+				assert.Contains(t, output, "Snapshots:    1")
+				assert.Contains(t, output, "Fork Deploys: 0")
+				assert.Contains(t, output, "(current)")
+			},
+		},
+		{
+			Name: "fork_status_after_deploy",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"fork", "enter", "anvil-31337"},
+				{"run", "script/deploy/DeployCounter.s.sol"},
+			},
+			TestCmds: [][]string{
+				{"fork", "status"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				// Verify output shows 1 fork deployment and 2 snapshots
+				assert.Contains(t, output, "Active Forks")
+				assert.Contains(t, output, "anvil-31337")
+				assert.Contains(t, output, "healthy")
+				assert.Contains(t, output, "Snapshots:    2")
+				assert.Contains(t, output, "Fork Deploys: 1")
+			},
+		},
+		{
+			Name: "fork_status_no_active_forks",
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+			},
+			TestCmds: [][]string{
+				{"fork", "status"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				assert.Contains(t, output, "No active forks")
+			},
+		},
+	}
+
+	RunIntegrationTests(t, tests)
+}
+
 func TestForkRevertCommand(t *testing.T) {
 	tests := []IntegrationTest{
 		{

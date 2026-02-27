@@ -21,6 +21,7 @@ func NewForkCmd() *cobra.Command {
 	cmd.AddCommand(newForkEnterCmd())
 	cmd.AddCommand(newForkExitCmd())
 	cmd.AddCommand(newForkRevertCmd())
+	cmd.AddCommand(newForkStatusCmd())
 
 	return cmd
 }
@@ -222,4 +223,36 @@ func runForkRevert(cmd *cobra.Command, args []string) error {
 
 	renderer := render.NewForkRenderer()
 	return renderer.RenderRevert(result)
+}
+
+// newForkStatusCmd creates the fork status subcommand
+func newForkStatusCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "status",
+		Short: "Show status of all active forks",
+		Long: `Show the state of all active forks including network, chain ID, fork URL,
+anvil health, uptime, snapshot count, and fork-added deployment count.`,
+		Args:         cobra.NoArgs,
+		SilenceUsage: true,
+		RunE:         runForkStatus,
+	}
+
+	return cmd
+}
+
+func runForkStatus(cmd *cobra.Command, _ []string) error {
+	app, err := getApp(cmd)
+	if err != nil {
+		return err
+	}
+
+	ctx := cmd.Context()
+
+	result, err := app.ForkStatus.Execute(ctx)
+	if err != nil {
+		return err
+	}
+
+	renderer := render.NewForkRenderer()
+	return renderer.RenderStatus(result)
 }

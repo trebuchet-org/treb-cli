@@ -2,6 +2,7 @@ package render
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -43,6 +44,47 @@ func (r *ForkRenderer) RenderExit(result *usecase.ExitForkResult) error {
 		fmt.Printf("  - %s: registry restored, fork cleaned up\n", network)
 	}
 	return nil
+}
+
+// RenderStatus renders the result of fork status
+func (r *ForkRenderer) RenderStatus(result *usecase.ForkStatusResult) error {
+	if !result.HasForks {
+		fmt.Println("No active forks")
+		return nil
+	}
+
+	fmt.Println("Active Forks")
+	fmt.Println()
+
+	for _, e := range result.Entries {
+		currentMarker := ""
+		if e.IsCurrent {
+			currentMarker = " (current)"
+		}
+
+		fmt.Printf("  %s%s\n", e.Network, currentMarker)
+		fmt.Printf("    Chain ID:     %d\n", e.ChainID)
+		fmt.Printf("    Fork URL:     %s\n", e.ForkURL)
+		fmt.Printf("    Anvil PID:    %d\n", e.AnvilPID)
+		fmt.Printf("    Status:       %s\n", e.HealthDetail)
+		fmt.Printf("    Uptime:       %s\n", formatDuration(e.Uptime))
+		fmt.Printf("    Snapshots:    %d\n", e.SnapshotCount)
+		fmt.Printf("    Fork Deploys: %d\n", e.ForkDeployments)
+		fmt.Println()
+	}
+
+	return nil
+}
+
+// formatDuration formats a duration in a human-readable way
+func formatDuration(d time.Duration) string {
+	if d < time.Minute {
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	}
+	if d < time.Hour {
+		return fmt.Sprintf("%dm%ds", int(d.Minutes()), int(d.Seconds())%60)
+	}
+	return fmt.Sprintf("%dh%dm", int(d.Hours()), int(d.Minutes())%60)
 }
 
 // RenderRevert renders the result of fork revert
