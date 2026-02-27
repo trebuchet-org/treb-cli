@@ -25,6 +25,8 @@ Started: Fri Feb 27 04:32:59 PM CET 2026
 - Integration test framework prepends `=== cmd N: [...] ===\n` before stdout; use `extractJSONArray()` helper to parse JSON from framework-wrapped output
 - `loadDeploymentIDs` in usecase package is reusable for any fork vs. baseline deployment comparison
 - Integration tests that need to kill processes and run commands after use `PostTest` with empty `TestCmds` and manual `Treb()` calls
+- treb-sol contracts use `pragma solidity ^0.8.0`, inherit from forge-std's CommonBase/Script/Test, and Safe contracts are available via `safe-smart-account/` remapping
+- Safe storage layout: slot 0=singleton, slot 1=modules, slot 2=owners mapping (linked list), slot 3=ownerCount, slot 4=threshold
 
 ---
 
@@ -337,4 +339,27 @@ Started: Fri Feb 27 04:32:59 PM CET 2026
   - `loadRawDeployments` returns `map[string]json.RawMessage` for byte-level comparison, while `loadDeploymentIDs` returns `map[string]bool` for set operations
   - The `--json` flag on subcommands is best handled as a local bool flag passed through the RunE closure, avoiding conflicts with global flags
   - Modified deployments are detected by comparing raw JSON bytes (string comparison of json.RawMessage), which catches any field-level change without needing to define which fields matter
+---
+
+## 2026-02-27 - US-018
+- Created ForkHelper.sol contract in `treb-sol/src/ForkHelper.sol` with three main utility functions
+- `convertSafeToSingleOwner(address safe, address newOwner)`: rewrites Safe storage via vm.store to set single owner, ownerCount=1, threshold=1, by clearing existing linked list and setting up new one
+- `dealNativeToken(address to, uint256 amount)`: wrapper around vm.deal for readability
+- `dealERC20(address token, address to, uint256 amount)`: auto-detects balanceOf mapping slot by probing slots 0-9 with distinctive test values, then writes desired amount
+- Abstract contract inheriting CommonBase for vm access, designed for diamond inheritance with TrebScript
+- Comprehensive NatSpec documentation on all functions and the contract itself
+- Created ForkHelper.t.sol test suite in `treb-sol/test/ForkHelper.t.sol` with 13 tests:
+  - Safe conversion: single owner, multiple owners (3→1), replace with existing owner, revert on zero address, revert on sentinel
+  - Native token: set balance, replace existing, zero amount
+  - ERC20: slot 0 detection, slot 1 detection, zero amount, large amount, multiple recipients
+- Created MockERC20Slot0 and MockERC20Slot1 test contracts to verify auto-detection across different storage layouts
+- All 114 treb-sol tests pass (13 new + 101 existing), forge build succeeds, Go lint passes, Go unit tests pass
+- Files changed: `treb-sol/src/ForkHelper.sol`, `treb-sol/test/ForkHelper.t.sol`
+- **Learnings for future iterations:**
+  - Safe storage layout (from SafeStorage.sol): slot 0=singleton, slot 1=modules mapping, slot 2=owners mapping, slot 3=ownerCount, slot 4=threshold
+  - Safe owners are a linked list in a mapping: sentinel(0x1) → owner1 → owner2 → ... → sentinel. Must clear all old entries before setting new ones.
+  - Solidity mapping storage slot: `keccak256(abi.encode(key, baseSlot))` for `mapping(address => T)` at `baseSlot`
+  - Use CommonBase from forge-std for vm access in abstract contracts - avoids naming conflicts in diamond inheritance with Script/Test
+  - ERC20 balanceOf slot detection via probing: write distinctive value, check balanceOf(), restore if mismatch. Works for any mapping-based implementation.
+  - ForkHelperHarness pattern (inherits both ForkHelper and Test) needed because ForkHelper's functions are `internal`
 ---

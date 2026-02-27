@@ -416,7 +416,7 @@
         "forge test passes in treb-sol/"
       ],
       "priority": 18,
-      "passes": false,
+      "passes": true,
       "notes": "This is in the treb-sol submodule (Solidity, not Go). Safe storage layout: slot 2 = ownerCount, slot 3 = threshold, owners stored in a linked list mapping at slot 2. ERC20 balanceOf is typically at slot 0 or slot 1 depending on the token implementation."
     }
   ]
