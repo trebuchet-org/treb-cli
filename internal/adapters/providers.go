@@ -25,6 +25,11 @@ func ProvideProjectPath(cfg *config.RuntimeConfig) string {
 	return cfg.ProjectRoot
 }
 
+// ProvideFoundryProfile derives the Foundry build profile from the namespace
+func ProvideFoundryProfile(cfg *config.RuntimeConfig) contracts.FoundryProfile {
+	return contracts.FoundryProfile(cfg.Namespace)
+}
+
 // FSSet provides filesystem-based implementations
 var FSSet = wire.NewSet(
 	deployments.NewFileRepositoryFromConfig,
@@ -150,6 +155,7 @@ var ScriptAdapters = wire.NewSet(
 var AllAdapters = wire.NewSet(
 	// Provider functions
 	ProvideProjectPath,
+	ProvideFoundryProfile,
 
 	// Adapter sets
 	FSSet,

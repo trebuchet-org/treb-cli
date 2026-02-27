@@ -2,6 +2,7 @@ package abi
 
 import (
 	"context"
+	"fmt"
 	"maps"
 	"strings"
 
@@ -42,7 +43,10 @@ func (r *ABIResolver) Get(ctx context.Context, artifact *models.Artifact) (*abi.
 
 func (r *ABIResolver) FindByRef(ctx context.Context, contractRef string) (*abi.ABI, error) {
 	query := domain.ContractQuery{Query: &contractRef}
-	contracts := r.contracts.SearchContracts(ctx, query)
+	contracts, err := r.contracts.SearchContracts(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search contracts: %w", err)
+	}
 	if len(contracts) == 0 {
 		return nil, domain.NoContractsMatchErr{Query: query}
 	}
