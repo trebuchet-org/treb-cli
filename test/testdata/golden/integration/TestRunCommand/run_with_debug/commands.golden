@@ -9,7 +9,7 @@
   Senders:   [anvil]
 ──────────────────────────────────────────────────
 [⠃] Compiling...
-[⠃] Solc 0.8.33 finished in 1.68s
+[*] Solc finished
 Compiler run successful with warnings:
 Warning (9207): 'send' is deprecated and scheduled for removal. Use 'call{value: <amount>}("")' instead.
    --> lib/treb-sol/lib/safe-utils/lib/safe-smart-account/contracts/Safe.sol:243:21:

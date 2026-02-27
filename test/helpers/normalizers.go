@@ -191,17 +191,20 @@ func (n VersionNormalizer) Normalize(output string) string {
 type SpinnerNormalizer struct{}
 
 func (n SpinnerNormalizer) Normalize(output string) string {
-	// Match spinner patterns: \r\r[spinner_char] Compiling...\r\r[spinner_char] Compiling...
-	// The spinner uses Unicode braille characters in brackets like [⠃], [⠊], [⠒], etc.
-	// We'll collapse ALL consecutive spinner frames into a single normalized one
+	// Forge uses Unicode braille spinner characters like [⠃], [⠊], [⠒], etc.
+	// These appear in compilation output (e.g. "[⠃] Compiling...", "[⠆] Solc 0.8.33 finished in 1.68s")
+	// The spinner char, number of frames, and timing values are all non-deterministic.
+	//
+	// Strategy: normalize any line starting with a braille spinner bracket to strip the
+	// spinner char and collapse consecutive spinner lines into one.
 
-	// Some toolchains print multiple frames on separate lines (no leading \r), e.g.:
-	//   \r[⠃] Compiling...\n[⠊] Compiling...\n
-	// So we match sequences where each frame may optionally be prefixed with one or more \r.
-	spinnerPattern := regexp.MustCompile(`((?:\r)*\[[^\]]+\] Compiling[^\n\r]*\s*(?:\r?\n|\r))+`)
+	// Normalize the "finished" line: variable spinner char and timing
+	finishedPattern := regexp.MustCompile(`\[[^\]]+\] Solc [^\n\r]* finished in [0-9.]+s`)
+	output = finishedPattern.ReplaceAllString(output, "[*] Solc finished")
 
-	// Replace ALL consecutive spinner frames (whether 2, 3, 4, or more) with a SINGLE normalized version
-	output = spinnerPattern.ReplaceAllString(output, "\r[⠃] Compiling...\n")
+	// Collapse consecutive "Compiling" spinner frames into a single normalized line
+	compilingPattern := regexp.MustCompile(`((?:\r)*\[[^\]]+\] Compiling[^\n\r]*\s*(?:\r?\n|\r))+`)
+	output = compilingPattern.ReplaceAllString(output, "\r[⠃] Compiling...\n")
 
 	return output
 }
