@@ -15,14 +15,7 @@ func IsolatedTest(t *testing.T, name string, fn func(t *testing.T, ctx *TestCont
 		}
 		testCtx := pool.Acquire(t)
 
-		// Only release if not skipping cleanup
-		if !ShouldSkipCleanup() {
-			defer pool.Release(testCtx)
-		} else {
-			defer func() {
-				t.Logf("🔍 Test context not released due to skip cleanup flag: %s", testCtx.WorkDir)
-			}()
-		}
+		defer pool.Release(testCtx)
 
 		// Run the test
 		fn(t, testCtx)

@@ -169,6 +169,20 @@ func StopAnvilInstance(name, port string) error {
 		}
 	}
 
+	// Wait for process to actually exit (with timeout)
+	done := make(chan struct{})
+	go func() {
+		process.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		// Force kill if SIGTERM didn't work in time
+		_ = process.Kill()
+		<-done
+	}
+
 	if err := os.Remove(inst.PidFile); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove PID file: %w", err)
 	}
