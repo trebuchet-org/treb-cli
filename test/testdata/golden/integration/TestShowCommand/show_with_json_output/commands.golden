@@ -7,6 +7,7 @@ Flags:
   -h, --help               help for show
       --namespace string   Namespace to use for deployment lookup
       --network string     Network to use for deployment lookup
+      --no-fork            Skip fork-added deployments (only show pre-fork deployments)
 
 Global Flags:
       --non-interactive   Disable interactive prompts
