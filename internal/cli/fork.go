@@ -22,6 +22,7 @@ func NewForkCmd() *cobra.Command {
 	cmd.AddCommand(newForkExitCmd())
 	cmd.AddCommand(newForkRevertCmd())
 	cmd.AddCommand(newForkStatusCmd())
+	cmd.AddCommand(newForkHistoryCmd())
 
 	return cmd
 }
@@ -255,4 +256,46 @@ func runForkStatus(cmd *cobra.Command, _ []string) error {
 
 	renderer := render.NewForkRenderer()
 	return renderer.RenderStatus(result)
+}
+
+// newForkHistoryCmd creates the fork history subcommand
+func newForkHistoryCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "history [network]",
+		Short: "Show command history for a fork",
+		Long: `Show chronological list of commands run against a fork and their snapshot points.
+
+If no network is specified, uses the currently configured network.`,
+		Args:         cobra.MaximumNArgs(1),
+		SilenceUsage: true,
+		RunE:         runForkHistory,
+	}
+
+	return cmd
+}
+
+func runForkHistory(cmd *cobra.Command, args []string) error {
+	app, err := getApp(cmd)
+	if err != nil {
+		return err
+	}
+
+	ctx := cmd.Context()
+
+	network := ""
+	if len(args) > 0 {
+		network = args[0]
+	}
+
+	params := usecase.ForkHistoryParams{
+		Network: network,
+	}
+
+	result, err := app.ForkHistory.Execute(ctx, params)
+	if err != nil {
+		return err
+	}
+
+	renderer := render.NewForkRenderer()
+	return renderer.RenderHistory(result)
 }

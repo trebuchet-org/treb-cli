@@ -98,3 +98,28 @@ func (r *ForkRenderer) RenderRevert(result *usecase.RevertForkResult) error {
 	fmt.Printf("  Remaining:  %d snapshot(s)\n", result.RemainingSnapshots)
 	return nil
 }
+
+// RenderHistory renders the result of fork history
+func (r *ForkRenderer) RenderHistory(result *usecase.ForkHistoryResult) error {
+	fmt.Printf("Fork History: %s\n", result.Network)
+	fmt.Println()
+
+	for _, e := range result.Entries {
+		marker := "  "
+		if e.IsCurrent {
+			marker = "→ "
+		}
+
+		label := ""
+		if e.IsInitial {
+			label = "initial"
+		} else {
+			label = e.Command
+		}
+
+		fmt.Printf("  %s[%d] %s  (%s)\n", marker, e.Index, label, e.Timestamp)
+	}
+
+	fmt.Println()
+	return nil
+}

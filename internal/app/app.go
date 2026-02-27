@@ -34,10 +34,11 @@ type App struct {
 	InitProject              *usecase.InitProject
 
 	// Fork use cases
-	EnterFork  *usecase.EnterFork
-	ExitFork   *usecase.ExitFork
-	RevertFork *usecase.RevertFork
-	ForkStatus *usecase.ForkStatus
+	EnterFork   *usecase.EnterFork
+	ExitFork    *usecase.ExitFork
+	RevertFork  *usecase.RevertFork
+	ForkStatus  *usecase.ForkStatus
+	ForkHistory *usecase.ForkHistory
 
 	// Adapters (needed for special cases like log streaming)
 	AnvilManager    usecase.AnvilManager
@@ -74,6 +75,7 @@ func NewApp(
 	exitFork *usecase.ExitFork,
 	revertFork *usecase.RevertFork,
 	forkStatus *usecase.ForkStatus,
+	forkHistory *usecase.ForkHistory,
 	anvilManager usecase.AnvilManager,
 	networkResolver usecase.NetworkResolver,
 	generateRenderer render.Renderer[*usecase.GenerateScriptResult],
@@ -104,6 +106,7 @@ func NewApp(
 		ExitFork:                 exitFork,
 		RevertFork:               revertFork,
 		ForkStatus:               forkStatus,
+		ForkHistory:              forkHistory,
 		AnvilManager:             anvilManager,
 		NetworkResolver:          networkResolver,
 		GenerateRenderer:         generateRenderer,

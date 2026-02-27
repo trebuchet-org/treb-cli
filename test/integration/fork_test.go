@@ -743,6 +743,93 @@ func TestForkStatusCommand(t *testing.T) {
 	RunIntegrationTests(t, tests)
 }
 
+func TestForkHistoryCommand(t *testing.T) {
+	tests := []IntegrationTest{
+		{
+			Name: "fork_history_shows_entries",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"gen", "deploy", "src/SampleToken.sol:SampleToken"},
+				{"fork", "enter", "anvil-31337"},
+				{"run", "script/deploy/DeployCounter.s.sol"},
+				{"run", "script/deploy/DeploySampleToken.s.sol"},
+			},
+			TestCmds: [][]string{
+				{"fork", "history", "anvil-31337"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				// Verify output shows fork history header
+				assert.Contains(t, output, "Fork History: anvil-31337")
+
+				// Verify 3 entries: initial, DeployCounter, DeploySampleToken
+				assert.Contains(t, output, "initial")
+				assert.Contains(t, output, "DeployCounter")
+				assert.Contains(t, output, "DeploySampleToken")
+
+				// Verify the most recent entry is marked as current (→)
+				assert.Contains(t, output, "→")
+
+				// Verify index markers
+				assert.Contains(t, output, "[0]")
+				assert.Contains(t, output, "[1]")
+				assert.Contains(t, output, "[2]")
+			},
+		},
+		{
+			Name: "fork_history_after_revert",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"fork", "enter", "anvil-31337"},
+				{"run", "script/deploy/DeployCounter.s.sol"},
+				{"fork", "revert", "anvil-31337"},
+			},
+			TestCmds: [][]string{
+				{"fork", "history", "anvil-31337"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				// After revert, only the initial entry should remain
+				assert.Contains(t, output, "Fork History: anvil-31337")
+				assert.Contains(t, output, "initial")
+				assert.Contains(t, output, "[0]")
+
+				// The reverted entry should not appear
+				assert.NotContains(t, output, "DeployCounter")
+				assert.NotContains(t, output, "[1]")
+			},
+		},
+		{
+			Name: "fork_history_no_active_fork",
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+			},
+			TestCmds: [][]string{
+				{"fork", "history", "anvil-31337"},
+			},
+			ExpectErr:  true,
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				assert.Contains(t, output, "no active fork")
+			},
+		},
+	}
+
+	RunIntegrationTests(t, tests)
+}
+
 func TestForkRevertCommand(t *testing.T) {
 	tests := []IntegrationTest{
 		{
