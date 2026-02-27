@@ -44,3 +44,6 @@ Thumbs.db
 
 # Crush working dir
 .crush/
+
+# Claude Code
+.claude/
