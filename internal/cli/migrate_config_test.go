@@ -112,7 +112,7 @@ func TestGenerateTrebToml(t *testing.T) {
 			{
 				Name: "production",
 				Senders: map[string]config.SenderConfig{
-					"safe": {Type: config.SenderTypeSafe, Safe: "0xABC", Signer: "proposer"},
+					"safe":     {Type: config.SenderTypeSafe, Safe: "0xABC", Signer: "proposer"},
 					"proposer": {Type: config.SenderTypeLedger, DerivationPath: "m/44'/60'/0'/0/0"},
 				},
 			},

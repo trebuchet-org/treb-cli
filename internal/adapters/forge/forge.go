@@ -44,7 +44,7 @@ func (f *ForgeAdapter) Build() error {
 
 	output, err := cmd.CombinedOutput()
 	duration := time.Since(start)
-	
+
 	if err != nil {
 		f.log.Error("forge build failed", "error", err, "output", string(output), "duration", duration)
 		// Only print error details if build actually failed

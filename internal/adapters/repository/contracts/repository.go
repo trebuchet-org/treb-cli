@@ -45,7 +45,7 @@ func NewRepository(projectRoot string, log *slog.Logger) *Repository {
 func (i *Repository) Index() error {
 	start := time.Now()
 	i.log.Debug("starting contract indexing")
-	
+
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
@@ -106,7 +106,7 @@ func (i *Repository) Index() error {
 func (i *Repository) runForgeBuild() error {
 	start := time.Now()
 	i.log.Debug("running forge build for contract indexing", "dir", i.projectRoot)
-	
+
 	// Check if we need to rebuild by looking for a cache indicator
 	// For now, always build without --force to improve performance
 	// The --force flag was causing significant slowdowns
@@ -115,7 +115,7 @@ func (i *Repository) runForgeBuild() error {
 
 	output, err := cmd.CombinedOutput()
 	duration := time.Since(start)
-	
+
 	if err != nil {
 		i.log.Error("forge build failed", "error", err, "duration", duration)
 		return fmt.Errorf("forge build failed: %w\nOutput: %s", err, string(output))

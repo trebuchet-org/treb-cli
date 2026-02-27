@@ -194,19 +194,19 @@ func calculateSummary(deployments []*models.Deployment) DeploymentSummary {
 func (uc *ListDeployments) findNetworkName(ctx context.Context, chainID uint64) string {
 	// Get all available network names
 	networkNames := uc.networkResolver.GetNetworks(ctx)
-	
+
 	// Try to resolve each network to find matching chain ID
 	for _, name := range networkNames {
 		network, err := uc.networkResolver.ResolveNetwork(ctx, name)
 		if err != nil {
 			continue
 		}
-		
+
 		if network.ChainID == chainID {
 			return name
 		}
 	}
-	
+
 	// Return empty string if no network found
 	return ""
 }
