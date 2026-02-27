@@ -1,5 +1,5 @@
 === cmd 0: [tag Counter:test --add v<VERSION>] ===
-ℹ Added tag 'v<VERSION>' to deployment default/31337/Counter:test
+Added tag 'v<VERSION>' to deployment default/31337/Counter:test
 ✅ Added tag 'v<VERSION>' to default/31337/Counter:test
 
 Current tags: v<VERSION>

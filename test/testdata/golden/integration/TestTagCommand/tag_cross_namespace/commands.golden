@@ -1,12 +1,12 @@
 === cmd 0: [tag Counter --add default-v1] ===
-ℹ Added tag 'default-v1' to deployment default/31337/Counter
+Added tag 'default-v1' to deployment default/31337/Counter
 ✅ Added tag 'default-v1' to default/31337/Counter
 
 Current tags: default-v1
 
 
 === cmd 1: [tag Counter --add staging-v1 --namespace staging] ===
-ℹ Added tag 'staging-v1' to deployment staging/31337/Counter
+Added tag 'staging-v1' to deployment staging/31337/Counter
 ✅ Added tag 'staging-v1' to staging/31337/Counter
 
 Current tags: staging-v1
@@ -14,19 +14,19 @@ Current tags: staging-v1
 
 === cmd 2: [list] ===
    ◎ namespace:   DEFAULT                       
-└─ ⛓ chain:       31337                         
+└─ ⛓ chain:       anvil-31337 (31337)           
   
   SINGLETONS
-  Counter (default-v1)     0x74148047D6bDf624C94eFc07F60cEE7b6052FB29   🅔 ? 🅢 ?         <TIMESTAMP>   
+  Counter (default-v1)     0x74148047D6bDf624C94eFc07F60cEE7b6052FB29   e[-] s[-] b[-]   <TIMESTAMP>   
 
 Total deployments: 1
 
 
 === cmd 3: [list --namespace staging] ===
    ◎ namespace:   STAGING                       
-└─ ⛓ chain:       31337                         
+└─ ⛓ chain:       anvil-31337 (31337)           
   
   SINGLETONS
-  Counter (staging-v1)     0x144180Ad5257d58F4AB181af127266Ba3F6Aa042   🅔 ? 🅢 ?         <TIMESTAMP>   
+  Counter (staging-v1)     0x144180Ad5257d58F4AB181af127266Ba3F6Aa042   e[-] s[-] b[-]   <TIMESTAMP>   
 
 Total deployments: 1

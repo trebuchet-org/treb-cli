@@ -1,5 +1,5 @@
 === cmd 0: [tag Counter --remove v<VERSION>] ===
-ℹ Removed tag 'v<VERSION>' from deployment default/31337/Counter
+Removed tag 'v<VERSION>' from deployment default/31337/Counter
 ✅ Removed tag 'v<VERSION>' from default/31337/Counter
 
 Remaining tags: v<VERSION>

@@ -62,13 +62,13 @@ Proxy[UpgradeableCounter] at 0x806ca68527807F59Bf2D513889eC6CbD6139BDFf
 
 === cmd 1: [list] ===
    ◎ namespace:   DEFAULT                       
-└─ ⛓ chain:       31337                         
+└─ ⛓ chain:       anvil-31337 (31337)           
   
   PROXIES
-  Proxy                         0x806ca68527807F59Bf2D513889eC6CbD6139BDFf   🅔 ? 🅢 ?         <TIMESTAMP>   
-  └─ UpgradeableCounter                                                                                            
+  Proxy                         0x806ca68527807F59Bf2D513889eC6CbD6139BDFf   e[-] s[-] b[-]   <TIMESTAMP>   
+  └─ UpgradeableCounter                                                                                             
   
   IMPLEMENTATIONS
-  UpgradeableCounter            0xcFd84621988A8243EfEd4C30163d85f5dEdE07Ad   🅔 ? 🅢 ?         <TIMESTAMP>   
+  UpgradeableCounter            0xcFd84621988A8243EfEd4C30163d85f5dEdE07Ad   e[-] s[-] b[-]   <TIMESTAMP>   
 
 Total deployments: 2

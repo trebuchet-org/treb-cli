@@ -82,11 +82,11 @@ TrebGovernor at 0x729cc9c01D35C0FF1Cc7c62a924236394Ff8fe54
 
 === cmd 1: [list] ===
    ◎ namespace:   DEFAULT                       
-└─ ⛓ chain:       31337                         
+└─ ⛓ chain:       anvil-31337 (31337)           
   
   SINGLETONS
-  GovernanceToken     0xEbe12C95cC689F0B29e8AACB50c67a6bF3364303   🅔 ? 🅢 ?         <TIMESTAMP>   
-  TrebGovernor        0x729cc9c01D35C0FF1Cc7c62a924236394Ff8fe54   🅔 ? 🅢 ?         <TIMESTAMP>   
-  TrebTimelock        0x5Bc6aA67E69DBfBbaE1a7289818bbe20a442E4e2   🅔 ? 🅢 ?         <TIMESTAMP>   
+  GovernanceToken     0xEbe12C95cC689F0B29e8AACB50c67a6bF3364303   e[-] s[-] b[-]   <TIMESTAMP>   
+  TrebGovernor        0x729cc9c01D35C0FF1Cc7c62a924236394Ff8fe54   e[-] s[-] b[-]   <TIMESTAMP>   
+  TrebTimelock        0x5Bc6aA67E69DBfBbaE1a7289818bbe20a442E4e2   e[-] s[-] b[-]   <TIMESTAMP>   
 
 Total deployments: 3

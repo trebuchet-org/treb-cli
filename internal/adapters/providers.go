@@ -70,8 +70,8 @@ var BlockchainSet = wire.NewSet(
 
 // VerificationSet provides verification-based implementations
 var VerificationSet = wire.NewSet(
-	verification.NewVerifierAdapter,
-	wire.Bind(new(usecase.ContractVerifier), new(*verification.VerifierAdapter)),
+	verification.NewVerifier,
+	wire.Bind(new(usecase.ContractVerifier), new(*verification.Verifier)),
 )
 
 // AnvilSet provides anvil-based implementations

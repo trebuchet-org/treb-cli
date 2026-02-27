@@ -10,6 +10,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
+	"github.com/mattn/go-runewidth"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -56,12 +57,12 @@ func (r *DeploymentsRenderer) RenderDeploymentList(result *usecase.DeploymentLis
 	}
 
 	// Display in tree-style table format
-	r.displayTableFormat(result.Deployments)
+	r.displayTableFormat(result.Deployments, result.NetworkNames)
 	return nil
 }
 
 // displayTableFormat shows deployments in table format
-func (r *DeploymentsRenderer) displayTableFormat(deployments []*models.Deployment) {
+func (r *DeploymentsRenderer) displayTableFormat(deployments []*models.Deployment, networkNames map[uint64]string) {
 	// Group by namespace and chain
 	namespaceChainGroups := make(map[string]map[uint64][]*models.Deployment)
 
@@ -171,9 +172,14 @@ func (r *DeploymentsRenderer) displayTableFormat(deployments []*models.Deploymen
 				continuationPrefix = "  "
 			}
 
-			// Chain header
+			// Chain header - show network name with chain ID in parentheses
 			chainLabel := fmt.Sprintf("%-12s", "chain:")
-			chainValue := fmt.Sprintf("%-30s", fmt.Sprintf("%d", chainID))
+			var chainValue string
+			if networkName, ok := networkNames[chainID]; ok && networkName != "" {
+				chainValue = fmt.Sprintf("%-30s", fmt.Sprintf("%s (%d)", networkName, chainID))
+			} else {
+				chainValue = fmt.Sprintf("%-30s", fmt.Sprintf("%d", chainID))
+			}
 			chainHeaderRow := fmt.Sprintf("%s%s%s",
 				treePrefix,
 				chainHeader.Sprintf(" ⛓ %s ", chainLabel),
@@ -348,45 +354,57 @@ func (r *DeploymentsRenderer) buildDeploymentTable(deployments []*models.Deploym
 
 // getVerifierStatuses returns the formatted verifier status string
 func (r *DeploymentsRenderer) getVerifierStatuses(deployment *models.Deployment) string {
-	verifierStatuses := []string{}
+	// Helper to get status symbol - returns symbol and whether it needs padding
+	getStatusSymbol := func(status string) (string, bool) {
+		switch status {
+		case "verified":
+			return verifiedStyle.Sprint("✔︎"), true // Wide character, needs padding
+		case "failed":
+			return notVerifiedStyle.Sprint("-"), false
+		case "pending":
+			return pendingStyle.Sprint("⏳"), true // Wide character, needs padding
+		default:
+			return "-", false
+		}
+	}
+
+	// Helper to format status with padding
+	formatStatus := func(prefix, status string, needsPadding bool) string {
+		if needsPadding {
+			// Add extra space after wide characters to compensate for visual width
+			return fmt.Sprintf("%s[%s] ", prefix, status)
+		}
+		return fmt.Sprintf("%s[%s]", prefix, status)
+	}
 
 	// Check Etherscan status
-	etherscanStatus := "?"
+	etherscanSymbol, etherscanPad := "-", false
 	if deployment.Verification.Verifiers != nil {
 		if etherscan, exists := deployment.Verification.Verifiers["etherscan"]; exists {
-			switch etherscan.Status {
-			case "verified":
-				etherscanStatus = verifiedStyle.Sprint("✓")
-			case "failed":
-				etherscanStatus = notVerifiedStyle.Sprint("✗")
-			case "pending":
-				etherscanStatus = pendingStyle.Sprint("⏳")
-			default:
-				etherscanStatus = "?"
-			}
+			etherscanSymbol, etherscanPad = getStatusSymbol(etherscan.Status)
 		}
 	}
-	verifierStatuses = append(verifierStatuses, fmt.Sprintf("🅔 %s", etherscanStatus))
+	etherscanStatus := formatStatus("e", etherscanSymbol, etherscanPad)
 
 	// Check Sourcify status
-	sourcifyStatus := "?"
+	sourcifySymbol, sourcifyPad := "-", false
 	if deployment.Verification.Verifiers != nil {
 		if sourcify, exists := deployment.Verification.Verifiers["sourcify"]; exists {
-			switch sourcify.Status {
-			case "verified":
-				sourcifyStatus = verifiedStyle.Sprint("✓")
-			case "failed":
-				sourcifyStatus = notVerifiedStyle.Sprint("✗")
-			case "pending":
-				sourcifyStatus = pendingStyle.Sprint("⏳")
-			default:
-				sourcifyStatus = "?"
-			}
+			sourcifySymbol, sourcifyPad = getStatusSymbol(sourcify.Status)
 		}
 	}
-	verifierStatuses = append(verifierStatuses, fmt.Sprintf("🅢 %s", sourcifyStatus))
+	sourcifyStatus := formatStatus("s", sourcifySymbol, sourcifyPad)
 
-	return strings.Join(verifierStatuses, " ")
+	// Check Blockscout status
+	blockscoutSymbol, blockscoutPad := "-", false
+	if deployment.Verification.Verifiers != nil {
+		if blockscout, exists := deployment.Verification.Verifiers["blockscout"]; exists {
+			blockscoutSymbol, blockscoutPad = getStatusSymbol(blockscout.Status)
+		}
+	}
+	blockscoutStatus := formatStatus("b", blockscoutSymbol, blockscoutPad)
+
+	return fmt.Sprintf("%s %s %s", etherscanStatus, sourcifyStatus, blockscoutStatus)
 }
 
 // getColoredDisplayName returns a colored display name for deployment
@@ -482,7 +500,17 @@ func calculateTableColumnWidths(tables []TableData) []int {
 			for colIdx, cell := range row {
 				if colIdx < len(widths) {
 					// Strip ANSI codes for width calculation
-					cellWidth := len(stripAnsiCodes(cell))
+					stripped := stripAnsiCodes(cell)
+
+					// For the verification column (column 2), use display width accounting for unicode
+					var cellWidth int
+					if colIdx == 2 {
+						// Count display width: unicode checkmark and box drawing chars count as 1
+						cellWidth = displayWidth(stripped)
+					} else {
+						cellWidth = len(stripped)
+					}
+
 					if cellWidth > widths[colIdx] {
 						widths[colIdx] = cellWidth
 					}
@@ -492,4 +520,9 @@ func calculateTableColumnWidths(tables []TableData) []int {
 	}
 
 	return widths
+}
+
+// displayWidth calculates the display width of a string, accounting for wide characters
+func displayWidth(s string) int {
+	return runewidth.StringWidth(s)
 }

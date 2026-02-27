@@ -40,7 +40,7 @@ type ContractRepository interface {
 
 // ContractVerifier handles contract verification
 type ContractVerifier interface {
-	Verify(ctx context.Context, deployment *models.Deployment, network *config.Network) error
+	Verify(ctx context.Context, deployment *models.Deployment, network *config.Network, verifiers []string, blockscoutVerifierURL string) error
 	GetVerificationStatus(ctx context.Context, deployment *models.Deployment) (*models.VerificationInfo, error)
 }
 
@@ -86,8 +86,9 @@ func (NopProgress) Error(string)                              {}
 
 // DeploymentListResult contains the result of listing deployments
 type DeploymentListResult struct {
-	Deployments []*models.Deployment
-	Summary     DeploymentSummary
+	Deployments  []*models.Deployment
+	Summary      DeploymentSummary
+	NetworkNames map[uint64]string // Map of chain ID to network name
 }
 
 // DeploymentSummary provides summary statistics
