@@ -80,6 +80,15 @@ var AnvilSet = wire.NewSet(
 	wire.Bind(new(usecase.AnvilManager), new(*anvil.Manager)),
 )
 
+// ForkSet provides fork mode implementations
+var ForkSet = wire.NewSet(
+	fs.NewForkStateStoreAdapter,
+	wire.Bind(new(usecase.ForkStateStore), new(*fs.ForkStateStoreAdapter)),
+
+	fs.NewForkFileManagerAdapter,
+	wire.Bind(new(usecase.ForkFileManager), new(*fs.ForkFileManagerAdapter)),
+)
+
 // ScriptAdapters provides all adapters needed for script execution
 var ScriptAdapters = wire.NewSet(
 	// Contract resolution and indexing
@@ -149,5 +158,6 @@ var AllAdapters = wire.NewSet(
 	BlockchainSet,
 	VerificationSet,
 	AnvilSet,
+	ForkSet,
 	ScriptAdapters,
 )

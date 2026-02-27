@@ -1,0 +1,117 @@
+package cli
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/spf13/cobra"
+	"github.com/trebuchet-org/treb-cli/internal/cli/render"
+	cfg "github.com/trebuchet-org/treb-cli/internal/config"
+	"github.com/trebuchet-org/treb-cli/internal/usecase"
+)
+
+// NewForkCmd creates the fork command group with subcommands
+func NewForkCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "fork",
+		Short: "Manage network fork mode",
+		Long:  `Fork mode lets you test deployment scripts against local forks of live networks with snapshot/revert workflow.`,
+	}
+
+	cmd.AddCommand(newForkEnterCmd())
+
+	return cmd
+}
+
+// newForkEnterCmd creates the fork enter subcommand
+func newForkEnterCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "enter <network>",
+		Short: "Enter fork mode for a network",
+		Long: `Start a local Anvil fork of the specified network, backup registry files,
+and prepare the environment for fork-mode testing.
+
+The network's RPC endpoint in foundry.toml must use an environment variable
+(e.g., ${SEPOLIA_RPC_URL}) so that treb can override it for the fork.`,
+		Args:         cobra.ExactArgs(1),
+		SilenceUsage: true,
+		RunE:         runForkEnter,
+	}
+
+	return cmd
+}
+
+func runForkEnter(cmd *cobra.Command, args []string) error {
+	app, err := getApp(cmd)
+	if err != nil {
+		return err
+	}
+
+	ctx := cmd.Context()
+	network := args[0]
+	projectRoot := app.Config.ProjectRoot
+
+	// Check raw RPC endpoint format (before env var expansion)
+	rawValue, err := cfg.LoadRawRPCEndpoint(projectRoot, network)
+	if err != nil {
+		return fmt.Errorf("failed to read RPC endpoint for '%s': %w", network, err)
+	}
+
+	envVarName, isEnvVar := cfg.DetectEnvVar(rawValue)
+	if !isEnvVar {
+		// RPC endpoint is hardcoded - needs migration for fork to work
+		nonInteractive, _ := cmd.Flags().GetBool("non-interactive")
+
+		if nonInteractive {
+			// Auto-migrate in non-interactive mode
+			fmt.Fprintf(os.Stderr, "Migrating hardcoded RPC endpoint for '%s' to environment variable...\n", network)
+			if err := cfg.MigrateRPCEndpoint(projectRoot, network, rawValue); err != nil {
+				return fmt.Errorf("failed to migrate RPC endpoint: %w", err)
+			}
+			envVarName = cfg.GenerateEnvVarName(network)
+			fmt.Fprintf(os.Stderr, "Migrated: foundry.toml now uses ${%s}, value appended to .env\n", envVarName)
+		} else {
+			// Prompt user in interactive mode
+			fmt.Fprintf(os.Stderr, "The RPC endpoint for '%s' is a hardcoded URL in foundry.toml.\n", network)
+			fmt.Fprintf(os.Stderr, "Fork mode requires an environment variable reference (e.g., ${%s}).\n", cfg.GenerateEnvVarName(network))
+			fmt.Fprintf(os.Stderr, "\nWould you like to migrate it? This will:\n")
+			fmt.Fprintf(os.Stderr, "  1. Update foundry.toml to use ${%s}\n", cfg.GenerateEnvVarName(network))
+			fmt.Fprintf(os.Stderr, "  2. Add %s=%s to .env\n\n", cfg.GenerateEnvVarName(network), rawValue)
+			fmt.Fprintf(os.Stderr, "Migrate? [y/N] ")
+
+			var answer string
+			if _, err := fmt.Scanln(&answer); err != nil || (answer != "y" && answer != "Y") {
+				return fmt.Errorf("fork mode requires environment variable RPC endpoints. Aborting")
+			}
+
+			if err := cfg.MigrateRPCEndpoint(projectRoot, network, rawValue); err != nil {
+				return fmt.Errorf("failed to migrate RPC endpoint: %w", err)
+			}
+			envVarName = cfg.GenerateEnvVarName(network)
+			fmt.Fprintf(os.Stderr, "Migrated successfully.\n\n")
+		}
+	}
+
+	// Resolve network to get RPC URL and chain ID
+	resolvedNetwork, err := app.NetworkResolver.ResolveNetwork(ctx, network)
+	if err != nil {
+		return fmt.Errorf("failed to resolve network '%s': %w", network, err)
+	}
+
+	// Execute the use case
+	params := usecase.EnterForkParams{
+		Network:    network,
+		RPCURL:     resolvedNetwork.RPCURL,
+		ChainID:    resolvedNetwork.ChainID,
+		EnvVarName: envVarName,
+	}
+
+	result, err := app.EnterFork.Execute(ctx, params)
+	if err != nil {
+		return err
+	}
+
+	// Render result
+	renderer := render.NewForkRenderer()
+	return renderer.RenderEnter(result)
+}

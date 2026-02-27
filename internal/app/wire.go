@@ -56,6 +56,7 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 		usecase.NewRegisterDeployment,
 		usecase.NewManageAnvil,
 		usecase.NewInitProject,
+		usecase.NewEnterFork,
 
 		// App
 		NewApp,

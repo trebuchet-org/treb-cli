@@ -33,8 +33,12 @@ type App struct {
 	ManageAnvil              *usecase.ManageAnvil
 	InitProject              *usecase.InitProject
 
+	// Fork use cases
+	EnterFork *usecase.EnterFork
+
 	// Adapters (needed for special cases like log streaming)
-	AnvilManager usecase.AnvilManager
+	AnvilManager    usecase.AnvilManager
+	NetworkResolver usecase.NetworkResolver
 
 	// Renderers
 	GenerateRenderer render.Renderer[*usecase.GenerateScriptResult]
@@ -63,7 +67,9 @@ func NewApp(
 	registerDeployment *usecase.RegisterDeployment,
 	manageAnvil *usecase.ManageAnvil,
 	initProject *usecase.InitProject,
+	enterFork *usecase.EnterFork,
 	anvilManager usecase.AnvilManager,
+	networkResolver usecase.NetworkResolver,
 	generateRenderer render.Renderer[*usecase.GenerateScriptResult],
 	scriptRenderer *render.ScriptRenderer,
 	composeRenderer *render.ComposeRenderer,
@@ -88,7 +94,9 @@ func NewApp(
 		RegisterDeployment:       registerDeployment,
 		ManageAnvil:              manageAnvil,
 		InitProject:              initProject,
+		EnterFork:                enterFork,
 		AnvilManager:             anvilManager,
+		NetworkResolver:          networkResolver,
 		GenerateRenderer:         generateRenderer,
 		ScriptRenderer:           scriptRenderer,
 		ComposeRenderer:          composeRenderer,
