@@ -124,6 +124,9 @@ func showConfig(cmd *cobra.Command) error {
 		return err
 	}
 
+	// Enrich result with config source from runtime config
+	result.ConfigSource = app.Config.ConfigSource
+
 	// Render result
 	renderer := render.NewConfigRenderer(cmd.OutOrStdout())
 	return renderer.RenderConfig(result)

@@ -12,6 +12,10 @@ func TestInitCommand(t *testing.T) {
 	tests := []IntegrationTest{
 		{
 			Name: "init_new_project",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				// Remove fixture treb.toml so init creates a fresh one
+				os.Remove(filepath.Join(ctx.WorkDir, "treb.toml"))
+			},
 			TestCmds: [][]string{
 				{"init"},
 			},
@@ -19,6 +23,10 @@ func TestInitCommand(t *testing.T) {
 		},
 		{
 			Name: "init_existing_project",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				// Remove fixture treb.toml so first init creates a fresh one
+				os.Remove(filepath.Join(ctx.WorkDir, "treb.toml"))
+			},
 			SetupCmds: [][]string{
 				{"init"}, // First init
 			},

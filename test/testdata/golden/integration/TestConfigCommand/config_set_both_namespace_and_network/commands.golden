@@ -13,4 +13,5 @@
 Namespace: staging
 Network:   polygon
 
+📦 Config source: treb.toml
 📁 config file: .treb/config.local.json

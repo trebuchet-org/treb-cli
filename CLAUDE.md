@@ -268,8 +268,38 @@ The registry (`.treb/deployments.json`) is a comprehensive JSON structure tracki
 
 ## Configuration
 
-### foundry.toml Sender Profiles
+### treb.toml Sender Configuration (Recommended)
 ```toml
+# treb.toml — Treb sender configuration
+# Each [ns.<name>] section defines a namespace with sender configs.
+# The optional 'profile' field maps to a foundry.toml profile (defaults to namespace name).
+
+[ns.default]
+profile = "default"
+
+[ns.default.senders.deployer]
+type = "private_key"
+private_key = "${DEPLOYER_PRIVATE_KEY}"
+
+[ns.production]
+profile = "production"
+
+# Production namespace with Safe multisig sender
+[ns.production.senders.safe]
+type = "safe"
+safe = "0x32CB58b145d3f7e28c45cE4B2Cc31fa94248b23F"
+signer = "proposer"
+
+# Hardware wallet proposer
+[ns.production.senders.proposer]
+type = "ledger"
+derivation_path = "${PROD_PROPOSER_DERIVATION_PATH}"
+```
+
+### foundry.toml Sender Profiles (Legacy)
+```toml
+# NOTE: This format is deprecated. Run `treb migrate-config` to migrate to treb.toml.
+
 # Default profile with private key sender
 [profile.default.treb.senders.deployer]
 type = "private_key"
@@ -354,7 +384,8 @@ treb run DeployCounter --dry-run
 - `src/internal/`: Internal utilities and registry contracts
 
 ### Configuration Files
-- `foundry.toml`: Foundry configuration with sender profiles and RPC endpoints
+- `treb.toml`: Treb sender configuration with namespace-based sender profiles (preferred)
+- `foundry.toml`: Foundry configuration with RPC endpoints (legacy sender profiles deprecated)
 - `.treb/deployments.json`: Deployment registry tracking all deployments
 - `.treb/transactions.json`: Transaction registry tracking script executions
 - `.treb/config.json`: Local project configuration (namespace, network)
