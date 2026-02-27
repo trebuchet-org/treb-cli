@@ -35,7 +35,10 @@ func NewContractResolver(
 // ResolveContractWithFilter resolves a contract reference with filtering
 func (r *ContractResolver) ResolveContract(ctx context.Context, query domain.ContractQuery) (*models.Contract, error) {
 	// First try exact match (could be "Counter" or "src/Counter.sol:Counter")
-	contracts := r.repo.SearchContracts(ctx, query)
+	contracts, err := r.repo.SearchContracts(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search contracts: %w", err)
+	}
 
 	if len(contracts) == 0 {
 		// Provide helpful error message based on what was filtered out
@@ -62,7 +65,10 @@ func (r *ContractResolver) ResolveContract(ctx context.Context, query domain.Con
 // GetProxyContracts returns all available proxy contracts
 func (r *ContractResolver) GetProxyContracts(ctx context.Context) ([]*models.Contract, error) {
 	var proxy = "Proxy"
-	proxies := r.repo.SearchContracts(ctx, domain.ContractQuery{Query: &proxy})
+	proxies, err := r.repo.SearchContracts(ctx, domain.ContractQuery{Query: &proxy})
+	if err != nil {
+		return nil, fmt.Errorf("failed to search proxy contracts: %w", err)
+	}
 	if len(proxies) == 0 {
 		return nil, fmt.Errorf("no proxy contracts found in project")
 	}

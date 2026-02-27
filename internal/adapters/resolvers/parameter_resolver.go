@@ -174,7 +174,10 @@ func (r *ParameterResolver) resolveDeployment(ctx context.Context, name string, 
 // resolveArtifact resolves an artifact parameter
 func (r *ParameterResolver) resolveArtifact(ctx context.Context, name string) (string, error) {
 	// Search for contracts matching the name
-	contracts := r.contractIndexer.SearchContracts(ctx, domain.ContractQuery{Query: &name})
+	contracts, err := r.contractIndexer.SearchContracts(ctx, domain.ContractQuery{Query: &name})
+	if err != nil {
+		return "", fmt.Errorf("failed to search contracts: %w", err)
+	}
 
 	// Look for exact match first
 	for _, contract := range contracts {

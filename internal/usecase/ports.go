@@ -34,8 +34,8 @@ type DeploymentRepository interface {
 // ContractIndexer provides access to compiled contracts
 type ContractRepository interface {
 	GetContract(ctx context.Context, key string) (*models.Contract, error)
-	SearchContracts(ctx context.Context, query domain.ContractQuery) []*models.Contract
-	GetContractByArtifact(ctx context.Context, artifact string) *models.Contract
+	SearchContracts(ctx context.Context, query domain.ContractQuery) ([]*models.Contract, error)
+	GetContractByArtifact(ctx context.Context, artifact string) (*models.Contract, error)
 }
 
 // ContractVerifier handles contract verification

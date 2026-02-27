@@ -96,7 +96,10 @@ func (h *RunResultHydrator) Hydrate(
 
 				// Look up contract info by artifact
 				if h.indexer != nil && e.Deployment.Artifact != "" {
-					if contractInfo := h.indexer.GetContractByArtifact(ctx, e.Deployment.Artifact); contractInfo != nil {
+					contractInfo, lookupErr := h.indexer.GetContractByArtifact(ctx, e.Deployment.Artifact)
+					if lookupErr != nil {
+						h.log.Warn("Failed to look up deployment artifact", "artifact", e.Deployment.Artifact, "error", lookupErr)
+					} else if contractInfo != nil {
 						deployment.Contract = contractInfo
 					} else {
 						h.log.Warn("Deployment artifact not found in contract repository", "artifact", e.Deployment.Artifact)

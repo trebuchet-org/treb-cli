@@ -468,7 +468,10 @@ func (uc *RegisterDeployment) generateDeploymentID(contractName, label string) s
 // verifyBytecode verifies that the on-chain bytecode matches the compiled contract
 func (uc *RegisterDeployment) verifyBytecode(ctx context.Context, address, contractPath string) error {
 	// Get contract from repository
-	contract := uc.contractRepo.GetContractByArtifact(ctx, contractPath)
+	contract, err := uc.contractRepo.GetContractByArtifact(ctx, contractPath)
+	if err != nil {
+		return fmt.Errorf("failed to look up contract: %w", err)
+	}
 	if contract == nil {
 		return fmt.Errorf("contract not found: %s", contractPath)
 	}
