@@ -44,6 +44,7 @@ type ForkStatusEntry struct {
 	HealthDetail    string // "healthy" or "dead"
 	ForkDeployments int    // number of deployments added during fork
 	IsCurrent       bool   // true if this is the currently configured network
+	LogFile         string // path to anvil log file
 }
 
 // ForkStatusResult contains the result of the fork status command
@@ -90,6 +91,7 @@ func (uc *ForkStatus) buildStatusEntry(ctx context.Context, entry *domain.ForkEn
 		Uptime:        time.Since(entry.EnteredAt),
 		SnapshotCount: len(entry.Snapshots),
 		IsCurrent:     entry.Network == currentNetwork,
+		LogFile:       entry.LogFile,
 	}
 
 	// Health check via anvil manager

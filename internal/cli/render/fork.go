@@ -26,6 +26,7 @@ func (r *ForkRenderer) RenderEnter(result *usecase.EnterForkResult) error {
 	fmt.Printf("  Fork URL:     %s\n", entry.ForkURL)
 	fmt.Printf("  Anvil PID:    %d\n", entry.AnvilPID)
 	fmt.Printf("  Env Override: %s=%s\n", entry.EnvVarName, entry.ForkURL)
+	fmt.Printf("  Logs:         %s\n", entry.LogFile)
 	if result.SetupScriptRan {
 		fmt.Printf("  Setup:        executed successfully\n")
 	}
@@ -70,6 +71,9 @@ func (r *ForkRenderer) RenderStatus(result *usecase.ForkStatusResult) error {
 		fmt.Printf("    Uptime:       %s\n", formatDuration(e.Uptime))
 		fmt.Printf("    Snapshots:    %d\n", e.SnapshotCount)
 		fmt.Printf("    Fork Deploys: %d\n", e.ForkDeployments)
+		if e.LogFile != "" {
+			fmt.Printf("    Logs:         %s\n", e.LogFile)
+		}
 		fmt.Println()
 	}
 
@@ -110,6 +114,7 @@ func (r *ForkRenderer) RenderRestart(result *usecase.RestartForkResult) error {
 	fmt.Printf("  Fork URL:     %s\n", entry.ForkURL)
 	fmt.Printf("  Anvil PID:    %d\n", entry.AnvilPID)
 	fmt.Printf("  Env Override: %s=%s\n", entry.EnvVarName, entry.ForkURL)
+	fmt.Printf("  Logs:         %s\n", entry.LogFile)
 	if result.SetupScriptRan {
 		fmt.Printf("  Setup:        executed successfully\n")
 	}
