@@ -61,8 +61,8 @@ func (r *InitRenderer) printSuccessMessage(result *usecase.InitProjectResult) {
 	fmt.Println("   • Set API keys for contract verification")
 	fmt.Println("")
 
-	fmt.Println("2. Configure deployment environments in foundry.toml:")
-	fmt.Println("   • Add [profile.staging.deployer] and [profile.production.deployer] sections")
+	fmt.Println("2. Configure deployment environments in treb.toml:")
+	fmt.Println("   • Add [ns.<namespace>.senders.<name>] sections for each environment")
 	fmt.Println("   • See documentation for Safe multisig and hardware wallet support")
 	fmt.Println("")
 

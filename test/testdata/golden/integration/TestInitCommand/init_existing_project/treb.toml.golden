@@ -1,0 +1,11 @@
+# treb.toml — Treb sender configuration
+#
+# Each [ns.<name>] section defines a namespace with sender configs.
+# The optional 'profile' field maps to a foundry.toml profile (defaults to namespace name).
+
+[ns.default]
+profile = "default"
+
+[ns.default.senders.deployer]
+type = "private_key"
+private_key = "${DEPLOYER_PRIVATE_KEY}"

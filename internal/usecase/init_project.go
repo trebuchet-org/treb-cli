@@ -25,6 +25,7 @@ type InitProjectResult struct {
 	FoundryProjectValid bool
 	TrebSolInstalled    bool
 	RegistryCreated     bool
+	TrebTomlCreated     bool
 	EnvExampleCreated   bool
 	AlreadyInitialized  bool
 	Steps               []InitStep
@@ -77,6 +78,13 @@ func (i *InitProject) Execute(ctx context.Context) (*InitProjectResult, error) {
 		if step.Message == "Registry files already exist in .treb/" {
 			result.AlreadyInitialized = true
 		}
+	}
+
+	// Create treb.toml
+	step = i.createTrebToml(ctx)
+	result.Steps = append(result.Steps, step)
+	if step.Success {
+		result.TrebTomlCreated = true
 	}
 
 	// Create example environment
@@ -174,6 +182,53 @@ func (i *InitProject) createRegistry(ctx context.Context) InitStep {
 		Name:    "Create Registry",
 		Success: true,
 		Message: "Created v2 registry structure in .treb/",
+	}
+}
+
+func (i *InitProject) createTrebToml(ctx context.Context) InitStep {
+	// Only create treb.toml if it doesn't exist
+	exists, err := i.fileWriter.FileExists(ctx, "treb.toml")
+	if err != nil {
+		return InitStep{
+			Name:    "Create treb.toml",
+			Success: false,
+			Error:   fmt.Errorf("failed to check treb.toml: %w", err),
+		}
+	}
+
+	if exists {
+		return InitStep{
+			Name:    "Create treb.toml",
+			Success: true,
+			Message: "treb.toml already exists",
+		}
+	}
+
+	trebToml := `# treb.toml — Treb sender configuration
+#
+# Each [ns.<name>] section defines a namespace with sender configs.
+# The optional 'profile' field maps to a foundry.toml profile (defaults to namespace name).
+
+[ns.default]
+profile = "default"
+
+[ns.default.senders.deployer]
+type = "private_key"
+private_key = "${DEPLOYER_PRIVATE_KEY}"
+`
+
+	if err := i.fileWriter.WriteScript(ctx, "treb.toml", trebToml); err != nil {
+		return InitStep{
+			Name:    "Create treb.toml",
+			Success: false,
+			Error:   fmt.Errorf("failed to create treb.toml: %w", err),
+		}
+	}
+
+	return InitStep{
+		Name:    "Create treb.toml",
+		Success: true,
+		Message: "Created treb.toml with default sender config",
 	}
 }
 

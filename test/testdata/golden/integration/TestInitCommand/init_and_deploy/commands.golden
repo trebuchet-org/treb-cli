@@ -2,6 +2,7 @@
 ✅ Valid Foundry project detected
 ✅ treb-sol library found
 ✅ Created v2 registry structure in .treb/
+✅ treb.toml already exists
 ✅ Created .env.example
 
 🎉 treb initialized successfully!
@@ -12,8 +13,8 @@
    • Set RPC URLs for networks you'll deploy to
    • Set API keys for contract verification
 
-2. Configure deployment environments in foundry.toml:
-   • Add [profile.staging.deployer] and [profile.production.deployer] sections
+2. Configure deployment environments in treb.toml:
+   • Add [ns.<namespace>.senders.<name>] sections for each environment
    • See documentation for Safe multisig and hardware wallet support
 
 3. Generate your first deployment script:
