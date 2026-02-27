@@ -455,3 +455,97 @@ func TestForkRunCommand(t *testing.T) {
 
 	RunIntegrationTests(t, tests)
 }
+
+func TestForkPreRunSnapshots(t *testing.T) {
+	tests := []IntegrationTest{
+		{
+			Name: "fork_run_creates_pre_run_snapshot",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"fork", "enter", "anvil-31337"},
+			},
+			TestCmds: [][]string{
+				{"run", "script/deploy/DeployCounter.s.sol"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				workDir := ctx.TrebContext.GetWorkDir()
+
+				// Verify snapshot 1 directory exists with pre-run registry files
+				snapshotDir := filepath.Join(workDir, ".treb", "priv", "fork", "anvil-31337", "snapshots", "1")
+				_, err := os.Stat(snapshotDir)
+				assert.NoError(t, err, "snapshot 1 directory should exist")
+
+				// Verify fork-state.json has 2 entries in snapshot stack (initial + pre-run)
+				state := readForkState(t, ctx)
+				fork := state.Forks["anvil-31337"]
+				require.NotNil(t, fork, "fork entry should exist")
+				assert.Len(t, fork.Snapshots, 2, "should have 2 snapshots (initial + pre-run)")
+
+				// Verify snapshot 0 is the initial entry
+				assert.Equal(t, 0, fork.Snapshots[0].Index)
+				assert.Equal(t, "fork enter", fork.Snapshots[0].Command)
+
+				// Verify snapshot 1 is the pre-run entry with the script ref
+				assert.Equal(t, 1, fork.Snapshots[1].Index)
+				assert.Contains(t, fork.Snapshots[1].Command, "DeployCounter")
+				assert.NotEmpty(t, fork.Snapshots[1].SnapshotID)
+			},
+		},
+		{
+			Name: "fork_multiple_runs_create_multiple_snapshots",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"gen", "deploy", "src/SampleToken.sol:SampleToken"},
+				{"fork", "enter", "anvil-31337"},
+			},
+			TestCmds: [][]string{
+				{"run", "script/deploy/DeployCounter.s.sol"},
+				{"run", "script/deploy/DeploySampleToken.s.sol"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				workDir := ctx.TrebContext.GetWorkDir()
+
+				// Verify snapshots 1 and 2 exist
+				snapshot1Dir := filepath.Join(workDir, ".treb", "priv", "fork", "anvil-31337", "snapshots", "1")
+				_, err := os.Stat(snapshot1Dir)
+				assert.NoError(t, err, "snapshot 1 directory should exist")
+
+				snapshot2Dir := filepath.Join(workDir, ".treb", "priv", "fork", "anvil-31337", "snapshots", "2")
+				_, err = os.Stat(snapshot2Dir)
+				assert.NoError(t, err, "snapshot 2 directory should exist")
+
+				// Verify fork-state.json has 3 entries in snapshot stack
+				state := readForkState(t, ctx)
+				fork := state.Forks["anvil-31337"]
+				require.NotNil(t, fork, "fork entry should exist")
+				assert.Len(t, fork.Snapshots, 3, "should have 3 snapshots (initial + 2 pre-run)")
+
+				// Verify snapshot entries
+				assert.Equal(t, 0, fork.Snapshots[0].Index)
+				assert.Equal(t, "fork enter", fork.Snapshots[0].Command)
+
+				assert.Equal(t, 1, fork.Snapshots[1].Index)
+				assert.Contains(t, fork.Snapshots[1].Command, "DeployCounter")
+
+				assert.Equal(t, 2, fork.Snapshots[2].Index)
+				assert.Contains(t, fork.Snapshots[2].Command, "DeploySampleToken")
+			},
+		},
+	}
+
+	RunIntegrationTests(t, tests)
+}

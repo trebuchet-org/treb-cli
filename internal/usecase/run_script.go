@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain/forge"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
@@ -44,6 +45,8 @@ type RunScript struct {
 	libraryResolver   LibraryResolver
 	progress          RunProgressSink
 	forkStateStore    ForkStateStore
+	anvilManager      AnvilManager
+	forkFileManager   ForkFileManager
 	// paramPrompter   ParameterPrompter
 }
 
@@ -59,6 +62,8 @@ func NewRunScript(
 	progress RunProgressSink,
 	forgeScriptRunner ForgeScriptRunner,
 	forkStateStore ForkStateStore,
+	anvilManager AnvilManager,
+	forkFileManager ForkFileManager,
 ) *RunScript {
 	return &RunScript{
 		config:            cfg,
@@ -71,6 +76,8 @@ func NewRunScript(
 		libraryResolver:   libraryResolver,
 		progress:          progress,
 		forkStateStore:    forkStateStore,
+		anvilManager:      anvilManager,
+		forkFileManager:   forkFileManager,
 		// paramPrompter:   paramPrompter,
 	}
 }
@@ -180,6 +187,13 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 		ForkEnvOverrides:   forkEnvOverrides,
 	}
 
+	// Pre-run snapshot in fork mode: take EVM snapshot and backup files before execution
+	if forkEnvOverrides != nil && uc.config.Network != nil {
+		if snapshotErr := uc.takePreRunSnapshot(ctx, params.ScriptRef); snapshotErr != nil {
+			return result, fmt.Errorf("failed to take pre-run fork snapshot: %w", snapshotErr)
+		}
+	}
+
 	if params.DumpCommand {
 		dumper, ok := uc.forgeScriptRunner.(interface {
 			DumpScriptCommand(config RunScriptConfig) (string, error)
@@ -263,4 +277,58 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 
 	result.Success = true
 	return result, nil
+}
+
+// takePreRunSnapshot takes an EVM snapshot and backs up registry files before a fork mode run.
+func (uc *RunScript) takePreRunSnapshot(ctx context.Context, scriptRef string) error {
+	networkName := uc.config.Network.Name
+
+	// Load fork state
+	state, err := uc.forkStateStore.Load(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to load fork state: %w", err)
+	}
+
+	fork := state.GetActiveFork(networkName)
+	if fork == nil {
+		return fmt.Errorf("no active fork for network '%s'", networkName)
+	}
+
+	// Determine next snapshot index
+	nextIndex := len(fork.Snapshots)
+
+	// Build AnvilInstance from fork entry for snapshot call
+	instance := &domain.AnvilInstance{
+		Name:    fmt.Sprintf("fork-%s", fork.Network),
+		Port:    portFromURL(fork.ForkURL),
+		ChainID: fmt.Sprintf("%d", fork.ChainID),
+		PidFile: fork.PidFile,
+		LogFile: fork.LogFile,
+	}
+
+	// Take EVM snapshot
+	snapshotID, err := uc.anvilManager.TakeSnapshot(ctx, instance)
+	if err != nil {
+		return fmt.Errorf("failed to take EVM snapshot: %w", err)
+	}
+
+	// Backup registry files
+	if err := uc.forkFileManager.BackupFiles(ctx, networkName, nextIndex); err != nil {
+		return fmt.Errorf("failed to backup registry files: %w", err)
+	}
+
+	// Record snapshot in fork state
+	fork.Snapshots = append(fork.Snapshots, domain.SnapshotEntry{
+		Index:      nextIndex,
+		SnapshotID: snapshotID,
+		Command:    scriptRef,
+		Timestamp:  time.Now(),
+	})
+
+	// Save updated fork state
+	if err := uc.forkStateStore.Save(ctx, state); err != nil {
+		return fmt.Errorf("failed to save fork state: %w", err)
+	}
+
+	return nil
 }
