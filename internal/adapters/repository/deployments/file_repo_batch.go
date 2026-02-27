@@ -82,6 +82,11 @@ func (f *FileRepository) BuildChangesetFromRunResult(ctx context.Context, execut
 		changeset.Create.SafeTransactions = append(changeset.Create.SafeTransactions, safeTransaction)
 	}
 
+	// Process proxy upgrades: check if any proxy relationships reference existing proxies
+	if err := f.processProxyUpgrades(changeset, execution, now); err != nil {
+		return nil, err
+	}
+
 	return changeset, nil
 }
 
@@ -369,6 +374,84 @@ func (f *FileRepository) createSafeTransactionFromExecution(
 	// This would require access to the actual transaction data from the execution
 
 	return safeTransaction
+}
+
+// processProxyUpgrades detects when a proxy relationship references an already-registered proxy
+// and updates the existing proxy's implementation address and upgrade history.
+func (f *FileRepository) processProxyUpgrades(changeset *models.Changeset, execution *forge.HydratedRunResult, now time.Time) error {
+	for proxyAddr, rel := range execution.ProxyRelationships {
+		// Check if this proxy address is already registered
+		addrLower := strings.ToLower(proxyAddr.Hex())
+		chainAddrs, exists := f.lookups.ByAddress[execution.ChainID]
+		if !exists {
+			continue
+		}
+		existingID, exists := chainAddrs[addrLower]
+		if !exists {
+			continue
+		}
+		existing, exists := f.deployments[existingID]
+		if !exists || existing.Type != models.ProxyDeployment || existing.ProxyInfo == nil {
+			continue
+		}
+
+		newImplAddr := rel.ImplementationAddress.Hex()
+		if strings.EqualFold(existing.ProxyInfo.Implementation, newImplAddr) {
+			// Implementation hasn't changed, skip
+			continue
+		}
+
+		f.log.Debug("Detected proxy upgrade",
+			"proxy", existingID,
+			"oldImpl", existing.ProxyInfo.Implementation,
+			"newImpl", newImplAddr,
+		)
+
+		// Build the upgrade history entry
+		upgradeEntry := models.ProxyUpgrade{
+			ImplementationID: f.resolveImplementationID(execution.ChainID, existing.ProxyInfo.Implementation),
+			UpgradedAt:       now,
+			UpgradeTxID:      f.findUpgradeTxID(execution, proxyAddr),
+		}
+
+		// Clone the existing deployment and update its proxy info
+		updated := *existing
+		updated.ProxyInfo = &models.ProxyInfo{
+			Type:           string(rel.ProxyType),
+			Implementation: newImplAddr,
+			Admin:          existing.ProxyInfo.Admin,
+			History:        append(existing.ProxyInfo.History, upgradeEntry),
+		}
+		if rel.AdminAddress != nil {
+			updated.ProxyInfo.Admin = rel.AdminAddress.Hex()
+		}
+		updated.UpdatedAt = now
+
+		changeset.Update.Deployments = append(changeset.Update.Deployments, &updated)
+	}
+	return nil
+}
+
+// resolveImplementationID tries to find the deployment ID for an implementation address
+func (f *FileRepository) resolveImplementationID(chainID uint64, implAddr string) string {
+	chainAddrs, exists := f.lookups.ByAddress[chainID]
+	if !exists {
+		return implAddr
+	}
+	if id, exists := chainAddrs[strings.ToLower(implAddr)]; exists {
+		return id
+	}
+	return implAddr
+}
+
+// findUpgradeTxID finds the transaction ID for the upgrade call to a proxy
+func (f *FileRepository) findUpgradeTxID(execution *forge.HydratedRunResult, proxyAddr common.Address) string {
+	for _, tx := range execution.Transactions {
+		if tx.Transaction.To == proxyAddr && tx.TxHash != nil {
+			return fmt.Sprintf("tx-%s", tx.TxHash.Hex())
+		}
+	}
+	return ""
 }
 
 // Helper methods

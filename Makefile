@@ -1,4 +1,4 @@
-.PHONY: build install test integration-test clean dev-setup watch release-build release-clean lint lint-install lint-fix 
+.PHONY: build install test integration-test clean dev-setup watch release-build release-clean lint lint-install lint-fix setup-worktree
 
 # Version information
 VERSION ?= $(shell git describe --tags --always --dirty)
@@ -18,6 +18,10 @@ setup:
 	@cd treb-sol && forge install
 	@echo "🔨 Installing abigen"
 	@go install github.com/ethereum/go-ethereum/cmd/abigen@latest
+
+# Full setup for git worktrees (one-shot: setup + integration test deps)
+setup-worktree: setup setup-integration-test
+	@echo "✅ Worktree fully set up"
 
 forge_build:
 	@echo ">> forge build"

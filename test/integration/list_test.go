@@ -47,7 +47,7 @@ func TestListCommand(t *testing.T) {
 			Name: "list_with_proxy_relationships",
 			SetupCmds: [][]string{
 				s("config set network anvil-31337"),
-				{"gen", "deploy", "UpgradeableCounter", "--proxy", "--proxy-contract", "ERC1967Proxy.sol:ERC1967Proxy"},
+				{"gen", "deploy", "src/UpgradeableCounter.sol:UpgradeableCounter", "--proxy", "--proxy-contract", "ERC1967Proxy.sol:ERC1967Proxy"},
 				{"run", "DeployUpgradeableCounterProxy"},
 			},
 			TestCmds: [][]string{{"list"}},
@@ -71,7 +71,7 @@ func TestListCommand(t *testing.T) {
 				{"gen", "deploy", "src/StringUtils.sol:StringUtils"},
 				{"run", "script/deploy/DeployStringUtils.s.sol"},
 				// Deploy a proxy with implementation
-				{"gen", "deploy", "UpgradeableCounter", "--proxy", "--proxy-contract", "ERC1967Proxy.sol:ERC1967Proxy"},
+				{"gen", "deploy", "src/UpgradeableCounter.sol:UpgradeableCounter", "--proxy", "--proxy-contract", "ERC1967Proxy.sol:ERC1967Proxy"},
 				{"run", "DeployUpgradeableCounterProxy"},
 				// Deploy a singleton
 				{"gen", "deploy", "src/Counter.sol:Counter"},

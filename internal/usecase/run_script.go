@@ -219,7 +219,9 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 	// fmt.Println("%v", result.RunResult.Deployments)
 
 	// Stage 5: Update registry (if not dry run)
-	if !params.DryRun && len(result.RunResult.Deployments) > 0 {
+	hasDeployments := len(result.RunResult.Deployments) > 0
+	hasProxyUpdates := len(result.RunResult.ProxyRelationships) > 0
+	if !params.DryRun && (hasDeployments || hasProxyUpdates) {
 		uc.progress.OnProgress(ctx, ProgressEvent{
 			Stage: string(StageParsing),
 		})
