@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -60,6 +61,7 @@ func runMigrateConfig(cfg *domainconfig.RuntimeConfig) error {
 	content := generateTrebToml(profiles)
 
 	trebTomlPath := filepath.Join(cfg.ProjectRoot, "treb.toml")
+	foundryTomlPath := filepath.Join(cfg.ProjectRoot, "foundry.toml")
 
 	// Check if treb.toml already exists
 	if _, err := os.Stat(trebTomlPath); err == nil {
@@ -95,13 +97,45 @@ func runMigrateConfig(cfg *domainconfig.RuntimeConfig) error {
 
 	green := color.New(color.FgGreen, color.Bold)
 	green.Printf("✓ treb.toml written successfully\n")
+
+	// Offer to clean up foundry.toml
+	cleanedUp := false
+	if !cfg.NonInteractive {
+		fmt.Println()
+		if confirmPrompt("Remove [profile.*.treb.*] sections from foundry.toml?") {
+			if err := cleanupFoundryToml(foundryTomlPath); err != nil {
+				return fmt.Errorf("failed to clean up foundry.toml: %w", err)
+			}
+			green.Printf("✓ foundry.toml cleaned up\n")
+			cleanedUp = true
+		} else {
+			fmt.Println("Skipped foundry.toml cleanup — you can remove [profile.*.treb.*] sections manually.")
+		}
+	}
+
+	// Print next steps
 	fmt.Println()
 	fmt.Println("Next steps:")
 	fmt.Println("  1. Review the generated treb.toml")
-	fmt.Println("  2. Remove [profile.*.treb.*] sections from foundry.toml")
-	fmt.Println("  3. Run `treb config show` to verify your config is loaded correctly")
+	if !cleanedUp {
+		fmt.Println("  2. Remove [profile.*.treb.*] sections from foundry.toml")
+		fmt.Println("  3. Run `treb config show` to verify your config is loaded correctly")
+	} else {
+		fmt.Println("  2. Run `treb config show` to verify your config is loaded correctly")
+	}
 
 	return nil
+}
+
+// cleanupFoundryToml reads foundry.toml and removes [profile.*.treb.*] sections.
+func cleanupFoundryToml(path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	cleaned := removeTrebFromFoundryToml(string(data))
+	return os.WriteFile(path, []byte(cleaned), 0644)
 }
 
 // trebProfile holds a foundry profile name and its treb sender config.
@@ -208,6 +242,50 @@ func writeSenderConfig(b *strings.Builder, s domainconfig.SenderConfig) {
 	if s.Proposer != "" {
 		fmt.Fprintf(b, "proposer = %q\n", s.Proposer)
 	}
+}
+
+// trebSectionHeaderRe matches [profile.<name>.treb] and [profile.<name>.treb.senders.<sender>] headers.
+var trebSectionHeaderRe = regexp.MustCompile(`^\[profile\.[^]]+\.treb(?:\.[^]]+)?\]\s*$`)
+
+// anySectionHeaderRe matches any TOML section header like [something] or [a.b.c].
+var anySectionHeaderRe = regexp.MustCompile(`^\[.+\]\s*$`)
+
+// removeTrebFromFoundryToml removes [profile.*.treb.*] sections from foundry.toml content
+// using a line-based approach to preserve user formatting and comments.
+func removeTrebFromFoundryToml(content string) string {
+	lines := strings.Split(content, "\n")
+	var result []string
+	inTrebSection := false
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		if anySectionHeaderRe.MatchString(trimmed) {
+			if trebSectionHeaderRe.MatchString(trimmed) {
+				inTrebSection = true
+				continue
+			}
+			inTrebSection = false
+		}
+
+		if inTrebSection {
+			// Skip key-value lines, comments, and blank lines within treb sections
+			continue
+		}
+
+		result = append(result, line)
+	}
+
+	// Clean up excess trailing blank lines (collapse to single trailing newline)
+	output := strings.Join(result, "\n")
+	for strings.HasSuffix(output, "\n\n") {
+		output = strings.TrimSuffix(output, "\n")
+	}
+	if !strings.HasSuffix(output, "\n") {
+		output += "\n"
+	}
+
+	return output
 }
 
 // confirmPrompt asks the user a yes/no question and returns their choice.

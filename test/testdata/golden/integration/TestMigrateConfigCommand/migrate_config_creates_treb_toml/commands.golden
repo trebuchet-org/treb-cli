@@ -1,0 +1,7 @@
+=== cmd 0: [migrate-config] ===
+✓ treb.toml written successfully
+
+Next steps:
+  1. Review the generated treb.toml
+  2. Remove [profile.*.treb.*] sections from foundry.toml
+  3. Run `treb config show` to verify your config is loaded correctly
