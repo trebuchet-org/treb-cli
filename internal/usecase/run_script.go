@@ -187,8 +187,14 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 		ForkEnvOverrides:   forkEnvOverrides,
 	}
 
-	// Pre-run snapshot in fork mode: take EVM snapshot and backup files before execution
+	// Fork mode pre-run checks: health check + snapshot
 	if forkEnvOverrides != nil && uc.config.Network != nil {
+		// Health-check fork anvil before proceeding
+		if err := uc.checkForkHealth(ctx); err != nil {
+			return result, err
+		}
+
+		// Take EVM snapshot and backup files before execution
 		if snapshotErr := uc.takePreRunSnapshot(ctx, params.ScriptRef); snapshotErr != nil {
 			return result, fmt.Errorf("failed to take pre-run fork snapshot: %w", snapshotErr)
 		}
@@ -277,6 +283,36 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 
 	result.Success = true
 	return result, nil
+}
+
+// checkForkHealth verifies the fork anvil process is alive and responsive before a fork mode run.
+func (uc *RunScript) checkForkHealth(ctx context.Context) error {
+	networkName := uc.config.Network.Name
+
+	state, err := uc.forkStateStore.Load(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to load fork state: %w", err)
+	}
+
+	fork := state.GetActiveFork(networkName)
+	if fork == nil {
+		return fmt.Errorf("no active fork for network '%s'", networkName)
+	}
+
+	instance := &domain.AnvilInstance{
+		Name:    fmt.Sprintf("fork-%s", fork.Network),
+		Port:    portFromURL(fork.ForkURL),
+		ChainID: fmt.Sprintf("%d", fork.ChainID),
+		PidFile: fork.PidFile,
+		LogFile: fork.LogFile,
+	}
+
+	status, err := uc.anvilManager.GetStatus(ctx, instance)
+	if err != nil || !status.Running || !status.RPCHealthy {
+		return fmt.Errorf("fork anvil for '%s' has crashed. EVM snapshots are no longer valid.\n\nTo recover, use one of:\n  treb fork restart %s  (start fresh fork, restore to initial state)\n  treb fork exit %s     (exit fork mode, restore original state)", networkName, networkName, networkName)
+	}
+
+	return nil
 }
 
 // takePreRunSnapshot takes an EVM snapshot and backs up registry files before a fork mode run.

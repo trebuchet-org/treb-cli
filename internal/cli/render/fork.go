@@ -99,6 +99,26 @@ func (r *ForkRenderer) RenderRevert(result *usecase.RevertForkResult) error {
 	return nil
 }
 
+// RenderRestart renders the result of fork restart
+func (r *ForkRenderer) RenderRestart(result *usecase.RestartForkResult) error {
+	entry := result.ForkEntry
+
+	fmt.Println(result.Message)
+	fmt.Println()
+	fmt.Printf("  Network:      %s\n", entry.Network)
+	fmt.Printf("  Chain ID:     %d\n", entry.ChainID)
+	fmt.Printf("  Fork URL:     %s\n", entry.ForkURL)
+	fmt.Printf("  Anvil PID:    %d\n", entry.AnvilPID)
+	fmt.Printf("  Env Override: %s=%s\n", entry.EnvVarName, entry.ForkURL)
+	if result.SetupScriptRan {
+		fmt.Printf("  Setup:        executed successfully\n")
+	}
+	fmt.Println()
+	fmt.Println("Registry restored to initial fork state. All previous snapshots cleared.")
+
+	return nil
+}
+
 // RenderHistory renders the result of fork history
 func (r *ForkRenderer) RenderHistory(result *usecase.ForkHistoryResult) error {
 	fmt.Printf("Fork History: %s\n", result.Network)

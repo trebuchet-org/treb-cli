@@ -21,6 +21,7 @@ func NewForkCmd() *cobra.Command {
 	cmd.AddCommand(newForkEnterCmd())
 	cmd.AddCommand(newForkExitCmd())
 	cmd.AddCommand(newForkRevertCmd())
+	cmd.AddCommand(newForkRestartCmd())
 	cmd.AddCommand(newForkStatusCmd())
 	cmd.AddCommand(newForkHistoryCmd())
 
@@ -224,6 +225,58 @@ func runForkRevert(cmd *cobra.Command, args []string) error {
 
 	renderer := render.NewForkRenderer()
 	return renderer.RenderRevert(result)
+}
+
+// newForkRestartCmd creates the fork restart subcommand
+func newForkRestartCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "restart [network]",
+		Short: "Restart a crashed fork",
+		Long: `Restart a fork whose Anvil process has crashed. This will:
+1. Stop the dead process (if needed)
+2. Restore registry files to the initial fork state
+3. Start a fresh fork from the original RPC
+4. Re-run SetupFork script (if configured)
+5. Take a new initial snapshot
+
+If no network is specified, uses the currently configured network.`,
+		Args:         cobra.MaximumNArgs(1),
+		SilenceUsage: true,
+		RunE:         runForkRestart,
+	}
+
+	return cmd
+}
+
+func runForkRestart(cmd *cobra.Command, args []string) error {
+	app, err := getApp(cmd)
+	if err != nil {
+		return err
+	}
+
+	ctx := cmd.Context()
+
+	network := ""
+	if len(args) > 0 {
+		network = args[0]
+	} else {
+		// Use current configured network
+		if app.Config.Network != nil {
+			network = app.Config.Network.Name
+		}
+	}
+
+	params := usecase.RestartForkParams{
+		Network: network,
+	}
+
+	result, err := app.RestartFork.Execute(ctx, params)
+	if err != nil {
+		return err
+	}
+
+	renderer := render.NewForkRenderer()
+	return renderer.RenderRestart(result)
 }
 
 // newForkStatusCmd creates the fork status subcommand

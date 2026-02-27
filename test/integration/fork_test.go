@@ -12,6 +12,7 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1136,6 +1137,172 @@ func TestForkRevertCommand(t *testing.T) {
 				defer cleanupForkAnvil(t, ctx, "anvil-31337")
 
 				assert.Contains(t, output, "nothing to revert")
+			},
+		},
+	}
+
+	RunIntegrationTests(t, tests)
+}
+
+// killForkAnvil sends SIGKILL to the fork anvil process to simulate a crash
+func killForkAnvil(t *testing.T, ctx *helpers.TestContext, network string) {
+	t.Helper()
+	state := readForkState(t, ctx)
+	entry := state.Forks[network]
+	require.NotNil(t, entry, "fork entry should exist for %s", network)
+
+	if entry.AnvilPID > 0 {
+		proc, err := os.FindProcess(entry.AnvilPID)
+		require.NoError(t, err)
+		err = proc.Signal(syscall.SIGKILL)
+		require.NoError(t, err, "should be able to kill fork anvil process")
+		// Wait briefly for process to die
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+func TestForkCrashDetection(t *testing.T) {
+	tests := []IntegrationTest{
+		{
+			Name: "fork_run_detects_crashed_anvil",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"fork", "enter", "anvil-31337"},
+			},
+			TestCmds:   [][]string{},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, _ string) {
+				// Kill the fork anvil to simulate crash
+				killForkAnvil(t, ctx, "anvil-31337")
+
+				// Now try to run a deployment - should fail with crash error
+				output, err := ctx.TrebContext.Treb("run", "script/deploy/DeployCounter.s.sol")
+				require.Error(t, err, "treb run should fail when fork anvil is crashed")
+
+				assert.Contains(t, output, "has crashed")
+				assert.Contains(t, output, "treb fork restart")
+				assert.Contains(t, output, "treb fork exit")
+			},
+		},
+		{
+			Name: "fork_status_shows_dead_for_crashed_anvil",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"fork", "enter", "anvil-31337"},
+			},
+			TestCmds:   [][]string{},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, _ string) {
+				// Kill the fork anvil
+				killForkAnvil(t, ctx, "anvil-31337")
+
+				// Check fork status - should show dead
+				output, err := ctx.TrebContext.Treb("fork", "status")
+				require.NoError(t, err, "fork status should succeed even with dead fork")
+
+				assert.Contains(t, output, "Active Forks")
+				assert.Contains(t, output, "anvil-31337")
+				assert.Contains(t, output, "dead")
+			},
+		},
+		{
+			Name: "fork_exit_cleans_up_crashed_anvil",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"fork", "enter", "anvil-31337"},
+			},
+			TestCmds:   [][]string{},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, _ string) {
+				// Kill the fork anvil
+				killForkAnvil(t, ctx, "anvil-31337")
+
+				// Exit should succeed even with dead anvil
+				output, err := ctx.TrebContext.Treb("fork", "exit", "anvil-31337")
+				require.NoError(t, err, "fork exit should succeed with dead anvil")
+
+				assert.Contains(t, output, "Fork mode exited")
+				assert.Contains(t, output, "anvil-31337")
+
+				workDir := ctx.TrebContext.GetWorkDir()
+
+				// Verify fork state file is gone
+				statePath := filepath.Join(workDir, ".treb", "priv", "fork-state.json")
+				_, err = os.Stat(statePath)
+				assert.True(t, os.IsNotExist(err), "fork-state.json should be deleted")
+
+				// Verify fork directory is cleaned up
+				forkDir := filepath.Join(workDir, ".treb", "priv", "fork", "anvil-31337")
+				_, err = os.Stat(forkDir)
+				assert.True(t, os.IsNotExist(err), "fork directory should be cleaned up")
+			},
+		},
+	}
+
+	RunIntegrationTests(t, tests)
+}
+
+func TestForkRestartCommand(t *testing.T) {
+	tests := []IntegrationTest{
+		{
+			Name: "fork_restart_after_crash_restores_state",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"fork", "enter", "anvil-31337"},
+				{"run", "script/deploy/DeployCounter.s.sol"},
+			},
+			TestCmds:   [][]string{},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, _ string) {
+				workDir := ctx.TrebContext.GetWorkDir()
+
+				// Verify Counter is deployed before crash
+				deploymentsPath := filepath.Join(workDir, ".treb", "deployments.json")
+				data, err := os.ReadFile(deploymentsPath)
+				require.NoError(t, err)
+				assert.Contains(t, string(data), "Counter", "Counter should be deployed before restart")
+
+				// Kill the fork anvil
+				killForkAnvil(t, ctx, "anvil-31337")
+
+				// Restart the fork
+				output, err := ctx.TrebContext.Treb("fork", "restart", "anvil-31337")
+				require.NoError(t, err, "fork restart should succeed")
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				assert.Contains(t, output, "Fork restarted")
+				assert.Contains(t, output, "anvil-31337")
+
+				// Verify Counter is no longer in deployments.json (restored to initial state)
+				data, err = os.ReadFile(deploymentsPath)
+				if err == nil {
+					assert.NotContains(t, string(data), "Counter",
+						"Counter deployment should be gone after restart (restored to initial state)")
+				}
+
+				// Verify fresh fork state
+				state := readForkState(t, ctx)
+				fork := state.Forks["anvil-31337"]
+				require.NotNil(t, fork, "fork entry should exist after restart")
+				assert.Len(t, fork.Snapshots, 1, "should have only initial snapshot after restart")
+				assert.Equal(t, "fork restart", fork.Snapshots[0].Command)
+
+				// Verify new fork anvil is healthy
+				assert.True(t, isProcessAlive(fork.AnvilPID), "new fork anvil should be running")
 			},
 		},
 	}

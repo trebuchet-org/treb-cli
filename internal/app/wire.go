@@ -59,6 +59,7 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 		usecase.NewEnterFork,
 		usecase.NewExitFork,
 		usecase.NewRevertFork,
+		usecase.NewRestartFork,
 		usecase.NewForkStatus,
 		usecase.NewForkHistory,
 

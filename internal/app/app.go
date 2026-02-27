@@ -37,6 +37,7 @@ type App struct {
 	EnterFork   *usecase.EnterFork
 	ExitFork    *usecase.ExitFork
 	RevertFork  *usecase.RevertFork
+	RestartFork *usecase.RestartFork
 	ForkStatus  *usecase.ForkStatus
 	ForkHistory *usecase.ForkHistory
 
@@ -74,6 +75,7 @@ func NewApp(
 	enterFork *usecase.EnterFork,
 	exitFork *usecase.ExitFork,
 	revertFork *usecase.RevertFork,
+	restartFork *usecase.RestartFork,
 	forkStatus *usecase.ForkStatus,
 	forkHistory *usecase.ForkHistory,
 	anvilManager usecase.AnvilManager,
@@ -105,6 +107,7 @@ func NewApp(
 		EnterFork:                enterFork,
 		ExitFork:                 exitFork,
 		RevertFork:               revertFork,
+		RestartFork:              restartFork,
 		ForkStatus:               forkStatus,
 		ForkHistory:              forkHistory,
 		AnvilManager:             anvilManager,
