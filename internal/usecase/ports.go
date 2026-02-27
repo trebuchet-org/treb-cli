@@ -241,6 +241,7 @@ type RunScriptConfig struct {
 	Script             *models.Contract
 	Network            *config.Network
 	Namespace          string
+	FoundryProfile     string // Foundry profile to set via FOUNDRY_PROFILE env var
 	Parameters         map[string]string // Includes resolved parameters and sender configs
 	DryRun             bool
 	Debug              bool

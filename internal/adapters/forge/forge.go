@@ -305,7 +305,7 @@ func (f *ForgeAdapter) buildEnv(config usecase.RunScriptConfig) []string {
 	maps.Copy(env, config.Parameters)
 
 	// Profile
-	env["FOUNDRY_PROFILE"] = config.Namespace
+	env["FOUNDRY_PROFILE"] = config.FoundryProfile
 	env["NAMESPACE"] = config.Namespace
 	env["NETWORK"] = config.Network.Name
 	env["DRYRUN"] = strconv.FormatBool(config.DryRun || config.Debug || config.DebugJSON)

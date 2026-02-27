@@ -175,6 +175,7 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 	runScriptConfig := RunScriptConfig{
 		Network:            uc.config.Network,
 		Namespace:          uc.config.Namespace,
+		FoundryProfile:     uc.config.FoundryProfile,
 		Script:             script,
 		Parameters:         resolvedParams,
 		Libraries:          libraryStrings,
