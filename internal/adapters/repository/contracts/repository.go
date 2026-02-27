@@ -68,10 +68,13 @@ func (i *Repository) Index() error {
 		i.log.Debug("out directory not found, build needed")
 		needsBuild = true
 	} else {
-		// Check if out directory has any content
-		entries, err := os.ReadDir(outDir)
-		if err != nil || len(entries) == 0 {
-			i.log.Debug("out directory empty, build needed")
+		// Check if out directory has actual artifact JSONs (not just build-info or other non-artifact files)
+		hasArtifacts, scanErr := hasArtifactFiles(outDir)
+		if scanErr != nil {
+			i.log.Debug("failed to scan out directory, build needed", "error", scanErr)
+			needsBuild = true
+		} else if !hasArtifacts {
+			i.log.Debug("no artifact files found in out directory, build needed")
 			needsBuild = true
 		}
 	}
@@ -85,9 +88,9 @@ func (i *Repository) Index() error {
 		i.log.Debug("skipping forge build, artifacts already exist")
 	}
 
-	// Verify the 'out' directory exists
-	if _, err := os.Stat(outDir); os.IsNotExist(err) {
-		return fmt.Errorf("out directory not found after attempting to index")
+	// Verify artifacts exist after potential build
+	if ok, _ := hasArtifactFiles(outDir); !ok {
+		return fmt.Errorf("no artifacts found in out directory after build: %s", outDir)
 	}
 
 	// Walk through all artifact directories
@@ -113,7 +116,9 @@ func (i *Repository) Index() error {
 		return nil
 	})
 
-	i.indexed = true
+	if err == nil {
+		i.indexed = true
+	}
 	duration := time.Since(start)
 	i.log.Debug("contract indexing completed", "duration", duration, "contracts_found", len(i.contracts))
 	return err
@@ -140,6 +145,28 @@ func (i *Repository) runForgeBuild() error {
 
 	i.log.Debug("forge build completed", "duration", duration)
 	return nil
+}
+
+// hasArtifactFiles checks if outDir contains at least one artifact JSON (excluding build-info).
+func hasArtifactFiles(outDir string) (bool, error) {
+	var found bool
+	err := filepath.WalkDir(outDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			if d.Name() == "build-info" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if filepath.Ext(path) == ".json" {
+			found = true
+			return filepath.SkipAll
+		}
+		return nil
+	})
+	return found, err
 }
 
 // processArtifact processes a single artifact file
