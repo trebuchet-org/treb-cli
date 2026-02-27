@@ -1,0 +1,258 @@
+# Ralph Progress Log
+Started: Fri Feb 27 04:32:59 PM CET 2026
+
+## Codebase Patterns
+- Domain models live in `internal/domain/` with `json:"camelCase"` tags
+- Port interfaces are defined in `internal/usecase/ports.go` with `ctx context.Context` as first param
+- File-based adapters in `internal/adapters/fs/` follow `New<Name>Adapter(cfg *config.RuntimeConfig)` constructor pattern
+- Use `var _ usecase.Interface = (*Adapter)(nil)` for compile-time type assertion
+- Error wrapping: `fmt.Errorf("context: %w", err)`
+- JSON files use `json.MarshalIndent(v, "", "  ")` for pretty-printing
+- Tests use `testify/assert` and `testify/require`
+- Wire DI sets in `internal/adapters/providers.go` organized by domain (FSSet, AnvilSet, etc.)
+- LocalConfig at `.treb/config.local.json`, fork state at `.treb/priv/fork-state.json`
+- Anvil manager uses `makeRPCCallWithResponse` for JSON-RPC calls; use `httptest.NewServer` for unit testing RPC methods
+- Extract testable helper functions (e.g. `buildAnvilArgs`) from methods that interact with OS processes for pure unit tests
+- `setFilePaths` respects pre-set PidFile/LogFile paths; fork instances should set name to "fork-<network>" for `/tmp/treb-fork-<network>.pid` naming
+- Lint requires all error return values to be checked, even in test helpers
+- Fork snapshot dir structure: `.treb/priv/fork/<network>/snapshots/<N>/` - registry files copied here
+- Use `//nolint:gosec` for internally-constructed paths that trigger G703 taint analysis
+- Run integration tests isolated because they take a long time
+- `deployments.json` is a flat map keyed by deployment ID (e.g. `default/31337/Counter`), not nested under a `deployments` key
+- To add new dependencies to use cases: update constructor, wire_gen.go (manual edit), and wire.go
+- LocalConfig supports dot-notation keys (e.g. `fork.setup`) - add to `ValidConfigKeys()`, `IsValidConfigKey()`, and switch cases in set/remove use cases
+- Forge cheatcodes (vm.deal, vm.store) don't persist on fork nodes via `forge script --broadcast`; use actual transactions or Anvil RPC methods for setup scripts
+- Integration test framework prepends `=== cmd N: [...] ===\n` before stdout; use `extractJSONArray()` helper to parse JSON from framework-wrapped output
+- `loadDeploymentIDs` in usecase package is reusable for any fork vs. baseline deployment comparison
+
+---
+
+## 2026-02-27 - US-001
+- Implemented ForkState domain model (`internal/domain/fork.go`) with ForkEntry and SnapshotEntry
+- Added ForkStateStore interface to `internal/usecase/ports.go`
+- Implemented ForkStateStoreAdapter in `internal/adapters/fs/fork_state_store.go`
+- Files changed: `internal/domain/fork.go`, `internal/domain/fork_test.go`, `internal/adapters/fs/fork_state_store.go`, `internal/adapters/fs/fork_state_store_test.go`, `internal/usecase/ports.go`
+- **Learnings for future iterations:**
+  - GetActiveFork returns `*ForkEntry` (not error) since nil is sufficient for "not found"
+  - ForkState.Forks map must be initialized on Load even from empty JSON to avoid nil map panics
+  - The `.treb/priv/` directory is for private/local state not committed to git
+---
+
+## 2026-02-27 - US-002
+- Extended AnvilInstance domain model with optional ForkURL field
+- Added `--fork-url` arg to anvil command builder when ForkURL is set
+- Extracted `buildAnvilArgs` helper function for testability
+- Added `TakeSnapshot` method (evm_snapshot JSON-RPC) and `RevertSnapshot` method (evm_revert JSON-RPC) to anvil manager
+- Updated `AnvilManager` interface in ports.go with new snapshot methods
+- Updated `setFilePaths` to preserve pre-set PidFile/LogFile paths
+- Fork instances use name "fork-<network>" → /tmp/treb-fork-<network>.pid naming
+- Files changed: `internal/domain/anvil.go`, `internal/adapters/anvil/manager.go`, `internal/adapters/anvil/manager_test.go`, `internal/usecase/ports.go`
+- **Learnings for future iterations:**
+  - `httptest.NewServer` is effective for unit testing JSON-RPC methods without needing a real anvil
+  - Anvil's `evm_revert` returns a boolean (true on success), while `evm_snapshot` returns a hex string snapshot ID
+  - The `setFilePaths` method is called by many manager methods; allowing pre-set paths lets callers control file locations for fork instances
+  - Always check error returns in test code - linter enforces this even in httptest handlers
+---
+
+## 2026-02-27 - US-003
+- Created ForkFileManager interface in `internal/usecase/ports.go` with BackupFiles, RestoreFiles, CleanupForkDir methods
+- Implemented ForkFileManagerAdapter in `internal/adapters/fs/fork_file_manager.go`
+- Backs up/restores 5 registry files: deployments.json, transactions.json, safe-txs.json, registry.json, addressbook.json
+- Snapshot directory structure: `.treb/priv/fork/<network>/snapshots/<N>/`
+- Files changed: `internal/usecase/ports.go`, `internal/adapters/fs/fork_file_manager.go`, `internal/adapters/fs/fork_file_manager_test.go`
+- **Learnings for future iterations:**
+  - gosec taint analysis (G703) flags `os.OpenFile` with paths from parameters even when internally constructed; use `//nolint:gosec` with justification
+  - Missing source files are handled gracefully with `os.IsNotExist` checks - skip instead of error
+  - `os.RemoveAll` on non-existent paths does not error (unlike `os.Remove`), so CleanupForkDir naturally handles non-existent directories
+  - Pre-existing lint issues in verifier.go (G702 gosec) - not related to fork mode work
+---
+
+## 2026-02-27 - US-004
+- Implemented DetectEnvVar, GenerateEnvVarName, LoadRawRPCEndpoint, LoadRawRPCEndpoints, and MigrateRPCEndpoint functions
+- DetectEnvVar uses regex to match `${VAR_NAME}` patterns, returning the var name and whether it's an env var
+- GenerateEnvVarName converts network names to convention: uppercase, dashes/dots to underscores, append `_RPC_URL`
+- LoadRawRPCEndpoint reads foundry.toml with BurntSushi/toml without calling os.ExpandEnv, preserving raw `${VAR}` references
+- MigrateRPCEndpoint does text-level find/replace in foundry.toml and appends to .env with proper newline handling
+- Files changed: `internal/config/rpc_env.go`, `internal/config/rpc_env_test.go`
+- **Learnings for future iterations:**
+  - TOML decoding does NOT expand `${VAR}` - it's `os.ExpandEnv()` in `loadFoundryConfig` that does the expansion. So reading raw values just means decoding TOML without the ExpandEnv call.
+  - MigrateRPCEndpoint does string-level replacement in foundry.toml rather than TOML serialization to preserve formatting, comments, and ordering
+  - The `.env` append logic must handle: file not existing, file with no trailing newline, and duplicate env var detection
+  - The `//nolint:gosec` directive is needed for `os.ReadFile`/`os.WriteFile`/`os.OpenFile` with internally-constructed paths to avoid G703 taint analysis warnings
+---
+
+## 2026-02-27 - US-005
+- Implemented `treb fork enter <network>` CLI command as cobra command group with subcommand
+- Created EnterFork use case in `internal/usecase/enter_fork.go` with full fork lifecycle:
+  - Validates no active fork for network, finds available port, starts anvil with --fork-url
+  - Waits for health check, backs up registry files to snapshot 0, takes EVM snapshot
+  - Saves fork state, ensures `.treb/priv/` in .gitignore
+- Created CLI command in `internal/cli/fork.go` handling RPC env var detection/migration flow
+- Created renderer in `internal/cli/render/fork.go` for status output
+- Wired DI: added ForkSet to providers.go, updated app.go/wire.go/wire_gen.go
+- Registered fork command group in root.go
+- Integration tests: fork_enter_success and fork_enter_already_active both pass
+- Files changed: `internal/usecase/enter_fork.go`, `internal/cli/fork.go`, `internal/cli/render/fork.go`, `internal/adapters/providers.go`, `internal/app/app.go`, `internal/app/wire.go`, `internal/app/wire_gen.go`, `internal/cli/root.go`, `test/integration/fork_test.go`, `test/testdata/project/.gitignore`
+- **Learnings for future iterations:**
+  - Integration test framework uses go-toml marshal which produces single-quoted strings — can't rely on original TOML formatting. Use `PreSetup` functions for env var migration setup.
+  - PID/log files should be project-scoped (`.treb/priv/`) not global (`/tmp/`) for parallel test isolation
+  - `SkipGolden: true` is needed for tests with dynamic output (PIDs, ports, URLs)
+  - The `TestRunCommand/run_with_debug` test is pre-existing flaky due to non-deterministic terminal escape sequences from solc output
+  - NetworkResolver must be exported from App struct for CLI commands that need to resolve network config
+  - RestoreFiles must remove files not present in the snapshot backup (they were created during fork mode)
+---
+
+## 2026-02-27 - US-006
+- Implemented `treb fork exit [network]` CLI command with `--all` flag
+- Created ExitFork use case in `internal/usecase/exit_fork.go`:
+  - Stops anvil fork process via anvil manager (handles already-dead processes)
+  - Restores all .treb/ registry files from initial backup (snapshot 0)
+  - Removes fork directory .treb/priv/fork/<network>/
+  - Removes fork entry from state; deletes fork-state.json if no more active forks
+  - `--all` flag iterates all active forks and exits each
+- Added fork exit CLI command in `internal/cli/fork.go` with network argument (optional, falls back to configured network)
+- Added RenderExit method in `internal/cli/render/fork.go`
+- Wired DI: added ExitFork use case to app.go, wire.go, wire_gen.go
+- Fixed RestoreFiles in `internal/adapters/fs/fork_file_manager.go`: files not present in snapshot backup are now removed from .treb/ (they were created during fork mode)
+- Updated corresponding unit test `TestForkFileManager_RestoreRemovesFilesNotInBackup`
+- Integration tests: fork_exit_restores_state, fork_exit_after_deploy_restores_registry, fork_exit_no_active_fork
+- Files changed: `internal/usecase/exit_fork.go`, `internal/cli/fork.go`, `internal/cli/render/fork.go`, `internal/app/app.go`, `internal/app/wire.go`, `internal/app/wire_gen.go`, `internal/adapters/fs/fork_file_manager.go`, `internal/adapters/fs/fork_file_manager_test.go`, `test/integration/fork_test.go`
+- **Learnings for future iterations:**
+  - RestoreFiles must handle files created during fork mode: if a file doesn't exist in the snapshot backup, it should be removed from .treb/ (not left in place)
+  - Anvil manager's Stop method is safe to call even if the process is already dead (returns nil)
+  - When network arg is optional in a CLI command, use `cobra.MaximumNArgs(1)` and fall back to `app.Config.Network.Name`
+  - `portFromURL` helper extracts port from `http://host:port` format for building AnvilInstance from ForkEntry
+---
+
+## 2026-02-27 - US-007
+- Implemented RPC override in forge adapter for fork mode
+- Added `ForkEnvOverrides map[string]string` field to `RunScriptConfig` in `internal/usecase/ports.go`
+- Updated `buildEnv()` in `internal/adapters/forge/forge.go` to merge fork env overrides into subprocess env
+- Added `ForkStateStore` dependency to `RunScript` use case in `internal/usecase/run_script.go`
+- RunScript.Run() loads fork state and populates ForkEnvOverrides when fork is active for the current network
+- Updated DI wiring in `internal/app/wire_gen.go` to pass ForkStateStoreAdapter to NewRunScript
+- Unit tests for buildEnv: with fork override, without fork override, nil overrides, different network override
+- Integration tests: fork_run_deploys_to_fork_anvil (verifies eth_getCode on fork URL + NOT on regular anvil), run_without_fork_deploys_to_regular_anvil
+- Files changed: `internal/adapters/forge/forge.go`, `internal/adapters/forge/forge_test.go`, `internal/app/wire_gen.go`, `internal/usecase/ports.go`, `internal/usecase/run_script.go`, `test/integration/fork_test.go`
+- **Learnings for future iterations:**
+  - The `deployments.json` file is a flat map keyed by deployment ID (e.g. `default/31337/Counter`), NOT nested under a `deployments` key
+  - Fork env override works by setting the env var that foundry.toml's `${VAR}` references in the forge subprocess env only - this is transparent to the Solidity scripts
+  - The RunScript use case silently ignores fork state load errors (file doesn't exist when not in fork mode) - this is correct since most runs don't use fork mode
+  - Integration tests for fork mode are slow (~7s per test due to forge compilation) - use `SkipGolden: true` for tests with dynamic output
+---
+
+## 2026-02-27 - US-008
+- Added pre-run EVM and file snapshot logic to RunScript use case (`internal/usecase/run_script.go`)
+- When fork mode is active, before forge execution: takes EVM snapshot, backs up registry files to next snapshot index, records snapshot in fork state
+- Added `AnvilManager` and `ForkFileManager` as new dependencies to RunScript use case
+- Updated DI wiring in `internal/app/wire_gen.go` to pass manager and forkFileManagerAdapter to NewRunScript
+- `takePreRunSnapshot` method: loads fork state, determines next index from snapshot count, builds AnvilInstance from ForkEntry, takes EVM snapshot, backs up files, saves updated state
+- Integration tests: fork_run_creates_pre_run_snapshot (single run → snapshot 1 with 2 stack entries), fork_multiple_runs_create_multiple_snapshots (two runs → snapshots 1 and 2 with 3 stack entries)
+- Files changed: `internal/usecase/run_script.go`, `internal/app/wire_gen.go`, `test/integration/fork_test.go`
+- **Learnings for future iterations:**
+  - The `forkEnvOverrides != nil` check is a clean proxy for "fork mode is active" since it's only populated when a fork is found for the current network
+  - `portFromURL` helper from exit_fork.go is reusable within the usecase package for building AnvilInstance from ForkEntry
+  - Snapshot index is simply `len(fork.Snapshots)` since the stack grows monotonically (0 = initial, 1 = first run, etc.)
+  - Pre-existing lint issue in verifier.go (G702 gosec) is unrelated to fork mode work - all prior stories had same issue
+---
+
+## 2026-02-27 - US-009
+- Implemented `treb fork revert [network]` CLI command with `--all` flag
+- Created RevertFork use case in `internal/usecase/revert_fork.go`:
+  - Single revert: pops top snapshot, calls evm_revert, restores files from popped snapshot, removes snapshot dir
+  - Revert all (`--all`): reverts EVM to initial snapshot (index 0), restores files from snapshot 0, removes all non-initial snapshot dirs
+  - Errors if only initial snapshot remains ("nothing to revert")
+- Added CLI command in `internal/cli/fork.go` with network argument (optional, falls back to configured network)
+- Added RenderRevert method in `internal/cli/render/fork.go`
+- Wired DI: added RevertFork use case to app.go, wire.go, wire_gen.go
+- Integration tests: fork_revert_restores_last_run, fork_revert_partial_keeps_earlier_deploy, fork_revert_all_restores_initial_state, fork_revert_nothing_to_revert - all pass
+- Files changed: `internal/usecase/revert_fork.go`, `internal/cli/fork.go`, `internal/cli/render/fork.go`, `internal/app/app.go`, `internal/app/wire.go`, `internal/app/wire_gen.go`, `test/integration/fork_test.go`
+- **Learnings for future iterations:**
+  - Anvil's `evm_revert` to snapshot 0 also restores to initial state; the stack model works naturally since older snapshots remain valid after reverting a newer one
+  - For `revert --all`, revert EVM to the initial snapshot ID (index 0), not to each snapshot in reverse order
+  - `os.RemoveAll` is safe for cleaning up snapshot directories (no error on non-existent paths)
+  - The `portFromURL` helper in exit_fork.go is reusable across all fork use cases for building AnvilInstance from ForkEntry
+---
+
+## 2026-02-27 - US-010
+- Added `fork.setup` configuration key to LocalConfig model (`internal/domain/config/local.go`)
+- Updated SetConfig and RemoveConfig use cases to handle `fork.setup` key
+- Updated CLI config command help text to list `fork.setup` as available key
+- Extended EnterFork use case with `executeSetupFork` method that:
+  - Loads fork.setup from LocalConfig
+  - Skips silently if not configured or script file doesn't exist
+  - Executes the setup script via ForgeScriptRunner with fork env overrides
+  - On failure: returns error so caller stops anvil and cleans up state
+- Moved initial EVM snapshot and file backup AFTER setup script execution (so snapshot captures setup state)
+- Added `SetupScriptRan` field to EnterForkResult for renderer output
+- Updated DI wiring: added LocalConfigRepository and ForgeScriptRunner to NewEnterFork
+- Created test SetupFork scripts: working (ETH transfer) and failing (revert)
+- Integration tests: fork_enter_with_setup_script, fork_enter_with_failing_setup_script, fork_enter_without_setup_config - all pass
+- Files changed: `internal/domain/config/local.go`, `internal/usecase/enter_fork.go`, `internal/usecase/set_config.go`, `internal/usecase/remove_config.go`, `internal/cli/config.go`, `internal/cli/render/fork.go`, `internal/app/wire_gen.go`, `test/integration/fork_test.go`, `test/testdata/project/script/setup/SetupFork.s.sol`, `test/testdata/project/script/setup/SetupForkFailing.s.sol`
+- **Learnings for future iterations:**
+  - Forge cheatcodes (vm.deal, vm.store) do NOT persist state on the actual node when using `forge script --broadcast`. They only affect the simulation. For setup scripts that need persistent state changes on a fork, use actual transactions (vm.startBroadcast + transfer/call) or Anvil RPC methods.
+  - LocalConfig uses `json:"forkSetup,omitempty"` to avoid polluting the JSON when not set, while the config key is `fork.setup` (dot-notation)
+  - The `executeSetupFork` method builds a minimal `RunScriptConfig` without going through full parameter/sender resolution - the setup script is treated as a plain forge script, not a treb deployment script
+  - EnterForkResult.SetupScriptRan flag allows the renderer to conditionally show "Setup: executed successfully"
+---
+
+## 2026-02-27 - US-011
+- Implemented `treb fork status` CLI command showing all active forks
+- Created ForkStatus use case in `internal/usecase/fork_status.go`:
+  - Loads fork state and iterates all active forks
+  - Health-checks each fork's anvil (PID alive + RPC responsive) via anvil manager
+  - Counts fork-added deployments by comparing current deployments.json against snapshot 0 backup
+  - Indicates which fork is the currently configured network
+- Added RenderStatus method to ForkRenderer in `internal/cli/render/fork.go`:
+  - Table output: network name, chain ID, fork URL, anvil PID, health status, uptime, snapshot count, fork deploy count
+  - Shows "(current)" marker for the configured network
+  - "No active forks" message when no forks exist
+- Added `formatDuration` helper for human-readable uptime display
+- Wired DI: added ForkStatus to app.go, wire.go, wire_gen.go
+- Integration tests: fork_status_shows_active_fork, fork_status_after_deploy, fork_status_no_active_forks - all pass
+- Files changed: `internal/usecase/fork_status.go`, `internal/cli/fork.go`, `internal/cli/render/fork.go`, `internal/app/app.go`, `internal/app/wire.go`, `internal/app/wire_gen.go`, `test/integration/fork_test.go`
+- **Learnings for future iterations:**
+  - `loadDeploymentIDs` is a reusable utility for comparing deployment sets across JSON files (current vs. backup)
+  - The ForkStatus use case reads deployments.json directly from disk rather than going through the DeploymentRepository - this is simpler and avoids coupling with the full repository infrastructure
+  - `portFromURL` helper in exit_fork.go continues to be reusable across fork use cases for building AnvilInstance from ForkEntry
+  - The `time.Since(entry.EnteredAt)` approach for uptime means the displayed value is a snapshot at render time, not a live counter
+---
+
+## 2026-02-27 - US-012
+- Implemented `treb fork history [network]` CLI command showing snapshot history for a fork
+- Created ForkHistory use case in `internal/usecase/fork_history.go`:
+  - Loads fork state, resolves network (optional arg, falls back to configured network)
+  - Builds history entries from snapshot stack with index, command, timestamp, current/initial markers
+  - Errors if no active fork for the specified network
+- Added `newForkHistoryCmd` in `internal/cli/fork.go` with optional network argument
+- Added `RenderHistory` method in `internal/cli/render/fork.go`:
+  - Shows "Fork History: <network>" header
+  - Entries marked with → for current (top of stack), [0] as "initial", others show command
+  - Timestamps formatted as "2006-01-02 15:04:05"
+- Wired DI: added ForkHistory to app.go, wire.go, wire_gen.go
+- Integration tests: fork_history_shows_entries (3 entries after 2 runs), fork_history_after_revert (only initial after revert), fork_history_no_active_fork (error case)
+- Files changed: `internal/usecase/fork_history.go`, `internal/cli/fork.go`, `internal/cli/render/fork.go`, `internal/app/app.go`, `internal/app/wire.go`, `internal/app/wire_gen.go`, `test/integration/fork_test.go`
+- **Learnings for future iterations:**
+  - ForkHistory is one of the simplest use cases - only depends on ForkStateStore (no anvil manager needed since it's read-only)
+  - The `buildHistoryEntries` helper converts domain SnapshotEntry to display-friendly ForkHistoryEntry with pre-formatted timestamps
+  - The → marker for the current (most recent) entry helps users identify what `fork revert` would undo
+---
+
+## 2026-02-27 - US-013
+- Added fork awareness to `treb list` command with `[fork]` indicator, `--fork` and `--no-fork` filters, and `--json` output with `fork` field
+- Extended ListDeployments use case with ForkStateStore dependency to compute fork deployment IDs by comparing current deployments.json against snapshot 0 backup
+- Added `ForkOnly` and `NoFork` params to `ListDeploymentsParams` with `filterByFork` function
+- Added `ForkDeploymentIDs map[string]bool` to `DeploymentListResult`
+- Updated deployments renderer to show `[fork]` indicator in yellow after deployment name
+- Added `--json` flag to list command with `listJSONEntry` struct including `fork` field (omitempty)
+- Updated DI wiring to pass `forkStateStoreAdapter` to `NewListDeployments`
+- Updated existing `list_json_output` integration test to expect success (no longer an error)
+- Added `extractJSONArray` helper for parsing JSON from framework-wrapped output
+- Files changed: `internal/usecase/list_deployments.go`, `internal/usecase/ports.go`, `internal/cli/list.go`, `internal/cli/render/deployments.go`, `internal/app/wire_gen.go`, `test/integration/fork_test.go`, `test/integration/list_test.go`
+- **Learnings for future iterations:**
+  - The integration test framework prepends `=== cmd N: [args...] ===\n` before each command's stdout - JSON parsing must skip this header (use `extractJSONArray` helper)
+  - `loadDeploymentIDs` from `fork_status.go` is reusable for any fork vs. baseline comparison - it's a package-level function in the usecase package
+  - The `--json` flag was added as a local bool on the list command (not via viper/global config) to avoid interference with the global `--json` flag binding
+  - Fork deployment detection uses the same pattern as `countForkDeployments` in ForkStatus: compare current deployments.json keys against snapshot 0 backup keys
+  - `forkDeploymentIDs` is nil when no fork is active, serving as a clean "not applicable" signal - nil means no fork indicators shown, empty map means fork active but no new deployments
+---
