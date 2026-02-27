@@ -48,7 +48,7 @@ func (v *Verifier) Verify(ctx context.Context, deployment *models.Deployment, ne
 
 	// Verify on Etherscan if enabled
 	if isEnabled("etherscan") {
-		etherscanErr := v.verifyOnEtherscan(deployment, network)
+		etherscanErr := v.verifyOnEtherscan(ctx, deployment, network)
 		if etherscanErr != nil {
 			deployment.Verification.Verifiers["etherscan"] = models.VerifierStatus{
 				Status: "failed",
@@ -65,7 +65,7 @@ func (v *Verifier) Verify(ctx context.Context, deployment *models.Deployment, ne
 
 	// Verify on Blockscout if enabled
 	if isEnabled("blockscout") {
-		blockscoutErr := v.verifyOnBlockscout(deployment, network, blockscoutVerifierURL)
+		blockscoutErr := v.verifyOnBlockscout(ctx, deployment, network, blockscoutVerifierURL)
 		if blockscoutErr != nil {
 			deployment.Verification.Verifiers["blockscout"] = models.VerifierStatus{
 				Status: "failed",
@@ -82,7 +82,7 @@ func (v *Verifier) Verify(ctx context.Context, deployment *models.Deployment, ne
 
 	// Verify on Sourcify if enabled
 	if isEnabled("sourcify") {
-		sourcifyErr := v.verifyOnSourceify(deployment, network)
+		sourcifyErr := v.verifyOnSourceify(ctx, deployment, network)
 		if sourcifyErr != nil {
 			deployment.Verification.Verifiers["sourcify"] = models.VerifierStatus{
 				Status: "failed",
@@ -109,7 +109,7 @@ func (v *Verifier) Verify(ctx context.Context, deployment *models.Deployment, ne
 }
 
 // verifyOnEtherscan performs verification on Etherscan
-func (v *Verifier) verifyOnEtherscan(deployment *models.Deployment, network *config.Network) error {
+func (v *Verifier) verifyOnEtherscan(ctx context.Context, deployment *models.Deployment, network *config.Network) error {
 	// Get constructor args from deployment strategy
 	constructorArgs := deployment.DeploymentStrategy.ConstructorArgs
 	if constructorArgs != "" && strings.HasPrefix(constructorArgs, "0x") {
@@ -150,11 +150,11 @@ func (v *Verifier) verifyOnEtherscan(deployment *models.Deployment, network *con
 	}
 
 	// Execute the command
-	return v.executeForgeVerify(args)
+	return v.executeForgeVerify(ctx, args)
 }
 
 // verifyOnSourceify performs verification on Sourcify
-func (v *Verifier) verifyOnSourceify(deployment *models.Deployment, network *config.Network) error {
+func (v *Verifier) verifyOnSourceify(ctx context.Context, deployment *models.Deployment, network *config.Network) error {
 	// Get contract path from artifact
 	contractPath := fmt.Sprintf("%s:%s", deployment.Artifact.Path, deployment.ContractName)
 
@@ -183,11 +183,11 @@ func (v *Verifier) verifyOnSourceify(deployment *models.Deployment, network *con
 	}
 
 	// Execute the command
-	return v.executeForgeVerify(args)
+	return v.executeForgeVerify(ctx, args)
 }
 
 // verifyOnBlockscout performs verification on Blockscout
-func (v *Verifier) verifyOnBlockscout(deployment *models.Deployment, network *config.Network, blockscoutVerifierURL string) error {
+func (v *Verifier) verifyOnBlockscout(ctx context.Context, deployment *models.Deployment, network *config.Network, blockscoutVerifierURL string) error {
 	// Get constructor args from deployment strategy
 	constructorArgs := deployment.DeploymentStrategy.ConstructorArgs
 	if constructorArgs != "" && strings.HasPrefix(constructorArgs, "0x") {
@@ -225,12 +225,12 @@ func (v *Verifier) verifyOnBlockscout(deployment *models.Deployment, network *co
 	}
 
 	// Execute the command
-	return v.executeForgeVerify(args)
+	return v.executeForgeVerify(ctx, args)
 }
 
 // executeForgeVerify executes a forge verify-contract command
-func (v *Verifier) executeForgeVerify(args []string) error {
-	cmd := exec.Command("forge", args...)
+func (v *Verifier) executeForgeVerify(ctx context.Context, args []string) error {
+	cmd := exec.CommandContext(ctx, "forge", args...)
 	cmd.Dir = v.projectRoot
 
 	// Print the command if debug is enabled

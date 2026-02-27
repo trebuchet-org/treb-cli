@@ -191,19 +191,5 @@ func (r *SpinnerProgressReporter) updateSpinnerDisplay() {
 	r.spinner.Suffix = " " + display
 }
 
-// NopProgressReporter is a no-op progress reporter for non-interactive mode
-type NopProgressReporter struct{}
-
-// NewNopProgressReporter creates a new no-op progress reporter
-func NewNopProgressReporter() *NopProgressReporter {
-	return &NopProgressReporter{}
-}
-
-// ReportStage does nothing
-func (r *NopProgressReporter) ReportStage(ctx context.Context, stage usecase.ExecutionStage) {}
-
-// ReportProgress does nothing
-func (r *NopProgressReporter) ReportProgress(ctx context.Context, event usecase.ProgressEvent) {}
-
 // Ensure SpinnerProgressReporter implements ProgressSink
 var _ usecase.ProgressSink = (*SpinnerProgressReporter)(nil)

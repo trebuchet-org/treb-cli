@@ -10,6 +10,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
+	"github.com/mattn/go-runewidth"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -523,18 +524,5 @@ func calculateTableColumnWidths(tables []TableData) []int {
 
 // displayWidth calculates the display width of a string, accounting for wide characters
 func displayWidth(s string) int {
-	width := 0
-	for _, r := range s {
-		// Most unicode symbols and emoji take 2 columns in terminals
-		// Checkmarks and similar symbols are wide characters
-		if r == '✔' || r == 0xFE0E || r == '⏳' {
-			width += 2 // These characters are wide in most terminals
-		} else if r > 127 {
-			// Other unicode characters
-			width += 2
-		} else {
-			width += 1
-		}
-	}
-	return width
+	return runewidth.StringWidth(s)
 }

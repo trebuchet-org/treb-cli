@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/trebuchet-org/treb-cli/internal/domain"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
@@ -25,6 +26,9 @@ func NewVerifyDeployment(
 	deploymentResolver DeploymentResolver,
 	progress ProgressSink,
 ) *VerifyDeployment {
+	if progress == nil {
+		progress = NopProgress{}
+	}
 	return &VerifyDeployment{
 		repo:               repo,
 		contractVerifier:   contractVerifier,
@@ -265,10 +269,11 @@ func (v *VerifyDeployment) getNetworkNameForChainID(ctx context.Context, chainID
 	networkNames := v.networkResolver.GetNetworks(ctx)
 
 	// Try to resolve each network to find matching chain ID
+	var resolveErrors []string
 	for _, name := range networkNames {
 		network, err := v.networkResolver.ResolveNetwork(ctx, name)
 		if err != nil {
-			// Skip networks that can't be resolved
+			resolveErrors = append(resolveErrors, fmt.Sprintf("%s: %v", name, err))
 			continue
 		}
 
@@ -277,7 +282,10 @@ func (v *VerifyDeployment) getNetworkNameForChainID(ctx context.Context, chainID
 		}
 	}
 
-	// If no network found, return an error
+	// If no network found, return an error with details about resolution failures
+	if len(resolveErrors) > 0 {
+		return "", fmt.Errorf("no network configuration found for chain ID %d (failed to resolve: %s)", chainID, strings.Join(resolveErrors, ", "))
+	}
 	return "", fmt.Errorf("no network configuration found for chain ID %d. Please ensure the network is configured in foundry.toml", chainID)
 }
 
