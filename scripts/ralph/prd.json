@@ -371,7 +371,7 @@
         "Integration tests pass"
       ],
       "priority": 16,
-      "passes": false,
+      "passes": true,
       "notes": "Only verify and sync are hard-blocked. Other commands operate on the current .treb/ files (which are fork-modified) with informational notes."
     },
     {

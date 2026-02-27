@@ -297,3 +297,19 @@ Started: Fri Feb 27 04:32:59 PM CET 2026
   - The `checkForkHealth` method reloads fork state from disk (not cached) to get the latest fork entry - this is correct since fork state may have been modified by other commands
   - `getAvailablePort()` in enter_fork.go is reusable by restart_fork.go since it's a package-level function
 ---
+
+## 2026-02-27 - US-016
+- Added fork mode command guards for fork-incompatible operations
+- `treb verify` and `treb sync` are hard-blocked in fork mode with error messages
+- `treb prune` and `treb register` print informational notes about fork state but proceed normally
+- `treb reset`, `treb tag` operate normally (no changes needed)
+- Added `ForkStateStore` to App struct for CLI-level fork state access
+- Created `isForkActiveForCurrentNetwork` helper in `internal/cli/root.go`
+- Integration tests: fork_verify_blocked, fork_sync_blocked
+- Files changed: `internal/app/app.go`, `internal/app/wire_gen.go`, `internal/cli/root.go`, `internal/cli/verify.go`, `internal/cli/sync.go`, `internal/cli/prune.go`, `internal/cli/register.go`, `test/integration/fork_test.go`
+- **Learnings for future iterations:**
+  - Go linter enforces lowercase error strings (ST1005 staticcheck rule), even when PRD specifies capitalized messages
+  - Adding a field to the App struct also requires updating NewApp constructor signature, wire_gen.go NewApp call, and the App body initialization
+  - The `isForkActiveForCurrentNetwork` helper provides a clean CLI-level pattern for fork state checks without needing to inject ForkStateStore into every use case
+  - Fork mode checks are best placed at the CLI layer (command RunE) rather than use case layer, since the behavior varies per command (hard block vs. info note vs. no change)
+---
