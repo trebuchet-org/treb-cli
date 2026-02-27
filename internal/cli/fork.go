@@ -19,6 +19,7 @@ func NewForkCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(newForkEnterCmd())
+	cmd.AddCommand(newForkExitCmd())
 
 	return cmd
 }
@@ -114,4 +115,57 @@ func runForkEnter(cmd *cobra.Command, args []string) error {
 	// Render result
 	renderer := render.NewForkRenderer()
 	return renderer.RenderEnter(result)
+}
+
+// newForkExitCmd creates the fork exit subcommand
+func newForkExitCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "exit [network]",
+		Short: "Exit fork mode for a network",
+		Long: `Stop the forked Anvil instance, restore registry files to pre-fork state,
+and clean up all fork state files.
+
+If no network is specified, uses the currently configured network.
+Use --all to exit all active forks.`,
+		Args:         cobra.MaximumNArgs(1),
+		SilenceUsage: true,
+		RunE:         runForkExit,
+	}
+
+	cmd.Flags().Bool("all", false, "Exit all active forks")
+
+	return cmd
+}
+
+func runForkExit(cmd *cobra.Command, args []string) error {
+	app, err := getApp(cmd)
+	if err != nil {
+		return err
+	}
+
+	ctx := cmd.Context()
+	allFlag, _ := cmd.Flags().GetBool("all")
+
+	network := ""
+	if len(args) > 0 {
+		network = args[0]
+	} else if !allFlag {
+		// Use current configured network
+		if app.Config.Network != nil {
+			network = app.Config.Network.Name
+		}
+	}
+
+	params := usecase.ExitForkParams{
+		Network: network,
+		All:     allFlag,
+	}
+
+	result, err := app.ExitFork.Execute(ctx, params)
+	if err != nil {
+		return err
+	}
+
+	renderer := render.NewForkRenderer()
+	return renderer.RenderExit(result)
 }

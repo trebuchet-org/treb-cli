@@ -31,3 +31,13 @@ func (r *ForkRenderer) RenderEnter(result *usecase.EnterForkResult) error {
 
 	return nil
 }
+
+// RenderExit renders the result of fork exit
+func (r *ForkRenderer) RenderExit(result *usecase.ExitForkResult) error {
+	fmt.Println(result.Message)
+	fmt.Println()
+	for _, network := range result.ExitedNetworks {
+		fmt.Printf("  - %s: registry restored, fork cleaned up\n", network)
+	}
+	return nil
+}

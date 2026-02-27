@@ -89,7 +89,7 @@ func TestForkFileManager_BackupSkipsMissingFiles(t *testing.T) {
 	assert.NoFileExists(t, filepath.Join(snapDir, "addressbook.json"))
 }
 
-func TestForkFileManager_RestoreSkipsMissingFiles(t *testing.T) {
+func TestForkFileManager_RestoreRemovesFilesNotInBackup(t *testing.T) {
 	mgr, dataDir := newTestForkFileManager(t)
 	ctx := context.Background()
 
@@ -98,10 +98,10 @@ func TestForkFileManager_RestoreSkipsMissingFiles(t *testing.T) {
 	err := mgr.BackupFiles(ctx, "sepolia", 0)
 	require.NoError(t, err)
 
-	// Create an extra file in .treb/ that wasn't in the backup
+	// Create an extra file in .treb/ that wasn't in the backup (simulates fork-created file)
 	writeTestFile(t, dataDir, "transactions.json", `{"transactions": ["extra"]}`)
 
-	// Restore should succeed, only overwriting files that exist in backup
+	// Restore should succeed
 	err = mgr.RestoreFiles(ctx, "sepolia", 0)
 	require.NoError(t, err)
 
@@ -109,9 +109,9 @@ func TestForkFileManager_RestoreSkipsMissingFiles(t *testing.T) {
 	restored := readTestFile(t, dataDir, "deployments.json")
 	assert.Equal(t, `{"deployments": []}`, restored)
 
-	// The file that wasn't in the backup should still have its current content
-	extra := readTestFile(t, dataDir, "transactions.json")
-	assert.Equal(t, `{"transactions": ["extra"]}`, extra)
+	// The file that wasn't in the backup should be removed (it was created during fork mode)
+	_, err = os.Stat(filepath.Join(dataDir, "transactions.json"))
+	assert.True(t, os.IsNotExist(err), "transactions.json should be removed since it wasn't in the backup")
 }
 
 func TestForkFileManager_BackupAllFiles(t *testing.T) {

@@ -59,6 +59,8 @@ func (m *ForkFileManagerAdapter) BackupFiles(_ context.Context, network string, 
 }
 
 // RestoreFiles copies registry files from the snapshot directory back to .treb/.
+// Files that exist in .treb/ but not in the snapshot backup are removed,
+// since they were created during fork mode and should not persist after restore.
 func (m *ForkFileManagerAdapter) RestoreFiles(_ context.Context, network string, snapshotIndex int) error {
 	srcDir := m.snapshotDir(network, snapshotIndex)
 
@@ -67,7 +69,11 @@ func (m *ForkFileManagerAdapter) RestoreFiles(_ context.Context, network string,
 		dst := filepath.Join(m.dataDir, name)
 		if err := copyFile(src, dst); err != nil {
 			if os.IsNotExist(err) {
-				continue // skip files that don't exist in backup
+				// File didn't exist before fork - remove it from .treb/ if it was created during fork
+				if removeErr := os.Remove(dst); removeErr != nil && !os.IsNotExist(removeErr) {
+					return fmt.Errorf("failed to remove fork-created %s: %w", name, removeErr)
+				}
+				continue
 			}
 			return fmt.Errorf("failed to restore %s: %w", name, err)
 		}

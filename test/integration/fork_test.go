@@ -149,6 +149,100 @@ func TestForkCommand(t *testing.T) {
 	RunIntegrationTests(t, tests)
 }
 
+func TestForkExitCommand(t *testing.T) {
+	tests := []IntegrationTest{
+		{
+			Name: "fork_exit_restores_state",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"fork", "enter", "anvil-31337"},
+			},
+			TestCmds: [][]string{
+				{"fork", "exit", "anvil-31337"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				workDir := ctx.TrebContext.GetWorkDir()
+
+				// Verify output
+				assert.Contains(t, output, "Fork mode exited")
+				assert.Contains(t, output, "anvil-31337")
+
+				// Verify fork state file is gone (no more active forks)
+				statePath := filepath.Join(workDir, ".treb", "priv", "fork-state.json")
+				_, err := os.Stat(statePath)
+				assert.True(t, os.IsNotExist(err), "fork-state.json should be deleted when no forks remain")
+
+				// Verify fork directory is cleaned up
+				forkDir := filepath.Join(workDir, ".treb", "priv", "fork", "anvil-31337")
+				_, err = os.Stat(forkDir)
+				assert.True(t, os.IsNotExist(err), "fork directory should be cleaned up")
+			},
+		},
+		{
+			Name: "fork_exit_after_deploy_restores_registry",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				{"fork", "enter", "anvil-31337"},
+			},
+			TestCmds: [][]string{
+				{"run", "script/deploy/DeployCounter.s.sol"},
+				{"fork", "exit", "anvil-31337"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				workDir := ctx.TrebContext.GetWorkDir()
+
+				// Verify fork state is cleaned up
+				statePath := filepath.Join(workDir, ".treb", "priv", "fork-state.json")
+				_, err := os.Stat(statePath)
+				assert.True(t, os.IsNotExist(err), "fork-state.json should be deleted")
+
+				// Verify deployments.json is restored to pre-fork state
+				// Before fork, we had no deployments (only gen, no run)
+				// After fork exit, either deployments.json doesn't exist (it was created during fork
+				// and cleaned up) or it exists but doesn't contain Counter
+				deploymentsPath := filepath.Join(workDir, ".treb", "deployments.json")
+				data, err := os.ReadFile(deploymentsPath)
+				if err == nil {
+					// If file exists, Counter should not be present
+					assert.NotContains(t, string(data), "Counter",
+						"Counter deployment should be reverted after fork exit")
+				} else {
+					// File doesn't exist - that's valid, it was created during fork and removed
+					assert.True(t, os.IsNotExist(err), "unexpected error reading deployments.json: %v", err)
+				}
+			},
+		},
+		{
+			Name: "fork_exit_no_active_fork",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+			},
+			TestCmds: [][]string{
+				{"fork", "exit", "anvil-31337"},
+			},
+			ExpectErr:  true,
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				assert.Contains(t, output, "no active fork")
+			},
+		},
+	}
+
+	RunIntegrationTests(t, tests)
+}
+
 // cleanupForkAnvil stops the fork anvil process and removes state files
 func cleanupForkAnvil(t *testing.T, ctx *helpers.TestContext, network string) {
 	t.Helper()
