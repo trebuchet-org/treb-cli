@@ -13,6 +13,7 @@ import (
 func NewShowCmd() *cobra.Command {
 	var namespace string
 	var network string
+	var noFork bool
 
 	cmd := &cobra.Command{
 		Use:   "show <deployment>",
@@ -27,6 +28,9 @@ You can specify deployments using:
 - Full deployment ID: "production/1/Counter:v1"
 - Contract address: "0x1234..."
 - Alias: "MyCounter"
+
+In fork mode, deployments added during the fork are marked with [fork].
+Use --no-fork to skip fork-added deployments.
 
 Examples:
   treb show Counter
@@ -56,9 +60,10 @@ Examples:
 			params := usecase.ShowDeploymentParams{
 				DeploymentRef: deploymentRef,
 				ResolveProxy:  true, // Always resolve proxy implementations
+				NoFork:        noFork,
 			}
 
-			deployment, err := app.ShowDeployment.Run(cmd.Context(), params)
+			result, err := app.ShowDeployment.Run(cmd.Context(), params)
 			if err != nil {
 				return fmt.Errorf("failed to resolve deployment: %w", err)
 			}
@@ -67,8 +72,10 @@ Examples:
 			if app.Config.JSON {
 				// For JSON output, we need to structure the data
 				output := map[string]interface{}{
-					"deployment": deployment,
-					// TODO: Add transaction when transaction support is implemented
+					"deployment": result.Deployment,
+				}
+				if result.IsForkDeployment {
+					output["fork"] = true
 				}
 				data, err := json.MarshalIndent(output, "", "  ")
 				if err != nil {
@@ -82,13 +89,14 @@ Examples:
 			// Detect if color is enabled from the command
 			color := cmd.OutOrStdout() == cmd.OutOrStdout() // Simple check, can be improved
 			renderer := render.NewDeploymentRenderer(cmd.OutOrStdout(), color)
-			return renderer.RenderDeployment(deployment)
+			return renderer.RenderDeployment(result.Deployment, result.IsForkDeployment)
 		},
 	}
 
 	// Add flags for network and namespace
 	cmd.Flags().StringVar(&network, "network", "", "Network to use for deployment lookup")
 	cmd.Flags().StringVar(&namespace, "namespace", "", "Namespace to use for deployment lookup")
+	cmd.Flags().BoolVar(&noFork, "no-fork", false, "Skip fork-added deployments (only show pre-fork deployments)")
 
 	return cmd
 }

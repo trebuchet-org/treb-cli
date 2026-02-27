@@ -236,6 +236,8 @@ func (r *ScriptRenderer) PrintDeploymentBanner(config *usecase.RunScriptConfig) 
 
 	if config.DryRun {
 		fmt.Fprintf(r.out, "  Mode:      %s\n", yellow.Sprint("DRY_RUN"))
+	} else if len(config.ForkEnvOverrides) > 0 {
+		fmt.Fprintf(r.out, "  Mode:      %s\n", purple.Sprint("FORK"))
 	} else {
 		fmt.Fprintf(r.out, "  Mode:      %s\n", green.Sprint("LIVE"))
 	}

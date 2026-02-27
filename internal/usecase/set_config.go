@@ -67,6 +67,8 @@ func (uc *SetConfig) Run(ctx context.Context, params SetConfigParams) (*SetConfi
 		localConfig.Namespace = params.Value
 	case config.ConfigKeyNetwork:
 		localConfig.Network = params.Value
+	case config.ConfigKeyForkSetup:
+		localConfig.ForkSetup = params.Value
 	}
 
 	// Save the updated config

@@ -33,8 +33,19 @@ type App struct {
 	ManageAnvil              *usecase.ManageAnvil
 	InitProject              *usecase.InitProject
 
+	// Fork use cases
+	EnterFork   *usecase.EnterFork
+	ExitFork    *usecase.ExitFork
+	RevertFork  *usecase.RevertFork
+	RestartFork *usecase.RestartFork
+	ForkStatus  *usecase.ForkStatus
+	ForkHistory *usecase.ForkHistory
+	DiffFork    *usecase.DiffFork
+
 	// Adapters (needed for special cases like log streaming)
-	AnvilManager usecase.AnvilManager
+	AnvilManager    usecase.AnvilManager
+	NetworkResolver usecase.NetworkResolver
+	ForkStateStore  usecase.ForkStateStore
 
 	// Renderers
 	GenerateRenderer render.Renderer[*usecase.GenerateScriptResult]
@@ -63,7 +74,16 @@ func NewApp(
 	registerDeployment *usecase.RegisterDeployment,
 	manageAnvil *usecase.ManageAnvil,
 	initProject *usecase.InitProject,
+	enterFork *usecase.EnterFork,
+	exitFork *usecase.ExitFork,
+	revertFork *usecase.RevertFork,
+	restartFork *usecase.RestartFork,
+	forkStatus *usecase.ForkStatus,
+	forkHistory *usecase.ForkHistory,
+	diffFork *usecase.DiffFork,
 	anvilManager usecase.AnvilManager,
+	networkResolver usecase.NetworkResolver,
+	forkStateStore usecase.ForkStateStore,
 	generateRenderer render.Renderer[*usecase.GenerateScriptResult],
 	scriptRenderer *render.ScriptRenderer,
 	composeRenderer *render.ComposeRenderer,
@@ -88,7 +108,16 @@ func NewApp(
 		RegisterDeployment:       registerDeployment,
 		ManageAnvil:              manageAnvil,
 		InitProject:              initProject,
+		EnterFork:                enterFork,
+		ExitFork:                 exitFork,
+		RevertFork:               revertFork,
+		RestartFork:              restartFork,
+		ForkStatus:               forkStatus,
+		ForkHistory:              forkHistory,
+		DiffFork:                 diffFork,
 		AnvilManager:             anvilManager,
+		NetworkResolver:          networkResolver,
+		ForkStateStore:           forkStateStore,
 		GenerateRenderer:         generateRenderer,
 		ScriptRenderer:           scriptRenderer,
 		ComposeRenderer:          composeRenderer,

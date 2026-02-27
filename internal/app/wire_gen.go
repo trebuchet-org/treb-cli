@@ -46,9 +46,10 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 		return nil, err
 	}
 	networkResolver := config.ProvideNetworkResolver(runtimeConfig)
-	listDeployments := usecase.NewListDeployments(runtimeConfig, fileRepository, networkResolver)
+	forkStateStoreAdapter := fs.NewForkStateStoreAdapter(runtimeConfig)
+	listDeployments := usecase.NewListDeployments(runtimeConfig, fileRepository, networkResolver, forkStateStoreAdapter)
 	deploymentResolver := resolvers.NewDeploymentResolver(runtimeConfig, fileRepository, selectorAdapter)
-	showDeployment := usecase.NewShowDeployment(runtimeConfig, fileRepository, deploymentResolver)
+	showDeployment := usecase.NewShowDeployment(runtimeConfig, fileRepository, deploymentResolver, forkStateStoreAdapter)
 	string2 := adapters.ProvideProjectPath(runtimeConfig)
 	repository := contracts.NewRepository(string2, logger)
 	contractResolver := resolvers.NewContractResolver(runtimeConfig, repository, selectorAdapter)
@@ -86,7 +87,9 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 	writer := render.ProvideIO(cmd)
 	scriptRenderer := render.NewScriptRenderer(writer, fileRepository, abiResolver, logger)
 	runProgress := progress.NewRunProgress(scriptRenderer)
-	runScript := usecase.NewRunScript(runtimeConfig, scriptResolver, parameterResolver, sendersManager, runResultHydrator, fileRepository, libraryResolver, runProgress, forgeAdapter)
+	manager := anvil.NewManager()
+	forkFileManagerAdapter := fs.NewForkFileManagerAdapter(runtimeConfig)
+	runScript := usecase.NewRunScript(runtimeConfig, scriptResolver, parameterResolver, sendersManager, runResultHydrator, fileRepository, libraryResolver, runProgress, forgeAdapter, forkStateStoreAdapter, manager, forkFileManagerAdapter)
 	verifier, err := verification.NewVerifier(runtimeConfig)
 	if err != nil {
 		return nil, err
@@ -98,11 +101,17 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 	syncRegistry := usecase.NewSyncRegistry(runtimeConfig, fileRepository, spinnerProgressReporter)
 	tagDeployment := usecase.NewTagDeployment(fileRepository, deploymentResolver, spinnerProgressReporter)
 	registerDeployment := usecase.NewRegisterDeployment(runtimeConfig, fileRepository, checkerAdapter, repository)
-	manager := anvil.NewManager()
 	manageAnvil := usecase.NewManageAnvil(manager, spinnerProgressReporter)
 	initProject := usecase.NewInitProject(fileWriterAdapter, spinnerProgressReporter)
+	enterFork := usecase.NewEnterFork(runtimeConfig, forkStateStoreAdapter, forkFileManagerAdapter, manager, localConfigStoreAdapter, forgeAdapter)
+	exitFork := usecase.NewExitFork(runtimeConfig, forkStateStoreAdapter, forkFileManagerAdapter, manager)
+	revertFork := usecase.NewRevertFork(runtimeConfig, forkStateStoreAdapter, forkFileManagerAdapter, manager)
+	restartFork := usecase.NewRestartFork(runtimeConfig, forkStateStoreAdapter, forkFileManagerAdapter, manager, localConfigStoreAdapter, forgeAdapter)
+	forkStatus := usecase.NewForkStatus(runtimeConfig, forkStateStoreAdapter, manager)
+	forkHistory := usecase.NewForkHistory(runtimeConfig, forkStateStoreAdapter)
+	diffFork := usecase.NewDiffFork(runtimeConfig, forkStateStoreAdapter)
 	renderer := render.NewGenerateRenderer()
-	app, err := NewApp(runtimeConfig, selectorAdapter, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, resetRegistry, showConfig, setConfig, removeConfig, runScript, verifyDeployment, composeDeployment, syncRegistry, tagDeployment, registerDeployment, manageAnvil, initProject, manager, renderer, scriptRenderer, composeRenderer)
+	app, err := NewApp(runtimeConfig, selectorAdapter, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, resetRegistry, showConfig, setConfig, removeConfig, runScript, verifyDeployment, composeDeployment, syncRegistry, tagDeployment, registerDeployment, manageAnvil, initProject, enterFork, exitFork, revertFork, restartFork, forkStatus, forkHistory, diffFork, manager, networkResolver, forkStateStoreAdapter, renderer, scriptRenderer, composeRenderer)
 	if err != nil {
 		return nil, err
 	}

@@ -24,9 +24,14 @@ func NewDeploymentRenderer(out io.Writer, color bool) *DeploymentRenderer {
 }
 
 // RenderDeployment renders detailed deployment information
-func (r *DeploymentRenderer) RenderDeployment(deployment *models.Deployment) error {
+func (r *DeploymentRenderer) RenderDeployment(deployment *models.Deployment, isForkDeployment bool) error {
 	// Header
-	color.New(color.FgCyan, color.Bold).Fprintf(r.out, "Deployment: %s\n", deployment.ID)
+	header := fmt.Sprintf("Deployment: %s", deployment.ID)
+	if isForkDeployment {
+		header += " " + forkIndicatorStyle.Sprint("[fork]")
+	}
+	color.New(color.FgCyan, color.Bold).Fprint(r.out, header)
+	fmt.Fprintln(r.out)
 	fmt.Fprintln(r.out, strings.Repeat("=", 80))
 
 	// Basic Info

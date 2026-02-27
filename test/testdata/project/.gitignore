@@ -12,3 +12,4 @@ broadcast/
 
 # Treb. Usually you commit this but for running tests we want a clean slate
 .treb
+.treb/priv/

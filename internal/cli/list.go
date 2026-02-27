@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -15,6 +16,9 @@ func NewListCmd() *cobra.Command {
 		contractName string
 		label        string
 		deployType   string
+		forkOnly     bool
+		noFork       bool
+		jsonOutput   bool
 	)
 
 	cmd := &cobra.Command{
@@ -23,7 +27,10 @@ func NewListCmd() *cobra.Command {
 		Short:   "List deployments from registry",
 		Long: `List all deployments from the registry.
 
-The list can be filtered by namespace, chain ID, contract name, label, or deployment type.`,
+The list can be filtered by namespace, chain ID, contract name, label, or deployment type.
+
+In fork mode, deployments added during the fork are marked with [fork].
+Use --fork to show only fork-added deployments, or --no-fork to exclude them.`,
 		Example: `  # List all deployments
   treb list
 
@@ -31,7 +38,13 @@ The list can be filtered by namespace, chain ID, contract name, label, or deploy
   treb list --contract Counter
 
   # List proxy deployments only
-  treb list --type proxy`,
+  treb list --type proxy
+
+  # List only fork-added deployments
+  treb list --fork
+
+  # List only pre-fork deployments
+  treb list --no-fork`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get app from context
 			app, err := getApp(cmd)
@@ -59,11 +72,18 @@ The list can be filtered by namespace, chain ID, contract name, label, or deploy
 				ContractName: contractName,
 				Label:        label,
 				Type:         deploymentType,
+				ForkOnly:     forkOnly,
+				NoFork:       noFork,
 			}
 
 			result, err := app.ListDeployments.Run(cmd.Context(), params)
 			if err != nil {
 				return err
+			}
+
+			// JSON output
+			if jsonOutput {
+				return renderListJSON(result)
 			}
 
 			// Render output (preserve existing format exactly)
@@ -80,6 +100,48 @@ The list can be filtered by namespace, chain ID, contract name, label, or deploy
 	cmd.Flags().StringVar(&contractName, "contract", "", "Filter by contract name")
 	cmd.Flags().StringVar(&label, "label", "", "Filter by label")
 	cmd.Flags().StringVar(&deployType, "type", "", "Filter by deployment type (singleton, proxy, library)")
+	cmd.Flags().BoolVar(&forkOnly, "fork", false, "Show only fork-added deployments")
+	cmd.Flags().BoolVar(&noFork, "no-fork", false, "Show only pre-fork deployments")
+	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output in JSON format")
 
 	return cmd
+}
+
+// listJSONEntry represents a deployment in JSON output
+type listJSONEntry struct {
+	ID           string `json:"id"`
+	ContractName string `json:"contractName"`
+	Address      string `json:"address"`
+	Namespace    string `json:"namespace"`
+	ChainID      uint64 `json:"chainId"`
+	Label        string `json:"label,omitempty"`
+	Type         string `json:"type"`
+	Fork         bool   `json:"fork,omitempty"`
+}
+
+// renderListJSON outputs deployments as JSON
+func renderListJSON(result *usecase.DeploymentListResult) error {
+	entries := make([]listJSONEntry, 0, len(result.Deployments))
+	for _, dep := range result.Deployments {
+		entry := listJSONEntry{
+			ID:           dep.ID,
+			ContractName: dep.ContractName,
+			Address:      dep.Address,
+			Namespace:    dep.Namespace,
+			ChainID:      dep.ChainID,
+			Label:        dep.Label,
+			Type:         string(dep.Type),
+		}
+		if result.ForkDeploymentIDs != nil && result.ForkDeploymentIDs[dep.ID] {
+			entry.Fork = true
+		}
+		entries = append(entries, entry)
+	}
+
+	data, err := json.MarshalIndent(entries, "", "  ")
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(data))
+	return nil
 }

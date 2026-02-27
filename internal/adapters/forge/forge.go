@@ -315,10 +315,14 @@ func (f *ForgeAdapter) buildEnv(config usecase.RunScriptConfig) []string {
 		env["QUIET"] = "true"
 	}
 
+	// Fork mode: override RPC env vars so foundry.toml ${VAR} resolves to the fork URL
+	for k, v := range config.ForkEnvOverrides {
+		env[k] = v
+	}
+
 	var envStrings []string
 	for k, v := range env {
 		envStrings = append(envStrings, fmt.Sprintf("%s=%s", k, v))
-
 	}
 
 	return envStrings

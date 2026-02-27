@@ -51,11 +51,7 @@ func (m *Manager) Start(ctx context.Context, instance *domain.AnvilInstance) err
 	}
 
 	// Build anvil command
-	args := []string{"--port", instance.Port, "--host", "0.0.0.0"}
-	if instance.ChainID != "" {
-		args = append(args, "--chain-id", instance.ChainID)
-	}
-
+	args := buildAnvilArgs(instance)
 	cmd := exec.Command("anvil", args...)
 
 	// Create log file
@@ -79,8 +75,16 @@ func (m *Manager) Start(ctx context.Context, instance *domain.AnvilInstance) err
 		return fmt.Errorf("failed to write PID file: %w", err)
 	}
 
-	// Wait for anvil to start
-	time.Sleep(200 * time.Millisecond)
+	// Wait for anvil to be ready (forked anvils can take longer to start)
+	maxWait := 5 * time.Second
+	if instance.ForkURL != "" {
+		maxWait = 30 * time.Second
+	}
+	if err := m.waitForReady(instance, maxWait); err != nil {
+		_ = cmd.Process.Kill()
+		_ = os.Remove(instance.PidFile)
+		return fmt.Errorf("anvil failed to become ready: %w", err)
+	}
 
 	// Deploy CreateX
 	if err := m.deployCreateX(instance); err != nil {
@@ -89,6 +93,19 @@ func (m *Manager) Start(ctx context.Context, instance *domain.AnvilInstance) err
 	}
 
 	return nil
+}
+
+// waitForReady polls the anvil RPC endpoint until it responds or the timeout is reached
+func (m *Manager) waitForReady(instance *domain.AnvilInstance, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	interval := 200 * time.Millisecond
+	for time.Now().Before(deadline) {
+		if err := m.checkRPCHealth(instance); err == nil {
+			return nil
+		}
+		time.Sleep(interval)
+	}
+	return fmt.Errorf("anvil not responding after %s", timeout)
 }
 
 // Stop stops an anvil instance
@@ -181,6 +198,69 @@ func (m *Manager) StreamLogs(ctx context.Context, instance *domain.AnvilInstance
 	return cmd.Run()
 }
 
+// buildAnvilArgs constructs the command-line arguments for starting an anvil instance
+func buildAnvilArgs(instance *domain.AnvilInstance) []string {
+	args := []string{"--port", instance.Port, "--host", "0.0.0.0"}
+	if instance.ChainID != "" {
+		args = append(args, "--chain-id", instance.ChainID)
+	}
+	if instance.ForkURL != "" {
+		args = append(args, "--fork-url", instance.ForkURL)
+	}
+	return args
+}
+
+// TakeSnapshot takes an EVM snapshot on the given anvil instance and returns the snapshot ID
+func (m *Manager) TakeSnapshot(ctx context.Context, instance *domain.AnvilInstance) (string, error) {
+	m.setFilePaths(instance)
+
+	req := rpcRequest{
+		Jsonrpc: "2.0",
+		Method:  "evm_snapshot",
+		Params:  []interface{}{},
+		ID:      1,
+	}
+
+	var resp rpcResponse
+	if err := m.makeRPCCallWithResponse(instance, req, &resp); err != nil {
+		return "", fmt.Errorf("evm_snapshot RPC call failed: %w", err)
+	}
+
+	snapshotID, ok := resp.Result.(string)
+	if !ok {
+		return "", fmt.Errorf("unexpected evm_snapshot response type: %T", resp.Result)
+	}
+
+	return snapshotID, nil
+}
+
+// RevertSnapshot reverts the anvil instance to a previously taken EVM snapshot
+func (m *Manager) RevertSnapshot(ctx context.Context, instance *domain.AnvilInstance, snapshotID string) error {
+	m.setFilePaths(instance)
+
+	req := rpcRequest{
+		Jsonrpc: "2.0",
+		Method:  "evm_revert",
+		Params:  []interface{}{snapshotID},
+		ID:      1,
+	}
+
+	var resp rpcResponse
+	if err := m.makeRPCCallWithResponse(instance, req, &resp); err != nil {
+		return fmt.Errorf("evm_revert RPC call failed: %w", err)
+	}
+
+	success, ok := resp.Result.(bool)
+	if !ok {
+		return fmt.Errorf("unexpected evm_revert response type: %T", resp.Result)
+	}
+	if !success {
+		return fmt.Errorf("evm_revert returned false for snapshot %s", snapshotID)
+	}
+
+	return nil
+}
+
 // setFilePaths sets the PID and log file paths for an instance
 func (m *Manager) setFilePaths(instance *domain.AnvilInstance) {
 	if instance.Name == "" {
@@ -190,12 +270,17 @@ func (m *Manager) setFilePaths(instance *domain.AnvilInstance) {
 		instance.Port = DefaultAnvilPort
 	}
 
+	// If paths are already set (e.g. by the caller for fork instances), skip
+	if instance.PidFile != "" && instance.LogFile != "" {
+		return
+	}
+
 	// Use backward-compatible paths for default instance
 	if instance.Name == "anvil" && instance.Port == DefaultAnvilPort {
 		instance.PidFile = "/tmp/treb-anvil-pid"
 		instance.LogFile = "/tmp/treb-anvil.log"
 	} else {
-		// Use per-instance files
+		// Use per-instance files (fork instances with name "fork-<network>" get /tmp/treb-fork-<network>.pid)
 		base := "/tmp"
 		instance.PidFile = filepath.Join(base, fmt.Sprintf("treb-%s.pid", instance.Name))
 		instance.LogFile = filepath.Join(base, fmt.Sprintf("treb-%s.log", instance.Name))

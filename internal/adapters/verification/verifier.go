@@ -230,7 +230,7 @@ func (v *Verifier) verifyOnBlockscout(ctx context.Context, deployment *models.De
 
 // executeForgeVerify executes a forge verify-contract command
 func (v *Verifier) executeForgeVerify(ctx context.Context, args []string) error {
-	cmd := exec.CommandContext(ctx, "forge", args...)
+	cmd := exec.CommandContext(ctx, "forge", args...) //nolint:gosec // args are constructed internally, not from user input
 	cmd.Dir = v.projectRoot
 
 	// Print the command if debug is enabled

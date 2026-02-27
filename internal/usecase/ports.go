@@ -86,9 +86,10 @@ func (NopProgress) Error(string)                              {}
 
 // DeploymentListResult contains the result of listing deployments
 type DeploymentListResult struct {
-	Deployments  []*models.Deployment
-	Summary      DeploymentSummary
-	NetworkNames map[uint64]string // Map of chain ID to network name
+	Deployments      []*models.Deployment
+	Summary          DeploymentSummary
+	NetworkNames     map[uint64]string // Map of chain ID to network name
+	ForkDeploymentIDs map[string]bool   // Set of deployment IDs added during fork mode (nil if fork not active)
 }
 
 // DeploymentSummary provides summary statistics
@@ -154,6 +155,8 @@ type AnvilManager interface {
 	Stop(ctx context.Context, instance *domain.AnvilInstance) error
 	GetStatus(ctx context.Context, instance *domain.AnvilInstance) (*domain.AnvilStatus, error)
 	StreamLogs(ctx context.Context, instance *domain.AnvilInstance, writer io.Writer) error
+	TakeSnapshot(ctx context.Context, instance *domain.AnvilInstance) (string, error)
+	RevertSnapshot(ctx context.Context, instance *domain.AnvilInstance, snapshotID string) error
 }
 
 // ContractResolver resolves contract references to actual contracts
@@ -246,6 +249,7 @@ type RunScriptConfig struct {
 	Libraries          []string
 	SenderScriptConfig config.SenderScriptConfig
 	Progress           ProgressSink
+	ForkEnvOverrides   map[string]string // env var overrides for fork mode (e.g. NETWORK_RPC_URL=http://localhost:PORT)
 }
 
 // RunResultHydrator hydrated RunResults with domain models.
@@ -290,4 +294,18 @@ type LibraryReference struct {
 
 type SendersManager interface {
 	BuildSenderScriptConfig(script *models.Artifact) (*config.SenderScriptConfig, error)
+}
+
+// ForkStateStore handles persistence of fork mode state
+type ForkStateStore interface {
+	Load(ctx context.Context) (*domain.ForkState, error)
+	Save(ctx context.Context, state *domain.ForkState) error
+	Delete(ctx context.Context) error
+}
+
+// ForkFileManager handles backup and restore of .treb/ registry files for fork snapshots
+type ForkFileManager interface {
+	BackupFiles(ctx context.Context, network string, snapshotIndex int) error
+	RestoreFiles(ctx context.Context, network string, snapshotIndex int) error
+	CleanupForkDir(ctx context.Context, network string) error
 }
