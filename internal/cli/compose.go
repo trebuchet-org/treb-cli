@@ -22,6 +22,7 @@ func NewComposeCmd() *cobra.Command {
 		nonInteractive bool
 		resume         bool
 		slow           bool
+		dumpCmd        bool
 	)
 
 	cmd := &cobra.Command{
@@ -97,6 +98,7 @@ This will execute: Broker → Tokens → Reserve → SortedOracles`,
 				NonInteractive: true, // Orchestration should always be non-interactive
 				Resume:         resume,
 				Slow:           slow,
+				DumpCommand:    dumpCmd,
 			}
 
 			ctx := cmd.Context()
@@ -105,6 +107,16 @@ This will execute: Broker → Tokens → Reserve → SortedOracles`,
 			result, err := app.ComposeDeployment.Execute(ctx, params)
 			if err != nil {
 				return err
+			}
+
+			if dumpCmd {
+				for _, step := range result.ExecutedSteps {
+					if step.RunResult != nil && step.RunResult.DumpedCommand != "" {
+						fmt.Fprintf(cmd.OutOrStdout(), "# %s\n", step.Step.Name)
+						fmt.Fprint(cmd.OutOrStdout(), step.RunResult.DumpedCommand)
+					}
+				}
+				return nil
 			}
 
 			// Render the results
@@ -138,6 +150,7 @@ This will execute: Broker → Tokens → Reserve → SortedOracles`,
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Show extra detailed information for events and transactions")
 	cmd.Flags().BoolVar(&nonInteractive, "non-interactive", false, "Disable interactive prompts (always non-interactive for orchestration)")
 	cmd.Flags().BoolVar(&resume, "resume", false, "Resume from a previous failed or interrupted compose run")
+	cmd.Flags().BoolVar(&dumpCmd, "dump-command", false, "Print the underlying forge commands without executing")
 
 	return cmd
 }

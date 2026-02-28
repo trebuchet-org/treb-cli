@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/trebuchet-org/treb-cli/internal/domain"
+	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
@@ -35,13 +36,15 @@ type VerifyOptions struct {
 	Force        bool   // Re-verify even if already verified
 	ContractPath string // Override contract path
 	Debug        bool   // Show debug information
+	DumpCommand  bool   // Print the underlying forge commands without executing
 }
 
 // VerifyResult contains the result of verification
 type VerifyResult struct {
-	Deployment *models.Deployment
-	Success    bool
-	Errors     []string
+	Deployment      *models.Deployment
+	Success         bool
+	Errors          []string
+	DumpedCommands  []string // Set when DumpCommand is true
 }
 
 // VerifyAll verifies all unverified deployments
@@ -141,8 +144,8 @@ func (v *VerifyDeployment) VerifySpecific(ctx context.Context, identifier string
 		}
 	}
 
-	// Check if already verified
-	if deployment.Verification.Status == models.VerificationStatusVerified && !options.Force {
+	// Check if already verified (skip this check when dumping commands)
+	if deployment.Verification.Status == models.VerificationStatusVerified && !options.Force && !options.DumpCommand {
 		return &VerifyResult{
 			Deployment: deployment,
 			Success:    true,
@@ -177,6 +180,25 @@ func (v *VerifyDeployment) verifyDeployment(ctx context.Context, deployment *mod
 			Deployment: deployment,
 			Success:    false,
 			Errors:     []string{fmt.Sprintf("failed to resolve network: %v", err)},
+		}
+	}
+
+	// Dump mode: return the forge commands without executing
+	if options.DumpCommand {
+		dumper, ok := v.contractVerifier.(interface {
+			DumpVerifyCommands(deployment *models.Deployment, network *config.Network) []string
+		})
+		if !ok {
+			return &VerifyResult{
+				Deployment: deployment,
+				Success:    false,
+				Errors:     []string{"verifier does not support dumping commands"},
+			}
+		}
+		return &VerifyResult{
+			Deployment:     deployment,
+			Success:        true,
+			DumpedCommands: dumper.DumpVerifyCommands(deployment, networkInfo),
 		}
 	}
 

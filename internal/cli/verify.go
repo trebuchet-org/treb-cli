@@ -19,6 +19,7 @@ func NewVerifyCmd() *cobra.Command {
 		debugFlag    bool
 		chainID      uint64
 		namespace    string
+		dumpCmd      bool
 	)
 
 	cmd := &cobra.Command{
@@ -50,6 +51,7 @@ Examples:
 				Force:        forceFlag,
 				ContractPath: contractPath,
 				Debug:        debugFlag,
+				DumpCommand:  dumpCmd,
 			}
 
 			// Create filter
@@ -65,6 +67,18 @@ Examples:
 				result, err := app.VerifyDeployment.VerifyAll(ctx, options)
 				if err != nil {
 					return fmt.Errorf("failed to verify contracts: %w", err)
+				}
+
+				if dumpCmd {
+					for _, r := range result.Results {
+						if len(r.DumpedCommands) > 0 {
+							fmt.Fprintf(cmd.OutOrStdout(), "# %s\n", r.Deployment.ContractName)
+							for _, c := range r.DumpedCommands {
+								fmt.Fprintln(cmd.OutOrStdout(), c)
+							}
+						}
+					}
+					return nil
 				}
 
 				// Render the results
@@ -83,6 +97,13 @@ Examples:
 				return err
 			}
 
+			if dumpCmd {
+				for _, c := range result.DumpedCommands {
+					fmt.Fprintln(cmd.OutOrStdout(), c)
+				}
+				return nil
+			}
+
 			// Render the result
 			renderer := render.NewVerifyRenderer(cmd.OutOrStdout(), !isNonInteractive())
 			return renderer.RenderVerifyResult(result, options)
@@ -95,6 +116,7 @@ Examples:
 	cmd.Flags().BoolVar(&debugFlag, "debug", false, "Show debug information including forge verify commands")
 	cmd.Flags().Uint64VarP(&chainID, "chain", "c", 0, "Filter by chain ID")
 	cmd.Flags().StringVar(&namespace, "namespace", "", "Filter by namespace")
+	cmd.Flags().BoolVar(&dumpCmd, "dump-command", false, "Print the underlying forge verify-contract commands without executing")
 
 	return cmd
 }

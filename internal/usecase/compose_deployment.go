@@ -42,6 +42,7 @@ type ComposeParams struct {
 	NonInteractive bool
 	Resume         bool // Resume from previous execution
 	Slow           bool
+	DumpCommand    bool // Print the underlying forge commands without executing
 }
 
 // ComposeResult contains the result of orchestration
@@ -402,6 +403,7 @@ func (o *ComposeDeployment) executeStep(ctx context.Context, step *ExecutionStep
 		Verbose:        params.Verbose,
 		Slow:           params.Slow,
 		NonInteractive: true, // Always non-interactive for orchestration
+		DumpCommand:    params.DumpCommand,
 	}
 
 	// Execute the script

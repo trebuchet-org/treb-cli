@@ -75,18 +75,15 @@ func (v *InternalVerifier) Verify(ctx context.Context, deployment *models.Deploy
 	return nil
 }
 
-// verifyOnEtherscan performs verification on Etherscan
-func (v *InternalVerifier) verifyOnEtherscan(deployment *models.Deployment, network *config.Network) error {
-	// Get constructor args from deployment strategy
+// buildEtherscanVerifyArgs builds the forge verify-contract args for Etherscan
+func (v *InternalVerifier) buildEtherscanVerifyArgs(deployment *models.Deployment, network *config.Network) []string {
 	constructorArgs := deployment.DeploymentStrategy.ConstructorArgs
 	if constructorArgs != "" && strings.HasPrefix(constructorArgs, "0x") {
-		constructorArgs = constructorArgs[2:] // Remove 0x prefix
+		constructorArgs = constructorArgs[2:]
 	}
 
-	// Get contract path from artifact
 	contractPath := fmt.Sprintf("%s:%s", deployment.Artifact.Path, deployment.ContractName)
 
-	// Build the forge verify-contract command
 	args := []string{
 		"verify-contract",
 		deployment.Address,
@@ -95,36 +92,31 @@ func (v *InternalVerifier) verifyOnEtherscan(deployment *models.Deployment, netw
 		"--watch",
 	}
 
-	// Add verifier URL if custom explorer is configured
 	if network.ExplorerURL != "" {
 		args = append(args, "--verifier-url", network.ExplorerURL)
 	}
-
-	// Add API key if available from environment
 	if apiKey := os.Getenv("ETHERSCAN_API_KEY"); apiKey != "" {
 		args = append(args, "--etherscan-api-key", apiKey)
 	}
-
-	// Add compiler version if available
 	if deployment.Artifact.CompilerVersion != "" {
 		args = append(args, "--compiler-version", deployment.Artifact.CompilerVersion)
 	}
-
-	// Add constructor args if available
 	if constructorArgs != "" {
 		args = append(args, "--constructor-args", constructorArgs)
 	}
 
-	// Execute the command
-	return v.executeForgeVerify(args)
+	return args
 }
 
-// verifyOnSourceify performs verification on Sourcify
-func (v *InternalVerifier) verifyOnSourceify(deployment *models.Deployment, network *config.Network) error {
-	// Get contract path from artifact
+// buildSourceifyVerifyArgs builds the forge verify-contract args for Sourcify
+func (v *InternalVerifier) buildSourceifyVerifyArgs(deployment *models.Deployment, network *config.Network) []string {
+	constructorArgs := deployment.DeploymentStrategy.ConstructorArgs
+	if constructorArgs != "" && strings.HasPrefix(constructorArgs, "0x") {
+		constructorArgs = constructorArgs[2:]
+	}
+
 	contractPath := fmt.Sprintf("%s:%s", deployment.Artifact.Path, deployment.ContractName)
 
-	// Build the forge verify-contract command for Sourcify
 	args := []string{
 		"verify-contract",
 		deployment.Address,
@@ -134,22 +126,34 @@ func (v *InternalVerifier) verifyOnSourceify(deployment *models.Deployment, netw
 		"--watch",
 	}
 
-	// Add compiler version if available
 	if deployment.Artifact.CompilerVersion != "" {
 		args = append(args, "--compiler-version", deployment.Artifact.CompilerVersion)
-	}
-
-	// Add constructor args if available
-	constructorArgs := deployment.DeploymentStrategy.ConstructorArgs
-	if constructorArgs != "" && strings.HasPrefix(constructorArgs, "0x") {
-		constructorArgs = constructorArgs[2:] // Remove 0x prefix
 	}
 	if constructorArgs != "" {
 		args = append(args, "--constructor-args", constructorArgs)
 	}
 
-	// Execute the command
-	return v.executeForgeVerify(args)
+	return args
+}
+
+// verifyOnEtherscan performs verification on Etherscan
+func (v *InternalVerifier) verifyOnEtherscan(deployment *models.Deployment, network *config.Network) error {
+	return v.executeForgeVerify(v.buildEtherscanVerifyArgs(deployment, network))
+}
+
+// verifyOnSourceify performs verification on Sourcify
+func (v *InternalVerifier) verifyOnSourceify(deployment *models.Deployment, network *config.Network) error {
+	return v.executeForgeVerify(v.buildSourceifyVerifyArgs(deployment, network))
+}
+
+// DumpVerifyCommands returns the forge commands that would be run for verification without executing them.
+func (v *InternalVerifier) DumpVerifyCommands(deployment *models.Deployment, network *config.Network) []string {
+	etherscanArgs := v.buildEtherscanVerifyArgs(deployment, network)
+	sourcifyArgs := v.buildSourceifyVerifyArgs(deployment, network)
+	return []string{
+		"forge " + strings.Join(etherscanArgs, " "),
+		"forge " + strings.Join(sourcifyArgs, " "),
+	}
 }
 
 // executeForgeVerify executes a forge verify-contract command
