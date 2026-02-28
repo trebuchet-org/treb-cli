@@ -1,3 +1,27 @@
 # Ralph Progress Log
-Started: Fri Feb 27 05:55:05 PM CET 2026
+Started: Sat Feb 28 08:02:38 PM CET 2026
+---
+
+## Codebase Patterns
+- Use function-based mocks for testing use cases (embed interface + func fields pattern)
+- RuntimeConfig holds Namespace (string) and Network (*config.Network, nil if unset)
+- DeploymentRepository.GetAllDeployments() returns all deployments unfiltered
+- ListDeployments filters via domain.DeploymentFilter (namespace, chainID, contractName, label, type)
+- Use `domain.ErrNotFound` for not-found errors
+- ForkStateStore.Load() returns error when no fork state exists
+- Unit tests go in the same package (package usecase) for internal access
+- testify/assert + testify/require for assertions
+---
+
+## 2026-02-28 - US-001
+- Implemented namespace discovery in ListDeployments use case
+- Files changed:
+  - internal/usecase/ports.go: Added OtherNamespaces, CurrentNamespace, CurrentNetwork fields to DeploymentListResult
+  - internal/usecase/list_deployments.go: Added discoverOtherNamespaces() method, populated new fields in Run()
+  - internal/usecase/list_deployments_test.go: New file with 6 test cases
+- **Learnings for future iterations:**
+  - DeploymentListResult is the central struct passed from use case to renderer — add fields here for cross-cutting data
+  - discoverOtherNamespaces uses GetAllDeployments (cold path only when current ns is empty)
+  - Chain ID filtering is handled by checking dep.ChainID != uc.config.Network.ChainID
+  - When Network is nil, no chain filtering is applied (counts all chains)
 ---
