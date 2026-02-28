@@ -132,3 +132,19 @@ Started: Sat Feb 28 07:33:50 PM CET 2026
   - `showDeprecationWarning` is called once in `PersistentPreRunE` — no risk of duplicate warnings per invocation
   - The `deprecationWarning` enum pattern (iota-based) keeps the warning type testable without string matching
 ---
+
+## 2026-02-28 - US-009
+- Implemented account deduplication logic in `internal/config/dedup.go`:
+  - `DeduplicateSenders()` — takes `map[namespace]map[sender]SenderConfig`, returns deduplicated accounts + namespace role mappings
+  - `senderFingerprint()` — generates identity fingerprint based on type + relevant fields
+  - `generateAccountName()` — creates human-readable names from key material with collision handling
+  - `nameFromPrivateKeyRef()` — extracts name from env var reference (e.g., `${DEPLOYER_PRIVATE_KEY}` → `deployer-key`)
+  - Phase 2 updates signer/proposer cross-references to use new account names
+- Files changed: `internal/config/dedup.go`, `internal/config/dedup_test.go`
+- **Learnings for future iterations:**
+  - Fingerprinting uses type-specific relevant fields: private_key uses PrivateKey, safe uses Safe+Signer, oz_governor uses Governor+Timelock+Proposer, ledger/trezor use Address+DerivationPath
+  - Name generation from env vars: strip `${}`, remove `PRIVATE_` substring, lowercase, hyphenate (e.g., `${DEPLOYER_PRIVATE_KEY}` → `DEPLOYER_KEY` → `deployer-key`)
+  - Safe/governor signer/proposer references need remapping after dedup — track origin namespace to resolve old sender names to new account names
+  - `sortedMapKeys[V any]()` generic helper ensures deterministic processing order for maps
+  - Literal private key values (not env var refs) get generic name `private-key`
+---
