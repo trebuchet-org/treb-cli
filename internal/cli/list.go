@@ -119,6 +119,12 @@ type listJSONEntry struct {
 	Fork         bool   `json:"fork,omitempty"`
 }
 
+// listJSONOutput wraps the JSON output with optional namespace discovery data
+type listJSONOutput struct {
+	Deployments     []listJSONEntry `json:"deployments"`
+	OtherNamespaces map[string]int  `json:"otherNamespaces,omitempty"`
+}
+
 // renderListJSON outputs deployments as JSON
 func renderListJSON(result *usecase.DeploymentListResult) error {
 	entries := make([]listJSONEntry, 0, len(result.Deployments))
@@ -138,7 +144,16 @@ func renderListJSON(result *usecase.DeploymentListResult) error {
 		entries = append(entries, entry)
 	}
 
-	data, err := json.MarshalIndent(entries, "", "  ")
+	output := listJSONOutput{
+		Deployments: entries,
+	}
+
+	// Include other namespaces only when current namespace is empty and others exist
+	if len(result.Deployments) == 0 && len(result.OtherNamespaces) > 0 {
+		output.OtherNamespaces = result.OtherNamespaces
+	}
+
+	data, err := json.MarshalIndent(output, "", "  ")
 	if err != nil {
 		return err
 	}
