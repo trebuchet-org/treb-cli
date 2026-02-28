@@ -170,20 +170,27 @@ func TestGenerateTrebTomlV2(t *testing.T) {
 	})
 }
 
+// writeFoundryToml is a test helper that writes a foundry.toml with treb sender sections.
+func writeFoundryToml(t *testing.T, dir string, foundryContent string) {
+	t.Helper()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "foundry.toml"), []byte(foundryContent), 0644))
+}
+
+// migrateTestCfg creates a minimal RuntimeConfig for migrate tests.
+func migrateTestCfg(dir string) *config.RuntimeConfig {
+	return &config.RuntimeConfig{
+		ProjectRoot:    dir,
+		NonInteractive: true,
+	}
+}
+
 func TestRunMigrate(t *testing.T) {
 	t.Run("no treb config prints message and exits", func(t *testing.T) {
 		tmpDir := t.TempDir()
-		cfg := &config.RuntimeConfig{
-			ProjectRoot: tmpDir,
-			FoundryConfig: &config.FoundryConfig{
-				Profile: map[string]config.ProfileConfig{
-					"default": {SrcPath: "src"},
-				},
-			},
-			NonInteractive: true,
-		}
-
-		err := runMigrate(cfg)
+		writeFoundryToml(t, tmpDir, `[profile.default]
+src = "src"
+`)
+		err := runMigrate(migrateTestCfg(tmpDir))
 		require.NoError(t, err)
 
 		// treb.toml should NOT be written
@@ -193,6 +200,13 @@ func TestRunMigrate(t *testing.T) {
 
 	t.Run("errors when treb.toml already in v2 format", func(t *testing.T) {
 		tmpDir := t.TempDir()
+		writeFoundryToml(t, tmpDir, `[profile.default]
+src = "src"
+
+[profile.default.treb.senders.deployer]
+type = "private_key"
+private_key = "${PK}"
+`)
 		v2Content := `[accounts.deployer]
 type = "private_key"
 private_key = "${PK}"
@@ -202,100 +216,80 @@ deployer = "deployer"
 `
 		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "treb.toml"), []byte(v2Content), 0644))
 
-		cfg := &config.RuntimeConfig{
-			ProjectRoot: tmpDir,
-			FoundryConfig: &config.FoundryConfig{
-				Profile: map[string]config.ProfileConfig{
-					"default": {
-						Treb: &config.TrebConfig{
-							Senders: map[string]config.SenderConfig{
-								"deployer": {Type: config.SenderTypePrivateKey, PrivateKey: "${PK}"},
-							},
-						},
-					},
-				},
-			},
-			NonInteractive: true,
-		}
-
-		err := runMigrate(cfg)
+		err := runMigrate(migrateTestCfg(tmpDir))
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "already uses the new accounts/namespace format")
 	})
 
 	t.Run("non-interactive writes v2 treb.toml", func(t *testing.T) {
 		tmpDir := t.TempDir()
-		cfg := &config.RuntimeConfig{
-			ProjectRoot: tmpDir,
-			FoundryConfig: &config.FoundryConfig{
-				Profile: map[string]config.ProfileConfig{
-					"default": {
-						Treb: &config.TrebConfig{
-							Senders: map[string]config.SenderConfig{
-								"deployer": {Type: config.SenderTypePrivateKey, PrivateKey: "${DEPLOYER_PRIVATE_KEY}"},
-							},
-						},
-					},
-				},
-			},
-			NonInteractive: true,
-		}
+		writeFoundryToml(t, tmpDir, `[profile.default]
+src = "src"
 
-		err := runMigrate(cfg)
+[profile.default.treb.senders.deployer]
+type = "private_key"
+private_key = "${DEPLOYER_PRIVATE_KEY}"
+`)
+		err := runMigrate(migrateTestCfg(tmpDir))
 		require.NoError(t, err)
 
-		// treb.toml should be written with v2 format
 		data, err := os.ReadFile(filepath.Join(tmpDir, "treb.toml"))
 		require.NoError(t, err)
 		content := string(data)
 		assert.Contains(t, content, "[accounts.")
 		assert.Contains(t, content, "[namespace.default]")
 		assert.Contains(t, content, `profile = "default"`)
-		// Should NOT contain v1 format
 		assert.NotContains(t, content, "[ns.")
 	})
 
-	t.Run("deduplicates identical senders across profiles", func(t *testing.T) {
+	t.Run("preserves env var references without expansion", func(t *testing.T) {
 		tmpDir := t.TempDir()
-		cfg := &config.RuntimeConfig{
-			ProjectRoot: tmpDir,
-			FoundryConfig: &config.FoundryConfig{
-				Profile: map[string]config.ProfileConfig{
-					"default": {
-						Treb: &config.TrebConfig{
-							Senders: map[string]config.SenderConfig{
-								"deployer": {Type: config.SenderTypePrivateKey, PrivateKey: "${PK}"},
-							},
-						},
-					},
-					"production": {
-						Treb: &config.TrebConfig{
-							Senders: map[string]config.SenderConfig{
-								"deployer": {Type: config.SenderTypePrivateKey, PrivateKey: "${PK}"},
-							},
-						},
-					},
-				},
-			},
-			NonInteractive: true,
-		}
+		t.Setenv("DEPLOYER_PRIVATE_KEY", "0xactual_secret_key")
+		writeFoundryToml(t, tmpDir, `[profile.default]
+src = "src"
 
-		err := runMigrate(cfg)
+[profile.default.treb.senders.deployer]
+type = "private_key"
+private_key = "${DEPLOYER_PRIVATE_KEY}"
+`)
+		err := runMigrate(migrateTestCfg(tmpDir))
 		require.NoError(t, err)
 
 		data, err := os.ReadFile(filepath.Join(tmpDir, "treb.toml"))
 		require.NoError(t, err)
 		content := string(data)
+		// Must contain the ${VAR} reference, NOT the expanded secret
+		assert.Contains(t, content, `"${DEPLOYER_PRIVATE_KEY}"`)
+		assert.NotContains(t, content, "0xactual_secret_key")
+	})
 
-		// Should have a single account (deduplicated)
+	t.Run("deduplicates identical senders across profiles", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		writeFoundryToml(t, tmpDir, `[profile.default.treb.senders.deployer]
+type = "private_key"
+private_key = "${PK}"
+
+[profile.production.treb.senders.deployer]
+type = "private_key"
+private_key = "${PK}"
+`)
+		err := runMigrate(migrateTestCfg(tmpDir))
+		require.NoError(t, err)
+
+		data, err := os.ReadFile(filepath.Join(tmpDir, "treb.toml"))
+		require.NoError(t, err)
+		content := string(data)
 		assert.Contains(t, content, "[accounts.")
-		// Both namespaces should reference the same account
 		assert.Contains(t, content, "[namespace.default]")
 		assert.Contains(t, content, "[namespace.production]")
 	})
 
 	t.Run("non-interactive overwrites existing v1 treb.toml", func(t *testing.T) {
 		tmpDir := t.TempDir()
+		writeFoundryToml(t, tmpDir, `[profile.default.treb.senders.deployer]
+type = "private_key"
+private_key = "${PK}"
+`)
 		v1Content := `[ns.default]
 profile = "default"
 
@@ -305,26 +299,9 @@ private_key = "${PK}"
 `
 		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "treb.toml"), []byte(v1Content), 0644))
 
-		cfg := &config.RuntimeConfig{
-			ProjectRoot: tmpDir,
-			FoundryConfig: &config.FoundryConfig{
-				Profile: map[string]config.ProfileConfig{
-					"default": {
-						Treb: &config.TrebConfig{
-							Senders: map[string]config.SenderConfig{
-								"deployer": {Type: config.SenderTypePrivateKey, PrivateKey: "${PK}"},
-							},
-						},
-					},
-				},
-			},
-			NonInteractive: true,
-		}
-
-		err := runMigrate(cfg)
+		err := runMigrate(migrateTestCfg(tmpDir))
 		require.NoError(t, err)
 
-		// Should be overwritten with v2 content
 		data, err := os.ReadFile(filepath.Join(tmpDir, "treb.toml"))
 		require.NoError(t, err)
 		content := string(data)
@@ -342,28 +319,11 @@ src = "src"
 type = "private_key"
 private_key = "0xkey"
 `
-		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "foundry.toml"), []byte(foundryContent), 0644))
+		writeFoundryToml(t, tmpDir, foundryContent)
 
-		cfg := &config.RuntimeConfig{
-			ProjectRoot: tmpDir,
-			FoundryConfig: &config.FoundryConfig{
-				Profile: map[string]config.ProfileConfig{
-					"default": {
-						Treb: &config.TrebConfig{
-							Senders: map[string]config.SenderConfig{
-								"deployer": {Type: config.SenderTypePrivateKey, PrivateKey: "0xkey"},
-							},
-						},
-					},
-				},
-			},
-			NonInteractive: true,
-		}
-
-		err := runMigrate(cfg)
+		err := runMigrate(migrateTestCfg(tmpDir))
 		require.NoError(t, err)
 
-		// foundry.toml should be untouched
 		data, err := os.ReadFile(filepath.Join(tmpDir, "foundry.toml"))
 		require.NoError(t, err)
 		assert.Equal(t, foundryContent, string(data))
@@ -371,31 +331,21 @@ private_key = "0xkey"
 
 	t.Run("safe senders with cross-references", func(t *testing.T) {
 		tmpDir := t.TempDir()
-		cfg := &config.RuntimeConfig{
-			ProjectRoot: tmpDir,
-			FoundryConfig: &config.FoundryConfig{
-				Profile: map[string]config.ProfileConfig{
-					"default": {
-						Treb: &config.TrebConfig{
-							Senders: map[string]config.SenderConfig{
-								"safe":   {Type: config.SenderTypeSafe, Safe: "0xABC", Signer: "signer"},
-								"signer": {Type: config.SenderTypePrivateKey, PrivateKey: "${SIGNER_KEY}"},
-							},
-						},
-					},
-				},
-			},
-			NonInteractive: true,
-		}
+		writeFoundryToml(t, tmpDir, `[profile.default.treb.senders.safe]
+type = "safe"
+safe = "0xABC"
+signer = "signer"
 
-		err := runMigrate(cfg)
+[profile.default.treb.senders.signer]
+type = "private_key"
+private_key = "${SIGNER_KEY}"
+`)
+		err := runMigrate(migrateTestCfg(tmpDir))
 		require.NoError(t, err)
 
 		data, err := os.ReadFile(filepath.Join(tmpDir, "treb.toml"))
 		require.NoError(t, err)
 		content := string(data)
-
-		// Both accounts should exist
 		assert.Contains(t, content, "[accounts.")
 		assert.Contains(t, content, `type = "safe"`)
 		assert.Contains(t, content, `type = "private_key"`)
@@ -404,41 +354,150 @@ private_key = "0xkey"
 
 	t.Run("multiple profiles with different senders", func(t *testing.T) {
 		tmpDir := t.TempDir()
-		cfg := &config.RuntimeConfig{
-			ProjectRoot: tmpDir,
-			FoundryConfig: &config.FoundryConfig{
-				Profile: map[string]config.ProfileConfig{
-					"default": {
-						Treb: &config.TrebConfig{
-							Senders: map[string]config.SenderConfig{
-								"deployer": {Type: config.SenderTypePrivateKey, PrivateKey: "${PK}"},
-							},
-						},
-					},
-					"production": {
-						Treb: &config.TrebConfig{
-							Senders: map[string]config.SenderConfig{
-								"safe":     {Type: config.SenderTypeSafe, Safe: "0xABC", Signer: "proposer"},
-								"proposer": {Type: config.SenderTypeLedger, DerivationPath: "m/44'/60'/0'/0/0"},
-							},
-						},
-					},
-				},
-			},
-			NonInteractive: true,
-		}
+		writeFoundryToml(t, tmpDir, `[profile.default.treb.senders.deployer]
+type = "private_key"
+private_key = "${PK}"
 
-		err := runMigrate(cfg)
+[profile.production.treb.senders.safe]
+type = "safe"
+safe = "0xABC"
+signer = "proposer"
+
+[profile.production.treb.senders.proposer]
+type = "ledger"
+derivation_path = "m/44'/60'/0'/0/0"
+`)
+		err := runMigrate(migrateTestCfg(tmpDir))
 		require.NoError(t, err)
 
 		data, err := os.ReadFile(filepath.Join(tmpDir, "treb.toml"))
 		require.NoError(t, err)
 		content := string(data)
-
 		assert.Contains(t, content, "[namespace.default]")
 		assert.Contains(t, content, "[namespace.production]")
 		assert.Contains(t, content, `profile = "default"`)
 		assert.Contains(t, content, `profile = "production"`)
+	})
+}
+
+func TestExtractTrebProfiles(t *testing.T) {
+	t.Run("nil foundry config returns nil", func(t *testing.T) {
+		profiles := extractTrebProfiles(nil)
+		assert.Nil(t, profiles)
+	})
+
+	t.Run("no treb config in any profile", func(t *testing.T) {
+		fc := &config.FoundryConfig{
+			Profile: map[string]config.ProfileConfig{
+				"default": {SrcPath: "src"},
+			},
+		}
+		profiles := extractTrebProfiles(fc)
+		assert.Empty(t, profiles)
+	})
+
+	t.Run("extracts profiles with treb senders", func(t *testing.T) {
+		fc := &config.FoundryConfig{
+			Profile: map[string]config.ProfileConfig{
+				"default": {
+					Treb: &config.TrebConfig{
+						Senders: map[string]config.SenderConfig{
+							"deployer": {Type: config.SenderTypePrivateKey, PrivateKey: "${PK}"},
+						},
+					},
+				},
+				"staging": {
+					Treb: &config.TrebConfig{
+						Senders: map[string]config.SenderConfig{
+							"deployer": {Type: config.SenderTypeLedger, DerivationPath: "m/44'/60'/0'/0/0"},
+						},
+					},
+				},
+				"other": {SrcPath: "src"}, // no treb config
+			},
+		}
+		profiles := extractTrebProfiles(fc)
+		require.Len(t, profiles, 2)
+		// default should come first
+		assert.Equal(t, "default", profiles[0].Name)
+		assert.Equal(t, "staging", profiles[1].Name)
+	})
+
+	t.Run("sort order: default first then alphabetical", func(t *testing.T) {
+		fc := &config.FoundryConfig{
+			Profile: map[string]config.ProfileConfig{
+				"production": {Treb: &config.TrebConfig{Senders: map[string]config.SenderConfig{"a": {Type: "private_key"}}}},
+				"default":    {Treb: &config.TrebConfig{Senders: map[string]config.SenderConfig{"b": {Type: "private_key"}}}},
+				"beta":       {Treb: &config.TrebConfig{Senders: map[string]config.SenderConfig{"c": {Type: "private_key"}}}},
+			},
+		}
+		profiles := extractTrebProfiles(fc)
+		require.Len(t, profiles, 3)
+		assert.Equal(t, "default", profiles[0].Name)
+		assert.Equal(t, "beta", profiles[1].Name)
+		assert.Equal(t, "production", profiles[2].Name)
+	})
+}
+
+func TestRemoveTrebFromFoundryToml(t *testing.T) {
+	t.Run("removes single treb section", func(t *testing.T) {
+		input := `[profile.default]
+src = "src"
+
+[profile.default.treb.senders.deployer]
+type = "private_key"
+private_key = "0xkey"
+
+[rpc_endpoints]
+anvil = "http://localhost:8545"
+`
+		result := removeTrebFromFoundryToml(input)
+		assert.Contains(t, result, `[profile.default]`)
+		assert.Contains(t, result, `src = "src"`)
+		assert.Contains(t, result, `[rpc_endpoints]`)
+		assert.Contains(t, result, `anvil = "http://localhost:8545"`)
+		assert.NotContains(t, result, `[profile.default.treb.senders.deployer]`)
+		assert.NotContains(t, result, `private_key`)
+	})
+
+	t.Run("removes multiple treb sections across profiles", func(t *testing.T) {
+		input := `[profile.default]
+src = "src"
+
+[profile.default.treb.senders.anvil]
+type = "private_key"
+private_key = "0xkey"
+
+[profile.default.treb.senders.governor]
+type = "oz_governor"
+governor = "0xGOV"
+
+[profile.live.treb.senders.safe0]
+type = "safe"
+safe = "0xSAFE"
+signer = "signer0"
+
+[rpc_endpoints]
+anvil = "http://localhost:8545"
+`
+		result := removeTrebFromFoundryToml(input)
+		assert.Contains(t, result, `[profile.default]`)
+		assert.Contains(t, result, `[rpc_endpoints]`)
+		assert.NotContains(t, result, `[profile.default.treb.senders.anvil]`)
+		assert.NotContains(t, result, `[profile.default.treb.senders.governor]`)
+		assert.NotContains(t, result, `[profile.live.treb.senders.safe0]`)
+		assert.NotContains(t, result, `oz_governor`)
+	})
+
+	t.Run("no treb sections returns content unchanged", func(t *testing.T) {
+		input := `[profile.default]
+src = "src"
+
+[rpc_endpoints]
+anvil = "http://localhost:8545"
+`
+		result := removeTrebFromFoundryToml(input)
+		assert.Equal(t, input, result)
 	})
 }
 

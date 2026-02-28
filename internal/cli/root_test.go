@@ -96,15 +96,6 @@ func TestGetDeprecationWarning(t *testing.T) {
 			expected: noWarning,
 		},
 		{
-			name:    "suppressed for migrate-config command",
-			cmdName: "migrate-config",
-			cfg: &config.RuntimeConfig{
-				ConfigSource:  "foundry.toml",
-				FoundryConfig: legacyFoundryConfig,
-			},
-			expected: noWarning,
-		},
-		{
 			name:    "suppressed for migrate command",
 			cmdName: "migrate",
 			cfg: &config.RuntimeConfig{
