@@ -27,7 +27,10 @@ type RuntimeConfig struct {
 
 	// Config source tracking
 	FoundryProfile string // Foundry profile name to use (from treb.toml or namespace)
-	ConfigSource   string // "treb.toml" or "foundry.toml"
+	ConfigSource   string // "treb.toml (v2)", "treb.toml", or "foundry.toml"
+
+	// Project configuration from treb.toml
+	ForkSetup string // Fork setup script path (from [fork] section in treb.toml v2)
 
 	// Resolved configurations
 	FoundryConfig *FoundryConfig

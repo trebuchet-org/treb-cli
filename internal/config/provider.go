@@ -44,16 +44,49 @@ func Provider(v *viper.Viper) (*config.RuntimeConfig, error) {
 	}
 	cfg.FoundryConfig = foundryConfig
 
-	// Try treb.toml first; fall back to foundry.toml profiles
-	trebFileConfig, err := loadTrebConfig(projectRoot)
+	// Detect treb.toml format version and load accordingly
+	trebFormat, err := detectTrebConfigFormat(projectRoot)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load treb config: %w", err)
+		return nil, fmt.Errorf("failed to detect treb config format: %w", err)
 	}
 
-	if trebFileConfig != nil {
-		cfg.ConfigSource = "treb.toml"
-		cfg.TrebConfig, cfg.FoundryProfile = mergeTrebFileConfig(trebFileConfig, cfg.Namespace)
-	} else {
+	switch trebFormat {
+	case TrebConfigFormatV2:
+		v2Config, err := loadTrebConfigV2(projectRoot)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load treb config v2: %w", err)
+		}
+		resolved, err := ResolveNamespace(v2Config, cfg.Namespace)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve namespace %q: %w", cfg.Namespace, err)
+		}
+		trebConfig, err := ResolvedNamespaceToTrebConfig(resolved, v2Config.Accounts)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert resolved namespace: %w", err)
+		}
+		cfg.ConfigSource = "treb.toml (v2)"
+		cfg.TrebConfig = trebConfig
+		cfg.FoundryProfile = resolved.Profile
+		if cfg.FoundryProfile == "" {
+			cfg.FoundryProfile = cfg.Namespace
+		}
+		cfg.ForkSetup = v2Config.Fork.Setup
+
+	case TrebConfigFormatV1:
+		trebFileConfig, err := loadTrebConfig(projectRoot)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load treb config: %w", err)
+		}
+		if trebFileConfig != nil {
+			cfg.ConfigSource = "treb.toml"
+			cfg.TrebConfig, cfg.FoundryProfile = mergeTrebFileConfig(trebFileConfig, cfg.Namespace)
+		} else {
+			cfg.ConfigSource = "foundry.toml"
+			cfg.FoundryProfile = cfg.Namespace
+			cfg.TrebConfig = mergeFoundryTrebConfig(foundryConfig, cfg.Namespace)
+		}
+
+	default:
 		cfg.ConfigSource = "foundry.toml"
 		cfg.FoundryProfile = cfg.Namespace
 		cfg.TrebConfig = mergeFoundryTrebConfig(foundryConfig, cfg.Namespace)
