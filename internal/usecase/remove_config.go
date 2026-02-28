@@ -52,6 +52,11 @@ func (uc *RemoveConfig) Run(ctx context.Context, params RemoveConfigParams) (*Re
 	// Normalize key to lowercase
 	key := strings.ToLower(params.Key)
 
+	// Reject fork.setup with helpful migration message
+	if key == "fork.setup" {
+		return nil, fmt.Errorf("fork.setup is no longer configurable via 'config remove'.\nSet it in treb.toml instead:\n\n  [fork]\n  setup = \"path/to/script.s.sol\"")
+	}
+
 	// Validate key
 	if !config.IsValidConfigKey(key) {
 		validKeys := []string{}
@@ -85,9 +90,6 @@ func (uc *RemoveConfig) Run(ctx context.Context, params RemoveConfigParams) (*Re
 	case config.ConfigKeyNetwork:
 		removedValue = localConfig.Network
 		localConfig.Network = ""
-	case config.ConfigKeyForkSetup:
-		removedValue = localConfig.ForkSetup
-		localConfig.ForkSetup = ""
 	}
 
 	// Save the updated config

@@ -85,11 +85,15 @@ func Provider(v *viper.Viper) (*config.RuntimeConfig, error) {
 			cfg.FoundryProfile = cfg.Namespace
 			cfg.TrebConfig = mergeFoundryTrebConfig(foundryConfig, cfg.Namespace)
 		}
+		// Backwards compat: read forkSetup from config.local.json via viper
+		cfg.ForkSetup = v.GetString("forksetup")
 
 	default:
 		cfg.ConfigSource = "foundry.toml"
 		cfg.FoundryProfile = cfg.Namespace
 		cfg.TrebConfig = mergeFoundryTrebConfig(foundryConfig, cfg.Namespace)
+		// Backwards compat: read forkSetup from config.local.json via viper
+		cfg.ForkSetup = v.GetString("forksetup")
 	}
 
 	// Resolve slow mode: default to true if not configured

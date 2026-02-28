@@ -471,6 +471,57 @@ private_key = "0x1234"
 		assert.Equal(t, config.SenderType("private_key"), cfg.TrebConfig.Senders["deployer"].Type)
 	})
 
+	t.Run("v1 format reads forkSetup from viper for backwards compat", func(t *testing.T) {
+		dir := t.TempDir()
+
+		foundryToml := `[profile.default]
+src = "src"
+`
+		err := os.WriteFile(filepath.Join(dir, "foundry.toml"), []byte(foundryToml), 0644)
+		require.NoError(t, err)
+
+		trebToml := `
+[ns.default.senders.deployer]
+type = "private_key"
+private_key = "0x1234"
+`
+		err = os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(trebToml), 0644)
+		require.NoError(t, err)
+
+		v := viper.New()
+		v.Set("project_root", dir)
+		v.Set("namespace", "default")
+		// Simulate forkSetup from config.local.json (viper reads this field)
+		v.Set("forksetup", "script/SetupFork.s.sol")
+
+		cfg, err := Provider(v)
+		require.NoError(t, err)
+
+		assert.Equal(t, "treb.toml", cfg.ConfigSource)
+		assert.Equal(t, "script/SetupFork.s.sol", cfg.ForkSetup)
+	})
+
+	t.Run("legacy foundry.toml reads forkSetup from viper for backwards compat", func(t *testing.T) {
+		dir := t.TempDir()
+
+		foundryToml := `[profile.default]
+src = "src"
+`
+		err := os.WriteFile(filepath.Join(dir, "foundry.toml"), []byte(foundryToml), 0644)
+		require.NoError(t, err)
+
+		v := viper.New()
+		v.Set("project_root", dir)
+		v.Set("namespace", "default")
+		v.Set("forksetup", "script/SetupFork.s.sol")
+
+		cfg, err := Provider(v)
+		require.NoError(t, err)
+
+		assert.Equal(t, "foundry.toml", cfg.ConfigSource)
+		assert.Equal(t, "script/SetupFork.s.sol", cfg.ForkSetup)
+	})
+
 	t.Run("v2 format with hierarchical namespace inheritance", func(t *testing.T) {
 		dir := t.TempDir()
 

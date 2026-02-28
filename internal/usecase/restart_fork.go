@@ -18,7 +18,6 @@ type RestartFork struct {
 	forkState    ForkStateStore
 	forkFiles    ForkFileManager
 	anvilManager AnvilManager
-	localConfig  LocalConfigRepository
 	forgeRunner  ForgeScriptRunner
 }
 
@@ -28,7 +27,6 @@ func NewRestartFork(
 	forkState ForkStateStore,
 	forkFiles ForkFileManager,
 	anvilManager AnvilManager,
-	localConfig LocalConfigRepository,
 	forgeRunner ForgeScriptRunner,
 ) *RestartFork {
 	return &RestartFork{
@@ -36,7 +34,6 @@ func NewRestartFork(
 		forkState:    forkState,
 		forkFiles:    forkFiles,
 		anvilManager: anvilManager,
-		localConfig:  localConfig,
 		forgeRunner:  forgeRunner,
 	}
 }
@@ -178,16 +175,11 @@ func (uc *RestartFork) Execute(ctx context.Context, params RestartForkParams) (*
 
 // executeSetupFork runs the configured fork setup script if it exists.
 func (uc *RestartFork) executeSetupFork(ctx context.Context, entry *domain.ForkEntry, forkEnvOverrides map[string]string) (bool, error) {
-	localCfg, err := uc.localConfig.Load(ctx)
-	if err != nil {
+	if uc.cfg.ForkSetup == "" {
 		return false, nil
 	}
 
-	if localCfg.ForkSetup == "" {
-		return false, nil
-	}
-
-	scriptPath := localCfg.ForkSetup
+	scriptPath := uc.cfg.ForkSetup
 	if !filepath.IsAbs(scriptPath) {
 		scriptPath = filepath.Join(uc.cfg.ProjectRoot, scriptPath)
 	}
@@ -203,8 +195,8 @@ func (uc *RestartFork) executeSetupFork(ctx context.Context, entry *domain.ForkE
 	}
 
 	script := &models.Contract{
-		Name: filepath.Base(localCfg.ForkSetup),
-		Path: localCfg.ForkSetup,
+		Name: filepath.Base(uc.cfg.ForkSetup),
+		Path: uc.cfg.ForkSetup,
 	}
 
 	runConfig := RunScriptConfig{
@@ -219,11 +211,11 @@ func (uc *RestartFork) executeSetupFork(ctx context.Context, entry *domain.ForkE
 
 	result, err := uc.forgeRunner.RunScript(ctx, runConfig)
 	if err != nil {
-		return false, fmt.Errorf("failed to execute setup script '%s': %w", localCfg.ForkSetup, err)
+		return false, fmt.Errorf("failed to execute setup script '%s': %w", uc.cfg.ForkSetup, err)
 	}
 
 	if !result.Success {
-		return false, fmt.Errorf("setup script '%s' failed", localCfg.ForkSetup)
+		return false, fmt.Errorf("setup script '%s' failed", uc.cfg.ForkSetup)
 	}
 
 	return true, nil

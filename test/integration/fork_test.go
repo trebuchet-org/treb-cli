@@ -578,16 +578,26 @@ func ethGetBalance(t *testing.T, rpcURL, address string) string {
 	return rpcResp.Result
 }
 
+// writeForkSetupConfig writes config.local.json with network and forkSetup fields.
+// forkSetup is written as a raw JSON field so viper can read it (even though
+// LocalConfig struct no longer has this field — it's read via RuntimeConfig.ForkSetup).
+func writeForkSetupConfig(t *testing.T, ctx *helpers.TestContext, network, forkSetup string) {
+	t.Helper()
+	workDir := ctx.TrebContext.GetWorkDir()
+	configDir := filepath.Join(workDir, ".treb")
+	require.NoError(t, os.MkdirAll(configDir, 0755))
+
+	configJSON := fmt.Sprintf(`{"namespace":"default","network":%q,"forkSetup":%q}`, network, forkSetup)
+	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.local.json"), []byte(configJSON), 0644))
+}
+
 func TestForkSetupScript(t *testing.T) {
 	tests := []IntegrationTest{
 		{
 			Name: "fork_enter_with_setup_script",
 			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
 				setupForkEnvVars(t, ctx)
-			},
-			SetupCmds: [][]string{
-				s("config set network anvil-31337"),
-				s("config set fork.setup script/setup/SetupFork.s.sol"),
+				writeForkSetupConfig(t, ctx, "anvil-31337", "script/setup/SetupFork.s.sol")
 			},
 			TestCmds: [][]string{
 				{"fork", "enter", "anvil-31337"},
@@ -618,10 +628,7 @@ func TestForkSetupScript(t *testing.T) {
 			Name: "fork_enter_with_failing_setup_script",
 			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
 				setupForkEnvVars(t, ctx)
-			},
-			SetupCmds: [][]string{
-				s("config set network anvil-31337"),
-				s("config set fork.setup script/setup/SetupForkFailing.s.sol"),
+				writeForkSetupConfig(t, ctx, "anvil-31337", "script/setup/SetupForkFailing.s.sol")
 			},
 			TestCmds: [][]string{
 				{"fork", "enter", "anvil-31337"},
@@ -644,10 +651,7 @@ func TestForkSetupScript(t *testing.T) {
 			Name: "fork_enter_without_setup_config",
 			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
 				setupForkEnvVars(t, ctx)
-			},
-			SetupCmds: [][]string{
-				s("config set network anvil-31337"),
-				// No fork.setup configured
+				writeForkSetupConfig(t, ctx, "anvil-31337", "")
 			},
 			TestCmds: [][]string{
 				{"fork", "enter", "anvil-31337"},
