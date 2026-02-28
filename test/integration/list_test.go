@@ -2,6 +2,7 @@ package integration
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -151,14 +152,19 @@ func TestListCommand(t *testing.T) {
 			SkipGolden: true,
 			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
 				// Extract JSON from output (framework prepends "=== cmd N: ... ===\n")
-				jsonStr := extractJSONArray(output)
+				jsonStr := extractJSONObject(output)
 
-				// Verify valid JSON output
-				var entries []map[string]interface{}
-				require.NoError(t, json.Unmarshal([]byte(jsonStr), &entries))
+				// Verify valid JSON output (now wrapped in object with "deployments" key)
+				var result map[string]interface{}
+				require.NoError(t, json.Unmarshal([]byte(jsonStr), &result))
+				entries, ok := result["deployments"].([]interface{})
+				require.True(t, ok, "expected deployments array")
 				require.Len(t, entries, 1)
-				assert.Equal(t, "Counter", entries[0]["contractName"])
-				assert.NotEmpty(t, entries[0]["address"])
+				entry := entries[0].(map[string]interface{})
+				assert.Equal(t, "Counter", entry["contractName"])
+				assert.NotEmpty(t, entry["address"])
+				// No otherNamespaces when deployments exist
+				assert.Nil(t, result["otherNamespaces"])
 			},
 		},
 		{
@@ -185,7 +191,68 @@ func TestListCommand(t *testing.T) {
 			},
 			TestCmds: [][]string{{"list"}},
 		},
+		// Namespace discovery tests
+		{
+			Name: "list_namespace_discovery_hint",
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				// Deploy Counter in default namespace
+				{"run", "script/deploy/DeployCounter.s.sol"},
+				// Deploy Counter in production namespace too
+				{"run", "script/deploy/DeployCounter.s.sol", "--namespace", "production"},
+			},
+			TestCmds: [][]string{
+				// List in staging namespace (empty) — should show discovery hint
+				{"list", "--namespace", "staging"},
+			},
+			OutputArtifacts: []string{},
+		},
+		{
+			Name: "list_namespace_discovery_json",
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+				// Deploy in default namespace
+				{"run", "script/deploy/DeployCounter.s.sol"},
+			},
+			TestCmds: [][]string{
+				// JSON list in staging namespace (empty) — should include otherNamespaces
+				{"list", "--namespace", "staging", "--json"},
+			},
+			SkipGolden:      true,
+			OutputArtifacts: []string{},
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				jsonStr := extractJSONObject(output)
+
+				var result map[string]interface{}
+				require.NoError(t, json.Unmarshal([]byte(jsonStr), &result))
+
+				// Deployments should be empty
+				entries, ok := result["deployments"].([]interface{})
+				require.True(t, ok, "expected deployments array")
+				assert.Empty(t, entries)
+
+				// otherNamespaces should include "default" with count
+				otherNs, ok := result["otherNamespaces"].(map[string]interface{})
+				require.True(t, ok, "expected otherNamespaces map")
+				assert.Contains(t, otherNs, "default")
+				assert.Equal(t, float64(1), otherNs["default"])
+			},
+		},
 	}
 
 	RunIntegrationTests(t, tests)
+}
+
+// extractJSONObject extracts a JSON object from output that may contain framework headers.
+func extractJSONObject(output string) string {
+	idx := strings.Index(output, "\n{")
+	if idx >= 0 {
+		return strings.TrimSpace(output[idx+1:])
+	}
+	if strings.HasPrefix(strings.TrimSpace(output), "{") {
+		return strings.TrimSpace(output)
+	}
+	return output
 }

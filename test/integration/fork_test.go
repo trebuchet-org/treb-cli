@@ -935,21 +935,24 @@ func TestForkAwareList(t *testing.T) {
 				defer cleanupForkAnvil(t, ctx, "anvil-31337")
 
 				// Extract JSON from output (framework prepends "=== cmd N: ... ===\n")
-				jsonStr := extractJSONArray(output)
+				jsonStr := extractJSONObject(output)
 
-				// Parse JSON output
-				var entries []map[string]interface{}
-				require.NoError(t, json.Unmarshal([]byte(jsonStr), &entries))
-				require.Len(t, entries, 2)
+				// Parse JSON output (now wrapped in object with "deployments" key)
+				var result map[string]interface{}
+				require.NoError(t, json.Unmarshal([]byte(jsonStr), &result))
+				deploymentsRaw, ok := result["deployments"].([]interface{})
+				require.True(t, ok, "expected deployments array")
+				require.Len(t, deploymentsRaw, 2)
 
 				// Find Counter and SampleToken entries
 				var counterEntry, tokenEntry map[string]interface{}
-				for _, e := range entries {
-					switch e["contractName"] {
+				for _, e := range deploymentsRaw {
+					entry := e.(map[string]interface{})
+					switch entry["contractName"] {
 					case "Counter":
-						counterEntry = e
+						counterEntry = entry
 					case "SampleToken":
-						tokenEntry = e
+						tokenEntry = entry
 					}
 				}
 
@@ -969,21 +972,6 @@ func TestForkAwareList(t *testing.T) {
 	}
 
 	RunIntegrationTests(t, tests)
-}
-
-// extractJSONArray extracts a JSON array from output that may contain framework headers.
-// The framework prepends "=== cmd N: [...] ===\n" to command output.
-func extractJSONArray(output string) string {
-	// Find the JSON array start - look for "\n[" to skip the framework header brackets
-	idx := strings.Index(output, "\n[")
-	if idx >= 0 {
-		return strings.TrimSpace(output[idx+1:])
-	}
-	// Fallback: if output starts with "[" directly
-	if strings.HasPrefix(strings.TrimSpace(output), "[") {
-		return strings.TrimSpace(output)
-	}
-	return output
 }
 
 func TestForkRevertCommand(t *testing.T) {
