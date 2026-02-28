@@ -8,17 +8,13 @@
   Mode:      LIVE
   Senders:   [anvil]
 ──────────────────────────────────────────────────
+Warning: This is a nightly build of Foundry. It is recommended to use the latest stable version. To mute this warning set `FOUNDRY_DISABLE_NIGHTLY_WARNING` in your environment. 
+
 [⠃] Compiling...
 [*] Solc finished
-Compiler run successful with warnings:
-Warning (9207): 'send' is deprecated and scheduled for removal. Use 'call{value: <amount>}("")' instead.
-   --> lib/treb-sol/lib/safe-utils/lib/safe-smart-account/contracts/Safe.sol:243:21:
-    |
-243 |             require(receiver.send(payment), "GS011");
-    |                     ^^^^^^^^^^^^^
-
+Compiler run successful!
 Traces:
-  [1359154] DeployCounter::run()
+  [1359176] DeployCounter::run()
     ├─ [0] VM::envOr("deployer", "anvil") [staticcall]
     │   └─ ← [Return] <env var value>
     ├─ [0] VM::envOr("LABEL", "") [staticcall]
