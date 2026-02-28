@@ -1,0 +1,3 @@
+=== cmd 0: [config set network nonexistent-network] ===
+Error: unknown network "nonexistent-network"
+Available networks: anvil-31337, anvil-31338, base-sepolia, celo, celo-sepolia, polygon

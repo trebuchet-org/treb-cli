@@ -3,6 +3,8 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"slices"
+	"sort"
 	"strings"
 
 	"github.com/trebuchet-org/treb-cli/internal/domain/config"
@@ -24,13 +26,15 @@ type SetConfigResult struct {
 
 // SetConfig is a use case for setting configuration values
 type SetConfig struct {
-	repo LocalConfigRepository
+	repo            LocalConfigRepository
+	networkResolver NetworkResolver
 }
 
 // NewSetConfig creates a new SetConfig use case
-func NewSetConfig(repo LocalConfigRepository) *SetConfig {
+func NewSetConfig(repo LocalConfigRepository, networkResolver NetworkResolver) *SetConfig {
 	return &SetConfig{
-		repo: repo,
+		repo:            repo,
+		networkResolver: networkResolver,
 	}
 }
 
@@ -59,6 +63,15 @@ func (uc *SetConfig) Run(ctx context.Context, params SetConfigParams) (*SetConfi
 	localConfig, err := uc.repo.Load(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config: %w", err)
+	}
+
+	// Validate network name against foundry.toml [rpc_endpoints]
+	if normalizedKey == config.ConfigKeyNetwork {
+		available := uc.networkResolver.GetNetworks(ctx)
+		if !slices.Contains(available, params.Value) {
+			sort.Strings(available)
+			return nil, fmt.Errorf("unknown network %q\nAvailable networks: %s", params.Value, strings.Join(available, ", "))
+		}
 	}
 
 	// Set the value based on key
