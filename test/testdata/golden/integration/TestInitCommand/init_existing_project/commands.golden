@@ -14,7 +14,7 @@
    • Set API keys for contract verification
 
 2. Configure deployment environments in treb.toml:
-   • Add [ns.<namespace>.senders.<name>] sections for each environment
+   • Add accounts in [accounts.<name>] and map them in [namespace.<name>]
    • See documentation for Safe multisig and hardware wallet support
 
 3. Generate your first deployment script:

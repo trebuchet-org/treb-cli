@@ -1,70 +1,170 @@
 # Ralph Progress Log
-Started: Sat Feb 28 08:02:38 PM CET 2026
+Started: Sat Feb 28 07:33:50 PM CET 2026
 ---
 
 ## Codebase Patterns
-- Use function-based mocks for testing use cases (embed interface + func fields pattern)
-- RuntimeConfig holds Namespace (string) and Network (*config.Network, nil if unset)
-- DeploymentRepository.GetAllDeployments() returns all deployments unfiltered
-- ListDeployments filters via domain.DeploymentFilter (namespace, chainID, contractName, label, type)
-- Use `domain.ErrNotFound` for not-found errors
-- ForkStateStore.Load() returns error when no fork state exists
-- Unit tests go in the same package (package usecase) for internal access
-- testify/assert + testify/require for assertions
-- DeploymentsRenderer.RenderDeploymentList() handles both empty and non-empty states; empty state branches on OtherNamespaces
-- Renderer uses fmt.Fprintln/Fprintf to r.out (io.Writer) for all output
-- DeploymentListResult carries CurrentNamespace, CurrentNetwork, CurrentChainID for display context
-- JSON output from `list --json` is now wrapped in an object: `{"deployments": [...], "otherNamespaces": {...}}` — use `extractJSONObject()` in integration tests
-- Integration tests for namespace-filtered empty lists: deploy in default/production namespaces, then list in a different namespace to trigger discovery
+- Domain config types live in `internal/domain/config/`, config loading logic in `internal/config/`
+- SenderConfig has fields: Type, Address, PrivateKey, Safe, Signer, DerivationPath, Governor, Timelock, Proposer
+- Tests use `github.com/stretchr/testify/assert` and `require` packages
+- Config tests in `internal/config/` are in `package config` (not `config_test`), allowing access to unexported functions
+- Domain config tests can be in either `package config` or `package config_test`
+- Environment variable expansion uses `os.ExpandEnv()` during config load time
+- TOML parsing uses `github.com/BurntSushi/toml`
+- For v2 namespace parsing, use `map[string]map[string]string` as the TOML decode target, then manually extract "profile" as reserved key; all other keys become role→account mappings
+- `ResolveNamespace()` walks a dot-separated hierarchy chain built by `buildNamespaceChain()`: for "a.b.c" → ["default", "a", "a.b", "a.b.c"]. Profile and roles overlay at each level.
+- BurntSushi/toml handles quoted TOML keys correctly: `[namespace."production.ntt"]` creates key `production.ntt` (dot is literal, not nesting)
+- `detectTrebConfigFormat()` returns `TrebConfigFormatV2/V1/None` by checking for top-level keys: accounts/namespace → v2, ns → v1
+- AccountConfig and SenderConfig have identical fields — use `config.SenderConfig(acct)` type conversion instead of struct literal (staticcheck S1016)
+- `ResolvedNamespaceToTrebConfig()` validates Safe signer and OzGovernor proposer cross-references against the accounts map; keeps account names as-is in the output SenderConfig
+- Wire DI: when changing constructor signatures (adding/removing params), update both `wire.go` and `wire_gen.go`; manual edit of `wire_gen.go` works fine
+- Viper reads config.local.json fields case-insensitively: JSON key `"forkSetup"` is accessible via `v.GetString("forksetup")`
+- For backwards compat config reading, Provider can use viper directly (bypassing the LocalConfig struct) to read legacy fields from config.local.json
+- Integration tests: when config.local.json needs fields the LocalConfig struct doesn't have, write the JSON directly in PreSetup instead of using `config set`
 ---
 
 ## 2026-02-28 - US-001
-- Implemented namespace discovery in ListDeployments use case
-- Files changed:
-  - internal/usecase/ports.go: Added OtherNamespaces, CurrentNamespace, CurrentNetwork fields to DeploymentListResult
-  - internal/usecase/list_deployments.go: Added discoverOtherNamespaces() method, populated new fields in Run()
-  - internal/usecase/list_deployments_test.go: New file with 6 test cases
+- Implemented new domain types in `internal/domain/config/trebfile_v2.go`:
+  - `AccountConfig` struct mirroring SenderConfig fields for named signing entities
+  - `NamespaceRoles` struct with Profile and Roles map[string]string
+  - `TrebFileConfigV2` struct with Accounts, Namespace, and Fork sections
+  - `ForkConfig` struct with Setup string
+  - `ResolvedNamespace` struct with Profile and Accounts map[string]AccountConfig
+- Files changed: `internal/domain/config/trebfile_v2.go`, `internal/domain/config/trebfile_v2_test.go`
 - **Learnings for future iterations:**
-  - DeploymentListResult is the central struct passed from use case to renderer — add fields here for cross-cutting data
-  - discoverOtherNamespaces uses GetAllDeployments (cold path only when current ns is empty)
-  - Chain ID filtering is handled by checking dep.ChainID != uc.config.Network.ChainID
-  - When Network is nil, no chain filtering is applied (counts all chains)
----
-
-## 2026-02-28 - US-003
-- Included namespace discovery data in JSON output when current namespace is empty
-- Files changed:
-  - internal/cli/list.go: Added listJSONOutput struct wrapping entries + optional OtherNamespaces; updated renderListJSON to use wrapped output
-- **Learnings for future iterations:**
-  - JSON output previously returned a bare array of entries; now returns an object with `deployments` array and optional `otherNamespaces` map
-  - This is a breaking change to the JSON output format (array → object) — downstream tooling may need updating
-  - `omitempty` on map fields in Go omits the field when the map is nil or empty, which is the desired behavior here
-  - The renderListJSON function is separate from the table renderer — JSON output is handled in internal/cli/list.go, not in render/deployments.go
+  - NamespaceRoles.Roles uses `toml:"-"` tag because roles are dynamic string keys parsed manually, not via struct tags
+  - AccountConfig intentionally mirrors SenderConfig fields — they're separate types for semantic clarity (accounts are global, senders are namespace-scoped)
+  - ResolvedNamespace.Accounts maps role name → AccountConfig (not account name → AccountConfig)
 ---
 
 ## 2026-02-28 - US-002
-- Rendered namespace discovery hint in table output when current namespace has no deployments
-- Files changed:
-  - internal/cli/render/deployments.go: Added renderNamespaceDiscoveryHint() method, updated RenderDeploymentList() to branch on OtherNamespaces
-  - internal/usecase/ports.go: Added CurrentChainID field to DeploymentListResult
-  - internal/usecase/list_deployments.go: Populated CurrentChainID from uc.config.Network.ChainID
+- Implemented v2 treb.toml parsing in `internal/config/trebfile_v2.go`:
+  - `loadTrebConfigV2()` — parses [accounts.*] and [namespace.*] sections with env var expansion
+  - `detectTrebConfigFormat()` — returns TrebConfigFormatV2/V1/None based on top-level TOML keys
+  - `trebFileV2Raw` helper struct for two-phase TOML decoding (namespace roles need manual extraction)
+- Files changed: `internal/config/trebfile_v2.go`, `internal/config/trebfile_v2_test.go`
 - **Learnings for future iterations:**
-  - The renderer needs both network name and chain ID for display — CurrentChainID was added to DeploymentListResult for this
-  - Hint format: header line with namespace/network info, blank line, sorted namespace list with counts, blank line, usage tip
-  - Singular/plural handling: "1 deployment" vs "N deployments"
-  - sort.Strings already imported in deployments.go (used by existing displayTableFormat)
+  - `trebFileV2Raw` uses `map[string]map[string]string` for Namespace because all values (profile + role mappings) are flat strings — this avoids custom TOML unmarshaling
+  - `loadTrebConfigV2()` returns (nil, nil) for v1 format files since the raw struct's Accounts/Namespace fields stay empty when [ns.*] sections are present (BurntSushi/toml silently ignores undecoded keys)
+  - Env var expansion happens on AccountConfig fields only, not on namespace role values (role values are account name references, not secrets)
+---
+
+## 2026-02-28 - US-003
+- Implemented hierarchical namespace resolution in `internal/config/trebfile_v2.go`:
+  - `ResolveNamespace()` — resolves a namespace by walking the dot-separated hierarchy, overlaying roles and profile at each level
+  - `buildNamespaceChain()` — builds ancestry chain from dot-separated name (e.g., "production.ntt" → ["default", "production", "production.ntt"])
+  - Validates all role→account references exist; returns error for unknown accounts
+- Files changed: `internal/config/trebfile_v2.go`, `internal/config/trebfile_v2_test.go`
+- **Learnings for future iterations:**
+  - Undefined parent namespaces are silently skipped — if "production" doesn't exist but "production.ntt" does, inheritance goes default → production.ntt
+  - Default namespace always exists implicitly as empty (no roles, no profile) even if not defined in config
+  - Profile and roles both use simple overlay semantics — child values replace parent values at each level
 ---
 
 ## 2026-02-28 - US-004
-- Added integration tests for namespace discovery feature
-- Files changed:
-  - test/integration/list_test.go: Added list_namespace_discovery_hint (table output) and list_namespace_discovery_json (JSON output) test cases; updated list_json_output to use new JSON object format; added extractJSONObject helper
-  - test/integration/fork_test.go: Updated fork_list_json_with_fork_field test to use new JSON object format; removed unused extractJSONArray function
-  - test/testdata/golden/integration/TestListCommand/list_namespace_discovery_hint/commands.golden: New golden file for discovery hint output
+- Implemented `ResolvedNamespaceToTrebConfig()` in `internal/config/trebfile_v2.go`:
+  - Converts ResolvedNamespace (role→AccountConfig) to TrebConfig (role→SenderConfig) using type conversion
+  - Validates Safe signer and OzGovernor proposer cross-references against the global accounts map
+  - Returns error for references to non-existent accounts
+- Files changed: `internal/config/trebfile_v2.go`, `internal/config/trebfile_v2_test.go`
 - **Learnings for future iterations:**
-  - The JSON format change (array → object) broke existing tests in both list_test.go and fork_test.go — when changing output format, grep for all tests consuming that format
-  - extractJSONObject helper extracts JSON `{...}` from framework-wrapped output (which prepends `=== cmd N: [...] ===\n` headers)
-  - Existing tests `list_empty` and `list_with_deployments` already cover the "no hint" cases (no deployments anywhere / deployments in current namespace)
-  - Integration test setup: deploy in multiple namespaces via --namespace flag, then list in an empty namespace to trigger discovery
-  - The `run_with_debug` test is flaky due to forge output normalization — pre-existing issue, not related to this feature
+  - AccountConfig and SenderConfig have identical field layouts — use `config.SenderConfig(acct)` type conversion (staticcheck S1016 catches struct literal copies)
+  - The signer/proposer fields in output SenderConfig keep the account name as-is; SendersManager already knows how to resolve these references
+  - Cross-reference validation only checks that the referenced account exists in the accounts map, not that it's mapped to a role in the current namespace
+---
+
+## 2026-02-28 - US-005
+- Integrated v2 config loader into Provider() with format detection and routing
+  - Added `ForkSetup` field to `RuntimeConfig` struct
+  - Updated `Provider()` to call `detectTrebConfigFormat()` first, then route to v2/v1/legacy paths
+  - V2 path: `loadTrebConfigV2()` → `ResolveNamespace()` → `ResolvedNamespaceToTrebConfig()`
+  - Sets `ConfigSource` to `"treb.toml (v2)"`, `"treb.toml"`, or `"foundry.toml"`
+  - Reads `fork.setup` from v2 `[fork]` section into `RuntimeConfig.ForkSetup`
+  - Falls back to `cfg.Namespace` when no profile is set in resolved namespace
+- Files changed: `internal/domain/config/runtime.go`, `internal/config/provider.go`, `internal/config/provider_test.go`
+- **Learnings for future iterations:**
+  - Provider uses a switch on `TrebConfigFormat` to route between v2/v1/legacy paths cleanly
+  - When v2 namespace has no explicit profile, `FoundryProfile` defaults to the namespace name (same behavior as v1)
+  - The v1 path in the switch still calls `loadTrebConfig()` (not `loadTrebConfigV2()`) to maintain exact backwards compatibility
+  - All existing tests (including v1 format tests) continue to pass unchanged — the format detection is transparent
+---
+
+## 2026-02-28 - US-006
+- Moved forkSetup from config.local.json to treb.toml [fork] section:
+  - Removed `ForkSetup` field from `LocalConfig` struct and `ConfigKeyForkSetup` constant
+  - `config set/remove fork.setup` now returns error with helpful message pointing to treb.toml
+  - `enter_fork.go` and `restart_fork.go` now read ForkSetup from `RuntimeConfig` instead of `LocalConfig`
+  - Removed `localConfig LocalConfigRepository` dependency from EnterFork and RestartFork use cases
+  - Provider reads forkSetup from viper for v1/legacy backwards compat (`v.GetString("forksetup")`)
+  - Updated `wire_gen.go` to match new constructor signatures
+  - Updated CLI help text, golden files, and integration tests
+- Files changed: `internal/domain/config/local.go`, `internal/usecase/enter_fork.go`, `internal/usecase/restart_fork.go`, `internal/usecase/set_config.go`, `internal/usecase/remove_config.go`, `internal/config/provider.go`, `internal/config/provider_test.go`, `internal/app/wire_gen.go`, `internal/cli/config.go`, `test/integration/fork_test.go`, 2 golden files
+- **Learnings for future iterations:**
+  - When removing a field from a struct used by config set/remove, add an early rejection check in the use case BEFORE the IsValidConfigKey check, so the user gets a specific message instead of "unknown key"
+  - Viper can read fields from config.local.json that aren't in the Go struct — useful for backwards compat when removing fields from the struct
+  - For integration tests that need raw JSON fields not in the struct, use PreSetup to write config.local.json directly with `os.WriteFile`
+  - Wire DI: removing a constructor param means removing it from both the wire.go declarations AND the wire_gen.go generated calls
+---
+
+## 2026-02-28 - US-007
+- Updated `treb init` to generate new v2 treb.toml format with `[accounts.*]` and `[namespace.*]` sections:
+  - New template in `createTrebToml()` includes: `[accounts.deployer]`, `[namespace.default]`, and commented-out `[fork]` section
+  - Added helpful comments explaining accounts vs namespaces and dot-separated inheritance
+  - Updated render hint text from old `[ns.<namespace>.senders.<name>]` to new `[accounts.<name>]` and `[namespace.<name>]` format
+  - Updated 5 golden files (2 treb.toml.golden + 3 commands.golden) to match new output
+- Files changed: `internal/usecase/init_project.go`, `internal/cli/render/init.go`, 5 golden files
+- **Learnings for future iterations:**
+  - The init command template is a hardcoded string in `createTrebToml()` — no template engine or file needed
+  - The render file (`internal/cli/render/init.go`) contains "Next steps" hints that reference config format — must be updated when changing config format
+  - Three integration test golden files (`init_new_project`, `init_existing_project`, `init_and_deploy`) all contain the "Next steps" text from the renderer
+  - The `init_and_deploy` test uses PreSetup to write its own treb.toml (v1 format with anvil sender), so it doesn't test the generated template
+---
+
+## 2026-02-28 - US-008
+- Added deprecation warnings for old config formats in `internal/cli/root.go`:
+  - Refactored `showLegacyConfigWarning` → `showDeprecationWarning` with `getDeprecationWarning` returning a `deprecationWarning` enum
+  - V1 treb.toml (`[ns.*]` format, ConfigSource="treb.toml") now shows: "Warning: treb.toml uses deprecated [ns.*] format. Run `treb migrate` to upgrade..."
+  - Legacy foundry.toml (ConfigSource="foundry.toml" with treb sender config) shows: "Warning: Sender config in foundry.toml is deprecated. Run `treb migrate` to move to treb.toml."
+  - Added "migrate" to suppressedCommands alongside existing "migrate-config"
+  - Updated tests to use `getDeprecationWarning` with enum assertions, added v1 treb.toml and migrate command test cases
+- Files changed: `internal/cli/root.go`, `internal/cli/root_test.go`
+- **Learnings for future iterations:**
+  - The deprecation warning system uses `ConfigSource` string to determine format: "treb.toml (v2)" = no warning, "treb.toml" = v1 warning, "foundry.toml" = foundry warning
+  - `showDeprecationWarning` is called once in `PersistentPreRunE` — no risk of duplicate warnings per invocation
+  - The `deprecationWarning` enum pattern (iota-based) keeps the warning type testable without string matching
+---
+
+## 2026-02-28 - US-009
+- Implemented account deduplication logic in `internal/config/dedup.go`:
+  - `DeduplicateSenders()` — takes `map[namespace]map[sender]SenderConfig`, returns deduplicated accounts + namespace role mappings
+  - `senderFingerprint()` — generates identity fingerprint based on type + relevant fields
+  - `generateAccountName()` — creates human-readable names from key material with collision handling
+  - `nameFromPrivateKeyRef()` — extracts name from env var reference (e.g., `${DEPLOYER_PRIVATE_KEY}` → `deployer-key`)
+  - Phase 2 updates signer/proposer cross-references to use new account names
+- Files changed: `internal/config/dedup.go`, `internal/config/dedup_test.go`
+- **Learnings for future iterations:**
+  - Fingerprinting uses type-specific relevant fields: private_key uses PrivateKey, safe uses Safe+Signer, oz_governor uses Governor+Timelock+Proposer, ledger/trezor use Address+DerivationPath
+  - Name generation from env vars: strip `${}`, remove `PRIVATE_` substring, lowercase, hyphenate (e.g., `${DEPLOYER_PRIVATE_KEY}` → `DEPLOYER_KEY` → `deployer-key`)
+  - Safe/governor signer/proposer references need remapping after dedup — track origin namespace to resolve old sender names to new account names
+  - `sortedMapKeys[V any]()` generic helper ensures deterministic processing order for maps
+  - Literal private key values (not env var refs) get generic name `private-key`
+---
+
+## 2026-02-28 - US-010
+- Built `treb migrate` command in `internal/cli/migrate.go`:
+  - `NewMigrateCmd()` — creates the cobra command with `--non-interactive` support
+  - `runMigrate()` — orchestrates: detect format → extract profiles → deduplicate → generate v2 TOML → write
+  - `generateTrebTomlV2()` — generates well-formatted treb.toml with `[accounts.*]` and `[namespace.*]` sections
+  - `writeAccountConfig()` — writes AccountConfig fields (same pattern as `writeSenderConfig()` in migrate_config.go)
+  - Errors if treb.toml already exists in v2 format
+  - Shows preview and prompts for confirmation in interactive mode
+  - Offers to remove `[profile.*.treb.*]` sections from foundry.toml after writing
+- Exported `DetectTrebConfigFormat()` from `internal/config/trebfile_v2.go` for cross-package use
+- Registered `migrate` command in `internal/cli/root.go` management group
+- Files changed: `internal/cli/migrate.go` (new), `internal/cli/migrate_test.go` (new), `internal/cli/root.go`, `internal/config/provider.go`, `internal/config/trebfile_v2.go`, `internal/config/trebfile_v2_test.go`
+- **Learnings for future iterations:**
+  - The `migrate` command reuses `extractTrebProfiles()` and `cleanupFoundryToml()` from `migrate_config.go` — no need to duplicate these helpers
+  - `DeduplicateSenders()` from `internal/config/dedup.go` handles the heavy lifting of merging identical configs and remapping cross-references
+  - When exporting a function from `internal/config/`, update callers in both `provider.go` and the test file
+  - The `nsInfo` type is local to `migrate.go` — keeps it simple since it's only used for TOML generation
+  - `sortedKeys[V any]()` generic helper parallels `sortedMapKeys` in dedup.go but lives in the cli package
 ---

@@ -4,7 +4,6 @@ package config
 type LocalConfig struct {
 	Namespace string `json:"namespace"`
 	Network   string `json:"network"`
-	ForkSetup string `json:"forkSetup,omitempty"`
 }
 
 // ConfigKey represents a configuration key
@@ -13,7 +12,6 @@ type ConfigKey string
 const (
 	ConfigKeyNamespace ConfigKey = "namespace"
 	ConfigKeyNetwork   ConfigKey = "network"
-	ConfigKeyForkSetup ConfigKey = "fork.setup"
 )
 
 // DefaultLocalConfig returns the default local configuration
@@ -29,7 +27,6 @@ func ValidConfigKeys() []ConfigKey {
 	return []ConfigKey{
 		ConfigKeyNamespace,
 		ConfigKeyNetwork,
-		ConfigKeyForkSetup,
 	}
 }
 

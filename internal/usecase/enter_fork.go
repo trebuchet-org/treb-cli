@@ -20,7 +20,6 @@ type EnterFork struct {
 	forkState    ForkStateStore
 	forkFiles    ForkFileManager
 	anvilManager AnvilManager
-	localConfig  LocalConfigRepository
 	forgeRunner  ForgeScriptRunner
 }
 
@@ -30,7 +29,6 @@ func NewEnterFork(
 	forkState ForkStateStore,
 	forkFiles ForkFileManager,
 	anvilManager AnvilManager,
-	localConfig LocalConfigRepository,
 	forgeRunner ForgeScriptRunner,
 ) *EnterFork {
 	return &EnterFork{
@@ -38,7 +36,6 @@ func NewEnterFork(
 		forkState:    forkState,
 		forkFiles:    forkFiles,
 		anvilManager: anvilManager,
-		localConfig:  localConfig,
 		forgeRunner:  forgeRunner,
 	}
 }
@@ -180,19 +177,12 @@ func (uc *EnterFork) Execute(ctx context.Context, params EnterForkParams) (*Ente
 // (false, nil) if no script is configured or file doesn't exist,
 // (false, error) if execution failed.
 func (uc *EnterFork) executeSetupFork(ctx context.Context, params EnterForkParams, forkEnvOverrides map[string]string) (bool, error) {
-	// Load local config to check for fork.setup
-	localCfg, err := uc.localConfig.Load(ctx)
-	if err != nil {
-		// No config file - skip silently
-		return false, nil
-	}
-
-	if localCfg.ForkSetup == "" {
+	if uc.cfg.ForkSetup == "" {
 		return false, nil
 	}
 
 	// Check if the script file exists
-	scriptPath := localCfg.ForkSetup
+	scriptPath := uc.cfg.ForkSetup
 	if !filepath.IsAbs(scriptPath) {
 		scriptPath = filepath.Join(uc.cfg.ProjectRoot, scriptPath)
 	}
@@ -211,8 +201,8 @@ func (uc *EnterFork) executeSetupFork(ctx context.Context, params EnterForkParam
 
 	// Build minimal contract for the script (just needs the path)
 	script := &models.Contract{
-		Name: filepath.Base(localCfg.ForkSetup),
-		Path: localCfg.ForkSetup,
+		Name: filepath.Base(uc.cfg.ForkSetup),
+		Path: uc.cfg.ForkSetup,
 	}
 
 	// Execute the setup script with fork env overrides
@@ -228,11 +218,11 @@ func (uc *EnterFork) executeSetupFork(ctx context.Context, params EnterForkParam
 
 	result, err := uc.forgeRunner.RunScript(ctx, runConfig)
 	if err != nil {
-		return false, fmt.Errorf("failed to execute setup script '%s': %w", localCfg.ForkSetup, err)
+		return false, fmt.Errorf("failed to execute setup script '%s': %w", uc.cfg.ForkSetup, err)
 	}
 
 	if !result.Success {
-		return false, fmt.Errorf("setup script '%s' failed", localCfg.ForkSetup)
+		return false, fmt.Errorf("setup script '%s' failed", uc.cfg.ForkSetup)
 	}
 
 	return true, nil

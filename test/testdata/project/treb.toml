@@ -1,34 +1,40 @@
-# treb.toml — Treb sender configuration
+# treb.toml — Treb project configuration
 #
-# Each [ns.<name>] section defines a namespace with sender configs.
-# The optional 'profile' field maps to a foundry.toml profile (defaults to namespace name).
+# [accounts.*] define signing entities.
+# [namespace.*] map script roles to accounts.
+# Namespaces inherit from default, dot-separated names inherit from parents.
 
-[ns.default]
-profile = "default"
-
-[ns.default.senders.anvil]
+[accounts.anvil]
 type = "private_key"
 private_key = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 
-[ns.default.senders.governor]
+[accounts.governor]
 type = "oz_governor"
 governor = "${GOVERNOR_ADDRESS}"
 timelock = "${TIMELOCK_ADDRESS}"
 proposer = "anvil"
 
-[ns.live]
-profile = "live"
-
-[ns.live.senders.safe0]
+[accounts.safe0]
 type = "safe"
 safe = "0x3D33783D1fd1B6D849d299aD2E711f844fC16d2F"
 signer = "signer0"
 
-[ns.live.senders.safe1]
+[accounts.safe1]
 type = "safe"
 safe = "0x8dcD47D7aC5FEBC1E49a532644D21cd9D9dd97b2"
 signer = "signer0"
 
-[ns.live.senders.signer0]
+[accounts.signer0]
 type = "private_key"
 private_key = "${BASE_SEPOLIA_SIGNER0_PK}"
+
+[namespace.default]
+profile = "default"
+anvil = "anvil"
+governor = "governor"
+
+[namespace.live]
+profile = "live"
+safe0 = "safe0"
+safe1 = "safe1"
+signer0 = "signer0"

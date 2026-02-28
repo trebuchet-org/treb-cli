@@ -43,6 +43,11 @@ func (uc *SetConfig) Run(ctx context.Context, params SetConfigParams) (*SetConfi
 	// Normalize key to lowercase
 	key := strings.ToLower(params.Key)
 
+	// Reject fork.setup with helpful migration message
+	if key == "fork.setup" {
+		return nil, fmt.Errorf("fork.setup is no longer configurable via 'config set'.\nSet it in treb.toml instead:\n\n  [fork]\n  setup = %q", params.Value)
+	}
+
 	// Validate key
 	if !config.IsValidConfigKey(key) {
 		validKeys := []string{}
@@ -80,8 +85,6 @@ func (uc *SetConfig) Run(ctx context.Context, params SetConfigParams) (*SetConfi
 		localConfig.Namespace = params.Value
 	case config.ConfigKeyNetwork:
 		localConfig.Network = params.Value
-	case config.ConfigKeyForkSetup:
-		localConfig.ForkSetup = params.Value
 	}
 
 	// Save the updated config

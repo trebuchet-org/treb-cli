@@ -1,21 +1,20 @@
 {
   "project": "treb-cli",
-  "branchName": "ralph/namespace-discovery",
-  "description": "Namespace Discovery for treb list - Show helpful hints about other namespaces when current namespace has no deployments",
+  "branchName": "ralph/config-restructure",
+  "description": "Restructure treb configuration: separate accounts from roles, add hierarchical dot-namespaces with implicit inheritance, move forkSetup to treb.toml, and build migration tooling with auto-deduplication",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Add namespace summary to ListDeployments use case",
-      "description": "As a developer, I need the list use case to return information about other namespaces when the current query returns no results, so the renderer can display a discovery hint.",
+      "title": "Define new domain types for accounts and namespace roles",
+      "description": "As a developer, I need new Go domain types that model accounts (signing entities) separately from namespace role mappings, plus the updated TrebFileConfig structure with [accounts.*], [namespace.*], and [fork] sections.",
       "acceptanceCriteria": [
-        "Add OtherNamespaces map[string]int field to DeploymentListResult in internal/usecase/ports.go — maps namespace name to deployment count",
-        "Add CurrentNamespace string and CurrentNetwork string fields to DeploymentListResult so the renderer knows the filter context",
-        "When result.Deployments is empty, populate OtherNamespaces by calling repo.GetAllDeployments() and counting deployments grouped by namespace, filtered by current chain ID if uc.config.Network is set",
-        "OtherNamespaces excludes the current namespace (already known to be empty)",
-        "OtherNamespaces is nil when deployments are found (no extra work on the happy path)",
-        "Unit tests cover: empty namespace with others available, empty namespace with no others, non-empty namespace (field stays nil), chain ID filtering applies to other-namespace counts",
+        "Add AccountConfig struct in internal/domain/config/ with fields: Type (SenderType), Address, PrivateKey, Safe, Signer, DerivationPath, Governor, Timelock, Proposer — same fields as SenderConfig but represents a named signing entity",
+        "Add NamespaceRoles struct with Profile string field and Roles map[string]string (role name → account name)",
+        "Add TrebFileConfigV2 struct with Accounts map[string]AccountConfig, Namespace map[string]NamespaceRoles, and Fork ForkConfig",
+        "Add ForkConfig struct with Setup string field",
+        "Add ResolvedNamespace struct that holds the fully-resolved profile and role→AccountConfig mapping after inheritance",
         "Typecheck passes (go build ./...)",
-        "make lint passes"
+        "Unit tests pass (go test ./internal/domain/config/...)"
       ],
       "priority": 1,
       "passes": true,
@@ -23,16 +22,17 @@
     },
     {
       "id": "US-002",
-      "title": "Render namespace discovery hint in table output",
-      "description": "As a user running treb list in an empty namespace, I want to see which other namespaces have deployments so I can switch context.",
+      "title": "Parse new treb.toml format with accounts and namespaces",
+      "description": "As a developer, I need a loader function that parses the new treb.toml format with [accounts.*] and [namespace.*] sections, handling TOML quoting for dot-separated namespace names and environment variable expansion.",
       "acceptanceCriteria": [
-        "In RenderDeploymentList in internal/cli/render/deployments.go, when result.Deployments is empty and result.OtherNamespaces is non-empty, render a discovery hint instead of bare 'No deployments found'",
-        "Hint includes: 'No deployments found in namespace \"<name>\"' with optional ' on <networkName> (<chainID>)' when network is set",
-        "Hint lists other namespaces sorted alphabetically with deployment counts, e.g.: '  production  5 deployments'",
-        "Hint ends with: 'Use --namespace <name> or `treb config set namespace <name>` to switch.'",
-        "When OtherNamespaces is nil or empty, keep existing 'No deployments found' message unchanged",
-        "Typecheck passes (go build ./...)",
-        "make lint passes"
+        "Add loadTrebConfigV2() function in internal/config/trebfile.go (or new file trebfile_v2.go)",
+        "Parses [accounts.*] sections into map[string]AccountConfig with env var expansion on all string fields",
+        "Parses [namespace.*] sections where 'profile' is extracted as a reserved key and all other string keys become role→account mappings",
+        "Handles TOML quoted keys like [namespace.\"production.ntt\"] correctly — the dot is part of the key, not TOML nesting",
+        "Returns nil,nil if treb.toml doesn't exist or doesn't have the new format sections",
+        "Add detectTrebConfigFormat() that checks if treb.toml has [accounts]/[namespace] (v2), [ns] (v1), or doesn't exist",
+        "Unit tests covering: basic parsing, env var expansion, quoted dot-namespace keys, missing file returns nil",
+        "Typecheck passes (go build ./...)"
       ],
       "priority": 2,
       "passes": true,
@@ -40,15 +40,18 @@
     },
     {
       "id": "US-003",
-      "title": "Include namespace discovery in JSON output",
-      "description": "As a tool consumer, I need the JSON output to include namespace discovery data when the list is empty.",
+      "title": "Implement hierarchical namespace resolution with dot-based inheritance",
+      "description": "As a developer, I need a function that resolves a namespace's full configuration by walking up the dot-separated hierarchy (default → production → production.ntt), overlaying roles and profile at each level.",
       "acceptanceCriteria": [
-        "In renderListJSON in internal/cli/list.go, when deployments list is empty and result.OtherNamespaces is non-empty, include 'otherNamespaces' map in JSON output alongside the empty 'deployments' array",
-        "When deployments exist, omit otherNamespaces from JSON output entirely",
-        "When no other namespaces have deployments, omit otherNamespaces from JSON output",
-        "Create a new listJSONOutput struct wrapping the entries slice and optional OtherNamespaces field with omitempty",
-        "Typecheck passes (go build ./...)",
-        "make lint passes"
+        "Add ResolveNamespace(config *TrebFileConfigV2, namespaceName string) (*ResolvedNamespace, error) function in internal/config/",
+        "Resolution walks the hierarchy: for 'production.ntt', resolve default → production → production.ntt",
+        "At each level, explicitly set role mappings override inherited ones",
+        "Profile is inherited like roles — if production sets profile='mainnet', production.ntt inherits it unless overridden",
+        "If a parent namespace is not explicitly defined (e.g., 'production.ntt' exists but 'production' doesn't), skip it and inherit from default",
+        "Default namespace always exists implicitly (empty if not defined in config)",
+        "Validates that all role values reference existing account names; returns error for unknown accounts",
+        "Unit tests covering: single-level resolution, multi-level inheritance, profile inheritance, undefined parent skip, unknown account error, default-only resolution",
+        "Typecheck passes (go build ./...)"
       ],
       "priority": 3,
       "passes": true,
@@ -56,18 +59,129 @@
     },
     {
       "id": "US-004",
-      "title": "Integration tests for namespace discovery",
-      "description": "As a developer, I need integration tests to verify the namespace discovery feature end-to-end.",
+      "title": "Bridge resolved namespaces to existing TrebConfig/SenderConfig",
+      "description": "As a developer, I need a function that converts a ResolvedNamespace (accounts + role mappings) into the existing TrebConfig with Senders map that the rest of the codebase (SendersManager, use cases) already expects.",
       "acceptanceCriteria": [
-        "Add test case in test/integration/: deploy in namespace A via setup, run treb list in namespace B — hint shows namespace A with count",
-        "Add test case: deploy in current namespace — no hint shown, normal table output",
-        "Add test case: no deployments anywhere — shows 'No deployments found' with no hint",
-        "Add test case: JSON output with --json includes otherNamespaces when current namespace is empty",
-        "Golden files created for all new test cases (use -treb.updategolden)",
-        "make integration-test passes",
+        "Add ResolvedNamespaceToTrebConfig(resolved *ResolvedNamespace, accounts map[string]AccountConfig) (*TrebConfig, error) function",
+        "Maps each role→account to a SenderConfig entry in TrebConfig.Senders using the role name as the key",
+        "Account cross-references (Safe signer, Governor proposer) are resolved: if signer='dev-wallet', look up dev-wallet in accounts and use its details",
+        "For Safe accounts, the 'signer' field in the output SenderConfig is set to the referenced account name (maintaining current SendersManager behavior)",
+        "For OzGovernor accounts, the 'proposer' field in the output SenderConfig is set to the referenced account name",
+        "Returns error if an account's signer/proposer references a non-existent account",
+        "Unit tests covering: private_key account mapping, safe account with signer resolution, oz_governor with proposer, missing account error",
         "Typecheck passes (go build ./...)"
       ],
       "priority": 4,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Integrate new config loader into Provider with format detection",
+      "description": "As a developer, I need the config Provider() to detect the treb.toml format version (v2 accounts/namespace, v1 ns.*, or legacy foundry.toml) and load accordingly, producing the same RuntimeConfig either way.",
+      "acceptanceCriteria": [
+        "Update Provider() in internal/config/provider.go to call detectTrebConfigFormat() first",
+        "If v2 format detected: call loadTrebConfigV2(), then ResolveNamespace(), then ResolvedNamespaceToTrebConfig() to produce TrebConfig and FoundryProfile",
+        "If v1 format detected: use existing loadTrebConfig() + mergeTrebFileConfig() path (unchanged)",
+        "If no treb.toml: use existing mergeFoundryTrebConfig() path (unchanged)",
+        "Set ConfigSource to 'treb.toml (v2)', 'treb.toml', or 'foundry.toml' for display",
+        "Read fork.setup from TrebFileConfigV2 if v2 format and store in RuntimeConfig (add ForkSetup field to RuntimeConfig if needed)",
+        "Existing integration tests continue to pass with old format configs",
+        "Typecheck passes (go build ./...)"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Move forkSetup from config.local.json to treb.toml",
+      "description": "As a developer, I need forkSetup to be read from treb.toml [fork] section instead of .treb/config.local.json, and I need to remove fork.setup from the config set/remove commands.",
+      "acceptanceCriteria": [
+        "Remove ConfigKeyForkSetup from ValidConfigKeys() in internal/domain/config/local.go",
+        "Remove ForkSetup field from LocalConfig struct",
+        "Update NormalizeConfigKey to no longer accept 'fork.setup'",
+        "Update set_config.go use case to reject fork.setup key with helpful error message pointing to treb.toml",
+        "Update remove_config.go use case similarly",
+        "Add ForkSetup string field to RuntimeConfig if not already present",
+        "When loading v2 treb.toml, populate RuntimeConfig.ForkSetup from [fork].setup",
+        "When loading v1/legacy format, continue reading forkSetup from config.local.json for backwards compat",
+        "Update any code that reads forkSetup from LocalConfig to read from RuntimeConfig.ForkSetup instead",
+        "Typecheck passes (go build ./...)",
+        "Unit tests pass"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Update treb init to generate new treb.toml format",
+      "description": "As a developer, I need treb init to generate treb.toml using the new [accounts.*] and [namespace.*] format instead of the old [ns.*] format.",
+      "acceptanceCriteria": [
+        "Update init command (internal/cli/init.go or equivalent) to generate treb.toml with [accounts.deployer] and [namespace.default] sections",
+        "Generated treb.toml includes a [fork] section (commented out as example)",
+        "Generated default account is type='private_key' with private_key='${DEPLOYER_PRIVATE_KEY}'",
+        "Generated default namespace maps deployer='deployer' (role deployer → account deployer)",
+        "Include helpful comments in generated file explaining accounts vs namespaces",
+        "Typecheck passes (go build ./...)"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Add deprecation warnings for old config formats",
+      "description": "As a user, I want to see a clear deprecation warning when my project uses the old [ns.*] treb.toml format or legacy foundry.toml sender config, so I know to run treb migrate.",
+      "acceptanceCriteria": [
+        "When v1 treb.toml format ([ns.*]) is detected, print a stderr warning: 'Warning: treb.toml uses deprecated [ns.*] format. Run `treb migrate` to upgrade to the new accounts/namespace format.'",
+        "When legacy foundry.toml ([profile.*.treb.*]) is detected, print a stderr warning: 'Warning: Sender config in foundry.toml is deprecated. Run `treb migrate` to move to treb.toml.'",
+        "Warnings are printed once per command invocation, not per config load",
+        "Warnings are suppressed when --json flag is set (to avoid polluting JSON output)",
+        "Warnings go to stderr, not stdout",
+        "Typecheck passes (go build ./...)"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Implement account deduplication logic for migration",
+      "description": "As a developer, I need a function that takes a set of sender configs across namespaces, identifies identical configs (same type + same key/address fields), and merges them into unique named accounts.",
+      "acceptanceCriteria": [
+        "Add DeduplicateSenders function that accepts map[namespaceName]map[senderName]SenderConfig and returns ([]AccountConfig with names, map[namespaceName]map[roleName]accountName)",
+        "Two senders are identical if they have the same type and same relevant fields (private_key for private_key type, safe+signer for safe type, governor+timelock+proposer for oz_governor, address+derivation_path for ledger/trezor)",
+        "Generate account names from key material: for private_key use env var name stripped of braces (e.g., DEPLOYER_PRIVATE_KEY → deployer-key), for safe use 'safe-' + first 6 hex chars of address, for governor use 'governor-' + first 6 hex chars",
+        "Handle name collisions by appending numeric suffix (deployer-key, deployer-key-2)",
+        "Return namespace role mappings that reference the deduplicated account names",
+        "Unit tests covering: basic dedup of identical private keys, safe dedup, no dedup when configs differ, name collision handling, mixed sender types",
+        "Typecheck passes (go build ./...)"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Build treb migrate command for foundry.toml legacy format",
+      "description": "As a user, I want to run treb migrate to convert my [profile.*.treb.senders.*] config in foundry.toml to the new treb.toml accounts/namespace format with auto-deduplication and a preview before writing.",
+      "acceptanceCriteria": [
+        "Add 'migrate' cobra command in internal/cli/migrate.go (or update existing migrate_config.go)",
+        "Reads [profile.*.treb.senders.*] sections from foundry.toml",
+        "Calls DeduplicateSenders to merge identical sender configs into accounts",
+        "Maps foundry profile names to namespace names (profile.default → namespace.default, profile.mainnet → namespace.mainnet, etc.)",
+        "Sets profile field on each namespace to match the original foundry profile name",
+        "Generates valid TOML output for new treb.toml with [accounts.*] and [namespace.*] sections",
+        "Prints preview of generated treb.toml to stdout before writing",
+        "In interactive mode, prompts for confirmation before writing",
+        "In non-interactive mode (--non-interactive flag), writes without prompting",
+        "After writing treb.toml, offers to remove [profile.*.treb.*] sections from foundry.toml",
+        "Errors if treb.toml already exists in v2 format (nothing to migrate)",
+        "Typecheck passes (go build ./...)"
+      ],
+      "priority": 10,
       "passes": true,
       "notes": ""
     }
