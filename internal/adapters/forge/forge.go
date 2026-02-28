@@ -291,7 +291,7 @@ func (f *ForgeAdapter) buildArgs(config usecase.RunScriptConfig) []string {
 		args = append(args, "--json")
 	}
 
-	if config.Slow {
+	if config.Slow || len(config.ForkEnvOverrides) > 0 {
 		args = append(args, "--slow")
 	}
 	args = append(args, "-vvvv")
@@ -316,8 +316,12 @@ func (f *ForgeAdapter) buildEnv(config usecase.RunScriptConfig) []string {
 	}
 
 	// Fork mode: override RPC env vars so foundry.toml ${VAR} resolves to the fork URL
-	for k, v := range config.ForkEnvOverrides {
-		env[k] = v
+	// and signal fork mode to Solidity scripts via TREB_FORK_MODE
+	if len(config.ForkEnvOverrides) > 0 {
+		for k, v := range config.ForkEnvOverrides {
+			env[k] = v
+		}
+		env["TREB_FORK_MODE"] = "true"
 	}
 
 	var envStrings []string

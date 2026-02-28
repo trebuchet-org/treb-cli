@@ -56,6 +56,7 @@ func TestBuildEnv_WithForkOverride(t *testing.T) {
 	envMap := envToMap(env)
 
 	assert.Equal(t, "http://127.0.0.1:54321", envMap["SEPOLIA_RPC_URL"])
+	assert.Equal(t, "true", envMap["TREB_FORK_MODE"], "fork mode should set TREB_FORK_MODE=true")
 	assert.Equal(t, "default", envMap["FOUNDRY_PROFILE"])
 	assert.Equal(t, "sepolia", envMap["NETWORK"])
 	assert.Equal(t, "v1", envMap["LABEL"])
@@ -70,6 +71,8 @@ func TestBuildEnv_WithoutForkOverride(t *testing.T) {
 
 	_, hasForkVar := envMap["SEPOLIA_RPC_URL"]
 	assert.False(t, hasForkVar, "should not have fork RPC override when no fork is active")
+	_, hasForkMode := envMap["TREB_FORK_MODE"]
+	assert.False(t, hasForkMode, "should not have TREB_FORK_MODE when no fork is active")
 	assert.Equal(t, "default", envMap["FOUNDRY_PROFILE"])
 	assert.Equal(t, "sepolia", envMap["NETWORK"])
 }
@@ -93,6 +96,37 @@ func TestBuildEnv_ForkOverrideForDifferentNetwork(t *testing.T) {
 	assert.False(t, hasSepolia, "sepolia var should not exist")
 }
 
+func TestBuildArgs_SlowInForkMode(t *testing.T) {
+	adapter := newTestForgeAdapter()
+	cfg := baseRunScriptConfig()
+	cfg.ForkEnvOverrides = map[string]string{
+		"SEPOLIA_RPC_URL": "http://127.0.0.1:54321",
+	}
+
+	args := adapter.buildArgs(cfg)
+
+	assert.Contains(t, args, "--slow", "fork mode should automatically enable --slow")
+}
+
+func TestBuildArgs_NoSlowWithoutFork(t *testing.T) {
+	adapter := newTestForgeAdapter()
+	cfg := baseRunScriptConfig()
+
+	args := adapter.buildArgs(cfg)
+
+	assert.NotContains(t, args, "--slow", "should not have --slow without fork or explicit flag")
+}
+
+func TestBuildArgs_SlowWithExplicitFlag(t *testing.T) {
+	adapter := newTestForgeAdapter()
+	cfg := baseRunScriptConfig()
+	cfg.Slow = true
+
+	args := adapter.buildArgs(cfg)
+
+	assert.Contains(t, args, "--slow", "explicit --slow flag should work")
+}
+
 func TestBuildEnv_NilForkOverrides(t *testing.T) {
 	adapter := newTestForgeAdapter()
 	cfg := baseRunScriptConfig()
@@ -103,4 +137,6 @@ func TestBuildEnv_NilForkOverrides(t *testing.T) {
 
 	assert.Equal(t, "default", envMap["FOUNDRY_PROFILE"])
 	assert.Equal(t, "sepolia", envMap["NETWORK"])
+	_, hasForkMode := envMap["TREB_FORK_MODE"]
+	assert.False(t, hasForkMode, "should not have TREB_FORK_MODE when fork overrides are nil")
 }
