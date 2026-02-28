@@ -41,7 +41,6 @@ type ComposeParams struct {
 	Verbose        bool
 	NonInteractive bool
 	Resume         bool // Resume from previous execution
-	Slow           bool
 }
 
 // ComposeResult contains the result of orchestration
@@ -400,7 +399,6 @@ func (o *ComposeDeployment) executeStep(ctx context.Context, step *ExecutionStep
 		Debug:          params.Debug,
 		DebugJSON:      params.DebugJSON,
 		Verbose:        params.Verbose,
-		Slow:           params.Slow,
 		NonInteractive: true, // Always non-interactive for orchestration
 	}
 

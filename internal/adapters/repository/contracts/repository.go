@@ -269,6 +269,7 @@ func (i *Repository) FindContracts(ctx context.Context, query domain.ContractQue
 	return i.searchContractsLocked(query), nil
 }
 
+
 func (i *Repository) searchContractsLocked(query domain.ContractQuery) []*models.Contract {
 	i.mu.RLock()
 	defer i.mu.RUnlock()

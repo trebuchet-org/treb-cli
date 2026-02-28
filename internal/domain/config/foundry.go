@@ -32,6 +32,7 @@ type ProfileConfig struct {
 
 // TrebConfig represents treb-specific configuration
 type TrebConfig struct {
+	Slow    *bool                   `json:"slow,omitempty" toml:"slow,omitempty"`
 	Senders map[string]SenderConfig `json:"senders" toml:"senders"`
 }
 

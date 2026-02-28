@@ -59,6 +59,12 @@ func Provider(v *viper.Viper) (*config.RuntimeConfig, error) {
 		cfg.TrebConfig = mergeFoundryTrebConfig(foundryConfig, cfg.Namespace)
 	}
 
+	// Resolve slow mode: default to true if not configured
+	cfg.Slow = true
+	if cfg.TrebConfig != nil && cfg.TrebConfig.Slow != nil {
+		cfg.Slow = *cfg.TrebConfig.Slow
+	}
+
 	if os.Getenv("TREB_DEBUG") != "" {
 		fmt.Printf("DEBUG: Loaded TrebConfig for profile %s\n", cfg.Namespace)
 		if cfg.TrebConfig != nil && cfg.TrebConfig.Senders != nil {
@@ -150,6 +156,9 @@ func mergeTrebFileConfig(trebFile *config.TrebFileConfig, namespace string) (*co
 		Senders: make(map[string]config.SenderConfig),
 	}
 
+	// Start with top-level slow setting
+	merged.Slow = trebFile.Slow
+
 	// Start with default namespace senders
 	if defaultNs, ok := trebFile.Ns["default"]; ok {
 		for k, v := range defaultNs.Senders {
@@ -167,9 +176,17 @@ func mergeTrebFileConfig(trebFile *config.TrebFileConfig, namespace string) (*co
 				merged.Senders[k] = v
 			}
 			foundryProfile = activeNs.Profile
+			// Per-namespace slow overrides top-level
+			if activeNs.Slow != nil {
+				merged.Slow = activeNs.Slow
+			}
 		}
 	} else if defaultNs, ok := trebFile.Ns["default"]; ok {
 		foundryProfile = defaultNs.Profile
+		// Per-namespace slow overrides top-level
+		if defaultNs.Slow != nil {
+			merged.Slow = defaultNs.Slow
+		}
 	}
 
 	return merged, foundryProfile
@@ -185,9 +202,12 @@ func mergeFoundryTrebConfig(foundryConfig *config.FoundryConfig, namespace strin
 		merged = &config.TrebConfig{
 			Senders: make(map[string]config.SenderConfig),
 		}
-		if defaultProfile.Treb != nil && defaultProfile.Treb.Senders != nil {
-			for k, v := range defaultProfile.Treb.Senders {
-				merged.Senders[k] = v
+		if defaultProfile.Treb != nil {
+			merged.Slow = defaultProfile.Treb.Slow
+			if defaultProfile.Treb.Senders != nil {
+				for k, v := range defaultProfile.Treb.Senders {
+					merged.Senders[k] = v
+				}
 			}
 		}
 	}
@@ -197,9 +217,15 @@ func mergeFoundryTrebConfig(foundryConfig *config.FoundryConfig, namespace strin
 		if profile, ok := foundryConfig.Profile[namespace]; ok {
 			if merged == nil {
 				merged = profile.Treb
-			} else if profile.Treb != nil && profile.Treb.Senders != nil {
-				for k, v := range profile.Treb.Senders {
-					merged.Senders[k] = v
+			} else if profile.Treb != nil {
+				// Per-namespace slow overrides default
+				if profile.Treb.Slow != nil {
+					merged.Slow = profile.Treb.Slow
+				}
+				if profile.Treb.Senders != nil {
+					for k, v := range profile.Treb.Senders {
+						merged.Senders[k] = v
+					}
 				}
 			}
 		}
