@@ -52,8 +52,8 @@ smart contract deployments using CreateX factory contracts.`,
 				return fmt.Errorf("failed to initialize app: %w", err)
 			}
 
-			// Show deprecation warning for legacy foundry.toml config
-			showLegacyConfigWarning(cmd, app.Config)
+			// Show deprecation warning for old config formats
+			showDeprecationWarning(cmd, app.Config)
 
 			// Store app in context
 			ctx := context.WithValue(cmd.Context(), appKey, app)
@@ -184,31 +184,52 @@ var suppressedCommands = map[string]bool{
 	"completion":     true,
 	"init":           true,
 	"migrate-config": true,
+	"migrate":        true,
 }
 
-// showLegacyConfigWarning prints a deprecation warning to stderr when
-// sender config is detected in foundry.toml and treb.toml does not exist.
-func showLegacyConfigWarning(cmd *cobra.Command, cfg *domainconfig.RuntimeConfig) {
-	if !shouldShowDeprecationWarning(cmd.Name(), cfg) {
+// deprecationWarning represents the type of deprecation warning to show
+type deprecationWarning int
+
+const (
+	noWarning          deprecationWarning = iota
+	v1TrebTomlWarning                     // [ns.*] format in treb.toml
+	foundryTomlWarning                    // sender config in foundry.toml
+)
+
+// showDeprecationWarning prints a deprecation warning to stderr when
+// old config formats are detected.
+func showDeprecationWarning(cmd *cobra.Command, cfg *domainconfig.RuntimeConfig) {
+	warning := getDeprecationWarning(cmd.Name(), cfg)
+	if warning == noWarning {
 		return
 	}
+
 	yellow := color.New(color.FgYellow)
-	_, _ = yellow.Fprintln(os.Stderr, "Warning: treb config detected in foundry.toml — this is deprecated.")
-	_, _ = yellow.Fprintln(os.Stderr, "Run `treb migrate-config` to move your config to treb.toml.")
+	switch warning {
+	case v1TrebTomlWarning:
+		_, _ = yellow.Fprintln(os.Stderr, "Warning: treb.toml uses deprecated [ns.*] format. Run `treb migrate` to upgrade to the new accounts/namespace format.")
+	case foundryTomlWarning:
+		_, _ = yellow.Fprintln(os.Stderr, "Warning: Sender config in foundry.toml is deprecated. Run `treb migrate` to move to treb.toml.")
+	}
 }
 
-// shouldShowDeprecationWarning determines if the deprecation warning should be shown.
-func shouldShowDeprecationWarning(cmdName string, cfg *domainconfig.RuntimeConfig) bool {
+// getDeprecationWarning determines which deprecation warning should be shown, if any.
+func getDeprecationWarning(cmdName string, cfg *domainconfig.RuntimeConfig) deprecationWarning {
 	if suppressedCommands[cmdName] {
-		return false
+		return noWarning
 	}
 	if cfg.JSON {
-		return false
+		return noWarning
 	}
-	if cfg.ConfigSource != "foundry.toml" {
-		return false
+	switch cfg.ConfigSource {
+	case "treb.toml":
+		return v1TrebTomlWarning
+	case "foundry.toml":
+		if hasLegacyTrebConfig(cfg.FoundryConfig) {
+			return foundryTomlWarning
+		}
 	}
-	return hasLegacyTrebConfig(cfg.FoundryConfig)
+	return noWarning
 }
 
 // hasLegacyTrebConfig returns true if any foundry.toml profile has treb sender config.
