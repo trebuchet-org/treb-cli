@@ -118,3 +118,17 @@ Started: Sat Feb 28 07:33:50 PM CET 2026
   - Three integration test golden files (`init_new_project`, `init_existing_project`, `init_and_deploy`) all contain the "Next steps" text from the renderer
   - The `init_and_deploy` test uses PreSetup to write its own treb.toml (v1 format with anvil sender), so it doesn't test the generated template
 ---
+
+## 2026-02-28 - US-008
+- Added deprecation warnings for old config formats in `internal/cli/root.go`:
+  - Refactored `showLegacyConfigWarning` → `showDeprecationWarning` with `getDeprecationWarning` returning a `deprecationWarning` enum
+  - V1 treb.toml (`[ns.*]` format, ConfigSource="treb.toml") now shows: "Warning: treb.toml uses deprecated [ns.*] format. Run `treb migrate` to upgrade..."
+  - Legacy foundry.toml (ConfigSource="foundry.toml" with treb sender config) shows: "Warning: Sender config in foundry.toml is deprecated. Run `treb migrate` to move to treb.toml."
+  - Added "migrate" to suppressedCommands alongside existing "migrate-config"
+  - Updated tests to use `getDeprecationWarning` with enum assertions, added v1 treb.toml and migrate command test cases
+- Files changed: `internal/cli/root.go`, `internal/cli/root_test.go`
+- **Learnings for future iterations:**
+  - The deprecation warning system uses `ConfigSource` string to determine format: "treb.toml (v2)" = no warning, "treb.toml" = v1 warning, "foundry.toml" = foundry warning
+  - `showDeprecationWarning` is called once in `PersistentPreRunE` — no risk of duplicate warnings per invocation
+  - The `deprecationWarning` enum pattern (iota-based) keeps the warning type testable without string matching
+---
