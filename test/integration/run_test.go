@@ -119,6 +119,10 @@ func TestRunCommand(t *testing.T) {
 			TestCmds: [][]string{
 				{"run", "script/deploy/DeployCounter.s.sol", "--debug"},
 			},
+			Normalizers: append(
+				helpers.GetDefaultNormalizers(),
+				helpers.ForgeOutputNormalizer{},
+			),
 		},
 		{
 			Name: "run_nonexistent_script",

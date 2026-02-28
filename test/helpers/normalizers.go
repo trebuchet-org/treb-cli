@@ -209,6 +209,28 @@ func (n SpinnerNormalizer) Normalize(output string) string {
 	return output
 }
 
+// ForgeOutputNormalizer removes variable forge output that differs between environments:
+// - Foundry nightly build warnings
+// - Solidity compiler warnings (e.g., deprecation notices)
+type ForgeOutputNormalizer struct{}
+
+func (n ForgeOutputNormalizer) Normalize(output string) string {
+	// Normalize line endings: \r\n to \n, then strip remaining standalone \r
+	output = strings.ReplaceAll(output, "\r\n", "\n")
+	output = strings.ReplaceAll(output, "\r", "")
+
+	// Remove Foundry nightly warning (may or may not be present)
+	output = regexp.MustCompile(`(?m)^Warning: This is a nightly build of Foundry\.[^\n]*\n?`).ReplaceAllString(output, "")
+
+	// Remove "Compiler run successful with warnings:" + all warning lines until a blank line
+	output = regexp.MustCompile(`Compiler run successful with warnings:\n(?:[^\n]+\n)*?\n`).ReplaceAllString(output, "Compiler run successful!\n")
+
+	// Clean up double blank lines left behind
+	output = regexp.MustCompile(`\n{3,}`).ReplaceAllString(output, "\n\n")
+
+	return output
+}
+
 // getDefaultNormalizers returns the default set of normalizers
 func GetDefaultNormalizers() []Normalizer {
 	return []Normalizer{

@@ -56,6 +56,7 @@ func TestBuildEnv_WithForkOverride(t *testing.T) {
 	envMap := envToMap(env)
 
 	assert.Equal(t, "http://127.0.0.1:54321", envMap["SEPOLIA_RPC_URL"])
+	assert.Equal(t, "true", envMap["TREB_FORK_MODE"], "fork mode should set TREB_FORK_MODE=true")
 	assert.Equal(t, "default", envMap["FOUNDRY_PROFILE"])
 	assert.Equal(t, "sepolia", envMap["NETWORK"])
 	assert.Equal(t, "v1", envMap["LABEL"])
@@ -70,6 +71,8 @@ func TestBuildEnv_WithoutForkOverride(t *testing.T) {
 
 	_, hasForkVar := envMap["SEPOLIA_RPC_URL"]
 	assert.False(t, hasForkVar, "should not have fork RPC override when no fork is active")
+	_, hasForkMode := envMap["TREB_FORK_MODE"]
+	assert.False(t, hasForkMode, "should not have TREB_FORK_MODE when no fork is active")
 	assert.Equal(t, "default", envMap["FOUNDRY_PROFILE"])
 	assert.Equal(t, "sepolia", envMap["NETWORK"])
 }
@@ -134,4 +137,6 @@ func TestBuildEnv_NilForkOverrides(t *testing.T) {
 
 	assert.Equal(t, "default", envMap["FOUNDRY_PROFILE"])
 	assert.Equal(t, "sepolia", envMap["NETWORK"])
+	_, hasForkMode := envMap["TREB_FORK_MODE"]
+	assert.False(t, hasForkMode, "should not have TREB_FORK_MODE when fork overrides are nil")
 }
