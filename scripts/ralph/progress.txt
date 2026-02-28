@@ -14,6 +14,8 @@ Started: Sat Feb 28 07:33:50 PM CET 2026
 - `ResolveNamespace()` walks a dot-separated hierarchy chain built by `buildNamespaceChain()`: for "a.b.c" → ["default", "a", "a.b", "a.b.c"]. Profile and roles overlay at each level.
 - BurntSushi/toml handles quoted TOML keys correctly: `[namespace."production.ntt"]` creates key `production.ntt` (dot is literal, not nesting)
 - `detectTrebConfigFormat()` returns `TrebConfigFormatV2/V1/None` by checking for top-level keys: accounts/namespace → v2, ns → v1
+- AccountConfig and SenderConfig have identical fields — use `config.SenderConfig(acct)` type conversion instead of struct literal (staticcheck S1016)
+- `ResolvedNamespaceToTrebConfig()` validates Safe signer and OzGovernor proposer cross-references against the accounts map; keeps account names as-is in the output SenderConfig
 ---
 
 ## 2026-02-28 - US-001
@@ -52,4 +54,16 @@ Started: Sat Feb 28 07:33:50 PM CET 2026
   - Undefined parent namespaces are silently skipped — if "production" doesn't exist but "production.ntt" does, inheritance goes default → production.ntt
   - Default namespace always exists implicitly as empty (no roles, no profile) even if not defined in config
   - Profile and roles both use simple overlay semantics — child values replace parent values at each level
+---
+
+## 2026-02-28 - US-004
+- Implemented `ResolvedNamespaceToTrebConfig()` in `internal/config/trebfile_v2.go`:
+  - Converts ResolvedNamespace (role→AccountConfig) to TrebConfig (role→SenderConfig) using type conversion
+  - Validates Safe signer and OzGovernor proposer cross-references against the global accounts map
+  - Returns error for references to non-existent accounts
+- Files changed: `internal/config/trebfile_v2.go`, `internal/config/trebfile_v2_test.go`
+- **Learnings for future iterations:**
+  - AccountConfig and SenderConfig have identical field layouts — use `config.SenderConfig(acct)` type conversion (staticcheck S1016 catches struct literal copies)
+  - The signer/proposer fields in output SenderConfig keep the account name as-is; SendersManager already knows how to resolve these references
+  - Cross-reference validation only checks that the referenced account exists in the accounts map, not that it's mapped to a role in the current namespace
 ---
