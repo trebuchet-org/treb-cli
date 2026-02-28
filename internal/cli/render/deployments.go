@@ -53,13 +53,50 @@ func NewDeploymentsRenderer(out io.Writer, color bool) *DeploymentsRenderer {
 // RenderDeploymentList renders deployments in the tree-style format
 func (r *DeploymentsRenderer) RenderDeploymentList(result *usecase.DeploymentListResult) error {
 	if len(result.Deployments) == 0 {
-		fmt.Fprintln(r.out, "No deployments found")
+		if len(result.OtherNamespaces) > 0 {
+			r.renderNamespaceDiscoveryHint(result)
+		} else {
+			fmt.Fprintln(r.out, "No deployments found")
+		}
 		return nil
 	}
 
 	// Display in tree-style table format
 	r.displayTableFormat(result.Deployments, result.NetworkNames, result.ForkDeploymentIDs)
 	return nil
+}
+
+// renderNamespaceDiscoveryHint displays a hint about other namespaces that have deployments
+func (r *DeploymentsRenderer) renderNamespaceDiscoveryHint(result *usecase.DeploymentListResult) {
+	// Header line: No deployments found in namespace "<name>" [on <network> (<chainID>)]
+	msg := fmt.Sprintf("No deployments found in namespace %q", result.CurrentNamespace)
+	if result.CurrentNetwork != "" {
+		msg += fmt.Sprintf(" on %s (%d)", result.CurrentNetwork, result.CurrentChainID)
+	}
+	fmt.Fprintln(r.out, msg)
+	fmt.Fprintln(r.out)
+
+	fmt.Fprintln(r.out, "Other namespaces with deployments:")
+	fmt.Fprintln(r.out)
+
+	// Sort namespaces alphabetically
+	namespaces := make([]string, 0, len(result.OtherNamespaces))
+	for ns := range result.OtherNamespaces {
+		namespaces = append(namespaces, ns)
+	}
+	sort.Strings(namespaces)
+
+	for _, ns := range namespaces {
+		count := result.OtherNamespaces[ns]
+		unit := "deployments"
+		if count == 1 {
+			unit = "deployment"
+		}
+		fmt.Fprintf(r.out, "  %-20s %d %s\n", ns, count, unit)
+	}
+
+	fmt.Fprintln(r.out)
+	fmt.Fprintln(r.out, "Use --namespace <name> or `treb config set namespace <name>` to switch.")
 }
 
 // displayTableFormat shows deployments in table format

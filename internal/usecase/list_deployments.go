@@ -82,12 +82,56 @@ func (uc *ListDeployments) Run(ctx context.Context, params ListDeploymentsParams
 		}
 	}
 
-	return &DeploymentListResult{
+	result := &DeploymentListResult{
 		Deployments:       deployments,
 		Summary:           summary,
 		NetworkNames:      networkNames,
 		ForkDeploymentIDs: forkDeploymentIDs,
-	}, nil
+		CurrentNamespace:  uc.config.Namespace,
+	}
+
+	if uc.config.Network != nil {
+		result.CurrentNetwork = uc.config.Network.Name
+		result.CurrentChainID = uc.config.Network.ChainID
+	}
+
+	// When no deployments found, check other namespaces for discovery hints
+	if len(deployments) == 0 {
+		result.OtherNamespaces = uc.discoverOtherNamespaces(ctx)
+	}
+
+	return result, nil
+}
+
+// discoverOtherNamespaces checks for deployments in other namespaces.
+// Returns a map of namespace name to deployment count, excluding the current namespace.
+// Returns nil if no other namespaces have deployments.
+func (uc *ListDeployments) discoverOtherNamespaces(ctx context.Context) map[string]int {
+	allDeployments, err := uc.repo.GetAllDeployments(ctx)
+	if err != nil {
+		return nil
+	}
+
+	counts := make(map[string]int)
+	for _, dep := range allDeployments {
+		// Skip the current namespace
+		if dep.Namespace == uc.config.Namespace {
+			continue
+		}
+
+		// Filter by chain ID if a network is set
+		if uc.config.Network != nil && dep.ChainID != uc.config.Network.ChainID {
+			continue
+		}
+
+		counts[dep.Namespace]++
+	}
+
+	if len(counts) == 0 {
+		return nil
+	}
+
+	return counts
 }
 
 // computeForkDeploymentIDs determines which deployments were added during fork mode.

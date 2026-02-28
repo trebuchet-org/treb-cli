@@ -1,0 +1,9 @@
+=== cmd 0: [list --namespace staging] ===
+No deployments found in namespace "staging" on anvil-31337 (31337)
+
+Other namespaces with deployments:
+
+  default              1 deployment
+  production           1 deployment
+
+Use --namespace <name> or `treb config set namespace <name>` to switch.
