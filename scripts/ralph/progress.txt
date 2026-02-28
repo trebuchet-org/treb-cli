@@ -1,70 +1,42 @@
 # Ralph Progress Log
-Started: Sat Feb 28 08:02:38 PM CET 2026
+Started: Sat Feb 28 07:33:50 PM CET 2026
 ---
 
 ## Codebase Patterns
-- Use function-based mocks for testing use cases (embed interface + func fields pattern)
-- RuntimeConfig holds Namespace (string) and Network (*config.Network, nil if unset)
-- DeploymentRepository.GetAllDeployments() returns all deployments unfiltered
-- ListDeployments filters via domain.DeploymentFilter (namespace, chainID, contractName, label, type)
-- Use `domain.ErrNotFound` for not-found errors
-- ForkStateStore.Load() returns error when no fork state exists
-- Unit tests go in the same package (package usecase) for internal access
-- testify/assert + testify/require for assertions
-- DeploymentsRenderer.RenderDeploymentList() handles both empty and non-empty states; empty state branches on OtherNamespaces
-- Renderer uses fmt.Fprintln/Fprintf to r.out (io.Writer) for all output
-- DeploymentListResult carries CurrentNamespace, CurrentNetwork, CurrentChainID for display context
-- JSON output from `list --json` is now wrapped in an object: `{"deployments": [...], "otherNamespaces": {...}}` — use `extractJSONObject()` in integration tests
-- Integration tests for namespace-filtered empty lists: deploy in default/production namespaces, then list in a different namespace to trigger discovery
+- Domain config types live in `internal/domain/config/`, config loading logic in `internal/config/`
+- SenderConfig has fields: Type, Address, PrivateKey, Safe, Signer, DerivationPath, Governor, Timelock, Proposer
+- Tests use `github.com/stretchr/testify/assert` and `require` packages
+- Config tests in `internal/config/` are in `package config` (not `config_test`), allowing access to unexported functions
+- Domain config tests can be in either `package config` or `package config_test`
+- Environment variable expansion uses `os.ExpandEnv()` during config load time
+- TOML parsing uses `github.com/BurntSushi/toml`
+- For v2 namespace parsing, use `map[string]map[string]string` as the TOML decode target, then manually extract "profile" as reserved key; all other keys become role→account mappings
+- BurntSushi/toml handles quoted TOML keys correctly: `[namespace."production.ntt"]` creates key `production.ntt` (dot is literal, not nesting)
+- `detectTrebConfigFormat()` returns `TrebConfigFormatV2/V1/None` by checking for top-level keys: accounts/namespace → v2, ns → v1
 ---
 
 ## 2026-02-28 - US-001
-- Implemented namespace discovery in ListDeployments use case
-- Files changed:
-  - internal/usecase/ports.go: Added OtherNamespaces, CurrentNamespace, CurrentNetwork fields to DeploymentListResult
-  - internal/usecase/list_deployments.go: Added discoverOtherNamespaces() method, populated new fields in Run()
-  - internal/usecase/list_deployments_test.go: New file with 6 test cases
+- Implemented new domain types in `internal/domain/config/trebfile_v2.go`:
+  - `AccountConfig` struct mirroring SenderConfig fields for named signing entities
+  - `NamespaceRoles` struct with Profile and Roles map[string]string
+  - `TrebFileConfigV2` struct with Accounts, Namespace, and Fork sections
+  - `ForkConfig` struct with Setup string
+  - `ResolvedNamespace` struct with Profile and Accounts map[string]AccountConfig
+- Files changed: `internal/domain/config/trebfile_v2.go`, `internal/domain/config/trebfile_v2_test.go`
 - **Learnings for future iterations:**
-  - DeploymentListResult is the central struct passed from use case to renderer — add fields here for cross-cutting data
-  - discoverOtherNamespaces uses GetAllDeployments (cold path only when current ns is empty)
-  - Chain ID filtering is handled by checking dep.ChainID != uc.config.Network.ChainID
-  - When Network is nil, no chain filtering is applied (counts all chains)
----
-
-## 2026-02-28 - US-003
-- Included namespace discovery data in JSON output when current namespace is empty
-- Files changed:
-  - internal/cli/list.go: Added listJSONOutput struct wrapping entries + optional OtherNamespaces; updated renderListJSON to use wrapped output
-- **Learnings for future iterations:**
-  - JSON output previously returned a bare array of entries; now returns an object with `deployments` array and optional `otherNamespaces` map
-  - This is a breaking change to the JSON output format (array → object) — downstream tooling may need updating
-  - `omitempty` on map fields in Go omits the field when the map is nil or empty, which is the desired behavior here
-  - The renderListJSON function is separate from the table renderer — JSON output is handled in internal/cli/list.go, not in render/deployments.go
+  - NamespaceRoles.Roles uses `toml:"-"` tag because roles are dynamic string keys parsed manually, not via struct tags
+  - AccountConfig intentionally mirrors SenderConfig fields — they're separate types for semantic clarity (accounts are global, senders are namespace-scoped)
+  - ResolvedNamespace.Accounts maps role name → AccountConfig (not account name → AccountConfig)
 ---
 
 ## 2026-02-28 - US-002
-- Rendered namespace discovery hint in table output when current namespace has no deployments
-- Files changed:
-  - internal/cli/render/deployments.go: Added renderNamespaceDiscoveryHint() method, updated RenderDeploymentList() to branch on OtherNamespaces
-  - internal/usecase/ports.go: Added CurrentChainID field to DeploymentListResult
-  - internal/usecase/list_deployments.go: Populated CurrentChainID from uc.config.Network.ChainID
+- Implemented v2 treb.toml parsing in `internal/config/trebfile_v2.go`:
+  - `loadTrebConfigV2()` — parses [accounts.*] and [namespace.*] sections with env var expansion
+  - `detectTrebConfigFormat()` — returns TrebConfigFormatV2/V1/None based on top-level TOML keys
+  - `trebFileV2Raw` helper struct for two-phase TOML decoding (namespace roles need manual extraction)
+- Files changed: `internal/config/trebfile_v2.go`, `internal/config/trebfile_v2_test.go`
 - **Learnings for future iterations:**
-  - The renderer needs both network name and chain ID for display — CurrentChainID was added to DeploymentListResult for this
-  - Hint format: header line with namespace/network info, blank line, sorted namespace list with counts, blank line, usage tip
-  - Singular/plural handling: "1 deployment" vs "N deployments"
-  - sort.Strings already imported in deployments.go (used by existing displayTableFormat)
----
-
-## 2026-02-28 - US-004
-- Added integration tests for namespace discovery feature
-- Files changed:
-  - test/integration/list_test.go: Added list_namespace_discovery_hint (table output) and list_namespace_discovery_json (JSON output) test cases; updated list_json_output to use new JSON object format; added extractJSONObject helper
-  - test/integration/fork_test.go: Updated fork_list_json_with_fork_field test to use new JSON object format; removed unused extractJSONArray function
-  - test/testdata/golden/integration/TestListCommand/list_namespace_discovery_hint/commands.golden: New golden file for discovery hint output
-- **Learnings for future iterations:**
-  - The JSON format change (array → object) broke existing tests in both list_test.go and fork_test.go — when changing output format, grep for all tests consuming that format
-  - extractJSONObject helper extracts JSON `{...}` from framework-wrapped output (which prepends `=== cmd N: [...] ===\n` headers)
-  - Existing tests `list_empty` and `list_with_deployments` already cover the "no hint" cases (no deployments anywhere / deployments in current namespace)
-  - Integration test setup: deploy in multiple namespaces via --namespace flag, then list in an empty namespace to trigger discovery
-  - The `run_with_debug` test is flaky due to forge output normalization — pre-existing issue, not related to this feature
+  - `trebFileV2Raw` uses `map[string]map[string]string` for Namespace because all values (profile + role mappings) are flat strings — this avoids custom TOML unmarshaling
+  - `loadTrebConfigV2()` returns (nil, nil) for v1 format files since the raw struct's Accounts/Namespace fields stay empty when [ns.*] sections are present (BurntSushi/toml silently ignores undecoded keys)
+  - Env var expansion happens on AccountConfig fields only, not on namespace role values (role values are account name references, not secrets)
 ---
