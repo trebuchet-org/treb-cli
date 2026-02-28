@@ -148,3 +148,23 @@ Started: Sat Feb 28 07:33:50 PM CET 2026
   - `sortedMapKeys[V any]()` generic helper ensures deterministic processing order for maps
   - Literal private key values (not env var refs) get generic name `private-key`
 ---
+
+## 2026-02-28 - US-010
+- Built `treb migrate` command in `internal/cli/migrate.go`:
+  - `NewMigrateCmd()` — creates the cobra command with `--non-interactive` support
+  - `runMigrate()` — orchestrates: detect format → extract profiles → deduplicate → generate v2 TOML → write
+  - `generateTrebTomlV2()` — generates well-formatted treb.toml with `[accounts.*]` and `[namespace.*]` sections
+  - `writeAccountConfig()` — writes AccountConfig fields (same pattern as `writeSenderConfig()` in migrate_config.go)
+  - Errors if treb.toml already exists in v2 format
+  - Shows preview and prompts for confirmation in interactive mode
+  - Offers to remove `[profile.*.treb.*]` sections from foundry.toml after writing
+- Exported `DetectTrebConfigFormat()` from `internal/config/trebfile_v2.go` for cross-package use
+- Registered `migrate` command in `internal/cli/root.go` management group
+- Files changed: `internal/cli/migrate.go` (new), `internal/cli/migrate_test.go` (new), `internal/cli/root.go`, `internal/config/provider.go`, `internal/config/trebfile_v2.go`, `internal/config/trebfile_v2_test.go`
+- **Learnings for future iterations:**
+  - The `migrate` command reuses `extractTrebProfiles()` and `cleanupFoundryToml()` from `migrate_config.go` — no need to duplicate these helpers
+  - `DeduplicateSenders()` from `internal/config/dedup.go` handles the heavy lifting of merging identical configs and remapping cross-references
+  - When exporting a function from `internal/config/`, update callers in both `provider.go` and the test file
+  - The `nsInfo` type is local to `migrate.go` — keeps it simple since it's only used for TOML generation
+  - `sortedKeys[V any]()` generic helper parallels `sortedMapKeys` in dedup.go but lives in the cli package
+---
