@@ -62,7 +62,7 @@ func (r *InitRenderer) printSuccessMessage(result *usecase.InitProjectResult) {
 	fmt.Println("")
 
 	fmt.Println("2. Configure deployment environments in treb.toml:")
-	fmt.Println("   • Add [ns.<namespace>.senders.<name>] sections for each environment")
+	fmt.Println("   • Add accounts in [accounts.<name>] and map them in [namespace.<name>]")
 	fmt.Println("   • See documentation for Safe multisig and hardware wallet support")
 	fmt.Println("")
 

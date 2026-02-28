@@ -204,17 +204,32 @@ func (i *InitProject) createTrebToml(ctx context.Context) InitStep {
 		}
 	}
 
-	trebToml := `# treb.toml — Treb sender configuration
+	trebToml := `# treb.toml — Treb configuration
 #
-# Each [ns.<name>] section defines a namespace with sender configs.
-# The optional 'profile' field maps to a foundry.toml profile (defaults to namespace name).
+# Accounts define signing entities (wallets, hardware wallets, multisigs).
+# Namespaces map roles to accounts for different environments.
+# Namespaces support dot-separated names for hierarchical inheritance
+# (e.g., "production.ntt" inherits from "production", which inherits from "default").
 
-[ns.default]
-profile = "default"
+# --- Accounts ---
+# Each [accounts.<name>] defines a named signing entity.
 
-[ns.default.senders.deployer]
+[accounts.deployer]
 type = "private_key"
 private_key = "${DEPLOYER_PRIVATE_KEY}"
+
+# --- Namespaces ---
+# Each [namespace.<name>] maps roles to account names.
+# The optional 'profile' key maps to a foundry.toml profile (defaults to namespace name).
+
+[namespace.default]
+profile = "default"
+deployer = "deployer"
+
+# --- Fork Configuration ---
+# Uncomment to configure fork setup script for treb dev commands.
+# [fork]
+# setup = "script/ForkSetup.s.sol"
 `
 
 	if err := i.fileWriter.WriteScript(ctx, "treb.toml", trebToml); err != nil {
