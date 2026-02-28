@@ -16,6 +16,10 @@ Started: Sat Feb 28 07:33:50 PM CET 2026
 - `detectTrebConfigFormat()` returns `TrebConfigFormatV2/V1/None` by checking for top-level keys: accounts/namespace → v2, ns → v1
 - AccountConfig and SenderConfig have identical fields — use `config.SenderConfig(acct)` type conversion instead of struct literal (staticcheck S1016)
 - `ResolvedNamespaceToTrebConfig()` validates Safe signer and OzGovernor proposer cross-references against the accounts map; keeps account names as-is in the output SenderConfig
+- Wire DI: when changing constructor signatures (adding/removing params), update both `wire.go` and `wire_gen.go`; manual edit of `wire_gen.go` works fine
+- Viper reads config.local.json fields case-insensitively: JSON key `"forkSetup"` is accessible via `v.GetString("forksetup")`
+- For backwards compat config reading, Provider can use viper directly (bypassing the LocalConfig struct) to read legacy fields from config.local.json
+- Integration tests: when config.local.json needs fields the LocalConfig struct doesn't have, write the JSON directly in PreSetup instead of using `config set`
 ---
 
 ## 2026-02-28 - US-001
@@ -82,4 +86,21 @@ Started: Sat Feb 28 07:33:50 PM CET 2026
   - When v2 namespace has no explicit profile, `FoundryProfile` defaults to the namespace name (same behavior as v1)
   - The v1 path in the switch still calls `loadTrebConfig()` (not `loadTrebConfigV2()`) to maintain exact backwards compatibility
   - All existing tests (including v1 format tests) continue to pass unchanged — the format detection is transparent
+---
+
+## 2026-02-28 - US-006
+- Moved forkSetup from config.local.json to treb.toml [fork] section:
+  - Removed `ForkSetup` field from `LocalConfig` struct and `ConfigKeyForkSetup` constant
+  - `config set/remove fork.setup` now returns error with helpful message pointing to treb.toml
+  - `enter_fork.go` and `restart_fork.go` now read ForkSetup from `RuntimeConfig` instead of `LocalConfig`
+  - Removed `localConfig LocalConfigRepository` dependency from EnterFork and RestartFork use cases
+  - Provider reads forkSetup from viper for v1/legacy backwards compat (`v.GetString("forksetup")`)
+  - Updated `wire_gen.go` to match new constructor signatures
+  - Updated CLI help text, golden files, and integration tests
+- Files changed: `internal/domain/config/local.go`, `internal/usecase/enter_fork.go`, `internal/usecase/restart_fork.go`, `internal/usecase/set_config.go`, `internal/usecase/remove_config.go`, `internal/config/provider.go`, `internal/config/provider_test.go`, `internal/app/wire_gen.go`, `internal/cli/config.go`, `test/integration/fork_test.go`, 2 golden files
+- **Learnings for future iterations:**
+  - When removing a field from a struct used by config set/remove, add an early rejection check in the use case BEFORE the IsValidConfigKey check, so the user gets a specific message instead of "unknown key"
+  - Viper can read fields from config.local.json that aren't in the Go struct — useful for backwards compat when removing fields from the struct
+  - For integration tests that need raw JSON fields not in the struct, use PreSetup to write config.local.json directly with `os.WriteFile`
+  - Wire DI: removing a constructor param means removing it from both the wire.go declarations AND the wire_gen.go generated calls
 ---

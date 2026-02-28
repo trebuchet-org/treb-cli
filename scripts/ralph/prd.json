@@ -111,7 +111,7 @@
         "Unit tests pass"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
