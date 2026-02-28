@@ -67,3 +67,19 @@ Started: Sat Feb 28 07:33:50 PM CET 2026
   - The signer/proposer fields in output SenderConfig keep the account name as-is; SendersManager already knows how to resolve these references
   - Cross-reference validation only checks that the referenced account exists in the accounts map, not that it's mapped to a role in the current namespace
 ---
+
+## 2026-02-28 - US-005
+- Integrated v2 config loader into Provider() with format detection and routing
+  - Added `ForkSetup` field to `RuntimeConfig` struct
+  - Updated `Provider()` to call `detectTrebConfigFormat()` first, then route to v2/v1/legacy paths
+  - V2 path: `loadTrebConfigV2()` → `ResolveNamespace()` → `ResolvedNamespaceToTrebConfig()`
+  - Sets `ConfigSource` to `"treb.toml (v2)"`, `"treb.toml"`, or `"foundry.toml"`
+  - Reads `fork.setup` from v2 `[fork]` section into `RuntimeConfig.ForkSetup`
+  - Falls back to `cfg.Namespace` when no profile is set in resolved namespace
+- Files changed: `internal/domain/config/runtime.go`, `internal/config/provider.go`, `internal/config/provider_test.go`
+- **Learnings for future iterations:**
+  - Provider uses a switch on `TrebConfigFormat` to route between v2/v1/legacy paths cleanly
+  - When v2 namespace has no explicit profile, `FoundryProfile` defaults to the namespace name (same behavior as v1)
+  - The v1 path in the switch still calls `loadTrebConfig()` (not `loadTrebConfigV2()`) to maintain exact backwards compatibility
+  - All existing tests (including v1 format tests) continue to pass unchanged — the format detection is transparent
+---
