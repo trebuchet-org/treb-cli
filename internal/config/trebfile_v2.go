@@ -161,6 +161,36 @@ func ResolveNamespace(cfg *config.TrebFileConfigV2, namespaceName string) (*conf
 	}, nil
 }
 
+// ResolvedNamespaceToTrebConfig converts a ResolvedNamespace (accounts + role mappings)
+// into the existing TrebConfig with Senders map that the rest of the codebase expects.
+// Each role in the resolved namespace becomes a SenderConfig entry keyed by role name.
+// Cross-references (Safe signer, OzGovernor proposer) are validated against the accounts map.
+func ResolvedNamespaceToTrebConfig(resolved *config.ResolvedNamespace, accounts map[string]config.AccountConfig) (*config.TrebConfig, error) {
+	senders := make(map[string]config.SenderConfig, len(resolved.Accounts))
+
+	for roleName, acct := range resolved.Accounts {
+		sender := config.SenderConfig(acct)
+
+		// Validate Safe signer cross-reference
+		if acct.Type == config.SenderTypeSafe && acct.Signer != "" {
+			if _, exists := accounts[acct.Signer]; !exists {
+				return nil, fmt.Errorf("role %q: safe account references unknown signer account %q", roleName, acct.Signer)
+			}
+		}
+
+		// Validate OzGovernor proposer cross-reference
+		if acct.Type == config.SenderTypeOZGovernor && acct.Proposer != "" {
+			if _, exists := accounts[acct.Proposer]; !exists {
+				return nil, fmt.Errorf("role %q: oz_governor account references unknown proposer account %q", roleName, acct.Proposer)
+			}
+		}
+
+		senders[roleName] = sender
+	}
+
+	return &config.TrebConfig{Senders: senders}, nil
+}
+
 // buildNamespaceChain returns the ordered list of namespace names to resolve,
 // starting from "default" and adding each dot-separated prefix.
 // For "production.ntt.v2" it returns: ["default", "production", "production.ntt", "production.ntt.v2"]

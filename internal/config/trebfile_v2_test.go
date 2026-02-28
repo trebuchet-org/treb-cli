@@ -524,6 +524,186 @@ func TestResolveNamespace(t *testing.T) {
 	})
 }
 
+func TestResolvedNamespaceToTrebConfig(t *testing.T) {
+	t.Run("private_key account mapping", func(t *testing.T) {
+		accounts := map[string]config.AccountConfig{
+			"deployer": {Type: config.SenderTypePrivateKey, PrivateKey: "0x1234"},
+		}
+		resolved := &config.ResolvedNamespace{
+			Profile: "default",
+			Accounts: map[string]config.AccountConfig{
+				"deployer": accounts["deployer"],
+			},
+		}
+
+		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
+		require.NoError(t, err)
+		require.NotNil(t, trebCfg)
+
+		assert.Len(t, trebCfg.Senders, 1)
+		sender := trebCfg.Senders["deployer"]
+		assert.Equal(t, config.SenderTypePrivateKey, sender.Type)
+		assert.Equal(t, "0x1234", sender.PrivateKey)
+	})
+
+	t.Run("safe account with signer resolution", func(t *testing.T) {
+		accounts := map[string]config.AccountConfig{
+			"dev-wallet": {Type: config.SenderTypePrivateKey, PrivateKey: "0xdev"},
+			"safe0":      {Type: config.SenderTypeSafe, Safe: "0xSafeAddr", Signer: "dev-wallet"},
+		}
+		resolved := &config.ResolvedNamespace{
+			Profile: "production",
+			Accounts: map[string]config.AccountConfig{
+				"deployer": accounts["safe0"],
+				"proposer": accounts["dev-wallet"],
+			},
+		}
+
+		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
+		require.NoError(t, err)
+		require.NotNil(t, trebCfg)
+
+		assert.Len(t, trebCfg.Senders, 2)
+
+		// Safe sender should have signer set to the account name
+		safeSender := trebCfg.Senders["deployer"]
+		assert.Equal(t, config.SenderTypeSafe, safeSender.Type)
+		assert.Equal(t, "0xSafeAddr", safeSender.Safe)
+		assert.Equal(t, "dev-wallet", safeSender.Signer)
+
+		// Signer account should be present as a sender
+		signerSender := trebCfg.Senders["proposer"]
+		assert.Equal(t, config.SenderTypePrivateKey, signerSender.Type)
+		assert.Equal(t, "0xdev", signerSender.PrivateKey)
+	})
+
+	t.Run("oz_governor with proposer", func(t *testing.T) {
+		accounts := map[string]config.AccountConfig{
+			"hw-wallet": {Type: config.SenderTypeLedger, DerivationPath: "m/44'/60'/0'/0/0"},
+			"gov":       {Type: config.SenderTypeOZGovernor, Governor: "0xGovAddr", Timelock: "0xTimelockAddr", Proposer: "hw-wallet"},
+		}
+		resolved := &config.ResolvedNamespace{
+			Profile: "production",
+			Accounts: map[string]config.AccountConfig{
+				"governor": accounts["gov"],
+				"proposer": accounts["hw-wallet"],
+			},
+		}
+
+		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
+		require.NoError(t, err)
+		require.NotNil(t, trebCfg)
+
+		assert.Len(t, trebCfg.Senders, 2)
+
+		govSender := trebCfg.Senders["governor"]
+		assert.Equal(t, config.SenderTypeOZGovernor, govSender.Type)
+		assert.Equal(t, "0xGovAddr", govSender.Governor)
+		assert.Equal(t, "0xTimelockAddr", govSender.Timelock)
+		assert.Equal(t, "hw-wallet", govSender.Proposer)
+
+		proposerSender := trebCfg.Senders["proposer"]
+		assert.Equal(t, config.SenderTypeLedger, proposerSender.Type)
+		assert.Equal(t, "m/44'/60'/0'/0/0", proposerSender.DerivationPath)
+	})
+
+	t.Run("missing signer account returns error", func(t *testing.T) {
+		accounts := map[string]config.AccountConfig{
+			"safe0": {Type: config.SenderTypeSafe, Safe: "0xSafeAddr", Signer: "nonexistent"},
+		}
+		resolved := &config.ResolvedNamespace{
+			Profile: "default",
+			Accounts: map[string]config.AccountConfig{
+				"deployer": accounts["safe0"],
+			},
+		}
+
+		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
+		assert.Error(t, err)
+		assert.Nil(t, trebCfg)
+		assert.Contains(t, err.Error(), "unknown signer account \"nonexistent\"")
+	})
+
+	t.Run("missing proposer account returns error", func(t *testing.T) {
+		accounts := map[string]config.AccountConfig{
+			"gov": {Type: config.SenderTypeOZGovernor, Governor: "0xGovAddr", Proposer: "nonexistent"},
+		}
+		resolved := &config.ResolvedNamespace{
+			Profile: "default",
+			Accounts: map[string]config.AccountConfig{
+				"governor": accounts["gov"],
+			},
+		}
+
+		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
+		assert.Error(t, err)
+		assert.Nil(t, trebCfg)
+		assert.Contains(t, err.Error(), "unknown proposer account \"nonexistent\"")
+	})
+
+	t.Run("all account fields are mapped to sender config", func(t *testing.T) {
+		accounts := map[string]config.AccountConfig{
+			"full": {
+				Type:           config.SenderTypeLedger,
+				Address:        "0xAddr",
+				DerivationPath: "m/44'/60'/0'/0/0",
+			},
+		}
+		resolved := &config.ResolvedNamespace{
+			Profile: "default",
+			Accounts: map[string]config.AccountConfig{
+				"hw": accounts["full"],
+			},
+		}
+
+		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
+		require.NoError(t, err)
+
+		sender := trebCfg.Senders["hw"]
+		assert.Equal(t, config.SenderTypeLedger, sender.Type)
+		assert.Equal(t, "0xAddr", sender.Address)
+		assert.Equal(t, "m/44'/60'/0'/0/0", sender.DerivationPath)
+	})
+
+	t.Run("empty resolved namespace produces empty senders", func(t *testing.T) {
+		accounts := map[string]config.AccountConfig{
+			"deployer": {Type: config.SenderTypePrivateKey, PrivateKey: "0x1234"},
+		}
+		resolved := &config.ResolvedNamespace{
+			Profile:  "default",
+			Accounts: map[string]config.AccountConfig{},
+		}
+
+		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
+		require.NoError(t, err)
+		assert.Empty(t, trebCfg.Senders)
+	})
+
+	t.Run("multiple roles with mixed types", func(t *testing.T) {
+		accounts := map[string]config.AccountConfig{
+			"pk":     {Type: config.SenderTypePrivateKey, PrivateKey: "0x1234"},
+			"ledger": {Type: config.SenderTypeLedger, DerivationPath: "m/44'/60'/0'/0/0"},
+			"safe0":  {Type: config.SenderTypeSafe, Safe: "0xSafe", Signer: "ledger"},
+		}
+		resolved := &config.ResolvedNamespace{
+			Profile: "mainnet",
+			Accounts: map[string]config.AccountConfig{
+				"deployer": accounts["pk"],
+				"admin":    accounts["ledger"],
+				"multisig": accounts["safe0"],
+			},
+		}
+
+		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
+		require.NoError(t, err)
+		assert.Len(t, trebCfg.Senders, 3)
+		assert.Equal(t, config.SenderTypePrivateKey, trebCfg.Senders["deployer"].Type)
+		assert.Equal(t, config.SenderTypeLedger, trebCfg.Senders["admin"].Type)
+		assert.Equal(t, config.SenderTypeSafe, trebCfg.Senders["multisig"].Type)
+		assert.Equal(t, "ledger", trebCfg.Senders["multisig"].Signer)
+	})
+}
+
 func TestBuildNamespaceChain(t *testing.T) {
 	tests := []struct {
 		name     string
