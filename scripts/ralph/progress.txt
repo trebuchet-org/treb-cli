@@ -104,3 +104,17 @@ Started: Sat Feb 28 07:33:50 PM CET 2026
   - For integration tests that need raw JSON fields not in the struct, use PreSetup to write config.local.json directly with `os.WriteFile`
   - Wire DI: removing a constructor param means removing it from both the wire.go declarations AND the wire_gen.go generated calls
 ---
+
+## 2026-02-28 - US-007
+- Updated `treb init` to generate new v2 treb.toml format with `[accounts.*]` and `[namespace.*]` sections:
+  - New template in `createTrebToml()` includes: `[accounts.deployer]`, `[namespace.default]`, and commented-out `[fork]` section
+  - Added helpful comments explaining accounts vs namespaces and dot-separated inheritance
+  - Updated render hint text from old `[ns.<namespace>.senders.<name>]` to new `[accounts.<name>]` and `[namespace.<name>]` format
+  - Updated 5 golden files (2 treb.toml.golden + 3 commands.golden) to match new output
+- Files changed: `internal/usecase/init_project.go`, `internal/cli/render/init.go`, 5 golden files
+- **Learnings for future iterations:**
+  - The init command template is a hardcoded string in `createTrebToml()` — no template engine or file needed
+  - The render file (`internal/cli/render/init.go`) contains "Next steps" hints that reference config format — must be updated when changing config format
+  - Three integration test golden files (`init_new_project`, `init_existing_project`, `init_and_deploy`) all contain the "Next steps" text from the renderer
+  - The `init_and_deploy` test uses PreSetup to write its own treb.toml (v1 format with anvil sender), so it doesn't test the generated template
+---
