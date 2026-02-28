@@ -234,7 +234,9 @@ func (i *Repository) GetContract(ctx context.Context, key string) (*models.Contr
 	return nil, fmt.Errorf("contract not found: %s", key)
 }
 
-// SearchContracts searches for contracts matching a pattern
+// SearchContracts searches for contracts matching a pattern, triggering a
+// forge build if no results are found (build-on-miss). Use this during
+// pre-execution phases where compilation may not have happened yet.
 func (i *Repository) SearchContracts(ctx context.Context, query domain.ContractQuery) ([]*models.Contract, error) {
 	if err := i.Index(); err != nil {
 		return nil, err
@@ -254,6 +256,17 @@ func (i *Repository) SearchContracts(ctx context.Context, query domain.ContractQ
 	}
 
 	return results, nil
+}
+
+// FindContracts searches the existing artifact index without triggering a build.
+// Use this for best-effort lookups where compilation has already happened
+// (e.g., ABI resolution during output rendering).
+func (i *Repository) FindContracts(ctx context.Context, query domain.ContractQuery) ([]*models.Contract, error) {
+	if err := i.Index(); err != nil {
+		return nil, err
+	}
+
+	return i.searchContractsLocked(query), nil
 }
 
 func (i *Repository) searchContractsLocked(query domain.ContractQuery) []*models.Contract {

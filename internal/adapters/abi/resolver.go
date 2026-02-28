@@ -43,7 +43,10 @@ func (r *ABIResolver) Get(ctx context.Context, artifact *models.Artifact) (*abi.
 
 func (r *ABIResolver) FindByRef(ctx context.Context, contractRef string) (*abi.ABI, error) {
 	query := domain.ContractQuery{Query: &contractRef}
-	contracts, err := r.contracts.SearchContracts(ctx, query)
+	// Use FindContracts (index-only, no build-on-miss) since ABI resolution
+	// happens after forge script has already compiled everything. Triggering
+	// a build here would cause a 1-2 minute hang during output rendering.
+	contracts, err := r.contracts.FindContracts(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search contracts: %w", err)
 	}

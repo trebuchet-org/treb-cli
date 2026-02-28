@@ -33,8 +33,16 @@ type DeploymentRepository interface {
 
 // ContractIndexer provides access to compiled contracts
 type ContractRepository interface {
-	GetContract(ctx context.Context, key string) (*models.Contract, error)
+	// SearchContracts searches for contracts matching a query, triggering a
+	// forge build if no results are found (build-on-miss). Use this during
+	// pre-execution phases like script resolution and parameter resolution
+	// where compilation may not have happened yet.
 	SearchContracts(ctx context.Context, query domain.ContractQuery) ([]*models.Contract, error)
+	// FindContracts searches the existing artifact index without triggering
+	// a build. Use this for best-effort lookups where compilation has already
+	// happened (e.g., ABI resolution during output rendering).
+	FindContracts(ctx context.Context, query domain.ContractQuery) ([]*models.Contract, error)
+	GetContract(ctx context.Context, key string) (*models.Contract, error)
 	GetContractByArtifact(ctx context.Context, artifact string) (*models.Contract, error)
 }
 
