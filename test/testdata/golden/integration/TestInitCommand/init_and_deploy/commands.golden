@@ -36,6 +36,7 @@
 
 To deploy, run:
   treb run script/deploy/DeployCounter.s.sol --network <network>
+Warning: treb.toml uses deprecated [ns.*] format. Run `treb migrate` to upgrade to the new accounts/namespace format.
 
 
 === cmd 2: [run script/deploy/DeployCounter.s.sol -n anvil-31337] ===
@@ -73,6 +74,7 @@ Counter at 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
 
 ✓ Updated registry for anvil-31337 network in namespace default
 ✓ Script execution completed successfully
+Warning: treb.toml uses deprecated [ns.*] format. Run `treb migrate` to upgrade to the new accounts/namespace format.
 
 
 === cmd 3: [list] ===
@@ -83,3 +85,4 @@ Counter at 0x74148047D6bDf624C94eFc07F60cEE7b6052FB29
   Counter     0x74148047D6bDf624C94eFc07F60cEE7b6052FB29   e[-] s[-] b[-]   <TIMESTAMP>   
 
 Total deployments: 1
+Warning: treb.toml uses deprecated [ns.*] format. Run `treb migrate` to upgrade to the new accounts/namespace format.

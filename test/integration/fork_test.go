@@ -578,17 +578,26 @@ func ethGetBalance(t *testing.T, rpcURL, address string) string {
 	return rpcResp.Result
 }
 
-// writeForkSetupConfig writes config.local.json with network and forkSetup fields.
-// forkSetup is written as a raw JSON field so viper can read it (even though
-// LocalConfig struct no longer has this field — it's read via RuntimeConfig.ForkSetup).
+// writeForkSetupConfig sets the network in config.local.json and writes
+// fork.setup to treb.toml (v2 format reads it from the [fork] section).
 func writeForkSetupConfig(t *testing.T, ctx *helpers.TestContext, network, forkSetup string) {
 	t.Helper()
 	workDir := ctx.TrebContext.GetWorkDir()
+
+	// Set network in config.local.json
 	configDir := filepath.Join(workDir, ".treb")
 	require.NoError(t, os.MkdirAll(configDir, 0755))
-
-	configJSON := fmt.Sprintf(`{"namespace":"default","network":%q,"forkSetup":%q}`, network, forkSetup)
+	configJSON := fmt.Sprintf(`{"namespace":"default","network":%q}`, network)
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.local.json"), []byte(configJSON), 0644))
+
+	// Append [fork] section to treb.toml if forkSetup is set
+	if forkSetup != "" {
+		trebTomlPath := filepath.Join(workDir, "treb.toml")
+		existing, err := os.ReadFile(trebTomlPath)
+		require.NoError(t, err)
+		updated := string(existing) + fmt.Sprintf("\n[fork]\nsetup = %q\n", forkSetup)
+		require.NoError(t, os.WriteFile(trebTomlPath, []byte(updated), 0644))
+	}
 }
 
 func TestForkSetupScript(t *testing.T) {
