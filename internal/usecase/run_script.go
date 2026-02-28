@@ -20,7 +20,6 @@ type RunScriptParams struct {
 	DebugJSON      bool
 	Verbose        bool
 	NonInteractive bool
-	Slow           bool
 	DumpCommand    bool
 }
 
@@ -184,7 +183,7 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 		DebugJSON:          params.DebugJSON,
 		Progress:           uc.progress,
 		SenderScriptConfig: *senderScriptConfig,
-		Slow:               params.Slow,
+		Slow:               uc.config.Slow,
 		ForkEnvOverrides:   forkEnvOverrides,
 	}
 
