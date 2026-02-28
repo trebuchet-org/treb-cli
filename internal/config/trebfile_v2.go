@@ -45,7 +45,12 @@ func DetectTrebConfigFormat(projectRoot string) (TrebConfigFormat, error) {
 		return TrebConfigFormatV1, nil
 	}
 
-	// File exists but has neither format (might be empty or only [fork])
+	// Treat [fork] section as V2 so fork.setup is loaded from treb.toml
+	if _, ok := raw["fork"]; ok {
+		return TrebConfigFormatV2, nil
+	}
+
+	// File exists but has neither format (empty or unrecognized)
 	return TrebConfigFormatNone, nil
 }
 
@@ -71,8 +76,8 @@ func loadTrebConfigV2(projectRoot string) (*config.TrebFileConfigV2, error) {
 		return nil, fmt.Errorf("failed to parse treb.toml: %w", err)
 	}
 
-	// If no accounts and no namespace sections, this isn't v2 format
-	if len(raw.Accounts) == 0 && len(raw.Namespace) == 0 {
+	// If no accounts, no namespace, and no fork config, this isn't v2 format
+	if len(raw.Accounts) == 0 && len(raw.Namespace) == 0 && raw.Fork.Setup == "" {
 		return nil, nil
 	}
 

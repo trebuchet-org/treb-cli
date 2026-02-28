@@ -63,6 +63,20 @@ private_key = "0x1234"
 		assert.Equal(t, TrebConfigFormatV1, format)
 	})
 
+	t.Run("fork-only treb.toml returns V2", func(t *testing.T) {
+		dir := t.TempDir()
+		content := `
+[fork]
+setup = "script/ForkSetup.s.sol"
+`
+		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0644)
+		require.NoError(t, err)
+
+		format, err := DetectTrebConfigFormat(dir)
+		require.NoError(t, err)
+		assert.Equal(t, TrebConfigFormatV2, format)
+	})
+
 	t.Run("empty treb.toml returns None", func(t *testing.T) {
 		dir := t.TempDir()
 		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(""), 0644)
@@ -250,6 +264,23 @@ setup = "script/ForkSetup.s.sol"
 		require.NoError(t, err)
 		require.NotNil(t, cfg)
 		assert.Equal(t, "script/ForkSetup.s.sol", cfg.Fork.Setup)
+	})
+
+	t.Run("fork-only config loads correctly", func(t *testing.T) {
+		dir := t.TempDir()
+		content := `
+[fork]
+setup = "script/ForkSetup.s.sol"
+`
+		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0644)
+		require.NoError(t, err)
+
+		cfg, err := loadTrebConfigV2(dir)
+		require.NoError(t, err)
+		require.NotNil(t, cfg)
+		assert.Equal(t, "script/ForkSetup.s.sol", cfg.Fork.Setup)
+		assert.Empty(t, cfg.Accounts)
+		assert.Empty(t, cfg.Namespace)
 	})
 
 	t.Run("invalid TOML returns error", func(t *testing.T) {

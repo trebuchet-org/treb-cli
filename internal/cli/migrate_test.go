@@ -129,6 +129,26 @@ func TestGenerateTrebTomlV2(t *testing.T) {
 		assert.NotContains(t, content, "proposer =")
 	})
 
+	t.Run("quotes dot-separated namespace keys", func(t *testing.T) {
+		accounts := map[string]config.AccountConfig{
+			"key": {Type: config.SenderTypePrivateKey, PrivateKey: "${PK}"},
+		}
+		namespaces := map[string]nsInfo{
+			"default":        {profile: "default", roles: map[string]string{"deployer": "key"}},
+			"production":     {profile: "production", roles: map[string]string{"deployer": "key"}},
+			"production.ntt": {profile: "production", roles: map[string]string{"deployer": "key"}},
+		}
+
+		content := generateTrebTomlV2(accounts, namespaces)
+
+		// Simple namespace names should NOT be quoted
+		assert.Contains(t, content, "[namespace.default]")
+		assert.Contains(t, content, "[namespace.production]")
+		// Dot-separated namespace names MUST be quoted to avoid TOML nested table interpretation
+		assert.Contains(t, content, `[namespace."production.ntt"]`)
+		assert.NotContains(t, content, "[namespace.production.ntt]")
+	})
+
 	t.Run("role mappings sorted alphabetically", func(t *testing.T) {
 		accounts := map[string]config.AccountConfig{
 			"key":  {Type: config.SenderTypePrivateKey, PrivateKey: "${PK}"},

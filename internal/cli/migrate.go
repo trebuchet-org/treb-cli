@@ -180,7 +180,7 @@ func generateTrebTomlV2(
 	for _, name := range accountNames {
 		acct := accounts[name]
 		b.WriteString("\n")
-		fmt.Fprintf(&b, "[accounts.%s]\n", name)
+		fmt.Fprintf(&b, "[accounts.%s]\n", tomlKey(name))
 		writeAccountConfig(&b, acct)
 	}
 
@@ -199,7 +199,7 @@ func generateTrebTomlV2(
 	for _, nsName := range nsNames {
 		ns := namespaces[nsName]
 		b.WriteString("\n")
-		fmt.Fprintf(&b, "[namespace.%s]\n", nsName)
+		fmt.Fprintf(&b, "[namespace.%s]\n", tomlKey(nsName))
 		fmt.Fprintf(&b, "profile = %q\n", ns.profile)
 
 		// Write role mappings sorted by name
@@ -240,6 +240,15 @@ func writeAccountConfig(b *strings.Builder, a domainconfig.AccountConfig) {
 	if a.Proposer != "" {
 		fmt.Fprintf(b, "proposer = %q\n", a.Proposer)
 	}
+}
+
+// tomlKey quotes a key if it contains dots to prevent TOML nested table interpretation.
+// e.g. "production.ntt" → `"production.ntt"` so [namespace."production.ntt"] is a single key.
+func tomlKey(key string) string {
+	if strings.Contains(key, ".") {
+		return `"` + key + `"`
+	}
+	return key
 }
 
 // sortedKeys returns the sorted keys of a map.
