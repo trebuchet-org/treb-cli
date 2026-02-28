@@ -101,6 +101,7 @@ type DeploymentListResult struct {
 	OtherNamespaces   map[string]int    // Other namespaces with deployment counts (nil when deployments found)
 	CurrentNamespace  string            // Current namespace for display in hints
 	CurrentNetwork    string            // Current network name for display in hints (empty if not set)
+	CurrentChainID    uint64            // Current chain ID for display in hints (0 if not set)
 }
 
 // DeploymentSummary provides summary statistics

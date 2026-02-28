@@ -92,6 +92,7 @@ func (uc *ListDeployments) Run(ctx context.Context, params ListDeploymentsParams
 
 	if uc.config.Network != nil {
 		result.CurrentNetwork = uc.config.Network.Name
+		result.CurrentChainID = uc.config.Network.ChainID
 	}
 
 	// When no deployments found, check other namespaces for discovery hints
