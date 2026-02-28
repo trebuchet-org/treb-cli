@@ -37,9 +37,6 @@ func (tc *TrebContext) Treb(args ...string) (string, error) {
 
 	// Build the full command with context flags
 	additionalArgs := []string{"--non-interactive"}
-	if args[0] == "run" || args[0] == "compose" {
-		additionalArgs = append(additionalArgs, "--slow")
-	}
 	// Add the command arguments
 	allArgs := append(slices.Clone(args), additionalArgs...)
 
