@@ -75,7 +75,7 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 	resetRegistry := usecase.NewResetRegistry(runtimeConfig, fileRepository, fileRepository)
 	localConfigStoreAdapter := fs.NewLocalConfigStoreAdapter(runtimeConfig)
 	showConfig := usecase.NewShowConfig(localConfigStoreAdapter)
-	setConfig := usecase.NewSetConfig(localConfigStoreAdapter)
+	setConfig := usecase.NewSetConfig(localConfigStoreAdapter, networkResolver)
 	removeConfig := usecase.NewRemoveConfig(localConfigStoreAdapter)
 	scriptResolver := resolvers.NewScriptResolver(string2, contractResolver)
 	parameterResolver := resolvers.NewParameterResolver(runtimeConfig, fileRepository, repository)

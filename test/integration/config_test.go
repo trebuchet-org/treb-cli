@@ -53,6 +53,13 @@ func TestConfigCommand(t *testing.T) {
 			ExpectErr: true,
 		},
 		{
+			Name: "config set invalid network",
+			TestCmds: [][]string{
+				{"config", "set", "network", "nonexistent-network"},
+			},
+			ExpectErr: true,
+		},
+		{
 			Name: "config remove namespace",
 			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
 				// Create config with namespace set
