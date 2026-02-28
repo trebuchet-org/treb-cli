@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 	internalconfig "github.com/trebuchet-org/treb-cli/internal/config"
 	domainconfig "github.com/trebuchet-org/treb-cli/internal/domain/config"
@@ -63,8 +65,15 @@ func runMigrate(cfg *domainconfig.RuntimeConfig) error {
 		return fmt.Errorf("treb.toml already uses the new accounts/namespace format — nothing to migrate")
 	}
 
-	// Extract treb profiles from foundry.toml
-	profiles := extractTrebProfiles(cfg.FoundryConfig)
+	// Load raw foundry config (without env var expansion) so we preserve ${VAR}
+	// references in the migrated output instead of leaking actual secrets.
+	rawFoundryConfig, err := internalconfig.LoadFoundryConfigRaw(cfg.ProjectRoot)
+	if err != nil {
+		return fmt.Errorf("failed to load foundry config: %w", err)
+	}
+
+	// Extract treb profiles from raw foundry.toml
+	profiles := extractTrebProfiles(rawFoundryConfig)
 	if len(profiles) == 0 {
 		fmt.Println("No treb config found in foundry.toml — nothing to migrate.")
 		return nil
@@ -259,4 +268,105 @@ func sortedKeys[V any](m map[string]V) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+// trebProfile holds a foundry profile name and its treb sender config.
+type trebProfile struct {
+	Name    string
+	Senders map[string]domainconfig.SenderConfig
+}
+
+// extractTrebProfiles extracts foundry profiles that have treb sender configs.
+func extractTrebProfiles(fc *domainconfig.FoundryConfig) []trebProfile {
+	if fc == nil {
+		return nil
+	}
+
+	var profiles []trebProfile
+	for name, profile := range fc.Profile {
+		if profile.Treb != nil && len(profile.Treb.Senders) > 0 {
+			profiles = append(profiles, trebProfile{
+				Name:    name,
+				Senders: profile.Treb.Senders,
+			})
+		}
+	}
+
+	// Sort by name for deterministic output (default first)
+	sort.Slice(profiles, func(i, j int) bool {
+		if profiles[i].Name == "default" {
+			return true
+		}
+		if profiles[j].Name == "default" {
+			return false
+		}
+		return profiles[i].Name < profiles[j].Name
+	})
+
+	return profiles
+}
+
+// cleanupFoundryToml reads foundry.toml and removes [profile.*.treb.*] sections.
+func cleanupFoundryToml(path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	cleaned := removeTrebFromFoundryToml(string(data))
+	return os.WriteFile(path, []byte(cleaned), 0644)
+}
+
+// trebSectionHeaderRe matches [profile.<name>.treb] and [profile.<name>.treb.senders.<sender>] headers.
+var trebSectionHeaderRe = regexp.MustCompile(`^\[profile\.[^]]+\.treb(?:\.[^]]+)?\]\s*$`)
+
+// anySectionHeaderRe matches any TOML section header like [something] or [a.b.c].
+var anySectionHeaderRe = regexp.MustCompile(`^\[.+\]\s*$`)
+
+// removeTrebFromFoundryToml removes [profile.*.treb.*] sections from foundry.toml content
+// using a line-based approach to preserve user formatting and comments.
+func removeTrebFromFoundryToml(content string) string {
+	lines := strings.Split(content, "\n")
+	var result []string
+	inTrebSection := false
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		if anySectionHeaderRe.MatchString(trimmed) {
+			if trebSectionHeaderRe.MatchString(trimmed) {
+				inTrebSection = true
+				continue
+			}
+			inTrebSection = false
+		}
+
+		if inTrebSection {
+			continue
+		}
+
+		result = append(result, line)
+	}
+
+	// Clean up excess trailing blank lines (collapse to single trailing newline)
+	output := strings.Join(result, "\n")
+	for strings.HasSuffix(output, "\n\n") {
+		output = strings.TrimSuffix(output, "\n")
+	}
+	if !strings.HasSuffix(output, "\n") {
+		output += "\n"
+	}
+
+	return output
+}
+
+// confirmPrompt asks the user a yes/no question and returns their choice.
+func confirmPrompt(label string) bool {
+	prompt := promptui.Prompt{
+		Label:     label,
+		IsConfirm: true,
+	}
+
+	_, err := prompt.Run()
+	return err == nil
 }

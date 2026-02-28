@@ -153,10 +153,6 @@ smart contract deployments using CreateX factory contracts.`,
 	configCmd.GroupID = "management"
 	rootCmd.AddCommand(configCmd)
 
-	migrateConfigCmd := NewMigrateConfigCmd()
-	migrateConfigCmd.GroupID = "management"
-	rootCmd.AddCommand(migrateConfigCmd)
-
 	migrateCmd := NewMigrateCmd()
 	migrateCmd.GroupID = "management"
 	rootCmd.AddCommand(migrateCmd)
@@ -187,8 +183,7 @@ var suppressedCommands = map[string]bool{
 	"help":           true,
 	"completion":     true,
 	"init":           true,
-	"migrate-config": true,
-	"migrate":        true,
+	"migrate": true,
 }
 
 // deprecationWarning represents the type of deprecation warning to show
