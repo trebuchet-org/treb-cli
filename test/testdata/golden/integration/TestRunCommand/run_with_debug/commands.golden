@@ -8,9 +8,7 @@
   Mode:      LIVE
   Senders:   [anvil]
 ──────────────────────────────────────────────────
-Warning: This is a nightly build of Foundry. It is recommended to use the latest stable version. To mute this warning set `FOUNDRY_DISABLE_NIGHTLY_WARNING` in your environment. 
-
-[⠃] Compiling...
+[⠃] Compiling...
 [*] Solc finished
 Compiler run successful!
 Traces:
@@ -36,7 +34,6 @@ Traces:
     │   ├─ emit ContractCreation(newContract: Counter: [0x74148047D6bDf624C94eFc07F60cEE7b6052FB29])
     │   └─ ← [Return] Counter: [0x74148047D6bDf624C94eFc07F60cEE7b6052FB29]
     └─ ← [Stop]
-
 
 Script ran successfully.
 
