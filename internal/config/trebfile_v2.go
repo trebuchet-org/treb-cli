@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/trebuchet-org/treb-cli/internal/domain/config"
@@ -114,4 +115,65 @@ func loadTrebConfigV2(projectRoot string) (*config.TrebFileConfigV2, error) {
 	}
 
 	return cfg, nil
+}
+
+// ResolveNamespace resolves a namespace's full configuration by walking up the
+// dot-separated hierarchy and overlaying roles and profile at each level.
+// For example, resolving "production.ntt" walks: default → production → production.ntt.
+// At each level, explicitly set values override inherited ones.
+func ResolveNamespace(cfg *config.TrebFileConfigV2, namespaceName string) (*config.ResolvedNamespace, error) {
+	// Build the ancestry chain: always start with "default", then each prefix segment
+	chain := buildNamespaceChain(namespaceName)
+
+	// Accumulate profile and roles by walking the chain
+	profile := ""
+	roles := make(map[string]string)
+
+	for _, ancestor := range chain {
+		ns, exists := cfg.Namespace[ancestor]
+		if !exists {
+			continue
+		}
+		if ns.Profile != "" {
+			profile = ns.Profile
+		}
+		for role, account := range ns.Roles {
+			roles[role] = account
+		}
+	}
+
+	// Validate that all role values reference existing account names
+	for role, accountName := range roles {
+		if _, exists := cfg.Accounts[accountName]; !exists {
+			return nil, fmt.Errorf("namespace %q role %q references unknown account %q", namespaceName, role, accountName)
+		}
+	}
+
+	// Build resolved accounts map: role name → AccountConfig
+	accounts := make(map[string]config.AccountConfig, len(roles))
+	for role, accountName := range roles {
+		accounts[role] = cfg.Accounts[accountName]
+	}
+
+	return &config.ResolvedNamespace{
+		Profile:  profile,
+		Accounts: accounts,
+	}, nil
+}
+
+// buildNamespaceChain returns the ordered list of namespace names to resolve,
+// starting from "default" and adding each dot-separated prefix.
+// For "production.ntt.v2" it returns: ["default", "production", "production.ntt", "production.ntt.v2"]
+// For "default" it returns just: ["default"]
+func buildNamespaceChain(namespaceName string) []string {
+	if namespaceName == "default" {
+		return []string{"default"}
+	}
+
+	chain := []string{"default"}
+	parts := strings.Split(namespaceName, ".")
+	for i := range parts {
+		chain = append(chain, strings.Join(parts[:i+1], "."))
+	}
+	return chain
 }

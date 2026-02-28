@@ -292,3 +292,252 @@ admin = "safe0"
 		assert.Len(t, defaultNs.Roles, 2)
 	})
 }
+
+func TestResolveNamespace(t *testing.T) {
+	t.Run("single-level default resolution", func(t *testing.T) {
+		cfg := &config.TrebFileConfigV2{
+			Accounts: map[string]config.AccountConfig{
+				"deployer": {Type: "private_key", PrivateKey: "0x1234"},
+			},
+			Namespace: map[string]config.NamespaceRoles{
+				"default": {
+					Profile: "default",
+					Roles:   map[string]string{"deployer": "deployer"},
+				},
+			},
+		}
+
+		resolved, err := ResolveNamespace(cfg, "default")
+		require.NoError(t, err)
+		assert.Equal(t, "default", resolved.Profile)
+		assert.Len(t, resolved.Accounts, 1)
+		assert.Equal(t, config.SenderType("private_key"), resolved.Accounts["deployer"].Type)
+		assert.Equal(t, "0x1234", resolved.Accounts["deployer"].PrivateKey)
+	})
+
+	t.Run("multi-level inheritance", func(t *testing.T) {
+		cfg := &config.TrebFileConfigV2{
+			Accounts: map[string]config.AccountConfig{
+				"dev-wallet":  {Type: "private_key", PrivateKey: "0xdev"},
+				"prod-safe":   {Type: "safe", Safe: "0xsafe", Signer: "dev-wallet"},
+				"ntt-deployer": {Type: "private_key", PrivateKey: "0xntt"},
+			},
+			Namespace: map[string]config.NamespaceRoles{
+				"default": {
+					Roles: map[string]string{"deployer": "dev-wallet"},
+				},
+				"production": {
+					Profile: "mainnet",
+					Roles:   map[string]string{"deployer": "prod-safe"},
+				},
+				"production.ntt": {
+					Roles: map[string]string{"deployer": "ntt-deployer"},
+				},
+			},
+		}
+
+		// Resolving "production.ntt" should walk: default → production → production.ntt
+		resolved, err := ResolveNamespace(cfg, "production.ntt")
+		require.NoError(t, err)
+
+		// Profile inherited from production
+		assert.Equal(t, "mainnet", resolved.Profile)
+		// Deployer overridden at production.ntt level
+		assert.Equal(t, config.SenderType("private_key"), resolved.Accounts["deployer"].Type)
+		assert.Equal(t, "0xntt", resolved.Accounts["deployer"].PrivateKey)
+	})
+
+	t.Run("profile inheritance without override", func(t *testing.T) {
+		cfg := &config.TrebFileConfigV2{
+			Accounts: map[string]config.AccountConfig{
+				"deployer": {Type: "private_key", PrivateKey: "0x1234"},
+			},
+			Namespace: map[string]config.NamespaceRoles{
+				"default": {
+					Roles: map[string]string{"deployer": "deployer"},
+				},
+				"production": {
+					Profile: "mainnet",
+					Roles:   map[string]string{},
+				},
+				"production.ntt": {
+					// No profile set — should inherit "mainnet" from production
+					Roles: map[string]string{},
+				},
+			},
+		}
+
+		resolved, err := ResolveNamespace(cfg, "production.ntt")
+		require.NoError(t, err)
+		assert.Equal(t, "mainnet", resolved.Profile)
+		// deployer inherited from default
+		assert.Equal(t, "0x1234", resolved.Accounts["deployer"].PrivateKey)
+	})
+
+	t.Run("profile override at child level", func(t *testing.T) {
+		cfg := &config.TrebFileConfigV2{
+			Accounts: map[string]config.AccountConfig{
+				"deployer": {Type: "private_key", PrivateKey: "0x1234"},
+			},
+			Namespace: map[string]config.NamespaceRoles{
+				"default": {
+					Roles: map[string]string{"deployer": "deployer"},
+				},
+				"production": {
+					Profile: "mainnet",
+					Roles:   map[string]string{},
+				},
+				"production.ntt": {
+					Profile: "ntt-mainnet",
+					Roles:   map[string]string{},
+				},
+			},
+		}
+
+		resolved, err := ResolveNamespace(cfg, "production.ntt")
+		require.NoError(t, err)
+		assert.Equal(t, "ntt-mainnet", resolved.Profile)
+	})
+
+	t.Run("undefined parent is skipped", func(t *testing.T) {
+		cfg := &config.TrebFileConfigV2{
+			Accounts: map[string]config.AccountConfig{
+				"deployer":     {Type: "private_key", PrivateKey: "0xdefault"},
+				"ntt-deployer": {Type: "private_key", PrivateKey: "0xntt"},
+			},
+			Namespace: map[string]config.NamespaceRoles{
+				"default": {
+					Roles: map[string]string{"deployer": "deployer"},
+				},
+				// "production" is NOT defined — should be skipped
+				"production.ntt": {
+					Profile: "mainnet",
+					Roles:   map[string]string{"deployer": "ntt-deployer"},
+				},
+			},
+		}
+
+		resolved, err := ResolveNamespace(cfg, "production.ntt")
+		require.NoError(t, err)
+		assert.Equal(t, "mainnet", resolved.Profile)
+		assert.Equal(t, "0xntt", resolved.Accounts["deployer"].PrivateKey)
+	})
+
+	t.Run("unknown account returns error", func(t *testing.T) {
+		cfg := &config.TrebFileConfigV2{
+			Accounts: map[string]config.AccountConfig{
+				"deployer": {Type: "private_key", PrivateKey: "0x1234"},
+			},
+			Namespace: map[string]config.NamespaceRoles{
+				"default": {
+					Roles: map[string]string{"deployer": "nonexistent"},
+				},
+			},
+		}
+
+		resolved, err := ResolveNamespace(cfg, "default")
+		assert.Error(t, err)
+		assert.Nil(t, resolved)
+		assert.Contains(t, err.Error(), "unknown account \"nonexistent\"")
+	})
+
+	t.Run("default-only resolution with undefined default", func(t *testing.T) {
+		cfg := &config.TrebFileConfigV2{
+			Accounts: map[string]config.AccountConfig{
+				"deployer": {Type: "private_key", PrivateKey: "0x1234"},
+			},
+			Namespace: map[string]config.NamespaceRoles{
+				// No default namespace defined
+				"staging": {
+					Profile: "staging",
+					Roles:   map[string]string{"deployer": "deployer"},
+				},
+			},
+		}
+
+		// Resolving "default" when it doesn't exist should return empty
+		resolved, err := ResolveNamespace(cfg, "default")
+		require.NoError(t, err)
+		assert.Equal(t, "", resolved.Profile)
+		assert.Empty(t, resolved.Accounts)
+	})
+
+	t.Run("roles accumulate across levels", func(t *testing.T) {
+		cfg := &config.TrebFileConfigV2{
+			Accounts: map[string]config.AccountConfig{
+				"dev-wallet": {Type: "private_key", PrivateKey: "0xdev"},
+				"prod-safe":  {Type: "safe", Safe: "0xsafe"},
+				"admin":      {Type: "ledger", DerivationPath: "m/44'/60'/0'/0/0"},
+			},
+			Namespace: map[string]config.NamespaceRoles{
+				"default": {
+					Roles: map[string]string{"deployer": "dev-wallet"},
+				},
+				"production": {
+					Profile: "mainnet",
+					Roles:   map[string]string{"deployer": "prod-safe", "admin": "admin"},
+				},
+			},
+		}
+
+		resolved, err := ResolveNamespace(cfg, "production")
+		require.NoError(t, err)
+		assert.Equal(t, "mainnet", resolved.Profile)
+		assert.Len(t, resolved.Accounts, 2)
+		// deployer overridden from default
+		assert.Equal(t, config.SenderType("safe"), resolved.Accounts["deployer"].Type)
+		// admin added at production level
+		assert.Equal(t, config.SenderType("ledger"), resolved.Accounts["admin"].Type)
+	})
+
+	t.Run("three-level deep resolution", func(t *testing.T) {
+		cfg := &config.TrebFileConfigV2{
+			Accounts: map[string]config.AccountConfig{
+				"dev":   {Type: "private_key", PrivateKey: "0xdev"},
+				"prod":  {Type: "private_key", PrivateKey: "0xprod"},
+				"ntt":   {Type: "private_key", PrivateKey: "0xntt"},
+				"v2":    {Type: "private_key", PrivateKey: "0xv2"},
+			},
+			Namespace: map[string]config.NamespaceRoles{
+				"default": {
+					Profile: "default",
+					Roles:   map[string]string{"deployer": "dev", "monitor": "dev"},
+				},
+				"production": {
+					Profile: "mainnet",
+					Roles:   map[string]string{"deployer": "prod"},
+				},
+				"production.ntt": {
+					Roles: map[string]string{"deployer": "ntt"},
+				},
+				"production.ntt.v2": {
+					Roles: map[string]string{"deployer": "v2"},
+				},
+			},
+		}
+
+		resolved, err := ResolveNamespace(cfg, "production.ntt.v2")
+		require.NoError(t, err)
+		assert.Equal(t, "mainnet", resolved.Profile) // inherited from production
+		assert.Equal(t, "0xv2", resolved.Accounts["deployer"].PrivateKey) // overridden at deepest level
+		assert.Equal(t, "0xdev", resolved.Accounts["monitor"].PrivateKey) // inherited from default
+	})
+}
+
+func TestBuildNamespaceChain(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected []string
+	}{
+		{"default", "default", []string{"default"}},
+		{"single level", "production", []string{"default", "production"}},
+		{"two levels", "production.ntt", []string{"default", "production", "production.ntt"}},
+		{"three levels", "production.ntt.v2", []string{"default", "production", "production.ntt", "production.ntt.v2"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, buildNamespaceChain(tt.input))
+		})
+	}
+}
