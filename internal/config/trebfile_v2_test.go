@@ -14,7 +14,7 @@ func TestDetectTrebConfigFormat(t *testing.T) {
 	t.Run("no treb.toml returns None", func(t *testing.T) {
 		dir := t.TempDir()
 
-		format, err := detectTrebConfigFormat(dir)
+		format, err := DetectTrebConfigFormat(dir)
 		require.NoError(t, err)
 		assert.Equal(t, TrebConfigFormatNone, format)
 	})
@@ -29,7 +29,7 @@ private_key = "0x1234"
 		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0644)
 		require.NoError(t, err)
 
-		format, err := detectTrebConfigFormat(dir)
+		format, err := DetectTrebConfigFormat(dir)
 		require.NoError(t, err)
 		assert.Equal(t, TrebConfigFormatV2, format)
 	})
@@ -43,7 +43,7 @@ deployer = "deployer"
 		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0644)
 		require.NoError(t, err)
 
-		format, err := detectTrebConfigFormat(dir)
+		format, err := DetectTrebConfigFormat(dir)
 		require.NoError(t, err)
 		assert.Equal(t, TrebConfigFormatV2, format)
 	})
@@ -58,7 +58,7 @@ private_key = "0x1234"
 		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0644)
 		require.NoError(t, err)
 
-		format, err := detectTrebConfigFormat(dir)
+		format, err := DetectTrebConfigFormat(dir)
 		require.NoError(t, err)
 		assert.Equal(t, TrebConfigFormatV1, format)
 	})
@@ -68,7 +68,7 @@ private_key = "0x1234"
 		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(""), 0644)
 		require.NoError(t, err)
 
-		format, err := detectTrebConfigFormat(dir)
+		format, err := DetectTrebConfigFormat(dir)
 		require.NoError(t, err)
 		assert.Equal(t, TrebConfigFormatNone, format)
 	})
@@ -78,7 +78,7 @@ private_key = "0x1234"
 		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte("invalid [[ toml"), 0644)
 		require.NoError(t, err)
 
-		_, err = detectTrebConfigFormat(dir)
+		_, err = DetectTrebConfigFormat(dir)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to parse treb.toml")
 	})

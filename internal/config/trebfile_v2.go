@@ -19,8 +19,8 @@ const (
 	TrebConfigFormatV2                           // New [accounts.*] / [namespace.*] format
 )
 
-// detectTrebConfigFormat checks if treb.toml exists and determines which format version it uses.
-func detectTrebConfigFormat(projectRoot string) (TrebConfigFormat, error) {
+// DetectTrebConfigFormat checks if treb.toml exists and determines which format version it uses.
+func DetectTrebConfigFormat(projectRoot string) (TrebConfigFormat, error) {
 	trebPath := filepath.Join(projectRoot, "treb.toml")
 
 	if _, err := os.Stat(trebPath); os.IsNotExist(err) {

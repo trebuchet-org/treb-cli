@@ -45,7 +45,7 @@ func Provider(v *viper.Viper) (*config.RuntimeConfig, error) {
 	cfg.FoundryConfig = foundryConfig
 
 	// Detect treb.toml format version and load accordingly
-	trebFormat, err := detectTrebConfigFormat(projectRoot)
+	trebFormat, err := DetectTrebConfigFormat(projectRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to detect treb config format: %w", err)
 	}
