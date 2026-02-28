@@ -11,6 +11,7 @@ Started: Sat Feb 28 07:33:50 PM CET 2026
 - Environment variable expansion uses `os.ExpandEnv()` during config load time
 - TOML parsing uses `github.com/BurntSushi/toml`
 - For v2 namespace parsing, use `map[string]map[string]string` as the TOML decode target, then manually extract "profile" as reserved key; all other keys become role→account mappings
+- `ResolveNamespace()` walks a dot-separated hierarchy chain built by `buildNamespaceChain()`: for "a.b.c" → ["default", "a", "a.b", "a.b.c"]. Profile and roles overlay at each level.
 - BurntSushi/toml handles quoted TOML keys correctly: `[namespace."production.ntt"]` creates key `production.ntt` (dot is literal, not nesting)
 - `detectTrebConfigFormat()` returns `TrebConfigFormatV2/V1/None` by checking for top-level keys: accounts/namespace → v2, ns → v1
 ---
@@ -39,4 +40,16 @@ Started: Sat Feb 28 07:33:50 PM CET 2026
   - `trebFileV2Raw` uses `map[string]map[string]string` for Namespace because all values (profile + role mappings) are flat strings — this avoids custom TOML unmarshaling
   - `loadTrebConfigV2()` returns (nil, nil) for v1 format files since the raw struct's Accounts/Namespace fields stay empty when [ns.*] sections are present (BurntSushi/toml silently ignores undecoded keys)
   - Env var expansion happens on AccountConfig fields only, not on namespace role values (role values are account name references, not secrets)
+---
+
+## 2026-02-28 - US-003
+- Implemented hierarchical namespace resolution in `internal/config/trebfile_v2.go`:
+  - `ResolveNamespace()` — resolves a namespace by walking the dot-separated hierarchy, overlaying roles and profile at each level
+  - `buildNamespaceChain()` — builds ancestry chain from dot-separated name (e.g., "production.ntt" → ["default", "production", "production.ntt"])
+  - Validates all role→account references exist; returns error for unknown accounts
+- Files changed: `internal/config/trebfile_v2.go`, `internal/config/trebfile_v2_test.go`
+- **Learnings for future iterations:**
+  - Undefined parent namespaces are silently skipped — if "production" doesn't exist but "production.ntt" does, inheritance goes default → production.ntt
+  - Default namespace always exists implicitly as empty (no roles, no profile) even if not defined in config
+  - Profile and roles both use simple overlay semantics — child values replace parent values at each level
 ---

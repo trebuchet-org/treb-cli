@@ -54,7 +54,7 @@
         "Typecheck passes (go build ./...)"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
