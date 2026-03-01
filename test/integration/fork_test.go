@@ -1508,3 +1508,217 @@ func TestForkCommandGuards(t *testing.T) {
 
 	RunIntegrationTests(t, tests)
 }
+
+// --- External fork (--url) tests ---
+
+func TestForkExternalEnter(t *testing.T) {
+	tests := []IntegrationTest{
+		{
+			Name: "fork_enter_external_url_success",
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+			},
+			TestCmds:   [][]string{},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, _ string) {
+				node := ctx.AnvilNodes["anvil-31337"]
+				require.NotNil(t, node, "anvil-31337 node should exist")
+
+				// Enter fork with external URL
+				output, err := ctx.TrebContext.Treb("fork", "enter", "anvil-31337", "--url", node.URL)
+				require.NoError(t, err, "fork enter with external URL should succeed")
+
+				// Verify output
+				assert.Contains(t, output, "Fork mode entered")
+				assert.Contains(t, output, "external")
+
+				// Verify fork state
+				workDir := ctx.TrebContext.GetWorkDir()
+				statePath := filepath.Join(workDir, ".treb", "priv", "fork-state.json")
+				data, err := os.ReadFile(statePath)
+				require.NoError(t, err, "fork-state.json should exist")
+
+				var state domain.ForkState
+				require.NoError(t, json.Unmarshal(data, &state))
+				entry := state.Forks["anvil-31337"]
+				require.NotNil(t, entry, "fork entry should exist")
+
+				assert.True(t, entry.External, "fork entry should be external")
+				assert.Equal(t, 0, entry.AnvilPID, "external fork should have AnvilPID=0")
+				assert.Empty(t, entry.PidFile, "external fork should have empty PidFile")
+				assert.Empty(t, entry.LogFile, "external fork should have empty LogFile")
+				assert.Equal(t, node.URL, entry.ForkURL, "fork URL should be the external URL")
+				assert.Len(t, entry.Snapshots, 1, "should have initial snapshot")
+				assert.Equal(t, "fork enter", entry.Snapshots[0].Command)
+
+				// Cleanup
+				_, _ = ctx.TrebContext.Treb("fork", "exit", "anvil-31337")
+			},
+		},
+		{
+			Name: "fork_enter_external_url_dead_endpoint",
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+			},
+			TestCmds: [][]string{
+				{"fork", "enter", "anvil-31337", "--url", "http://127.0.0.1:19999"},
+			},
+			ExpectErr:  true,
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				assert.Contains(t, output, "external endpoint validation failed")
+			},
+		},
+	}
+
+	RunIntegrationTests(t, tests)
+}
+
+func TestForkExternalRunAndRevert(t *testing.T) {
+	tests := []IntegrationTest{
+		{
+			Name: "fork_external_run_deploys_and_revert_restores",
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+			},
+			TestCmds:   [][]string{},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, _ string) {
+				node := ctx.AnvilNodes["anvil-31337"]
+				require.NotNil(t, node)
+				workDir := ctx.TrebContext.GetWorkDir()
+
+				// Enter external fork
+				_, err := ctx.TrebContext.Treb("fork", "enter", "anvil-31337", "--url", node.URL)
+				require.NoError(t, err)
+
+				// Deploy Counter against the external fork
+				output, err := ctx.TrebContext.Treb("run", "script/deploy/DeployCounter.s.sol")
+				require.NoError(t, err, "run should succeed against external fork")
+				assert.Contains(t, output, "Counter")
+
+				// Verify deployment registered
+				address := getDeploymentAddress(t, workDir, "Counter")
+				assert.NotEmpty(t, address)
+
+				// Verify contract exists on the external anvil
+				code := ethGetCode(t, node.URL, address)
+				assert.NotEqual(t, "0x", code, "contract should have code")
+
+				// Revert the run
+				output, err = ctx.TrebContext.Treb("fork", "revert", "anvil-31337")
+				require.NoError(t, err, "revert should succeed")
+				assert.Contains(t, output, "Reverted")
+				assert.Contains(t, output, "DeployCounter")
+
+				// Verify Counter removed from deployments.json
+				deploymentsPath := filepath.Join(workDir, ".treb", "deployments.json")
+				data, err := os.ReadFile(deploymentsPath)
+				if err == nil {
+					assert.NotContains(t, string(data), "Counter",
+						"Counter should be reverted after revert")
+				}
+
+				// Verify fork state has only initial snapshot
+				state := readForkState(t, ctx)
+				fork := state.Forks["anvil-31337"]
+				require.NotNil(t, fork)
+				assert.Len(t, fork.Snapshots, 1)
+
+				// Cleanup
+				_, _ = ctx.TrebContext.Treb("fork", "exit", "anvil-31337")
+			},
+		},
+	}
+
+	RunIntegrationTests(t, tests)
+}
+
+func TestForkExternalExit(t *testing.T) {
+	tests := []IntegrationTest{
+		{
+			Name: "fork_external_exit_restores_and_cleans_up",
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+			},
+			TestCmds:   [][]string{},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, _ string) {
+				node := ctx.AnvilNodes["anvil-31337"]
+				require.NotNil(t, node)
+				workDir := ctx.TrebContext.GetWorkDir()
+
+				// Enter external fork and deploy
+				_, err := ctx.TrebContext.Treb("fork", "enter", "anvil-31337", "--url", node.URL)
+				require.NoError(t, err)
+				_, err = ctx.TrebContext.Treb("run", "script/deploy/DeployCounter.s.sol")
+				require.NoError(t, err)
+
+				// Exit
+				output, err := ctx.TrebContext.Treb("fork", "exit", "anvil-31337")
+				require.NoError(t, err, "fork exit should succeed for external fork")
+				assert.Contains(t, output, "Fork mode exited")
+
+				// Verify fork state file is gone
+				statePath := filepath.Join(workDir, ".treb", "priv", "fork-state.json")
+				_, err = os.Stat(statePath)
+				assert.True(t, os.IsNotExist(err), "fork-state.json should be deleted")
+
+				// Verify fork directory is cleaned up
+				forkDir := filepath.Join(workDir, ".treb", "priv", "fork", "anvil-31337")
+				_, err = os.Stat(forkDir)
+				assert.True(t, os.IsNotExist(err), "fork directory should be cleaned up")
+
+				// Verify deployments.json is restored (Counter deployment should be gone)
+				deploymentsPath := filepath.Join(workDir, ".treb", "deployments.json")
+				data, err := os.ReadFile(deploymentsPath)
+				if err == nil {
+					assert.NotContains(t, string(data), "Counter",
+						"Counter should be reverted after exit")
+				}
+			},
+		},
+	}
+
+	RunIntegrationTests(t, tests)
+}
+
+func TestForkExternalStatus(t *testing.T) {
+	tests := []IntegrationTest{
+		{
+			Name: "fork_external_status_shows_external_info",
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+			},
+			TestCmds:   [][]string{},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, _ string) {
+				node := ctx.AnvilNodes["anvil-31337"]
+				require.NotNil(t, node)
+
+				// Enter external fork
+				_, err := ctx.TrebContext.Treb("fork", "enter", "anvil-31337", "--url", node.URL)
+				require.NoError(t, err)
+
+				// Check status
+				output, err := ctx.TrebContext.Treb("fork", "status")
+				require.NoError(t, err, "fork status should succeed")
+
+				assert.Contains(t, output, "Active Forks")
+				assert.Contains(t, output, "anvil-31337")
+				assert.Contains(t, output, "[external]")
+				assert.Contains(t, output, "healthy")
+				assert.Contains(t, output, node.URL)
+				// PID and Uptime should NOT be displayed for external forks
+				assert.NotContains(t, output, "Anvil PID")
+
+				// Cleanup
+				_, _ = ctx.TrebContext.Treb("fork", "exit", "anvil-31337")
+			},
+		},
+	}
+
+	RunIntegrationTests(t, tests)
+}
