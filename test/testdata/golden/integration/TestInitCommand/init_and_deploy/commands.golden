@@ -82,7 +82,7 @@ Warning: treb.toml uses deprecated [ns.*] format. Run `treb migrate` to upgrade 
 └─ ⛓ chain:       anvil-31337 (31337)           
   
   SINGLETONS
-  Counter     0x74148047D6bDf624C94eFc07F60cEE7b6052FB29   e[-] s[-] b[-]   <TIMESTAMP>   
+  Counter     0x74148047D6bDf624C94eFc07F60cEE7b6052FB29   e[-]  s[-]  b[-]    <TIMESTAMP>   
 
 Total deployments: 1
 Warning: treb.toml uses deprecated [ns.*] format. Run `treb migrate` to upgrade to the new accounts/namespace format.

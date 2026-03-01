@@ -403,57 +403,72 @@ func (r *DeploymentsRenderer) buildDeploymentTable(deployments []*models.Deploym
 	return tableData
 }
 
+// verifierCellWidth is the fixed display width for each verifier status cell (e.g., "e[✔︎]").
+// Computed from the widest possible status symbol to ensure consistent column alignment.
+var verifierCellWidth = func() int {
+	symbols := []string{"✔︎", "-", "⏳"}
+	maxW := 0
+	for _, sym := range symbols {
+		w := runewidth.StringWidth(fmt.Sprintf("x[%s]", sym))
+		if w > maxW {
+			maxW = w
+		}
+	}
+	return maxW
+}()
+
 // getVerifierStatuses returns the formatted verifier status string
 func (r *DeploymentsRenderer) getVerifierStatuses(deployment *models.Deployment) string {
-	// Helper to get status symbol - returns symbol and whether it needs padding
-	getStatusSymbol := func(status string) (string, bool) {
+	getStatusSymbol := func(status string) string {
 		switch status {
 		case "verified":
-			return verifiedStyle.Sprint("✔︎"), true // Wide character, needs padding
+			return verifiedStyle.Sprint("✔︎")
 		case "failed":
-			return notVerifiedStyle.Sprint("-"), false
+			return notVerifiedStyle.Sprint("-")
 		case "pending":
-			return pendingStyle.Sprint("⏳"), true // Wide character, needs padding
+			return pendingStyle.Sprint("⏳")
 		default:
-			return "-", false
+			return "-"
 		}
 	}
 
-	// Helper to format status with padding
-	formatStatus := func(prefix, status string, needsPadding bool) string {
-		if needsPadding {
-			// Add extra space after wide characters to compensate for visual width
-			return fmt.Sprintf("%s[%s] ", prefix, status)
+	// formatStatus formats a single verifier status (e.g., "e[✔︎]") and pads it
+	// to a fixed visual width so that columns align regardless of symbol content.
+	formatStatus := func(prefix, symbol string) string {
+		s := fmt.Sprintf("%s[%s]", prefix, symbol)
+		w := displayWidth(stripAnsiCodes(s))
+		if w < verifierCellWidth {
+			return s + strings.Repeat(" ", verifierCellWidth-w)
 		}
-		return fmt.Sprintf("%s[%s]", prefix, status)
+		return s
 	}
 
 	// Check Etherscan status
-	etherscanSymbol, etherscanPad := "-", false
+	etherscanSymbol := "-"
 	if deployment.Verification.Verifiers != nil {
 		if etherscan, exists := deployment.Verification.Verifiers["etherscan"]; exists {
-			etherscanSymbol, etherscanPad = getStatusSymbol(etherscan.Status)
+			etherscanSymbol = getStatusSymbol(etherscan.Status)
 		}
 	}
-	etherscanStatus := formatStatus("e", etherscanSymbol, etherscanPad)
+	etherscanStatus := formatStatus("e", etherscanSymbol)
 
 	// Check Sourcify status
-	sourcifySymbol, sourcifyPad := "-", false
+	sourcifySymbol := "-"
 	if deployment.Verification.Verifiers != nil {
 		if sourcify, exists := deployment.Verification.Verifiers["sourcify"]; exists {
-			sourcifySymbol, sourcifyPad = getStatusSymbol(sourcify.Status)
+			sourcifySymbol = getStatusSymbol(sourcify.Status)
 		}
 	}
-	sourcifyStatus := formatStatus("s", sourcifySymbol, sourcifyPad)
+	sourcifyStatus := formatStatus("s", sourcifySymbol)
 
 	// Check Blockscout status
-	blockscoutSymbol, blockscoutPad := "-", false
+	blockscoutSymbol := "-"
 	if deployment.Verification.Verifiers != nil {
 		if blockscout, exists := deployment.Verification.Verifiers["blockscout"]; exists {
-			blockscoutSymbol, blockscoutPad = getStatusSymbol(blockscout.Status)
+			blockscoutSymbol = getStatusSymbol(blockscout.Status)
 		}
 	}
-	blockscoutStatus := formatStatus("b", blockscoutSymbol, blockscoutPad)
+	blockscoutStatus := formatStatus("b", blockscoutSymbol)
 
 	return fmt.Sprintf("%s %s %s", etherscanStatus, sourcifyStatus, blockscoutStatus)
 }
