@@ -12,12 +12,13 @@ import (
 )
 
 // registryFiles is the list of .treb/ files to backup and restore during fork mode.
+// The addressbook is intentionally excluded: it contains user-curated reference
+// data (external contract addresses) that should persist across fork operations.
 var registryFiles = []string{
 	"deployments.json",
 	"transactions.json",
 	"safe-txs.json",
 	"registry.json",
-	"addressbook.json",
 }
 
 // ForkFileManagerAdapter implements ForkFileManager using the file system
