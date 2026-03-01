@@ -18,6 +18,8 @@ private_key = "${DEPLOYER_PRIVATE_KEY}"
 
 [namespace.default]
 profile = "default"
+
+[namespace.default.senders]
 deployer = "deployer"
 
 # --- Fork Configuration ---

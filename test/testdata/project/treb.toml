@@ -30,11 +30,15 @@ private_key = "${BASE_SEPOLIA_SIGNER0_PK}"
 
 [namespace.default]
 profile = "default"
+
+[namespace.default.senders]
 anvil = "anvil"
 governor = "governor"
 
 [namespace.live]
 profile = "live"
+
+[namespace.live.senders]
 safe0 = "safe0"
 safe1 = "safe1"
 signer0 = "signer0"

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -37,7 +38,7 @@ private_key = "0x1234"
 	t.Run("v2 format with namespace section", func(t *testing.T) {
 		dir := t.TempDir()
 		content := `
-[namespace.default]
+[namespace.default.senders]
 deployer = "deployer"
 `
 		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0644)
@@ -111,11 +112,13 @@ type = "safe"
 safe = "0x3D33783D1fd1B6D849d299aD2E711f844fC16d2F"
 signer = "deployer"
 
-[namespace.default]
+[namespace.default.senders]
 deployer = "deployer"
 
 [namespace.production]
 profile = "mainnet"
+
+[namespace.production.senders]
 deployer = "safe0"
 `
 		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0644)
@@ -138,11 +141,11 @@ deployer = "safe0"
 
 		defaultNs := cfg.Namespace["default"]
 		assert.Equal(t, "", defaultNs.Profile)
-		assert.Equal(t, "deployer", defaultNs.Roles["deployer"])
+		assert.Equal(t, "deployer", defaultNs.Senders["deployer"])
 
 		prodNs := cfg.Namespace["production"]
 		assert.Equal(t, "mainnet", prodNs.Profile)
-		assert.Equal(t, "safe0", prodNs.Roles["deployer"])
+		assert.Equal(t, "safe0", prodNs.Senders["deployer"])
 	})
 
 	t.Run("expands environment variables in accounts", func(t *testing.T) {
@@ -168,7 +171,7 @@ governor = "${TEST_V2_GOV}"
 timelock = "${TEST_V2_TIMELOCK}"
 proposer = "hw"
 
-[namespace.default]
+[namespace.default.senders]
 deployer = "deployer"
 `
 		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0644)
@@ -200,11 +203,13 @@ deployer = "deployer"
 type = "private_key"
 private_key = "0x1234"
 
-[namespace.default]
+[namespace.default.senders]
 deployer = "deployer"
 
 [namespace."production.ntt"]
 profile = "production"
+
+[namespace."production.ntt".senders]
 deployer = "deployer"
 `
 		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0644)
@@ -218,7 +223,7 @@ deployer = "deployer"
 		nttNs, ok := cfg.Namespace["production.ntt"]
 		require.True(t, ok, "namespace 'production.ntt' should exist as a single key")
 		assert.Equal(t, "production", nttNs.Profile)
-		assert.Equal(t, "deployer", nttNs.Roles["deployer"])
+		assert.Equal(t, "deployer", nttNs.Senders["deployer"])
 	})
 
 	t.Run("missing file returns nil", func(t *testing.T) {
@@ -251,7 +256,7 @@ private_key = "0x1234"
 type = "private_key"
 private_key = "0x1234"
 
-[namespace.default]
+[namespace.default.senders]
 deployer = "deployer"
 
 [fork]
@@ -306,7 +311,7 @@ type = "safe"
 safe = "0xaaaa"
 signer = "deployer"
 
-[namespace.default]
+[namespace.default.senders]
 deployer = "deployer"
 admin = "safe0"
 `
@@ -318,9 +323,9 @@ admin = "safe0"
 		require.NotNil(t, cfg)
 
 		defaultNs := cfg.Namespace["default"]
-		assert.Equal(t, "deployer", defaultNs.Roles["deployer"])
-		assert.Equal(t, "safe0", defaultNs.Roles["admin"])
-		assert.Len(t, defaultNs.Roles, 2)
+		assert.Equal(t, "deployer", defaultNs.Senders["deployer"])
+		assert.Equal(t, "safe0", defaultNs.Senders["admin"])
+		assert.Len(t, defaultNs.Senders, 2)
 	})
 }
 
@@ -333,7 +338,7 @@ func TestResolveNamespace(t *testing.T) {
 			Namespace: map[string]config.NamespaceRoles{
 				"default": {
 					Profile: "default",
-					Roles:   map[string]string{"deployer": "deployer"},
+					Senders:   map[string]string{"deployer": "deployer"},
 				},
 			},
 		}
@@ -355,14 +360,14 @@ func TestResolveNamespace(t *testing.T) {
 			},
 			Namespace: map[string]config.NamespaceRoles{
 				"default": {
-					Roles: map[string]string{"deployer": "dev-wallet"},
+					Senders: map[string]string{"deployer": "dev-wallet"},
 				},
 				"production": {
 					Profile: "mainnet",
-					Roles:   map[string]string{"deployer": "prod-safe"},
+					Senders:   map[string]string{"deployer": "prod-safe"},
 				},
 				"production.ntt": {
-					Roles: map[string]string{"deployer": "ntt-deployer"},
+					Senders: map[string]string{"deployer": "ntt-deployer"},
 				},
 			},
 		}
@@ -385,15 +390,15 @@ func TestResolveNamespace(t *testing.T) {
 			},
 			Namespace: map[string]config.NamespaceRoles{
 				"default": {
-					Roles: map[string]string{"deployer": "deployer"},
+					Senders: map[string]string{"deployer": "deployer"},
 				},
 				"production": {
 					Profile: "mainnet",
-					Roles:   map[string]string{},
+					Senders:   map[string]string{},
 				},
 				"production.ntt": {
 					// No profile set — should inherit "mainnet" from production
-					Roles: map[string]string{},
+					Senders: map[string]string{},
 				},
 			},
 		}
@@ -412,15 +417,15 @@ func TestResolveNamespace(t *testing.T) {
 			},
 			Namespace: map[string]config.NamespaceRoles{
 				"default": {
-					Roles: map[string]string{"deployer": "deployer"},
+					Senders: map[string]string{"deployer": "deployer"},
 				},
 				"production": {
 					Profile: "mainnet",
-					Roles:   map[string]string{},
+					Senders:   map[string]string{},
 				},
 				"production.ntt": {
 					Profile: "ntt-mainnet",
-					Roles:   map[string]string{},
+					Senders:   map[string]string{},
 				},
 			},
 		}
@@ -438,12 +443,12 @@ func TestResolveNamespace(t *testing.T) {
 			},
 			Namespace: map[string]config.NamespaceRoles{
 				"default": {
-					Roles: map[string]string{"deployer": "deployer"},
+					Senders: map[string]string{"deployer": "deployer"},
 				},
 				// "production" is NOT defined — should be skipped
 				"production.ntt": {
 					Profile: "mainnet",
-					Roles:   map[string]string{"deployer": "ntt-deployer"},
+					Senders:   map[string]string{"deployer": "ntt-deployer"},
 				},
 			},
 		}
@@ -454,22 +459,50 @@ func TestResolveNamespace(t *testing.T) {
 		assert.Equal(t, "0xntt", resolved.Accounts["deployer"].PrivateKey)
 	})
 
-	t.Run("unknown account returns error", func(t *testing.T) {
+	t.Run("unknown account is skipped with warning", func(t *testing.T) {
 		cfg := &config.TrebFileConfigV2{
 			Accounts: map[string]config.AccountConfig{
 				"deployer": {Type: "private_key", PrivateKey: "0x1234"},
 			},
 			Namespace: map[string]config.NamespaceRoles{
 				"default": {
-					Roles: map[string]string{"deployer": "nonexistent"},
+					Senders: map[string]string{"deployer": "nonexistent"},
 				},
 			},
 		}
 
-		resolved, err := ResolveNamespace(cfg, "default")
-		assert.Error(t, err)
-		assert.Nil(t, resolved)
-		assert.Contains(t, err.Error(), "unknown account \"nonexistent\"")
+		var buf bytes.Buffer
+		resolved, err := ResolveNamespace(cfg, "default", &buf)
+		require.NoError(t, err)
+		assert.Empty(t, resolved.Accounts)
+		assert.Contains(t, buf.String(), `namespace "default" role "deployer" references unknown account "nonexistent"`)
+	})
+
+	t.Run("mix of valid and invalid account references resolves only valid", func(t *testing.T) {
+		cfg := &config.TrebFileConfigV2{
+			Accounts: map[string]config.AccountConfig{
+				"deployer": {Type: "private_key", PrivateKey: "0x1234"},
+			},
+			Namespace: map[string]config.NamespaceRoles{
+				"default": {
+					Senders: map[string]string{
+						"deployer": "deployer",
+						"admin":    "nonexistent",
+					},
+				},
+			},
+		}
+
+		var buf bytes.Buffer
+		resolved, err := ResolveNamespace(cfg, "default", &buf)
+		require.NoError(t, err)
+		// Only valid sender is resolved
+		assert.Len(t, resolved.Accounts, 1)
+		assert.Equal(t, config.SenderType("private_key"), resolved.Accounts["deployer"].Type)
+		assert.Equal(t, "0x1234", resolved.Accounts["deployer"].PrivateKey)
+		// Warning emitted for invalid reference
+		assert.Contains(t, buf.String(), `unknown account "nonexistent"`)
+		assert.NotContains(t, buf.String(), `"deployer"`)
 	})
 
 	t.Run("default-only resolution with undefined default", func(t *testing.T) {
@@ -481,7 +514,7 @@ func TestResolveNamespace(t *testing.T) {
 				// No default namespace defined
 				"staging": {
 					Profile: "staging",
-					Roles:   map[string]string{"deployer": "deployer"},
+					Senders:   map[string]string{"deployer": "deployer"},
 				},
 			},
 		}
@@ -502,11 +535,11 @@ func TestResolveNamespace(t *testing.T) {
 			},
 			Namespace: map[string]config.NamespaceRoles{
 				"default": {
-					Roles: map[string]string{"deployer": "dev-wallet"},
+					Senders: map[string]string{"deployer": "dev-wallet"},
 				},
 				"production": {
 					Profile: "mainnet",
-					Roles:   map[string]string{"deployer": "prod-safe", "admin": "admin"},
+					Senders:   map[string]string{"deployer": "prod-safe", "admin": "admin"},
 				},
 			},
 		}
@@ -532,17 +565,17 @@ func TestResolveNamespace(t *testing.T) {
 			Namespace: map[string]config.NamespaceRoles{
 				"default": {
 					Profile: "default",
-					Roles:   map[string]string{"deployer": "dev", "monitor": "dev"},
+					Senders:   map[string]string{"deployer": "dev", "monitor": "dev"},
 				},
 				"production": {
 					Profile: "mainnet",
-					Roles:   map[string]string{"deployer": "prod"},
+					Senders:   map[string]string{"deployer": "prod"},
 				},
 				"production.ntt": {
-					Roles: map[string]string{"deployer": "ntt"},
+					Senders: map[string]string{"deployer": "ntt"},
 				},
 				"production.ntt.v2": {
-					Roles: map[string]string{"deployer": "v2"},
+					Senders: map[string]string{"deployer": "v2"},
 				},
 			},
 		}
@@ -638,7 +671,7 @@ func TestResolvedNamespaceToTrebConfig(t *testing.T) {
 		assert.Equal(t, "m/44'/60'/0'/0/0", proposerSender.DerivationPath)
 	})
 
-	t.Run("missing signer account returns error", func(t *testing.T) {
+	t.Run("missing signer account is skipped with warning", func(t *testing.T) {
 		accounts := map[string]config.AccountConfig{
 			"safe0": {Type: config.SenderTypeSafe, Safe: "0xSafeAddr", Signer: "nonexistent"},
 		}
@@ -649,13 +682,14 @@ func TestResolvedNamespaceToTrebConfig(t *testing.T) {
 			},
 		}
 
-		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
-		assert.Error(t, err)
-		assert.Nil(t, trebCfg)
-		assert.Contains(t, err.Error(), "unknown signer account \"nonexistent\"")
+		var buf bytes.Buffer
+		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts, &buf)
+		require.NoError(t, err)
+		assert.Empty(t, trebCfg.Senders)
+		assert.Contains(t, buf.String(), `role "deployer" references safe with unknown signer account "nonexistent"`)
 	})
 
-	t.Run("missing proposer account returns error", func(t *testing.T) {
+	t.Run("missing proposer account is skipped with warning", func(t *testing.T) {
 		accounts := map[string]config.AccountConfig{
 			"gov": {Type: config.SenderTypeOZGovernor, Governor: "0xGovAddr", Proposer: "nonexistent"},
 		}
@@ -666,10 +700,34 @@ func TestResolvedNamespaceToTrebConfig(t *testing.T) {
 			},
 		}
 
-		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
-		assert.Error(t, err)
-		assert.Nil(t, trebCfg)
-		assert.Contains(t, err.Error(), "unknown proposer account \"nonexistent\"")
+		var buf bytes.Buffer
+		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts, &buf)
+		require.NoError(t, err)
+		assert.Empty(t, trebCfg.Senders)
+		assert.Contains(t, buf.String(), `role "governor" references oz_governor with unknown proposer account "nonexistent"`)
+	})
+
+	t.Run("safe with missing signer skipped while other senders kept", func(t *testing.T) {
+		accounts := map[string]config.AccountConfig{
+			"pk":    {Type: config.SenderTypePrivateKey, PrivateKey: "0x1234"},
+			"safe0": {Type: config.SenderTypeSafe, Safe: "0xSafeAddr", Signer: "nonexistent"},
+		}
+		resolved := &config.ResolvedNamespace{
+			Profile: "default",
+			Accounts: map[string]config.AccountConfig{
+				"deployer": accounts["pk"],
+				"multisig": accounts["safe0"],
+			},
+		}
+
+		var buf bytes.Buffer
+		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts, &buf)
+		require.NoError(t, err)
+		// Only the valid sender remains
+		assert.Len(t, trebCfg.Senders, 1)
+		assert.Equal(t, config.SenderTypePrivateKey, trebCfg.Senders["deployer"].Type)
+		// Warning for the skipped safe
+		assert.Contains(t, buf.String(), `unknown signer account "nonexistent"`)
 	})
 
 	t.Run("all account fields are mapped to sender config", func(t *testing.T) {

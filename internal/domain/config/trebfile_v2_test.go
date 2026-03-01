@@ -49,23 +49,23 @@ func TestNamespaceRoles(t *testing.T) {
 	t.Run("stores profile and role mappings", func(t *testing.T) {
 		ns := NamespaceRoles{
 			Profile: "production",
-			Roles: map[string]string{
+			Senders: map[string]string{
 				"deployer": "prod-deployer",
 				"safe":     "prod-safe",
 			},
 		}
 		assert.Equal(t, "production", ns.Profile)
-		assert.Equal(t, "prod-deployer", ns.Roles["deployer"])
-		assert.Equal(t, "prod-safe", ns.Roles["safe"])
+		assert.Equal(t, "prod-deployer", ns.Senders["deployer"])
+		assert.Equal(t, "prod-safe", ns.Senders["safe"])
 	})
 
 	t.Run("roles map can be empty", func(t *testing.T) {
 		ns := NamespaceRoles{
 			Profile: "staging",
-			Roles:   map[string]string{},
+			Senders:   map[string]string{},
 		}
 		assert.Equal(t, "staging", ns.Profile)
-		assert.Empty(t, ns.Roles)
+		assert.Empty(t, ns.Senders)
 	})
 }
 
@@ -79,11 +79,11 @@ func TestTrebFileConfigV2(t *testing.T) {
 			Namespace: map[string]NamespaceRoles{
 				"default": {
 					Profile: "default",
-					Roles:   map[string]string{"deployer": "deployer"},
+					Senders:   map[string]string{"deployer": "deployer"},
 				},
 				"production": {
 					Profile: "mainnet",
-					Roles:   map[string]string{"deployer": "hw"},
+					Senders:   map[string]string{"deployer": "hw"},
 				},
 			},
 			Fork: ForkConfig{Setup: "script/ForkSetup.s.sol"},
@@ -95,9 +95,9 @@ func TestTrebFileConfigV2(t *testing.T) {
 
 		assert.Len(t, cfg.Namespace, 2)
 		assert.Equal(t, "default", cfg.Namespace["default"].Profile)
-		assert.Equal(t, "deployer", cfg.Namespace["default"].Roles["deployer"])
+		assert.Equal(t, "deployer", cfg.Namespace["default"].Senders["deployer"])
 		assert.Equal(t, "mainnet", cfg.Namespace["production"].Profile)
-		assert.Equal(t, "hw", cfg.Namespace["production"].Roles["deployer"])
+		assert.Equal(t, "hw", cfg.Namespace["production"].Senders["deployer"])
 
 		assert.Equal(t, "script/ForkSetup.s.sol", cfg.Fork.Setup)
 	})

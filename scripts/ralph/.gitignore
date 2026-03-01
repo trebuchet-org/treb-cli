@@ -1,0 +1,5 @@
+# Runtime files — generated per-run, not source-controlled
+prd.json
+progress.txt
+.last-branch
+archive/
