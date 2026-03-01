@@ -62,11 +62,11 @@ func TestMergeTrebFileConfig(t *testing.T) {
 		assert.Equal(t, config.SenderType("private_key"), merged.Senders["backup"].Type)
 	})
 
-	t.Run("profile defaults to namespace name", func(t *testing.T) {
+	t.Run("profile defaults to default when not explicitly set", func(t *testing.T) {
 		trebFile := &config.TrebFileConfig{
 			Ns: map[string]config.NamespaceConfig{
 				"staging": {
-					Profile: "staging", // Set by loadTrebConfig default logic
+					Profile: "default", // Set by loadTrebConfig default logic
 					Senders: map[string]config.SenderConfig{
 						"deployer": {Type: "private_key", PrivateKey: "0x1234"},
 					},
@@ -75,10 +75,10 @@ func TestMergeTrebFileConfig(t *testing.T) {
 		}
 
 		_, profile := mergeTrebFileConfig(trebFile, "staging")
-		assert.Equal(t, "staging", profile)
+		assert.Equal(t, "default", profile)
 	})
 
-	t.Run("namespace not in config uses default senders and namespace as profile", func(t *testing.T) {
+	t.Run("namespace not in config uses default senders and default profile", func(t *testing.T) {
 		trebFile := &config.TrebFileConfig{
 			Ns: map[string]config.NamespaceConfig{
 				"default": {
@@ -93,7 +93,7 @@ func TestMergeTrebFileConfig(t *testing.T) {
 		merged, profile := mergeTrebFileConfig(trebFile, "unknown")
 
 		require.NotNil(t, merged)
-		assert.Equal(t, "unknown", profile)
+		assert.Equal(t, "default", profile)
 		assert.Len(t, merged.Senders, 1)
 		assert.Equal(t, config.SenderType("private_key"), merged.Senders["deployer"].Type)
 	})
@@ -271,7 +271,7 @@ derivation_path = "m/44'/60'/0'/0/0"
 		assert.Equal(t, config.SenderType("ledger"), cfg.TrebConfig.Senders["deployer"].Type)
 	})
 
-	t.Run("foundry.toml fallback sets FoundryProfile to namespace", func(t *testing.T) {
+	t.Run("foundry.toml fallback sets FoundryProfile to default", func(t *testing.T) {
 		dir := t.TempDir()
 
 		foundryToml := `[profile.default]
@@ -295,7 +295,7 @@ private_key = "0x1234"
 		require.NoError(t, err)
 
 		assert.Equal(t, "foundry.toml", cfg.ConfigSource)
-		assert.Equal(t, "staging", cfg.FoundryProfile, "FoundryProfile should equal namespace in legacy mode")
+		assert.Equal(t, "default", cfg.FoundryProfile, "FoundryProfile should default to 'default'")
 	})
 
 	t.Run("uses treb.toml v2 format with accounts and namespaces", func(t *testing.T) {
@@ -410,7 +410,7 @@ setup = "script/SetupFork.s.sol"
 		assert.Equal(t, "script/SetupFork.s.sol", cfg.ForkSetup)
 	})
 
-	t.Run("v2 format defaults FoundryProfile to namespace when profile not set", func(t *testing.T) {
+	t.Run("v2 format defaults FoundryProfile to default when profile not set", func(t *testing.T) {
 		dir := t.TempDir()
 
 		foundryToml := `[profile.default]
@@ -441,7 +441,7 @@ deployer = "deployer"
 		require.NoError(t, err)
 
 		assert.Equal(t, "treb.toml (v2)", cfg.ConfigSource)
-		assert.Equal(t, "staging", cfg.FoundryProfile, "should default to namespace name when profile not set")
+		assert.Equal(t, "default", cfg.FoundryProfile, "should default to 'default' when profile not set")
 	})
 
 	t.Run("v1 treb.toml still works when v2 not detected", func(t *testing.T) {

@@ -6,6 +6,7 @@ type AnvilInstance struct {
 	Port    string `json:"port"`
 	ChainID string `json:"chainId,omitempty"`
 	ForkURL string `json:"forkUrl,omitempty"`
+	RPCURL  string `json:"rpcUrl,omitempty"` // Full RPC endpoint URL (used for external forks)
 	PidFile string `json:"pidFile"`
 	LogFile string `json:"logFile"`
 }

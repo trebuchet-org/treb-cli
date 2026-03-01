@@ -79,15 +79,7 @@ func (uc *RevertFork) revertLast(ctx context.Context, state *domain.ForkState, e
 	topSnapshot := entry.Snapshots[len(entry.Snapshots)-1]
 
 	// Revert EVM state to this snapshot's ID
-	instance := &domain.AnvilInstance{
-		Name:    fmt.Sprintf("fork-%s", entry.Network),
-		Port:    portFromURL(entry.ForkURL),
-		ChainID: fmt.Sprintf("%d", entry.ChainID),
-		PidFile: entry.PidFile,
-		LogFile: entry.LogFile,
-	}
-
-	if err := uc.anvilManager.RevertSnapshot(ctx, instance, topSnapshot.SnapshotID); err != nil {
+	if err := uc.anvilManager.RevertSnapshot(ctx, entry.AnvilInstance(), topSnapshot.SnapshotID); err != nil {
 		return nil, fmt.Errorf("failed to revert EVM snapshot: %w", err)
 	}
 
@@ -125,15 +117,7 @@ func (uc *RevertFork) revertAll(ctx context.Context, state *domain.ForkState, en
 	// Revert EVM state to the initial snapshot (index 0)
 	initialSnapshot := entry.Snapshots[0]
 
-	instance := &domain.AnvilInstance{
-		Name:    fmt.Sprintf("fork-%s", entry.Network),
-		Port:    portFromURL(entry.ForkURL),
-		ChainID: fmt.Sprintf("%d", entry.ChainID),
-		PidFile: entry.PidFile,
-		LogFile: entry.LogFile,
-	}
-
-	if err := uc.anvilManager.RevertSnapshot(ctx, instance, initialSnapshot.SnapshotID); err != nil {
+	if err := uc.anvilManager.RevertSnapshot(ctx, entry.AnvilInstance(), initialSnapshot.SnapshotID); err != nil {
 		return nil, fmt.Errorf("failed to revert EVM snapshot to initial state: %w", err)
 	}
 

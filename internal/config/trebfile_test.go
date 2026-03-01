@@ -48,7 +48,7 @@ signer = "deployer"
 		assert.Equal(t, "deployer", liveNs.Senders["safe0"].Signer)
 	})
 
-	t.Run("profile defaults to namespace name", func(t *testing.T) {
+	t.Run("profile defaults to default when not set", func(t *testing.T) {
 		dir := t.TempDir()
 		trebToml := `
 [ns.staging.senders.deployer]
@@ -63,7 +63,7 @@ private_key = "0x1234"
 		require.NotNil(t, cfg)
 
 		stagingNs := cfg.Ns["staging"]
-		assert.Equal(t, "staging", stagingNs.Profile, "profile should default to namespace name")
+		assert.Equal(t, "default", stagingNs.Profile, "profile should default to 'default'")
 	})
 
 	t.Run("explicit profile overrides default", func(t *testing.T) {

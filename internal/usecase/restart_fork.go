@@ -72,14 +72,7 @@ func (uc *RestartFork) Execute(ctx context.Context, params RestartForkParams) (*
 	}
 
 	// Stop existing anvil process (may already be dead)
-	instance := &domain.AnvilInstance{
-		Name:    fmt.Sprintf("fork-%s", entry.Network),
-		Port:    portFromURL(entry.ForkURL),
-		ChainID: fmt.Sprintf("%d", entry.ChainID),
-		PidFile: entry.PidFile,
-		LogFile: entry.LogFile,
-	}
-	_ = uc.anvilManager.Stop(ctx, instance)
+	_ = uc.anvilManager.Stop(ctx, entry.AnvilInstance())
 
 	// Restore registry files from initial backup (snapshot 0)
 	if err := uc.forkFiles.RestoreFiles(ctx, entry.Network, 0); err != nil {

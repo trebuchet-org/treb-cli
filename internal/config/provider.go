@@ -68,7 +68,7 @@ func Provider(v *viper.Viper) (*config.RuntimeConfig, error) {
 		cfg.TrebConfig = trebConfig
 		cfg.FoundryProfile = resolved.Profile
 		if cfg.FoundryProfile == "" {
-			cfg.FoundryProfile = cfg.Namespace
+			cfg.FoundryProfile = "default"
 		}
 		cfg.ForkSetup = v2Config.Fork.Setup
 
@@ -82,7 +82,7 @@ func Provider(v *viper.Viper) (*config.RuntimeConfig, error) {
 			cfg.TrebConfig, cfg.FoundryProfile = mergeTrebFileConfig(trebFileConfig, cfg.Namespace)
 		} else {
 			cfg.ConfigSource = "foundry.toml"
-			cfg.FoundryProfile = cfg.Namespace
+			cfg.FoundryProfile = "default"
 			cfg.TrebConfig = mergeFoundryTrebConfig(foundryConfig, cfg.Namespace)
 		}
 		// Backwards compat: read forkSetup from config.local.json via viper
@@ -90,7 +90,7 @@ func Provider(v *viper.Viper) (*config.RuntimeConfig, error) {
 
 	default:
 		cfg.ConfigSource = "foundry.toml"
-		cfg.FoundryProfile = cfg.Namespace
+		cfg.FoundryProfile = "default"
 		cfg.TrebConfig = mergeFoundryTrebConfig(foundryConfig, cfg.Namespace)
 		// Backwards compat: read forkSetup from config.local.json via viper
 		cfg.ForkSetup = v.GetString("forksetup")
@@ -203,8 +203,8 @@ func mergeTrebFileConfig(trebFile *config.TrebFileConfig, namespace string) (*co
 		}
 	}
 
-	// Resolve foundry profile: default to namespace name
-	foundryProfile := namespace
+	// Resolve foundry profile: default to "default" unless explicitly overridden
+	foundryProfile := "default"
 
 	// Overlay active namespace senders (if not "default")
 	if namespace != "default" {

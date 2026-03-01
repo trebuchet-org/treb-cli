@@ -470,7 +470,12 @@ func (m *Manager) makeRPCCallWithResponse(instance *domain.AnvilInstance, req rp
 		return err
 	}
 
-	httpResp, err := http.Post(fmt.Sprintf("http://localhost:%s", instance.Port), "application/json", bytes.NewBuffer(jsonData))
+	rpcURL := fmt.Sprintf("http://localhost:%s", instance.Port)
+	if instance.RPCURL != "" {
+		rpcURL = instance.RPCURL
+	}
+
+	httpResp, err := http.Post(rpcURL, "application/json", bytes.NewBuffer(jsonData)) //nolint:gosec // RPC URL from fork config
 	if err != nil {
 		return err
 	}

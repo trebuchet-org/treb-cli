@@ -23,10 +23,10 @@ func loadTrebConfig(projectRoot string) (*config.TrebFileConfig, error) {
 		return nil, fmt.Errorf("failed to parse treb.toml: %w", err)
 	}
 
-	// Default profile to namespace name when omitted
+	// Default profile to "default" when omitted
 	for nsName, nsCfg := range cfg.Ns {
 		if nsCfg.Profile == "" {
-			nsCfg.Profile = nsName
+			nsCfg.Profile = "default"
 			cfg.Ns[nsName] = nsCfg
 		}
 	}
