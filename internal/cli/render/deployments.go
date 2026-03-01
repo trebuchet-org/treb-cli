@@ -52,7 +52,10 @@ func NewDeploymentsRenderer(out io.Writer, color bool) *DeploymentsRenderer {
 
 // RenderDeploymentList renders deployments in the tree-style format
 func (r *DeploymentsRenderer) RenderDeploymentList(result *usecase.DeploymentListResult) error {
-	if len(result.Deployments) == 0 {
+	hasDeployments := len(result.Deployments) > 0
+	hasAddressbook := len(result.AddressbookEntries) > 0
+
+	if !hasDeployments && !hasAddressbook {
 		if len(result.OtherNamespaces) > 0 {
 			r.renderNamespaceDiscoveryHint(result)
 		} else {
@@ -61,8 +64,15 @@ func (r *DeploymentsRenderer) RenderDeploymentList(result *usecase.DeploymentLis
 		return nil
 	}
 
-	// Display in tree-style table format
-	r.displayTableFormat(result.Deployments, result.NetworkNames, result.ForkDeploymentIDs)
+	if hasDeployments {
+		// Display in tree-style table format
+		r.displayTableFormat(result.Deployments, result.NetworkNames, result.ForkDeploymentIDs)
+	}
+
+	if hasAddressbook {
+		r.renderAddressbookSection(result)
+	}
+
 	return nil
 }
 
@@ -566,4 +576,17 @@ func calculateTableColumnWidths(tables []TableData) []int {
 // displayWidth calculates the display width of a string, accounting for wide characters
 func displayWidth(s string) int {
 	return runewidth.StringWidth(s)
+}
+
+// renderAddressbookSection renders the ADDRESSBOOK section in the deployment list output.
+func (r *DeploymentsRenderer) renderAddressbookSection(result *usecase.DeploymentListResult) {
+	fmt.Fprintln(r.out, sectionHeaderStyle.Sprint("ADDRESSBOOK"))
+
+	for _, entry := range result.AddressbookEntries {
+		name := color.New(color.FgYellow, color.Bold).Sprintf("%-24s", entry.Name)
+		addr := addressStyle.Sprint(entry.Address)
+		fmt.Fprintf(r.out, "  %s  %s\n", name, addr)
+	}
+
+	fmt.Fprintln(r.out)
 }

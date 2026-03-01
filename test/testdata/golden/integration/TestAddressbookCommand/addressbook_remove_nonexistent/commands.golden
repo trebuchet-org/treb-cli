@@ -1,0 +1,2 @@
+=== cmd 0: [addressbook remove NOPE] ===
+Error: addressbook entry "NOPE" not found on chain 31337

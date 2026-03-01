@@ -47,7 +47,8 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 	}
 	networkResolver := config.ProvideNetworkResolver(runtimeConfig)
 	forkStateStoreAdapter := fs.NewForkStateStoreAdapter(runtimeConfig)
-	listDeployments := usecase.NewListDeployments(runtimeConfig, fileRepository, networkResolver, forkStateStoreAdapter)
+	addressbookStoreAdapter := fs.NewAddressbookStoreAdapter(runtimeConfig)
+	listDeployments := usecase.NewListDeployments(runtimeConfig, fileRepository, networkResolver, forkStateStoreAdapter, addressbookStoreAdapter)
 	deploymentResolver := resolvers.NewDeploymentResolver(runtimeConfig, fileRepository, selectorAdapter)
 	showDeployment := usecase.NewShowDeployment(runtimeConfig, fileRepository, deploymentResolver, forkStateStoreAdapter)
 	string2 := adapters.ProvideProjectPath(runtimeConfig)
@@ -104,6 +105,9 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 	registerDeployment := usecase.NewRegisterDeployment(runtimeConfig, fileRepository, checkerAdapter, repository)
 	manageAnvil := usecase.NewManageAnvil(manager, spinnerProgressReporter)
 	initProject := usecase.NewInitProject(fileWriterAdapter, spinnerProgressReporter)
+	setAddressbook := usecase.NewSetAddressbook(runtimeConfig, addressbookStoreAdapter)
+	removeAddressbook := usecase.NewRemoveAddressbook(runtimeConfig, addressbookStoreAdapter)
+	listAddressbook := usecase.NewListAddressbook(runtimeConfig, addressbookStoreAdapter)
 	enterFork := usecase.NewEnterFork(runtimeConfig, forkStateStoreAdapter, forkFileManagerAdapter, manager, forgeAdapter)
 	exitFork := usecase.NewExitFork(runtimeConfig, forkStateStoreAdapter, forkFileManagerAdapter, manager)
 	revertFork := usecase.NewRevertFork(runtimeConfig, forkStateStoreAdapter, forkFileManagerAdapter, manager)
@@ -112,7 +116,7 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 	forkHistory := usecase.NewForkHistory(runtimeConfig, forkStateStoreAdapter)
 	diffFork := usecase.NewDiffFork(runtimeConfig, forkStateStoreAdapter)
 	renderer := render.NewGenerateRenderer()
-	app, err := NewApp(runtimeConfig, selectorAdapter, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, resetRegistry, showConfig, setConfig, removeConfig, runScript, verifyDeployment, composeDeployment, syncRegistry, tagDeployment, registerDeployment, manageAnvil, initProject, enterFork, exitFork, revertFork, restartFork, forkStatus, forkHistory, diffFork, manager, networkResolver, forkStateStoreAdapter, renderer, scriptRenderer, composeRenderer)
+	app, err := NewApp(runtimeConfig, selectorAdapter, listDeployments, showDeployment, generateDeploymentScript, listNetworks, pruneRegistry, resetRegistry, showConfig, setConfig, removeConfig, runScript, verifyDeployment, composeDeployment, syncRegistry, tagDeployment, registerDeployment, manageAnvil, initProject, setAddressbook, removeAddressbook, listAddressbook, enterFork, exitFork, revertFork, restartFork, forkStatus, forkHistory, diffFork, manager, networkResolver, forkStateStoreAdapter, renderer, scriptRenderer, composeRenderer)
 	if err != nil {
 		return nil, err
 	}

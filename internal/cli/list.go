@@ -119,10 +119,17 @@ type listJSONEntry struct {
 	Fork         bool   `json:"fork,omitempty"`
 }
 
+// listJSONAddressbookEntry represents an addressbook entry in JSON output
+type listJSONAddressbookEntry struct {
+	Name    string `json:"name"`
+	Address string `json:"address"`
+}
+
 // listJSONOutput wraps the JSON output with optional namespace discovery data
 type listJSONOutput struct {
-	Deployments     []listJSONEntry `json:"deployments"`
-	OtherNamespaces map[string]int  `json:"otherNamespaces,omitempty"`
+	Deployments     []listJSONEntry            `json:"deployments"`
+	Addressbook     []listJSONAddressbookEntry `json:"addressbook,omitempty"`
+	OtherNamespaces map[string]int             `json:"otherNamespaces,omitempty"`
 }
 
 // renderListJSON outputs deployments as JSON
@@ -146,6 +153,18 @@ func renderListJSON(result *usecase.DeploymentListResult) error {
 
 	output := listJSONOutput{
 		Deployments: entries,
+	}
+
+	// Include addressbook entries if present
+	if len(result.AddressbookEntries) > 0 {
+		abEntries := make([]listJSONAddressbookEntry, 0, len(result.AddressbookEntries))
+		for _, e := range result.AddressbookEntries {
+			abEntries = append(abEntries, listJSONAddressbookEntry{
+				Name:    e.Name,
+				Address: e.Address,
+			})
+		}
+		output.Addressbook = abEntries
 	}
 
 	// Include other namespaces only when current namespace is empty and others exist

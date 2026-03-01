@@ -1,0 +1,2 @@
+=== cmd 0: [addressbook set BAD not-an-address] ===
+Error: invalid address "not-an-address": must be a 0x-prefixed 40-character hex string

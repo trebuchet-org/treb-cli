@@ -44,6 +44,9 @@ var FSSet = wire.NewSet(
 
 	fs.NewLocalConfigStoreAdapter,
 	wire.Bind(new(usecase.LocalConfigRepository), new(*fs.LocalConfigStoreAdapter)),
+
+	fs.NewAddressbookStoreAdapter,
+	wire.Bind(new(usecase.AddressbookRepository), new(*fs.AddressbookStoreAdapter)),
 )
 
 // TemplateSet provides template-based implementations
