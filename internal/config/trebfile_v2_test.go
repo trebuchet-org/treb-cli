@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -458,7 +459,7 @@ func TestResolveNamespace(t *testing.T) {
 		assert.Equal(t, "0xntt", resolved.Accounts["deployer"].PrivateKey)
 	})
 
-	t.Run("unknown account returns error", func(t *testing.T) {
+	t.Run("unknown account is skipped with warning", func(t *testing.T) {
 		cfg := &config.TrebFileConfigV2{
 			Accounts: map[string]config.AccountConfig{
 				"deployer": {Type: "private_key", PrivateKey: "0x1234"},
@@ -470,10 +471,38 @@ func TestResolveNamespace(t *testing.T) {
 			},
 		}
 
-		resolved, err := ResolveNamespace(cfg, "default")
-		assert.Error(t, err)
-		assert.Nil(t, resolved)
-		assert.Contains(t, err.Error(), "unknown account \"nonexistent\"")
+		var buf bytes.Buffer
+		resolved, err := ResolveNamespace(cfg, "default", &buf)
+		require.NoError(t, err)
+		assert.Empty(t, resolved.Accounts)
+		assert.Contains(t, buf.String(), `namespace "default" role "deployer" references unknown account "nonexistent"`)
+	})
+
+	t.Run("mix of valid and invalid account references resolves only valid", func(t *testing.T) {
+		cfg := &config.TrebFileConfigV2{
+			Accounts: map[string]config.AccountConfig{
+				"deployer": {Type: "private_key", PrivateKey: "0x1234"},
+			},
+			Namespace: map[string]config.NamespaceRoles{
+				"default": {
+					Senders: map[string]string{
+						"deployer": "deployer",
+						"admin":    "nonexistent",
+					},
+				},
+			},
+		}
+
+		var buf bytes.Buffer
+		resolved, err := ResolveNamespace(cfg, "default", &buf)
+		require.NoError(t, err)
+		// Only valid sender is resolved
+		assert.Len(t, resolved.Accounts, 1)
+		assert.Equal(t, config.SenderType("private_key"), resolved.Accounts["deployer"].Type)
+		assert.Equal(t, "0x1234", resolved.Accounts["deployer"].PrivateKey)
+		// Warning emitted for invalid reference
+		assert.Contains(t, buf.String(), `unknown account "nonexistent"`)
+		assert.NotContains(t, buf.String(), `"deployer"`)
 	})
 
 	t.Run("default-only resolution with undefined default", func(t *testing.T) {
@@ -642,7 +671,7 @@ func TestResolvedNamespaceToTrebConfig(t *testing.T) {
 		assert.Equal(t, "m/44'/60'/0'/0/0", proposerSender.DerivationPath)
 	})
 
-	t.Run("missing signer account returns error", func(t *testing.T) {
+	t.Run("missing signer account is skipped with warning", func(t *testing.T) {
 		accounts := map[string]config.AccountConfig{
 			"safe0": {Type: config.SenderTypeSafe, Safe: "0xSafeAddr", Signer: "nonexistent"},
 		}
@@ -653,13 +682,14 @@ func TestResolvedNamespaceToTrebConfig(t *testing.T) {
 			},
 		}
 
-		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
-		assert.Error(t, err)
-		assert.Nil(t, trebCfg)
-		assert.Contains(t, err.Error(), "unknown signer account \"nonexistent\"")
+		var buf bytes.Buffer
+		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts, &buf)
+		require.NoError(t, err)
+		assert.Empty(t, trebCfg.Senders)
+		assert.Contains(t, buf.String(), `role "deployer" references safe with unknown signer account "nonexistent"`)
 	})
 
-	t.Run("missing proposer account returns error", func(t *testing.T) {
+	t.Run("missing proposer account is skipped with warning", func(t *testing.T) {
 		accounts := map[string]config.AccountConfig{
 			"gov": {Type: config.SenderTypeOZGovernor, Governor: "0xGovAddr", Proposer: "nonexistent"},
 		}
@@ -670,10 +700,34 @@ func TestResolvedNamespaceToTrebConfig(t *testing.T) {
 			},
 		}
 
-		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
-		assert.Error(t, err)
-		assert.Nil(t, trebCfg)
-		assert.Contains(t, err.Error(), "unknown proposer account \"nonexistent\"")
+		var buf bytes.Buffer
+		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts, &buf)
+		require.NoError(t, err)
+		assert.Empty(t, trebCfg.Senders)
+		assert.Contains(t, buf.String(), `role "governor" references oz_governor with unknown proposer account "nonexistent"`)
+	})
+
+	t.Run("safe with missing signer skipped while other senders kept", func(t *testing.T) {
+		accounts := map[string]config.AccountConfig{
+			"pk":    {Type: config.SenderTypePrivateKey, PrivateKey: "0x1234"},
+			"safe0": {Type: config.SenderTypeSafe, Safe: "0xSafeAddr", Signer: "nonexistent"},
+		}
+		resolved := &config.ResolvedNamespace{
+			Profile: "default",
+			Accounts: map[string]config.AccountConfig{
+				"deployer": accounts["pk"],
+				"multisig": accounts["safe0"],
+			},
+		}
+
+		var buf bytes.Buffer
+		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts, &buf)
+		require.NoError(t, err)
+		// Only the valid sender remains
+		assert.Len(t, trebCfg.Senders, 1)
+		assert.Equal(t, config.SenderTypePrivateKey, trebCfg.Senders["deployer"].Type)
+		// Warning for the skipped safe
+		assert.Contains(t, buf.String(), `unknown signer account "nonexistent"`)
 	})
 
 	t.Run("all account fields are mapped to sender config", func(t *testing.T) {
