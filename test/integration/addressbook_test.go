@@ -120,13 +120,9 @@ func TestAddressbookCommand(t *testing.T) {
 				require.True(t, ok, "expected deployments array")
 				require.Len(t, entries, 1)
 
-				// Should have addressbook
-				ab, ok := result["addressbook"].([]interface{})
-				require.True(t, ok, "expected addressbook array")
-				require.Len(t, ab, 1)
-				abEntry := ab[0].(map[string]interface{})
-				assert.Equal(t, "WETH", abEntry["name"])
-				assert.Equal(t, "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", abEntry["address"])
+				// Should NOT have addressbook (removed from list output)
+				_, hasAB := result["addressbook"]
+				assert.False(t, hasAB, "addressbook should not be in list JSON output")
 			},
 		},
 	}

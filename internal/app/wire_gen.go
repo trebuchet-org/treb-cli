@@ -48,7 +48,7 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 	networkResolver := config.ProvideNetworkResolver(runtimeConfig)
 	forkStateStoreAdapter := fs.NewForkStateStoreAdapter(runtimeConfig)
 	addressbookStoreAdapter := fs.NewAddressbookStoreAdapter(runtimeConfig)
-	listDeployments := usecase.NewListDeployments(runtimeConfig, fileRepository, networkResolver, forkStateStoreAdapter, addressbookStoreAdapter)
+	listDeployments := usecase.NewListDeployments(runtimeConfig, fileRepository, networkResolver, forkStateStoreAdapter)
 	deploymentResolver := resolvers.NewDeploymentResolver(runtimeConfig, fileRepository, selectorAdapter)
 	showDeployment := usecase.NewShowDeployment(runtimeConfig, fileRepository, deploymentResolver, forkStateStoreAdapter)
 	string2 := adapters.ProvideProjectPath(runtimeConfig)
