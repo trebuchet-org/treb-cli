@@ -1,6 +1,9 @@
 package domain
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 // ForkState represents the state of all active forks
 type ForkState struct {
@@ -52,4 +55,40 @@ func (s *ForkState) GetActiveFork(network string) *ForkEntry {
 		return nil
 	}
 	return s.Forks[network]
+}
+
+// AnvilInstance returns an AnvilInstance for this fork entry.
+// For external forks, RPCURL is set to the full fork URL so RPC calls
+// go to the correct endpoint instead of constructing http://localhost:<port>.
+func (e *ForkEntry) AnvilInstance() *AnvilInstance {
+	instance := &AnvilInstance{
+		Name:    fmt.Sprintf("fork-%s", e.Network),
+		ChainID: fmt.Sprintf("%d", e.ChainID),
+		PidFile: e.PidFile,
+		LogFile: e.LogFile,
+	}
+
+	if e.External {
+		instance.RPCURL = e.ForkURL
+	} else {
+		instance.Port = portFromURL(e.ForkURL)
+	}
+
+	return instance
+}
+
+// portFromURL extracts the port from a URL like "http://127.0.0.1:12345"
+func portFromURL(rawURL string) string {
+	// Find the last colon
+	for i := len(rawURL) - 1; i >= 0; i-- {
+		if rawURL[i] == ':' {
+			port := rawURL[i+1:]
+			// Trim trailing slash
+			if len(port) > 0 && port[len(port)-1] == '/' {
+				port = port[:len(port)-1]
+			}
+			return port
+		}
+	}
+	return ""
 }

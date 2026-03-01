@@ -109,15 +109,7 @@ func (uc *ForkStatus) buildStatusEntry(ctx context.Context, entry *domain.ForkEn
 		}
 	} else {
 		// Local fork: use AnvilManager status check
-		instance := &domain.AnvilInstance{
-			Name:    fmt.Sprintf("fork-%s", entry.Network),
-			Port:    portFromURL(entry.ForkURL),
-			ChainID: fmt.Sprintf("%d", entry.ChainID),
-			PidFile: entry.PidFile,
-			LogFile: entry.LogFile,
-		}
-
-		status, err := uc.anvilManager.GetStatus(ctx, instance)
+		status, err := uc.anvilManager.GetStatus(ctx, entry.AnvilInstance())
 		if err != nil || !status.Running || !status.RPCHealthy {
 			se.Healthy = false
 			se.HealthDetail = "dead"

@@ -126,16 +126,8 @@ func (uc *ExitFork) exitAll(ctx context.Context, state *domain.ForkState) (*Exit
 func (uc *ExitFork) cleanupFork(ctx context.Context, entry *domain.ForkEntry) error {
 	// Skip process termination for external forks — treb doesn't own the process
 	if !entry.External {
-		instance := &domain.AnvilInstance{
-			Name:    fmt.Sprintf("fork-%s", entry.Network),
-			Port:    portFromURL(entry.ForkURL),
-			ChainID: fmt.Sprintf("%d", entry.ChainID),
-			PidFile: entry.PidFile,
-			LogFile: entry.LogFile,
-		}
-
 		// Stop is safe to call even if process is already dead
-		if err := uc.anvilManager.Stop(ctx, instance); err != nil {
+		if err := uc.anvilManager.Stop(ctx, entry.AnvilInstance()); err != nil {
 			// Log but don't fail - process may already be dead
 			fmt.Printf("Warning: failed to stop anvil for '%s': %v\n", entry.Network, err)
 		}
@@ -166,15 +158,4 @@ func (uc *ExitFork) saveOrDeleteState(ctx context.Context, state *domain.ForkSta
 		}
 	}
 	return nil
-}
-
-// portFromURL extracts the port from a URL like "http://127.0.0.1:12345"
-func portFromURL(url string) string {
-	// Find the last colon
-	for i := len(url) - 1; i >= 0; i-- {
-		if url[i] == ':' {
-			return url[i+1:]
-		}
-	}
-	return ""
 }

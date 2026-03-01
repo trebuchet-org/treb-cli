@@ -314,13 +314,7 @@ func (uc *RunScript) checkForkHealth(ctx context.Context) error {
 		return nil
 	}
 
-	instance := &domain.AnvilInstance{
-		Name:    fmt.Sprintf("fork-%s", fork.Network),
-		Port:    portFromURL(fork.ForkURL),
-		ChainID: fmt.Sprintf("%d", fork.ChainID),
-		PidFile: fork.PidFile,
-		LogFile: fork.LogFile,
-	}
+	instance := fork.AnvilInstance()
 
 	status, err := uc.anvilManager.GetStatus(ctx, instance)
 	if err != nil || !status.Running || !status.RPCHealthy {
@@ -348,17 +342,8 @@ func (uc *RunScript) takePreRunSnapshot(ctx context.Context, scriptRef string) e
 	// Determine next snapshot index
 	nextIndex := len(fork.Snapshots)
 
-	// Build AnvilInstance from fork entry for snapshot call
-	instance := &domain.AnvilInstance{
-		Name:    fmt.Sprintf("fork-%s", fork.Network),
-		Port:    portFromURL(fork.ForkURL),
-		ChainID: fmt.Sprintf("%d", fork.ChainID),
-		PidFile: fork.PidFile,
-		LogFile: fork.LogFile,
-	}
-
 	// Take EVM snapshot
-	snapshotID, err := uc.anvilManager.TakeSnapshot(ctx, instance)
+	snapshotID, err := uc.anvilManager.TakeSnapshot(ctx, fork.AnvilInstance())
 	if err != nil {
 		return fmt.Errorf("failed to take EVM snapshot: %w", err)
 	}
