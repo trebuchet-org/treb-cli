@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/fatih/color"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 )
 
@@ -23,7 +24,7 @@ func NewPruneRenderer(out io.Writer) *PruneRenderer {
 func (r *PruneRenderer) RenderItemsToPrune(changeset models.ChangesetModels) error {
 	// Check if there's anything to prune
 	if changeset.Count() == 0 {
-		fmt.Fprintln(r.out, "✅ All registry entries are valid. Nothing to prune.")
+		color.New(color.FgGreen).Fprintln(r.out, "✓ All registry entries are valid. Nothing to prune.")
 		return nil
 	}
 

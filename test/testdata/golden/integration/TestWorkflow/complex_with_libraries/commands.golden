@@ -1,5 +1,5 @@
 === cmd 0: [config set network anvil-31337] ===
-✅ Set network to: anvil-31337
+✓ Set network to: anvil-31337
 📁 config saved to: .treb/config.local.json
 
 
@@ -113,7 +113,7 @@ Total deployments: 2
 
 
 === cmd 7: [config set network anvil-31338] ===
-✅ Set network to: anvil-31338
+✓ Set network to: anvil-31338
 📁 config saved to: .treb/config.local.json
 
 

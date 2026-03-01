@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/fatih/color"
 	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -102,7 +103,7 @@ func (r *ConfigRenderer) RenderConfig(result *usecase.ShowConfigResult) error {
 
 // RenderSet renders the result of setting a configuration value
 func (r *ConfigRenderer) RenderSet(result *usecase.SetConfigResult) error {
-	fmt.Fprintf(r.out, "✅ Set %s to: %s\n", result.Key, result.Value)
+	color.New(color.FgGreen).Fprintf(r.out, "✓ Set %s to: %s\n", result.Key, result.Value)
 	fmt.Fprintf(r.out, "📁 config saved to: %s\n", getRelativePath(result.ConfigPath))
 	return nil
 }
@@ -111,9 +112,9 @@ func (r *ConfigRenderer) RenderSet(result *usecase.SetConfigResult) error {
 func (r *ConfigRenderer) RenderRemove(result *usecase.RemoveConfigResult) error {
 	switch result.Key {
 	case config.ConfigKeyNamespace:
-		fmt.Fprintf(r.out, "✅ Reset namespace to: default\n")
+		color.New(color.FgGreen).Fprintf(r.out, "✓ Reset namespace to: default\n")
 	case config.ConfigKeyNetwork:
-		fmt.Fprintf(r.out, "✅ Removed network from config (will be required as flag)\n")
+		color.New(color.FgGreen).Fprintf(r.out, "✓ Removed network from config (will be required as flag)\n")
 	}
 
 	fmt.Fprintf(r.out, "📁 config saved to: %s\n", getRelativePath(result.ConfigPath))

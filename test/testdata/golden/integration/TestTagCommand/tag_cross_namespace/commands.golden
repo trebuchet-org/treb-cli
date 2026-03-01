@@ -1,13 +1,13 @@
 === cmd 0: [tag Counter --add default-v1] ===
 Added tag 'default-v1' to deployment default/31337/Counter
-✅ Added tag 'default-v1' to default/31337/Counter
+✓ Added tag 'default-v1' to default/31337/Counter
 
 Current tags: default-v1
 
 
 === cmd 1: [tag Counter --add staging-v1 --namespace staging] ===
 Added tag 'staging-v1' to deployment staging/31337/Counter
-✅ Added tag 'staging-v1' to staging/31337/Counter
+✓ Added tag 'staging-v1' to staging/31337/Counter
 
 Current tags: staging-v1
 

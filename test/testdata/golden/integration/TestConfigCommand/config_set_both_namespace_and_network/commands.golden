@@ -1,10 +1,10 @@
 === cmd 0: [config set namespace staging] ===
-✅ Set namespace to: staging
+✓ Set namespace to: staging
 📁 config saved to: .treb/config.local.json
 
 
 === cmd 1: [config set network polygon] ===
-✅ Set network to: polygon
+✓ Set network to: polygon
 📁 config saved to: .treb/config.local.json
 
 

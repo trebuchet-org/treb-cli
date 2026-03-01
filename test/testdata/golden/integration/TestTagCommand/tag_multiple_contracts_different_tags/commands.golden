@@ -1,13 +1,13 @@
 === cmd 0: [tag Counter --add v<VERSION>] ===
 Added tag 'v<VERSION>' to deployment default/31337/Counter
-✅ Added tag 'v<VERSION>' to default/31337/Counter
+✓ Added tag 'v<VERSION>' to default/31337/Counter
 
 Current tags: v<VERSION>
 
 
 === cmd 1: [tag SampleToken --add token-v1] ===
 Added tag 'token-v1' to deployment default/31337/SampleToken
-✅ Added tag 'token-v1' to default/31337/SampleToken
+✓ Added tag 'token-v1' to default/31337/SampleToken
 
 Current tags: token-v1
 

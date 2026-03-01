@@ -1,6 +1,6 @@
 === cmd 0: [tag StringUtils --add lib-v<VERSION>] ===
 Added tag 'lib-v<VERSION>' to deployment default/31337/StringUtils
-✅ Added tag 'lib-v<VERSION>' to default/31337/StringUtils
+✓ Added tag 'lib-v<VERSION>' to default/31337/StringUtils
 
 Current tags: lib-v<VERSION>
 

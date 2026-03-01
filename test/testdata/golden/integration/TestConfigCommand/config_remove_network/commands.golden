@@ -1,5 +1,5 @@
 === cmd 0: [config remove network] ===
-✅ Removed network from config (will be required as flag)
+✓ Removed network from config (will be required as flag)
 📁 config saved to: .treb/config.local.json
 
 

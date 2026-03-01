@@ -84,7 +84,7 @@ func (r *TagRenderer) renderShowTags(deployment *models.Deployment, displayName 
 func (r *TagRenderer) renderAddTag(deployment *models.Deployment, displayName, tag string, currentTags []string) error {
 
 	// Show success
-	color.New(color.FgGreen).Fprintf(r.out, "✅ Added tag '%s' to %s/%d/%s\n",
+	color.New(color.FgGreen).Fprintf(r.out, "✓ Added tag '%s' to %s/%d/%s\n",
 		tag,
 		deployment.Namespace,
 		deployment.ChainID,
@@ -114,7 +114,7 @@ func (r *TagRenderer) renderAddTag(deployment *models.Deployment, displayName, t
 func (r *TagRenderer) renderRemoveTag(deployment *models.Deployment, displayName, tag string, currentTags []string) error {
 
 	// Show success
-	color.New(color.FgGreen).Fprintf(r.out, "✅ Removed tag '%s' from %s/%d/%s\n",
+	color.New(color.FgGreen).Fprintf(r.out, "✓ Removed tag '%s' from %s/%d/%s\n",
 		tag,
 		deployment.Namespace,
 		deployment.ChainID,
