@@ -7,4 +7,10 @@
 📋 Current config:
 Namespace: default
 Network:   celo
+
+📦 Config source: treb.toml
 📁 config file: .treb/config.local.json
+
+🔑 Senders:
+  anvil     private_key   (literal key)
+  governor  oz_governor   ${GOVERNOR_ADDRESS}

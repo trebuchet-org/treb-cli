@@ -48,24 +48,54 @@ func (r *ConfigRenderer) RenderConfig(result *usecase.ShowConfigResult) error {
 	fmt.Fprintln(r.out, "📋 Current config:")
 
 	// Show namespace (always has a value)
-	fmt.Fprintf(r.out, "Namespace: %s\n", result.Config.Namespace)
+	fmt.Fprintf(r.out, "Namespace: ")
+	cyan.Fprintln(r.out, result.Config.Namespace)
 
 	// Show network (may be empty)
 	if result.Config.Network != "" {
-		fmt.Fprintf(r.out, "Network:   %s\n", result.Config.Network)
+		fmt.Fprintf(r.out, "Network:   ")
+		cyan.Fprintln(r.out, result.Config.Network)
 	} else {
-		fmt.Fprintf(r.out, "Network:   %s\n", "(not set)")
+		fmt.Fprintf(r.out, "Network:   ")
+		gray.Fprintln(r.out, "(not set)")
 	}
 
 	// Show config source
 	switch result.ConfigSource {
-	case "treb.toml":
+	case "treb.toml", "treb.toml (v2)":
 		fmt.Fprintf(r.out, "\n📦 Config source: treb.toml\n")
 	case "foundry.toml":
 		fmt.Fprintf(r.out, "\n📦 Config source: foundry.toml (legacy)\n")
 	}
 
 	fmt.Fprintf(r.out, "📁 config file: %s\n", getRelativePath(result.ConfigPath))
+
+	// Show senders
+	if len(result.Senders) > 0 {
+		fmt.Fprintln(r.out)
+		fmt.Fprintf(r.out, "🔑 Senders:\n")
+		// Calculate max name width for alignment
+		maxName := 0
+		for _, s := range result.Senders {
+			if len(s.Name) > maxName {
+				maxName = len(s.Name)
+			}
+		}
+		for _, s := range result.Senders {
+			fmt.Fprintf(r.out, "  ")
+			cyan.Fprintf(r.out, "%-*s", maxName, s.Name)
+			fmt.Fprintf(r.out, "  ")
+			gray.Fprintf(r.out, "%-12s", string(s.Type))
+			if s.Detail != "" {
+				fmt.Fprintf(r.out, "  ")
+				gray.Fprintf(r.out, "%s", s.Detail)
+			}
+			fmt.Fprintln(r.out)
+		}
+	} else if result.ConfigSource == "" {
+		fmt.Fprintln(r.out)
+		gray.Fprintln(r.out, "💡 Create a treb.toml to configure senders")
+	}
 
 	return nil
 }
