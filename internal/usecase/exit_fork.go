@@ -124,19 +124,21 @@ func (uc *ExitFork) exitAll(ctx context.Context, state *domain.ForkState) (*Exit
 
 // cleanupFork handles the cleanup for a single fork: stop anvil, restore files, clean up dirs
 func (uc *ExitFork) cleanupFork(ctx context.Context, entry *domain.ForkEntry) error {
-	// Stop anvil process - handle already-dead processes gracefully
-	instance := &domain.AnvilInstance{
-		Name:    fmt.Sprintf("fork-%s", entry.Network),
-		Port:    portFromURL(entry.ForkURL),
-		ChainID: fmt.Sprintf("%d", entry.ChainID),
-		PidFile: entry.PidFile,
-		LogFile: entry.LogFile,
-	}
+	// Skip process termination for external forks — treb doesn't own the process
+	if !entry.External {
+		instance := &domain.AnvilInstance{
+			Name:    fmt.Sprintf("fork-%s", entry.Network),
+			Port:    portFromURL(entry.ForkURL),
+			ChainID: fmt.Sprintf("%d", entry.ChainID),
+			PidFile: entry.PidFile,
+			LogFile: entry.LogFile,
+		}
 
-	// Stop is safe to call even if process is already dead
-	if err := uc.anvilManager.Stop(ctx, instance); err != nil {
-		// Log but don't fail - process may already be dead
-		fmt.Printf("Warning: failed to stop anvil for '%s': %v\n", entry.Network, err)
+		// Stop is safe to call even if process is already dead
+		if err := uc.anvilManager.Stop(ctx, instance); err != nil {
+			// Log but don't fail - process may already be dead
+			fmt.Printf("Warning: failed to stop anvil for '%s': %v\n", entry.Network, err)
+		}
 	}
 
 	// Restore registry files from initial backup (snapshot 0)

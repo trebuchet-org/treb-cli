@@ -1,9 +1,13 @@
 package usecase
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -42,10 +46,11 @@ func NewEnterFork(
 
 // EnterForkParams contains parameters for entering fork mode
 type EnterForkParams struct {
-	Network    string // network name from foundry.toml
-	RPCURL     string // resolved RPC URL (after env var expansion)
-	ChainID    uint64 // chain ID
-	EnvVarName string // env var name that foundry.toml uses for the RPC endpoint
+	Network     string // network name from foundry.toml
+	RPCURL      string // resolved RPC URL (after env var expansion)
+	ChainID     uint64 // chain ID
+	EnvVarName  string // env var name that foundry.toml uses for the RPC endpoint
+	ExternalURL string // optional external Anvil endpoint URL (skips local Anvil startup)
 }
 
 // EnterForkResult contains the result of entering fork mode
@@ -68,6 +73,64 @@ func (uc *EnterFork) Execute(ctx context.Context, params EnterForkParams) (*Ente
 		return nil, fmt.Errorf("fork already active for network '%s'. Run 'treb fork exit %s' first", params.Network, params.Network)
 	}
 
+	if params.ExternalURL != "" {
+		return uc.executeExternal(ctx, state, params)
+	}
+	return uc.executeLocal(ctx, state, params)
+}
+
+// executeExternal enters fork mode using an already-running external Anvil endpoint
+func (uc *EnterFork) executeExternal(ctx context.Context, state *domain.ForkState, params EnterForkParams) (*EnterForkResult, error) {
+	forkURL := params.ExternalURL
+
+	// Validate endpoint by calling evm_snapshot — this doubles as taking the initial snapshot
+	snapshotID, err := evmSnapshot(forkURL)
+	if err != nil {
+		return nil, fmt.Errorf("external endpoint validation failed — evm_snapshot not supported at %s: %w", forkURL, err)
+	}
+
+	// Backup registry files to snapshot 0
+	if err := uc.forkFiles.BackupFiles(ctx, params.Network, 0); err != nil {
+		return nil, fmt.Errorf("failed to backup registry files: %w", err)
+	}
+
+	// Build fork entry for external fork
+	entry := &domain.ForkEntry{
+		Network:     params.Network,
+		ChainID:     params.ChainID,
+		EnvVarName:  params.EnvVarName,
+		OriginalRPC: params.RPCURL,
+		ForkURL:     forkURL,
+		AnvilPID:    0,
+		PidFile:     "",
+		LogFile:     "",
+		EnteredAt:   time.Now(),
+		External:    true,
+		Snapshots: []domain.SnapshotEntry{
+			{
+				Index:      0,
+				SnapshotID: snapshotID,
+				Command:    "fork enter",
+				Timestamp:  time.Now(),
+			},
+		},
+	}
+
+	// Save fork state
+	state.Forks[params.Network] = entry
+	if err := uc.forkState.Save(ctx, state); err != nil {
+		return nil, fmt.Errorf("failed to save fork state: %w", err)
+	}
+
+	return &EnterForkResult{
+		ForkEntry:      entry,
+		Message:        fmt.Sprintf("Fork mode entered for network '%s' (external)", params.Network),
+		SetupScriptRan: false,
+	}, nil
+}
+
+// executeLocal enters fork mode by starting a local Anvil instance
+func (uc *EnterFork) executeLocal(ctx context.Context, state *domain.ForkState, params EnterForkParams) (*EnterForkResult, error) {
 	// Find available port
 	port, err := getAvailablePort()
 	if err != nil {
@@ -237,6 +300,57 @@ func getAvailablePort() (int, error) {
 	port := listener.Addr().(*net.TCPAddr).Port
 	_ = listener.Close()
 	return port, nil
+}
+
+// evmSnapshot calls evm_snapshot on an arbitrary RPC endpoint and returns the snapshot ID.
+// Used for external fork validation — if the endpoint doesn't support evm_snapshot, it's not a valid Anvil fork.
+func evmSnapshot(rpcURL string) (string, error) {
+	reqBody, err := json.Marshal(map[string]interface{}{
+		"jsonrpc": "2.0",
+		"method":  "evm_snapshot",
+		"params":  []interface{}{},
+		"id":      1,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := http.Post(rpcURL, "application/json", bytes.NewBuffer(reqBody)) //nolint:gosec // user-provided URL for fork endpoint
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("HTTP error: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	var rpcResp struct {
+		Result interface{} `json:"result"`
+		Error  *struct {
+			Code    int    `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(body, &rpcResp); err != nil {
+		return "", fmt.Errorf("invalid JSON-RPC response: %w", err)
+	}
+
+	if rpcResp.Error != nil {
+		return "", fmt.Errorf("RPC error: %s", rpcResp.Error.Message)
+	}
+
+	snapshotID, ok := rpcResp.Result.(string)
+	if !ok {
+		return "", fmt.Errorf("unexpected evm_snapshot response type: %T", rpcResp.Result)
+	}
+
+	return snapshotID, nil
 }
 
 // ensureGitignoreEntry adds an entry to .gitignore if not already present

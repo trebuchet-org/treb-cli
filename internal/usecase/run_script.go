@@ -301,6 +301,19 @@ func (uc *RunScript) checkForkHealth(ctx context.Context) error {
 		return fmt.Errorf("no active fork for network '%s'", networkName)
 	}
 
+	// For external forks, skip PID-based process check — just verify RPC is reachable.
+	// GetStatus() gates health checks behind isRunning() which requires a PID file,
+	// so we do a direct RPC ping for external forks instead.
+	if fork.External {
+		if _, err := evmSnapshot(fork.ForkURL); err != nil {
+			return fmt.Errorf(
+				"external fork endpoint for '%s' is not reachable at %s.\n\nTo recover:\n  treb fork exit %s     (exit fork mode, restore original state)",
+				networkName, fork.ForkURL, networkName,
+			)
+		}
+		return nil
+	}
+
 	instance := &domain.AnvilInstance{
 		Name:    fmt.Sprintf("fork-%s", fork.Network),
 		Port:    portFromURL(fork.ForkURL),

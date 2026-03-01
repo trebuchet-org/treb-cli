@@ -19,6 +19,7 @@ type ForkEntry struct {
 	LogFile     string          `json:"logFile"`
 	EnteredAt   time.Time       `json:"enteredAt"`
 	Snapshots   []SnapshotEntry `json:"snapshots"`
+	External    bool            `json:"external,omitempty"`
 }
 
 // SnapshotEntry represents an EVM snapshot point in the fork

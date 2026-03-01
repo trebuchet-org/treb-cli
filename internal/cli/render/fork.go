@@ -24,9 +24,15 @@ func (r *ForkRenderer) RenderEnter(result *usecase.EnterForkResult) error {
 	fmt.Printf("  Network:      %s\n", entry.Network)
 	fmt.Printf("  Chain ID:     %d\n", entry.ChainID)
 	fmt.Printf("  Fork URL:     %s\n", entry.ForkURL)
-	fmt.Printf("  Anvil PID:    %d\n", entry.AnvilPID)
+	if entry.External {
+		fmt.Printf("  Mode:         external\n")
+	} else {
+		fmt.Printf("  Anvil PID:    %d\n", entry.AnvilPID)
+	}
 	fmt.Printf("  Env Override: %s=%s\n", entry.EnvVarName, entry.ForkURL)
-	fmt.Printf("  Logs:         %s\n", entry.LogFile)
+	if entry.LogFile != "" {
+		fmt.Printf("  Logs:         %s\n", entry.LogFile)
+	}
 	if result.SetupScriptRan {
 		fmt.Printf("  Setup:        executed successfully\n")
 	}
@@ -63,12 +69,21 @@ func (r *ForkRenderer) RenderStatus(result *usecase.ForkStatusResult) error {
 			currentMarker = " (current)"
 		}
 
-		fmt.Printf("  %s%s\n", e.Network, currentMarker)
+		externalLabel := ""
+		if e.External {
+			externalLabel = " [external]"
+		}
+
+		fmt.Printf("  %s%s%s\n", e.Network, currentMarker, externalLabel)
 		fmt.Printf("    Chain ID:     %d\n", e.ChainID)
 		fmt.Printf("    Fork URL:     %s\n", e.ForkURL)
-		fmt.Printf("    Anvil PID:    %d\n", e.AnvilPID)
+		if !e.External {
+			fmt.Printf("    Anvil PID:    %d\n", e.AnvilPID)
+		}
 		fmt.Printf("    Status:       %s\n", e.HealthDetail)
-		fmt.Printf("    Uptime:       %s\n", formatDuration(e.Uptime))
+		if !e.External {
+			fmt.Printf("    Uptime:       %s\n", formatDuration(e.Uptime))
+		}
 		fmt.Printf("    Snapshots:    %d\n", e.SnapshotCount)
 		fmt.Printf("    Fork Deploys: %d\n", e.ForkDeployments)
 		if e.LogFile != "" {
