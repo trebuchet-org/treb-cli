@@ -68,3 +68,16 @@ func loadFoundryConfig(projectRoot string) (*config.FoundryConfig, error) {
 
 	return &cfg, nil
 }
+
+// LoadFoundryConfigRaw loads foundry.toml without expanding environment variables.
+// Used by the migrate command to preserve ${VAR} references in generated output.
+func LoadFoundryConfigRaw(projectRoot string) (*config.FoundryConfig, error) {
+	foundryPath := filepath.Join(projectRoot, "foundry.toml")
+	var cfg config.FoundryConfig
+
+	if _, err := toml.DecodeFile(foundryPath, &cfg); err != nil {
+		return nil, fmt.Errorf("failed to parse foundry.toml: %w", err)
+	}
+
+	return &cfg, nil
+}
