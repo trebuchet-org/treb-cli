@@ -7,6 +7,9 @@ Started: Sun Mar  1 05:09:25 PM CET 2026
 - When checking for duplicate senders, compare both: (1) key name collision and (2) struct equality via `==` on `SenderConfig`
 - SenderConfig has only value-type fields (strings), so `==` comparison works for dedup
 - Existing tests in `internal/config/provider_test.go` exercise the full Provider pipeline including ResolvedNamespaceToTrebConfig — changes here must not break those
+- Integration tests need `make setup-integration-test` to install forge dependencies (forge-std, openzeppelin) and create treb-sol symlink in `test/testdata/project/lib/`
+- The `TestRunCommand/run_with_debug` test is flaky due to non-deterministic Solc compiler output lines — unrelated to auto-resolution
+- When adding a namespace to the test fixture treb.toml, namespace inheritance means a new namespace inherits senders from `default` if it defines no senders section; to test specific sender configs, define the senders explicitly
 
 ---
 
@@ -41,4 +44,21 @@ Started: Sun Mar  1 05:09:25 PM CET 2026
 - **Learnings for future iterations:**
   - The recursive `resolveAccountChain` with visited-slice approach is cleaner than queue-based iteration for this use case
   - Cycle detection uses ordered slice (not set) to produce a readable error path like "safe-a → safe-b → safe-a"
+---
+
+## 2026-03-01 - US-004
+- Added integration tests for auto-resolution of signer references
+- Created `test/integration/auto_resolve_test.go` with two test cases:
+  1. `auto_resolve_safe_signer`: Deploys using `--namespace auto-resolve` where `safe0`'s signer (`signer0`) is NOT in namespace senders — verifies auto-resolution works end-to-end
+  2. `explicit_signer_mapping_regression`: Deploys using default namespace with all explicit mappings — verifies no regression
+- Added `auto-resolve` namespace to `test/testdata/project/treb.toml` that maps `anvil` and `safe0` but NOT `signer0`
+- Golden files generated for both test cases
+- Files changed: `test/integration/auto_resolve_test.go` (new), `test/testdata/project/treb.toml`, `test/testdata/golden/integration/TestAutoResolveSenders/` (new golden files)
+- All 206 tests pass (1 skipped: verify, 1 flaky: run_with_debug — unrelated)
+- Lint clean
+- **Learnings for future iterations:**
+  - Integration tests prove auto-resolution end-to-end: a namespace with a Safe sender whose signer isn't explicitly mapped still resolves correctly during `treb run`
+  - The `PostTest` function with `TrebParser` is useful for programmatic validation beyond golden file comparison
+  - Adding new namespaces to the test fixture is safe — existing tests using other namespaces are unaffected
+  - Worktrees need `git submodule update --init --recursive` and `make setup-integration-test` before running integration tests
 ---

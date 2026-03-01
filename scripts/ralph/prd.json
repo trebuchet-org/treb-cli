@@ -65,7 +65,7 @@
         "Lint passes"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Add tests in test/integration/ that use a treb.toml where a Safe's signer is defined as an account but NOT listed in namespace senders. The existing integration test infrastructure should work — just update the test project's treb.toml fixture."
     }
   ]

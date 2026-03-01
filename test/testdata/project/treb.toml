@@ -35,6 +35,14 @@ profile = "default"
 anvil = "anvil"
 governor = "governor"
 
+[namespace.auto-resolve]
+profile = "default"
+
+[namespace.auto-resolve.senders]
+anvil = "anvil"
+safe0 = "safe0"
+# signer0 is NOT mapped — should be auto-resolved from safe0's signer field
+
 [namespace.live]
 profile = "live"
 
