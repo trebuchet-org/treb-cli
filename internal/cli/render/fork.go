@@ -2,53 +2,56 @@ package render
 
 import (
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
 // ForkRenderer handles rendering of fork command results
-type ForkRenderer struct{}
+type ForkRenderer struct {
+	out io.Writer
+}
 
 // NewForkRenderer creates a new ForkRenderer
-func NewForkRenderer() *ForkRenderer {
-	return &ForkRenderer{}
+func NewForkRenderer(out io.Writer) *ForkRenderer {
+	return &ForkRenderer{out: out}
 }
 
 // RenderEnter renders the result of fork enter
 func (r *ForkRenderer) RenderEnter(result *usecase.EnterForkResult) error {
 	entry := result.ForkEntry
 
-	fmt.Println(result.Message)
-	fmt.Println()
-	fmt.Printf("  Network:      %s\n", entry.Network)
-	fmt.Printf("  Chain ID:     %d\n", entry.ChainID)
-	fmt.Printf("  Fork URL:     %s\n", entry.ForkURL)
+	fmt.Fprintln(r.out, result.Message)
+	fmt.Fprintln(r.out)
+	fmt.Fprintf(r.out, "  Network:      %s\n", entry.Network)
+	fmt.Fprintf(r.out, "  Chain ID:     %d\n", entry.ChainID)
+	fmt.Fprintf(r.out, "  Fork URL:     %s\n", entry.ForkURL)
 	if entry.External {
-		fmt.Printf("  Mode:         external\n")
+		fmt.Fprintf(r.out, "  Mode:         external\n")
 	} else {
-		fmt.Printf("  Anvil PID:    %d\n", entry.AnvilPID)
+		fmt.Fprintf(r.out, "  Anvil PID:    %d\n", entry.AnvilPID)
 	}
-	fmt.Printf("  Env Override: %s=%s\n", entry.EnvVarName, entry.ForkURL)
+	fmt.Fprintf(r.out, "  Env Override: %s=%s\n", entry.EnvVarName, entry.ForkURL)
 	if entry.LogFile != "" {
-		fmt.Printf("  Logs:         %s\n", entry.LogFile)
+		fmt.Fprintf(r.out, "  Logs:         %s\n", entry.LogFile)
 	}
 	if result.SetupScriptRan {
-		fmt.Printf("  Setup:        executed successfully\n")
+		fmt.Fprintf(r.out, "  Setup:        executed successfully\n")
 	}
-	fmt.Println()
-	fmt.Println("Run 'treb fork status' to check fork state")
-	fmt.Println("Run 'treb fork exit' to stop fork and restore original state")
+	fmt.Fprintln(r.out)
+	fmt.Fprintln(r.out, "Run 'treb fork status' to check fork state")
+	fmt.Fprintln(r.out, "Run 'treb fork exit' to stop fork and restore original state")
 
 	return nil
 }
 
 // RenderExit renders the result of fork exit
 func (r *ForkRenderer) RenderExit(result *usecase.ExitForkResult) error {
-	fmt.Println(result.Message)
-	fmt.Println()
+	fmt.Fprintln(r.out, result.Message)
+	fmt.Fprintln(r.out)
 	for _, network := range result.ExitedNetworks {
-		fmt.Printf("  - %s: registry restored, fork cleaned up\n", network)
+		fmt.Fprintf(r.out, "  - %s: registry restored, fork cleaned up\n", network)
 	}
 	return nil
 }
@@ -56,12 +59,12 @@ func (r *ForkRenderer) RenderExit(result *usecase.ExitForkResult) error {
 // RenderStatus renders the result of fork status
 func (r *ForkRenderer) RenderStatus(result *usecase.ForkStatusResult) error {
 	if !result.HasForks {
-		fmt.Println("No active forks")
+		fmt.Fprintln(r.out, "No active forks")
 		return nil
 	}
 
-	fmt.Println("Active Forks")
-	fmt.Println()
+	fmt.Fprintln(r.out, "Active Forks")
+	fmt.Fprintln(r.out)
 
 	for _, e := range result.Entries {
 		currentMarker := ""
@@ -74,22 +77,22 @@ func (r *ForkRenderer) RenderStatus(result *usecase.ForkStatusResult) error {
 			externalLabel = " [external]"
 		}
 
-		fmt.Printf("  %s%s%s\n", e.Network, currentMarker, externalLabel)
-		fmt.Printf("    Chain ID:     %d\n", e.ChainID)
-		fmt.Printf("    Fork URL:     %s\n", e.ForkURL)
+		fmt.Fprintf(r.out, "  %s%s%s\n", e.Network, currentMarker, externalLabel)
+		fmt.Fprintf(r.out, "    Chain ID:     %d\n", e.ChainID)
+		fmt.Fprintf(r.out, "    Fork URL:     %s\n", e.ForkURL)
 		if !e.External {
-			fmt.Printf("    Anvil PID:    %d\n", e.AnvilPID)
+			fmt.Fprintf(r.out, "    Anvil PID:    %d\n", e.AnvilPID)
 		}
-		fmt.Printf("    Status:       %s\n", e.HealthDetail)
+		fmt.Fprintf(r.out, "    Status:       %s\n", e.HealthDetail)
 		if !e.External {
-			fmt.Printf("    Uptime:       %s\n", formatDuration(e.Uptime))
+			fmt.Fprintf(r.out, "    Uptime:       %s\n", formatDuration(e.Uptime))
 		}
-		fmt.Printf("    Snapshots:    %d\n", e.SnapshotCount)
-		fmt.Printf("    Fork Deploys: %d\n", e.ForkDeployments)
+		fmt.Fprintf(r.out, "    Snapshots:    %d\n", e.SnapshotCount)
+		fmt.Fprintf(r.out, "    Fork Deploys: %d\n", e.ForkDeployments)
 		if e.LogFile != "" {
-			fmt.Printf("    Logs:         %s\n", e.LogFile)
+			fmt.Fprintf(r.out, "    Logs:         %s\n", e.LogFile)
 		}
-		fmt.Println()
+		fmt.Fprintln(r.out)
 	}
 
 	return nil
@@ -108,13 +111,13 @@ func formatDuration(d time.Duration) string {
 
 // RenderRevert renders the result of fork revert
 func (r *ForkRenderer) RenderRevert(result *usecase.RevertForkResult) error {
-	fmt.Println(result.Message)
-	fmt.Println()
+	fmt.Fprintln(r.out, result.Message)
+	fmt.Fprintln(r.out)
 	if result.RevertedCommand != "" {
-		fmt.Printf("  Reverted:   %s\n", result.RevertedCommand)
+		fmt.Fprintf(r.out, "  Reverted:   %s\n", result.RevertedCommand)
 	}
-	fmt.Printf("  Reverted:   %d snapshot(s)\n", result.RevertedCount)
-	fmt.Printf("  Remaining:  %d snapshot(s)\n", result.RemainingSnapshots)
+	fmt.Fprintf(r.out, "  Reverted:   %d snapshot(s)\n", result.RevertedCount)
+	fmt.Fprintf(r.out, "  Remaining:  %d snapshot(s)\n", result.RemainingSnapshots)
 	return nil
 }
 
@@ -122,27 +125,27 @@ func (r *ForkRenderer) RenderRevert(result *usecase.RevertForkResult) error {
 func (r *ForkRenderer) RenderRestart(result *usecase.RestartForkResult) error {
 	entry := result.ForkEntry
 
-	fmt.Println(result.Message)
-	fmt.Println()
-	fmt.Printf("  Network:      %s\n", entry.Network)
-	fmt.Printf("  Chain ID:     %d\n", entry.ChainID)
-	fmt.Printf("  Fork URL:     %s\n", entry.ForkURL)
-	fmt.Printf("  Anvil PID:    %d\n", entry.AnvilPID)
-	fmt.Printf("  Env Override: %s=%s\n", entry.EnvVarName, entry.ForkURL)
-	fmt.Printf("  Logs:         %s\n", entry.LogFile)
+	fmt.Fprintln(r.out, result.Message)
+	fmt.Fprintln(r.out)
+	fmt.Fprintf(r.out, "  Network:      %s\n", entry.Network)
+	fmt.Fprintf(r.out, "  Chain ID:     %d\n", entry.ChainID)
+	fmt.Fprintf(r.out, "  Fork URL:     %s\n", entry.ForkURL)
+	fmt.Fprintf(r.out, "  Anvil PID:    %d\n", entry.AnvilPID)
+	fmt.Fprintf(r.out, "  Env Override: %s=%s\n", entry.EnvVarName, entry.ForkURL)
+	fmt.Fprintf(r.out, "  Logs:         %s\n", entry.LogFile)
 	if result.SetupScriptRan {
-		fmt.Printf("  Setup:        executed successfully\n")
+		fmt.Fprintf(r.out, "  Setup:        executed successfully\n")
 	}
-	fmt.Println()
-	fmt.Println("Registry restored to initial fork state. All previous snapshots cleared.")
+	fmt.Fprintln(r.out)
+	fmt.Fprintln(r.out, "Registry restored to initial fork state. All previous snapshots cleared.")
 
 	return nil
 }
 
 // RenderHistory renders the result of fork history
 func (r *ForkRenderer) RenderHistory(result *usecase.ForkHistoryResult) error {
-	fmt.Printf("Fork History: %s\n", result.Network)
-	fmt.Println()
+	fmt.Fprintf(r.out, "Fork History: %s\n", result.Network)
+	fmt.Fprintln(r.out)
 
 	for _, e := range result.Entries {
 		marker := "  "
@@ -157,42 +160,42 @@ func (r *ForkRenderer) RenderHistory(result *usecase.ForkHistoryResult) error {
 			label = e.Command
 		}
 
-		fmt.Printf("  %s[%d] %s  (%s)\n", marker, e.Index, label, e.Timestamp)
+		fmt.Fprintf(r.out, "  %s[%d] %s  (%s)\n", marker, e.Index, label, e.Timestamp)
 	}
 
-	fmt.Println()
+	fmt.Fprintln(r.out)
 	return nil
 }
 
 // RenderDiff renders the result of fork diff
 func (r *ForkRenderer) RenderDiff(result *usecase.ForkDiffResult) error {
-	fmt.Printf("Fork Diff: %s\n", result.Network)
-	fmt.Println()
+	fmt.Fprintf(r.out, "Fork Diff: %s\n", result.Network)
+	fmt.Fprintln(r.out)
 
 	if !result.HasChanges {
-		fmt.Println("No changes since fork entered.")
+		fmt.Fprintln(r.out, "No changes since fork entered.")
 		return nil
 	}
 
 	if len(result.NewDeployments) > 0 {
-		fmt.Printf("New Deployments (%d):\n", len(result.NewDeployments))
+		fmt.Fprintf(r.out, "New Deployments (%d):\n", len(result.NewDeployments))
 		for _, dep := range result.NewDeployments {
-			fmt.Printf("  + %-20s %s  %s\n", dep.ContractName, dep.Address, dep.Type)
+			fmt.Fprintf(r.out, "  + %-20s %s  %s\n", dep.ContractName, dep.Address, dep.Type)
 		}
-		fmt.Println()
+		fmt.Fprintln(r.out)
 	}
 
 	if len(result.ModifiedDeployments) > 0 {
-		fmt.Printf("Modified Deployments (%d):\n", len(result.ModifiedDeployments))
+		fmt.Fprintf(r.out, "Modified Deployments (%d):\n", len(result.ModifiedDeployments))
 		for _, dep := range result.ModifiedDeployments {
-			fmt.Printf("  ~ %-20s %s  %s\n", dep.ContractName, dep.Address, dep.Type)
+			fmt.Fprintf(r.out, "  ~ %-20s %s  %s\n", dep.ContractName, dep.Address, dep.Type)
 		}
-		fmt.Println()
+		fmt.Fprintln(r.out)
 	}
 
 	if result.NewTransactionCount > 0 {
-		fmt.Printf("New Transactions: %d\n", result.NewTransactionCount)
-		fmt.Println()
+		fmt.Fprintf(r.out, "New Transactions: %d\n", result.NewTransactionCount)
+		fmt.Fprintln(r.out)
 	}
 
 	return nil
