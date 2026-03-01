@@ -98,9 +98,8 @@ type DeploymentListResult struct {
 	Summary            DeploymentSummary
 	NetworkNames       map[uint64]string       // Map of chain ID to network name
 	ForkDeploymentIDs  map[string]bool          // Set of deployment IDs added during fork mode (nil if fork not active)
-	OtherNamespaces    map[string]int           // Other namespaces with deployment counts (nil when deployments found)
-	AddressbookEntries []domain.AddressbookEntry // Addressbook entries for the current chain
-	CurrentNamespace   string                   // Current namespace for display in hints
+	OtherNamespaces  map[string]int // Other namespaces with deployment counts (nil when deployments found)
+	CurrentNamespace string         // Current namespace for display in hints
 	CurrentNetwork     string                   // Current network name for display in hints (empty if not set)
 	CurrentChainID     uint64                   // Current chain ID for display in hints (0 if not set)
 }

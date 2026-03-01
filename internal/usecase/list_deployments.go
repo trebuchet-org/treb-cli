@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
 	"sort"
 
@@ -27,17 +26,15 @@ type ListDeployments struct {
 	repo            DeploymentRepository
 	networkResolver NetworkResolver
 	forkState       ForkStateStore
-	addressbook     AddressbookRepository
 }
 
 // NewListDeployments creates a new ListDeployments use case
-func NewListDeployments(cfg *config.RuntimeConfig, repo DeploymentRepository, networkResolver NetworkResolver, forkState ForkStateStore, addressbook AddressbookRepository) *ListDeployments {
+func NewListDeployments(cfg *config.RuntimeConfig, repo DeploymentRepository, networkResolver NetworkResolver, forkState ForkStateStore) *ListDeployments {
 	return &ListDeployments{
 		config:          cfg,
 		repo:            repo,
 		networkResolver: networkResolver,
 		forkState:       forkState,
-		addressbook:     addressbook,
 	}
 }
 
@@ -102,9 +99,6 @@ func (uc *ListDeployments) Run(ctx context.Context, params ListDeploymentsParams
 	if len(deployments) == 0 {
 		result.OtherNamespaces = uc.discoverOtherNamespaces(ctx)
 	}
-
-	// Load addressbook entries for the current chain
-	result.AddressbookEntries = uc.loadAddressbookEntries(ctx)
 
 	return result, nil
 }
@@ -261,35 +255,3 @@ func (uc *ListDeployments) findNetworkName(ctx context.Context, chainID uint64) 
 	return ""
 }
 
-// loadAddressbookEntries loads sorted addressbook entries for the current chain.
-// Returns nil if no network is configured or the addressbook is empty/unreadable.
-func (uc *ListDeployments) loadAddressbookEntries(ctx context.Context) []domain.AddressbookEntry {
-	if uc.config.Network == nil {
-		return nil
-	}
-
-	ab, err := uc.addressbook.Load(ctx)
-	if err != nil {
-		return nil
-	}
-
-	chainKey := fmt.Sprintf("%d", uc.config.Network.ChainID)
-	chain := ab[chainKey]
-	if len(chain) == 0 {
-		return nil
-	}
-
-	entries := make([]domain.AddressbookEntry, 0, len(chain))
-	for name, addr := range chain {
-		entries = append(entries, domain.AddressbookEntry{
-			Name:    name,
-			Address: addr,
-		})
-	}
-
-	sort.Slice(entries, func(i, j int) bool {
-		return entries[i].Name < entries[j].Name
-	})
-
-	return entries
-}
