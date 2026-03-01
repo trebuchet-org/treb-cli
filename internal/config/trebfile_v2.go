@@ -55,11 +55,11 @@ func DetectTrebConfigFormat(projectRoot string) (TrebConfigFormat, error) {
 }
 
 // trebFileV2Raw is a helper for initial TOML parsing of v2 format.
-// Namespace uses map[string]string because all values (profile + roles) are flat strings.
+// Namespace sections decode directly into NamespaceRoles structs with profile and senders sub-table.
 type trebFileV2Raw struct {
-	Accounts  map[string]config.AccountConfig `toml:"accounts"`
-	Namespace map[string]map[string]string    `toml:"namespace"`
-	Fork      config.ForkConfig               `toml:"fork"`
+	Accounts  map[string]config.AccountConfig  `toml:"accounts"`
+	Namespace map[string]config.NamespaceRoles `toml:"namespace"`
+	Fork      config.ForkConfig                `toml:"fork"`
 }
 
 // loadTrebConfigV2 loads and parses treb.toml in the v2 format with [accounts.*] and [namespace.*] sections.
@@ -83,7 +83,7 @@ func loadTrebConfigV2(projectRoot string) (*config.TrebFileConfigV2, error) {
 
 	cfg := &config.TrebFileConfigV2{
 		Accounts:  raw.Accounts,
-		Namespace: make(map[string]config.NamespaceRoles),
+		Namespace: raw.Namespace,
 		Fork:      raw.Fork,
 	}
 
@@ -91,19 +91,8 @@ func loadTrebConfigV2(projectRoot string) (*config.TrebFileConfigV2, error) {
 		cfg.Accounts = make(map[string]config.AccountConfig)
 	}
 
-	// Parse namespace sections: "profile" is a reserved key, all others become role→account mappings
-	for nsName, nsMap := range raw.Namespace {
-		ns := config.NamespaceRoles{
-			Roles: make(map[string]string),
-		}
-		for k, v := range nsMap {
-			if k == "profile" {
-				ns.Profile = v
-			} else {
-				ns.Roles[k] = v
-			}
-		}
-		cfg.Namespace[nsName] = ns
+	if cfg.Namespace == nil {
+		cfg.Namespace = make(map[string]config.NamespaceRoles)
 	}
 
 	// Expand environment variables in all account config string fields
@@ -142,7 +131,7 @@ func ResolveNamespace(cfg *config.TrebFileConfigV2, namespaceName string) (*conf
 		if ns.Profile != "" {
 			profile = ns.Profile
 		}
-		for role, account := range ns.Roles {
+		for role, account := range ns.Senders {
 			roles[role] = account
 		}
 	}
