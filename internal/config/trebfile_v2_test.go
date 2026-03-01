@@ -784,6 +784,59 @@ func TestResolvedNamespaceToTrebConfig(t *testing.T) {
 		assert.Equal(t, "0xdev", signerSender.PrivateKey)
 	})
 
+	t.Run("oz_governor with unmapped proposer auto-resolves proposer into senders", func(t *testing.T) {
+		accounts := map[string]config.AccountConfig{
+			"hw-wallet": {Type: config.SenderTypeLedger, DerivationPath: "m/44'/60'/0'/0/0"},
+			"gov":       {Type: config.SenderTypeOZGovernor, Governor: "0xGovAddr", Timelock: "0xTimelockAddr", Proposer: "hw-wallet"},
+		}
+		resolved := &config.ResolvedNamespace{
+			Profile: "production",
+			Accounts: map[string]config.AccountConfig{
+				// Only the Governor is mapped as a namespace role — proposer is NOT mapped
+				"governor": accounts["gov"],
+			},
+		}
+
+		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
+		require.NoError(t, err)
+		require.NotNil(t, trebCfg)
+
+		// Governor sender is present under its role name
+		assert.Len(t, trebCfg.Senders, 2)
+		govSender := trebCfg.Senders["governor"]
+		assert.Equal(t, config.SenderTypeOZGovernor, govSender.Type)
+		assert.Equal(t, "0xGovAddr", govSender.Governor)
+		assert.Equal(t, "hw-wallet", govSender.Proposer)
+
+		// Proposer account is auto-resolved and keyed by account name
+		proposerSender := trebCfg.Senders["hw-wallet"]
+		assert.Equal(t, config.SenderTypeLedger, proposerSender.Type)
+		assert.Equal(t, "m/44'/60'/0'/0/0", proposerSender.DerivationPath)
+	})
+
+	t.Run("oz_governor with already-mapped proposer does not duplicate", func(t *testing.T) {
+		accounts := map[string]config.AccountConfig{
+			"hw-wallet": {Type: config.SenderTypeLedger, DerivationPath: "m/44'/60'/0'/0/0"},
+			"gov":       {Type: config.SenderTypeOZGovernor, Governor: "0xGovAddr", Timelock: "0xTimelockAddr", Proposer: "hw-wallet"},
+		}
+		resolved := &config.ResolvedNamespace{
+			Profile: "production",
+			Accounts: map[string]config.AccountConfig{
+				"governor":  accounts["gov"],
+				"hw-wallet": accounts["hw-wallet"], // proposer explicitly mapped
+			},
+		}
+
+		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
+		require.NoError(t, err)
+		require.NotNil(t, trebCfg)
+
+		// Should have exactly 2 senders, not 3
+		assert.Len(t, trebCfg.Senders, 2)
+		assert.Equal(t, config.SenderTypeOZGovernor, trebCfg.Senders["governor"].Type)
+		assert.Equal(t, config.SenderTypeLedger, trebCfg.Senders["hw-wallet"].Type)
+	})
+
 	t.Run("safe with already-mapped signer does not duplicate", func(t *testing.T) {
 		accounts := map[string]config.AccountConfig{
 			"dev-wallet": {Type: config.SenderTypePrivateKey, PrivateKey: "0xdev"},

@@ -188,32 +188,40 @@ func ResolvedNamespaceToTrebConfig(resolved *config.ResolvedNamespace, accounts 
 		senders[roleName] = sender
 	}
 
-	// Auto-resolve signer references: when a Safe sender references a signer
-	// account that exists in the global accounts map but isn't already in senders
-	// (under any key), add it keyed by account name.
+	// Auto-resolve signer/proposer references: when a Safe or OZ Governor sender
+	// references a signer/proposer account that exists in the global accounts map
+	// but isn't already in senders (under any key), add it keyed by account name.
 	autoResolved := make(map[string]config.SenderConfig)
 	for _, sender := range senders {
-		if sender.Type == config.SenderTypeSafe && sender.Signer != "" {
-			// Skip if the account name is already a key in senders (don't overwrite role mappings)
-			if _, exists := senders[sender.Signer]; exists {
-				continue
+		var refName string
+		switch {
+		case sender.Type == config.SenderTypeSafe && sender.Signer != "":
+			refName = sender.Signer
+		case sender.Type == config.SenderTypeOZGovernor && sender.Proposer != "":
+			refName = sender.Proposer
+		default:
+			continue
+		}
+
+		// Skip if the account name is already a key in senders (don't overwrite role mappings)
+		if _, exists := senders[refName]; exists {
+			continue
+		}
+		refAcct, ok := accounts[refName]
+		if !ok {
+			continue
+		}
+		// Skip if the same config is already present under a different key
+		refSender := config.SenderConfig(refAcct)
+		alreadyPresent := false
+		for _, existing := range senders {
+			if existing == refSender {
+				alreadyPresent = true
+				break
 			}
-			signerAcct, ok := accounts[sender.Signer]
-			if !ok {
-				continue
-			}
-			// Skip if the same config is already present under a different key
-			signerSender := config.SenderConfig(signerAcct)
-			alreadyPresent := false
-			for _, existing := range senders {
-				if existing == signerSender {
-					alreadyPresent = true
-					break
-				}
-			}
-			if !alreadyPresent {
-				autoResolved[sender.Signer] = signerSender
-			}
+		}
+		if !alreadyPresent {
+			autoResolved[refName] = refSender
 		}
 	}
 	for name, sender := range autoResolved {
