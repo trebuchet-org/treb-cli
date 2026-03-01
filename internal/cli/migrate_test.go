@@ -25,6 +25,7 @@ func TestGenerateTrebTomlV2(t *testing.T) {
 		assert.Contains(t, content, `private_key = "${DEPLOYER_PRIVATE_KEY}"`)
 		assert.Contains(t, content, "[namespace.default]")
 		assert.Contains(t, content, `profile = "default"`)
+		assert.Contains(t, content, "[namespace.default.senders]")
 		assert.Contains(t, content, `deployer = "deployer-key"`)
 	})
 
@@ -143,10 +144,14 @@ func TestGenerateTrebTomlV2(t *testing.T) {
 
 		// Simple namespace names should NOT be quoted
 		assert.Contains(t, content, "[namespace.default]")
+		assert.Contains(t, content, "[namespace.default.senders]")
 		assert.Contains(t, content, "[namespace.production]")
+		assert.Contains(t, content, "[namespace.production.senders]")
 		// Dot-separated namespace names MUST be quoted to avoid TOML nested table interpretation
 		assert.Contains(t, content, `[namespace."production.ntt"]`)
+		assert.Contains(t, content, `[namespace."production.ntt".senders]`)
 		assert.NotContains(t, content, "[namespace.production.ntt]")
+		assert.NotContains(t, content, "[namespace.production.ntt.senders]")
 	})
 
 	t.Run("role mappings sorted alphabetically", func(t *testing.T) {
@@ -162,6 +167,7 @@ func TestGenerateTrebTomlV2(t *testing.T) {
 		}
 
 		content := generateTrebTomlV2(accounts, namespaces)
+		assert.Contains(t, content, "[namespace.default.senders]")
 
 		// admin should appear before deployer
 		adminIdx := indexOfSubstring(content, `admin = "key2"`)
@@ -251,6 +257,7 @@ deployer = "deployer"
 		assert.Contains(t, content, "[accounts.")
 		assert.Contains(t, content, "[namespace.default]")
 		assert.Contains(t, content, `profile = "default"`)
+		assert.Contains(t, content, "[namespace.default.senders]")
 		// Should NOT contain v1 format
 		assert.NotContains(t, content, "[ns.")
 	})

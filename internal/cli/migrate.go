@@ -202,10 +202,14 @@ func generateTrebTomlV2(
 		fmt.Fprintf(&b, "[namespace.%s]\n", tomlKey(nsName))
 		fmt.Fprintf(&b, "profile = %q\n", ns.profile)
 
-		// Write role mappings sorted by name
-		roleNames := sortedKeys(ns.roles)
-		for _, role := range roleNames {
-			fmt.Fprintf(&b, "%s = %q\n", role, ns.roles[role])
+		// Write role mappings under [namespace.<name>.senders] sub-table
+		if len(ns.roles) > 0 {
+			b.WriteString("\n")
+			fmt.Fprintf(&b, "[namespace.%s.senders]\n", tomlKey(nsName))
+			roleNames := sortedKeys(ns.roles)
+			for _, role := range roleNames {
+				fmt.Fprintf(&b, "%s = %q\n", role, ns.roles[role])
+			}
 		}
 	}
 
