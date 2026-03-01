@@ -449,6 +449,91 @@ private_key = "0xkey"
 	})
 }
 
+func TestValidateAccountName(t *testing.T) {
+	t.Run("valid names", func(t *testing.T) {
+		usedNames := map[string]bool{}
+		assert.Empty(t, validateAccountName("deployer", usedNames))
+		assert.Empty(t, validateAccountName("deployer-key", usedNames))
+		assert.Empty(t, validateAccountName("my_account", usedNames))
+		assert.Empty(t, validateAccountName("key-2", usedNames))
+		assert.Empty(t, validateAccountName("ABC123", usedNames))
+	})
+
+	t.Run("empty name rejected", func(t *testing.T) {
+		msg := validateAccountName("", map[string]bool{})
+		assert.Equal(t, "name cannot be empty", msg)
+	})
+
+	t.Run("invalid characters rejected", func(t *testing.T) {
+		usedNames := map[string]bool{}
+		assert.NotEmpty(t, validateAccountName("has space", usedNames))
+		assert.NotEmpty(t, validateAccountName("has.dot", usedNames))
+		assert.NotEmpty(t, validateAccountName("has/slash", usedNames))
+		assert.NotEmpty(t, validateAccountName("has@at", usedNames))
+		assert.NotEmpty(t, validateAccountName("has=equals", usedNames))
+	})
+
+	t.Run("duplicate name rejected", func(t *testing.T) {
+		usedNames := map[string]bool{"deployer": true}
+		msg := validateAccountName("deployer", usedNames)
+		assert.Contains(t, msg, "already taken")
+	})
+
+	t.Run("non-duplicate passes", func(t *testing.T) {
+		usedNames := map[string]bool{"deployer": true}
+		assert.Empty(t, validateAccountName("deployer-2", usedNames))
+	})
+}
+
+func TestFormatAccountSummary(t *testing.T) {
+	tests := []struct {
+		name     string
+		acct     config.AccountConfig
+		expected string
+	}{
+		{
+			name:     "private key",
+			acct:     config.AccountConfig{Type: config.SenderTypePrivateKey, PrivateKey: "${DEPLOYER_KEY}"},
+			expected: "private_key (${DEPLOYER_KEY})",
+		},
+		{
+			name:     "safe",
+			acct:     config.AccountConfig{Type: config.SenderTypeSafe, Safe: "0xABC123"},
+			expected: "safe (0xABC123)",
+		},
+		{
+			name:     "ledger with address",
+			acct:     config.AccountConfig{Type: config.SenderTypeLedger, Address: "0xDEAD"},
+			expected: "ledger (0xDEAD)",
+		},
+		{
+			name:     "ledger with derivation path only",
+			acct:     config.AccountConfig{Type: config.SenderTypeLedger, DerivationPath: "m/44'/60'/0'/0/0"},
+			expected: "ledger (path: m/44'/60'/0'/0/0)",
+		},
+		{
+			name:     "trezor with address",
+			acct:     config.AccountConfig{Type: config.SenderTypeTrezor, Address: "0xCAFE"},
+			expected: "trezor (0xCAFE)",
+		},
+		{
+			name:     "trezor with derivation path only",
+			acct:     config.AccountConfig{Type: config.SenderTypeTrezor, DerivationPath: "m/44'/60'/0'/0/0"},
+			expected: "trezor (path: m/44'/60'/0'/0/0)",
+		},
+		{
+			name:     "oz governor",
+			acct:     config.AccountConfig{Type: config.SenderTypeOZGovernor, Governor: "0xGOV"},
+			expected: "oz_governor (0xGOV)",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, formatAccountSummary(tt.acct))
+		})
+	}
+}
+
 // indexOfSubstring returns the index of the first occurrence of substr in s, or -1 if not found.
 func indexOfSubstring(s, substr string) int {
 	for i := 0; i+len(substr) <= len(s); i++ {

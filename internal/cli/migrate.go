@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 	internalconfig "github.com/trebuchet-org/treb-cli/internal/config"
 	domainconfig "github.com/trebuchet-org/treb-cli/internal/domain/config"
@@ -78,6 +80,15 @@ func runMigrate(cfg *domainconfig.RuntimeConfig) error {
 
 	// Deduplicate senders across profiles
 	accounts, namespaceMappings := internalconfig.DeduplicateSenders(namespaceSenders)
+
+	// Interactive account naming: prompt user to name each deduplicated account
+	if !cfg.NonInteractive {
+		renamed, err := interactiveAccountNaming(accounts, namespaceMappings)
+		if err != nil {
+			return err
+		}
+		accounts = renamed
+	}
 
 	// Build namespace info (profile name for each namespace)
 	namespaces := make(map[string]nsInfo, len(profiles))
@@ -263,4 +274,138 @@ func sortedKeys[V any](m map[string]V) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+// validAccountNameRe matches valid TOML bare keys: alphanumeric, hyphens, and underscores.
+var validAccountNameRe = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
+
+// validateAccountName checks whether a proposed account name is valid.
+// Returns an error message string if invalid, or empty string if valid.
+func validateAccountName(name string, usedNames map[string]bool) string {
+	if name == "" {
+		return "name cannot be empty"
+	}
+	if !validAccountNameRe.MatchString(name) {
+		return "name must contain only letters, digits, hyphens, and underscores"
+	}
+	if usedNames[name] {
+		return fmt.Sprintf("name %q is already taken", name)
+	}
+	return ""
+}
+
+// formatAccountSummary returns a short human-readable description of an account.
+func formatAccountSummary(acct domainconfig.AccountConfig) string {
+	switch acct.Type {
+	case domainconfig.SenderTypePrivateKey:
+		return fmt.Sprintf("private_key (%s)", acct.PrivateKey)
+	case domainconfig.SenderTypeSafe:
+		return fmt.Sprintf("safe (%s)", acct.Safe)
+	case domainconfig.SenderTypeLedger:
+		if acct.Address != "" {
+			return fmt.Sprintf("ledger (%s)", acct.Address)
+		}
+		return fmt.Sprintf("ledger (path: %s)", acct.DerivationPath)
+	case domainconfig.SenderTypeTrezor:
+		if acct.Address != "" {
+			return fmt.Sprintf("trezor (%s)", acct.Address)
+		}
+		return fmt.Sprintf("trezor (path: %s)", acct.DerivationPath)
+	case domainconfig.SenderTypeOZGovernor:
+		return fmt.Sprintf("oz_governor (%s)", acct.Governor)
+	default:
+		return string(acct.Type)
+	}
+}
+
+// interactiveAccountNaming prompts the user to name each deduplicated account.
+// It returns the renamed accounts map. The namespaceMappings are updated in-place
+// to reference the new names.
+func interactiveAccountNaming(
+	accounts map[string]domainconfig.AccountConfig,
+	namespaceMappings map[string]map[string]string,
+) (map[string]domainconfig.AccountConfig, error) {
+	names := sortedKeys(accounts)
+	if len(names) == 0 {
+		return accounts, nil
+	}
+
+	fmt.Println()
+	fmt.Printf("Found %d deduplicated account(s). Name each one (press Enter to keep default):\n", len(names))
+	fmt.Println()
+
+	usedNames := make(map[string]bool)
+	// Map old name → new name for renaming
+	renames := make(map[string]string, len(names))
+
+	for _, oldName := range names {
+		acct := accounts[oldName]
+		summary := formatAccountSummary(acct)
+
+		var newName string
+		for {
+			prompt := promptui.Prompt{
+				Label:   fmt.Sprintf("  %s — name", summary),
+				Default: oldName,
+				Validate: func(input string) error {
+					if msg := validateAccountName(input, usedNames); msg != "" {
+						return fmt.Errorf("%s", msg)
+					}
+					return nil
+				},
+			}
+
+			result, err := prompt.Run()
+			if err != nil {
+				if err == promptui.ErrInterrupt {
+					return nil, fmt.Errorf("migration cancelled")
+				}
+				// Validation error — promptui re-prompts automatically,
+				// but if Run() returns an unexpected error, retry.
+				continue
+			}
+			newName = result
+			break
+		}
+
+		usedNames[newName] = true
+		renames[oldName] = newName
+	}
+
+	// Build renamed accounts map
+	renamed := make(map[string]domainconfig.AccountConfig, len(accounts))
+	for oldName, acct := range accounts {
+		renamed[renames[oldName]] = acct
+	}
+
+	// Update signer/proposer cross-references in accounts
+	for name, acct := range renamed {
+		updated := false
+		if acct.Signer != "" {
+			if newName, ok := renames[acct.Signer]; ok {
+				acct.Signer = newName
+				updated = true
+			}
+		}
+		if acct.Proposer != "" {
+			if newName, ok := renames[acct.Proposer]; ok {
+				acct.Proposer = newName
+				updated = true
+			}
+		}
+		if updated {
+			renamed[name] = acct
+		}
+	}
+
+	// Update namespace mappings to use new names
+	for _, roles := range namespaceMappings {
+		for role, oldName := range roles {
+			if newName, ok := renames[oldName]; ok {
+				roles[role] = newName
+			}
+		}
+	}
+
+	return renamed, nil
 }
