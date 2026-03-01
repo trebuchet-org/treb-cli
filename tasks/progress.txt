@@ -1,0 +1,47 @@
+## Codebase Patterns
+- Auto-resolution logic lives in `ResolvedNamespaceToTrebConfig()` in `internal/config/trebfile_v2.go`
+- The function converts V2 accounts to the flat `TrebConfig.Senders` map; any cross-reference resolution must happen here
+- Transitive resolution uses recursive `resolveAccountChain()` with a visited slice for cycle detection
+- `senderRefName()` helper extracts the referenced account name from Safe (signer) or OZGovernor (proposer)
+- Role-name collisions (role name = account name but different config) are handled by comparing `senders[name]` with `accounts[name]`; if they differ, the explicit role mapping takes priority (FR-3)
+- Tests for config resolution are in `internal/config/trebfile_v2_test.go` under `TestResolvedNamespaceToTrebConfig`
+- Go toolchain is managed via mise; use `export PATH="/home/sol/.local/share/mise/installs/go/latest/bin:/home/sol/.local/share/mise/shims:$HOME/go/bin:$PATH"` before running go/lint commands
+
+---
+
+## 2026-03-01 - US-001 (completed in prior iteration)
+- Auto-resolve Safe signer references into TrebConfig.Senders
+- Files changed: internal/config/trebfile_v2.go, internal/config/trebfile_v2_test.go
+- **Learnings for future iterations:**
+  - The auto-resolution pattern adds a second pass after building the initial senders map
+  - Deduplication checks both key existence and value equality to avoid conflicts
+
+---
+
+## 2026-03-01 - US-002
+- Extended auto-resolution to also handle OZ Governor proposer references
+- Refactored Safe-only auto-resolution loop into a unified switch handling both Safe (signer) and OZGovernor (proposer)
+- Added two tests: unmapped proposer auto-resolves, already-mapped proposer does not duplicate
+- Files changed: internal/config/trebfile_v2.go, internal/config/trebfile_v2_test.go
+- **Learnings for future iterations:**
+  - The Safe and OZGovernor auto-resolution share identical logic; only the field name differs (Signer vs Proposer)
+  - Using a `refName` variable from a switch keeps the loop body DRY
+  - All unit tests pass; lint clean
+
+---
+
+## 2026-03-01 - US-003
+- Replaced single-pass auto-resolution with recursive `resolveAccountReferences()` / `resolveAccountChain()` for transitive chain support
+- Added circular reference detection with full cycle path in error message (e.g., "circular account reference: safe-a → safe-b → safe-a")
+- Added `senderRefName()` helper to extract referenced account name from Safe/OZGovernor senders
+- Handled role-name collisions: when a role name matches an account name but maps to a different config, the role mapping takes priority (no false-positive circular error)
+- Updated 3 existing tests to account for auto-resolved entries being added under account names
+- Added 3 new tests: transitive chain (Governor → Safe → PK), circular reference (A → B → A), self-reference
+- Files changed: internal/config/trebfile_v2.go, internal/config/trebfile_v2_test.go, tasks/progress.txt
+- **Learnings for future iterations:**
+  - The `senders` map uses both role names AND account names as keys — role-name collisions must be detected by comparing configs, not just checking key existence
+  - Self-references are a special case of circular references; the same visited-set logic handles both
+  - When `senders[name]` exists but doesn't match `accounts[name]`, it's a role collision, not a cycle — skip without error
+  - All unit tests pass; lint clean; all existing provider_test.go tests pass
+
+---

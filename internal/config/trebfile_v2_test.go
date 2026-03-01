@@ -627,7 +627,8 @@ func TestResolvedNamespaceToTrebConfig(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, trebCfg)
 
-		assert.Len(t, trebCfg.Senders, 2)
+		// 3 senders: deployer (safe), proposer (explicit role), dev-wallet (auto-resolved by account name)
+		assert.Len(t, trebCfg.Senders, 3)
 
 		// Safe sender should have signer set to the account name
 		safeSender := trebCfg.Senders["deployer"]
@@ -635,10 +636,15 @@ func TestResolvedNamespaceToTrebConfig(t *testing.T) {
 		assert.Equal(t, "0xSafeAddr", safeSender.Safe)
 		assert.Equal(t, "dev-wallet", safeSender.Signer)
 
-		// Signer account should be present as a sender
+		// Signer account present under its role name
 		signerSender := trebCfg.Senders["proposer"]
 		assert.Equal(t, config.SenderTypePrivateKey, signerSender.Type)
 		assert.Equal(t, "0xdev", signerSender.PrivateKey)
+
+		// Signer account also auto-resolved under its account name
+		autoResolved := trebCfg.Senders["dev-wallet"]
+		assert.Equal(t, config.SenderTypePrivateKey, autoResolved.Type)
+		assert.Equal(t, "0xdev", autoResolved.PrivateKey)
 	})
 
 	t.Run("oz_governor with proposer", func(t *testing.T) {
@@ -658,7 +664,8 @@ func TestResolvedNamespaceToTrebConfig(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, trebCfg)
 
-		assert.Len(t, trebCfg.Senders, 2)
+		// 3 senders: governor, proposer (explicit role), hw-wallet (auto-resolved by account name)
+		assert.Len(t, trebCfg.Senders, 3)
 
 		govSender := trebCfg.Senders["governor"]
 		assert.Equal(t, config.SenderTypeOZGovernor, govSender.Type)
@@ -669,6 +676,11 @@ func TestResolvedNamespaceToTrebConfig(t *testing.T) {
 		proposerSender := trebCfg.Senders["proposer"]
 		assert.Equal(t, config.SenderTypeLedger, proposerSender.Type)
 		assert.Equal(t, "m/44'/60'/0'/0/0", proposerSender.DerivationPath)
+
+		// Proposer also auto-resolved under its account name
+		autoResolved := trebCfg.Senders["hw-wallet"]
+		assert.Equal(t, config.SenderTypeLedger, autoResolved.Type)
+		assert.Equal(t, "m/44'/60'/0'/0/0", autoResolved.DerivationPath)
 	})
 
 	t.Run("missing signer account is skipped with warning", func(t *testing.T) {
@@ -860,6 +872,67 @@ func TestResolvedNamespaceToTrebConfig(t *testing.T) {
 		assert.Equal(t, config.SenderTypePrivateKey, trebCfg.Senders["dev-wallet"].Type)
 	})
 
+	t.Run("transitive chain: governor -> safe proposer -> pk signer", func(t *testing.T) {
+		accounts := map[string]config.AccountConfig{
+			"dev-pk":   {Type: config.SenderTypePrivateKey, PrivateKey: "0xdev"},
+			"dev-safe": {Type: config.SenderTypeSafe, Safe: "0xSafeAddr", Signer: "dev-pk"},
+			"gov":      {Type: config.SenderTypeOZGovernor, Governor: "0xGovAddr", Timelock: "0xTimelockAddr", Proposer: "dev-safe"},
+		}
+		resolved := &config.ResolvedNamespace{
+			Profile: "production",
+			Accounts: map[string]config.AccountConfig{
+				// Only the Governor is a namespace role — Safe and PK are NOT mapped
+				"governor": accounts["gov"],
+			},
+		}
+
+		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
+		require.NoError(t, err)
+		require.NotNil(t, trebCfg)
+
+		// All three accounts should be present
+		assert.Len(t, trebCfg.Senders, 3)
+		assert.Equal(t, config.SenderTypeOZGovernor, trebCfg.Senders["governor"].Type)
+		assert.Equal(t, config.SenderTypeSafe, trebCfg.Senders["dev-safe"].Type)
+		assert.Equal(t, config.SenderTypePrivateKey, trebCfg.Senders["dev-pk"].Type)
+	})
+
+	t.Run("circular reference produces error", func(t *testing.T) {
+		accounts := map[string]config.AccountConfig{
+			"safe-a": {Type: config.SenderTypeSafe, Safe: "0xA", Signer: "safe-b"},
+			"safe-b": {Type: config.SenderTypeSafe, Safe: "0xB", Signer: "safe-a"},
+		}
+		resolved := &config.ResolvedNamespace{
+			Profile: "default",
+			Accounts: map[string]config.AccountConfig{
+				"deployer": accounts["safe-a"],
+			},
+		}
+
+		_, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "circular account reference")
+		assert.Contains(t, err.Error(), "safe-a")
+		assert.Contains(t, err.Error(), "safe-b")
+	})
+
+	t.Run("self-reference produces error", func(t *testing.T) {
+		accounts := map[string]config.AccountConfig{
+			"self-ref": {Type: config.SenderTypeSafe, Safe: "0xSelf", Signer: "self-ref"},
+		}
+		resolved := &config.ResolvedNamespace{
+			Profile: "default",
+			Accounts: map[string]config.AccountConfig{
+				"deployer": accounts["self-ref"],
+			},
+		}
+
+		_, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "circular account reference")
+		assert.Contains(t, err.Error(), "self-ref")
+	})
+
 	t.Run("empty resolved namespace produces empty senders", func(t *testing.T) {
 		accounts := map[string]config.AccountConfig{
 			"deployer": {Type: config.SenderTypePrivateKey, PrivateKey: "0x1234"},
@@ -891,11 +964,14 @@ func TestResolvedNamespaceToTrebConfig(t *testing.T) {
 
 		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
 		require.NoError(t, err)
-		assert.Len(t, trebCfg.Senders, 3)
+		// 4 senders: deployer, admin, multisig, plus ledger auto-resolved by account name
+		assert.Len(t, trebCfg.Senders, 4)
 		assert.Equal(t, config.SenderTypePrivateKey, trebCfg.Senders["deployer"].Type)
 		assert.Equal(t, config.SenderTypeLedger, trebCfg.Senders["admin"].Type)
 		assert.Equal(t, config.SenderTypeSafe, trebCfg.Senders["multisig"].Type)
 		assert.Equal(t, "ledger", trebCfg.Senders["multisig"].Signer)
+		// Signer auto-resolved under its account name so BuildSenderScriptConfig can find it
+		assert.Equal(t, config.SenderTypeLedger, trebCfg.Senders["ledger"].Type)
 	})
 }
 
