@@ -188,6 +188,38 @@ func ResolvedNamespaceToTrebConfig(resolved *config.ResolvedNamespace, accounts 
 		senders[roleName] = sender
 	}
 
+	// Auto-resolve signer references: when a Safe sender references a signer
+	// account that exists in the global accounts map but isn't already in senders
+	// (under any key), add it keyed by account name.
+	autoResolved := make(map[string]config.SenderConfig)
+	for _, sender := range senders {
+		if sender.Type == config.SenderTypeSafe && sender.Signer != "" {
+			// Skip if the account name is already a key in senders (don't overwrite role mappings)
+			if _, exists := senders[sender.Signer]; exists {
+				continue
+			}
+			signerAcct, ok := accounts[sender.Signer]
+			if !ok {
+				continue
+			}
+			// Skip if the same config is already present under a different key
+			signerSender := config.SenderConfig(signerAcct)
+			alreadyPresent := false
+			for _, existing := range senders {
+				if existing == signerSender {
+					alreadyPresent = true
+					break
+				}
+			}
+			if !alreadyPresent {
+				autoResolved[sender.Signer] = signerSender
+			}
+		}
+	}
+	for name, sender := range autoResolved {
+		senders[name] = sender
+	}
+
 	return &config.TrebConfig{Senders: senders}, nil
 }
 
