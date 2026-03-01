@@ -1,0 +1,174 @@
+{
+  "project": "treb-cli",
+  "branchName": "ralph/cosmetic-polish",
+  "description": "CLI output cosmetic polish — fix alignment bugs, add colors to fork/config commands, show sender info in config, normalize io.Writer usage and icon conventions across all renderers",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Fix list command column alignment",
+      "description": "As a user, I want the list output columns to be perfectly aligned regardless of verification status content (checkmarks vs dashes vs pending icons) so that addresses and timestamps line up across all rows.",
+      "acceptanceCriteria": [
+        "In internal/cli/render/deployments.go, normalize the verification status cell to a fixed visual width regardless of content (checkmark, dash, or pending icon)",
+        "Remove the conditional padding logic in formatStatus() — instead, always pad the cell to the same width",
+        "Ensure displayWidth() and go-pretty agree on column widths by using runewidth consistently",
+        "Address column starts at the same position for all rows in list output",
+        "Timestamp column starts at the same position for all rows in list output",
+        "Update golden files in test/testdata/golden/ with -treb.updategolden if output format changes",
+        "make lint passes",
+        "make unit-test passes",
+        "make integration-test passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Root cause: getVerifierStatuses() formatStatus() adds trailing space conditionally for wide characters. The go-pretty table library does its own ANSI-aware width calculation that may disagree with the manual padding. Fix should normalize to fixed width. Key file: internal/cli/render/deployments.go lines 397-449."
+    },
+    {
+      "id": "US-002",
+      "title": "Fork renderer: migrate to io.Writer pattern",
+      "description": "As a developer, I want the fork renderer to use io.Writer instead of raw fmt.Println/fmt.Printf so that output is testable and pipeable.",
+      "acceptanceCriteria": [
+        "ForkRenderer struct in internal/cli/render/fork.go gets an 'out io.Writer' field",
+        "NewForkRenderer() accepts an io.Writer parameter",
+        "All fmt.Println/fmt.Printf calls in fork.go replaced with fmt.Fprintln/fmt.Fprintf using the renderer's io.Writer",
+        "All callers of NewForkRenderer() are updated to pass an io.Writer (check internal/cli/fork.go and internal/app/)",
+        "No functional changes to output content — same text, just written to io.Writer instead of stdout",
+        "make lint passes",
+        "make unit-test passes",
+        "make integration-test passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Purely structural refactor. All 7 render methods (RenderEnter, RenderExit, RenderStatus, RenderRevert, RenderRestart, RenderHistory, RenderDiff) need updating. Search for all NewForkRenderer() call sites."
+    },
+    {
+      "id": "US-003",
+      "title": "Fork renderer: add colors to output",
+      "description": "As a user, I want fork command output to have colored values so it's visually consistent with other treb commands and easier to scan.",
+      "acceptanceCriteria": [
+        "Network names colored cyan (using github.com/fatih/color)",
+        "URLs (fork URLs, log file paths) colored faint/gray",
+        "Health status colored green for healthy, red for unhealthy",
+        "PID numbers colored faint",
+        "Success messages prefixed with green checkmark (matching run/sync pattern)",
+        "fork status header 'Active Forks' rendered bold",
+        "fork diff uses dynamic width for contract names instead of fixed %-20s",
+        "fork history current marker arrow colored green or cyan",
+        "Keep the simple key-value format — no section headers or separators added",
+        "Update golden files with -treb.updategolden",
+        "make lint passes",
+        "make unit-test passes",
+        "make integration-test passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Depends on US-002 (io.Writer migration). Use color patterns from internal/cli/render/script.go as reference (bold, gray, cyan, yellow, green, red variables). For fork diff dynamic width, calculate max contract name length before printing."
+    },
+    {
+      "id": "US-004",
+      "title": "Tag renderer: fix io.Writer usage",
+      "description": "As a developer, I want the tag renderer to consistently use io.Writer instead of mixing fmt.Println with direct stdout writes so that output is fully testable.",
+      "acceptanceCriteria": [
+        "TagRenderer struct in internal/cli/render/tag.go gets an 'out io.Writer' field",
+        "NewTagRenderer() constructor accepts io.Writer (keep existing config param or simplify if unused)",
+        "All fmt.Println/fmt.Print/fmt.Printf calls replaced with fmt.Fprintln/fmt.Fprint/fmt.Fprintf using io.Writer",
+        "All callers of NewTagRenderer() updated to pass io.Writer",
+        "No functional changes to output content",
+        "make lint passes",
+        "make unit-test passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Small mechanical change. Tag renderer currently uses config.RuntimeConfig in constructor but only for rendering — check if it's actually needed. Key file: internal/cli/render/tag.go"
+    },
+    {
+      "id": "US-005",
+      "title": "Expand config command to show sender information",
+      "description": "As a user running treb config, I want to see the resolved sender configuration from treb.toml for the current namespace so I can debug deployment configuration without opening the TOML file.",
+      "acceptanceCriteria": [
+        "ShowConfigResult in internal/usecase/show_config.go gets new fields for sender info (namespace senders from treb.toml)",
+        "ShowConfig.Run() resolves and populates sender information for the current namespace",
+        "Config renderer shows senders section with: sender name, type (private_key/ledger/safe/trezor), and key details",
+        "For private_key type: show env var reference (e.g. $DEPLOYER_PRIVATE_KEY) — never show the actual key value",
+        "For safe type: show the safe address",
+        "For ledger type: show the derivation path (or env var reference)",
+        "Sender names colored cyan, types colored faint in output",
+        "Namespace and network values in config output are colored",
+        "If no treb.toml exists, show a hint about creating one",
+        "Update golden files with -treb.updategolden",
+        "make lint passes",
+        "make unit-test passes",
+        "make integration-test passes"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Requires changes to: 1) internal/usecase/show_config.go (add sender data to result), 2) internal/cli/render/config.go (render sender section). The sender config types are in internal/domain/config/foundry.go (SenderConfig) and internal/domain/config/trebfile.go (NamespaceConfig). The treb.toml is parsed via TrebfileV2 — check internal/domain/config/trebfile_v2.go and how RuntimeConfig.TrebConfig gets populated. Config source detection already exists. IMPORTANT: values like private_key often contain env var references like '${DEPLOYER_PRIVATE_KEY}' — show those literally, do NOT resolve them."
+    },
+    {
+      "id": "US-006",
+      "title": "Move reset command output to dedicated renderer",
+      "description": "As a developer, I want the reset command to use a dedicated renderer so that output formatting is consistent with other commands and testable.",
+      "acceptanceCriteria": [
+        "Create internal/cli/render/reset.go with a ResetRenderer struct that accepts io.Writer",
+        "Move output formatting from internal/cli/reset.go cobra command into the renderer",
+        "Add colors: item counts bold, namespace/network colored cyan",
+        "Success message uses green checkmark pattern (matching sync/run)",
+        "Confirmation prompt stays in the cobra command (interactive concern, not in renderer)",
+        "The cobra command calls the renderer for display, handles prompts itself",
+        "make lint passes",
+        "make unit-test passes"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "The reset command is in internal/cli/reset.go. It currently prints directly with fmt.Fprintf to cmd.OutOrStdout(). Extract the display logic into a renderer, keep the interactive confirmation prompt in the command. Pattern to follow: see how internal/cli/render/prune.go works with internal/cli/prune.go."
+    },
+    {
+      "id": "US-007",
+      "title": "Clean up register command output rendering",
+      "description": "As a user, I want the register command's success output to be cleanly formatted with colors so that registered deployments are easy to review.",
+      "acceptanceCriteria": [
+        "Create internal/cli/render/register.go with a RegisterRenderer struct that accepts io.Writer",
+        "Move success output formatting from internal/cli/register.go into the renderer",
+        "Deployment IDs colored cyan, addresses colored green, contract names colored yellow",
+        "JSON output mode uses proper json.Marshal instead of raw fmt.Printf string concatenation",
+        "Interactive prompts and selection logic stay in the cobra command",
+        "make lint passes",
+        "make unit-test passes"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "The register command is in internal/cli/register.go. It already uses some color calls inline. The JSON output section around line 371 manually builds JSON with fmt.Printf — replace with proper marshaling. Interactive selection is complex — leave all that in the command, only extract the final result display."
+    },
+    {
+      "id": "US-008",
+      "title": "Polish networks command alignment and colors",
+      "description": "As a user, I want the networks list to have aligned chain IDs and colored network names for easier scanning.",
+      "acceptanceCriteria": [
+        "Network names colored cyan or bold in internal/cli/render/networks.go",
+        "Chain IDs right-aligned for visual consistency across all entries",
+        "Error messages colored red (already using emoji, keep that)",
+        "Keep existing emoji icons (they work well here)",
+        "make lint passes",
+        "make unit-test passes"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Small change in internal/cli/render/networks.go. Calculate max network name width first, then format with consistent padding. Use color.New(color.FgCyan) for network names."
+    },
+    {
+      "id": "US-009",
+      "title": "Normalize icon usage across all commands",
+      "description": "As a user, I want consistent success/error/warning indicators across all commands so the CLI feels cohesive.",
+      "acceptanceCriteria": [
+        "Document icon convention as a comment block in internal/cli/render/helpers.go: green checkmark for inline success, green emoji checkmark for major milestones, red X for inline errors, red emoji X for fatal errors, yellow warning emoji for warnings",
+        "Audit all renderers and update outliers to match the convention",
+        "Do NOT change run/show/list output (except the list fix already done in US-001)",
+        "Do NOT change init or gen output (they correctly use emoji for milestones)",
+        "make lint passes",
+        "make unit-test passes"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "This is a cross-cutting audit story. Check: verify.go uses plain checkmark/X (correct for inline), anvil.go mixes styles, sync.go is fine. The convention is: use the green checkmark character (not emoji) + green color for inline results in command output, use the emoji checkmark for major operations like init/gen. Document this in helpers.go near the existing FormatSuccess/FormatError/FormatWarning functions."
+    }
+  ]
+}
