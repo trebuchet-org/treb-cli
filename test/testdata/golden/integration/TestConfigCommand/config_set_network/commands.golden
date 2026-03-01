@@ -1,5 +1,5 @@
 === cmd 0: [config set network celo] ===
-✅ Set network to: celo
+✓ Set network to: celo
 📁 config saved to: .treb/config.local.json
 
 
@@ -7,4 +7,10 @@
 📋 Current config:
 Namespace: default
 Network:   celo
+
+📦 Config source: treb.toml
 📁 config file: .treb/config.local.json
+
+🔑 Senders:
+  anvil     private_key   (literal key)
+  governor  oz_governor   ${GOVERNOR_ADDRESS}

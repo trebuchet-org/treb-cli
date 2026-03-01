@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/trebuchet-org/treb-cli/internal/cli/render"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -31,6 +32,8 @@ The namespace and network are determined from the current configuration context
 				return fmt.Errorf("network must be set (use 'treb config set network <name>' or --network flag)")
 			}
 
+			renderer := render.NewResetRenderer(cmd.OutOrStdout())
+
 			// First, collect items to reset (dry run)
 			result, err := app.ResetRegistry.Run(cmd.Context(), usecase.ResetRegistryParams{
 				DryRun: true,
@@ -41,29 +44,20 @@ The namespace and network are determined from the current configuration context
 
 			// If no items to reset, we're done
 			if !result.Changeset.HasChanges() {
-				fmt.Fprintln(cmd.OutOrStdout(), "Nothing to reset. No registry entries found for the current namespace and network.")
+				renderer.RenderNothing()
 				return nil
 			}
 
 			// Show what will be deleted
 			del := result.Changeset.Delete
-			fmt.Fprintf(cmd.OutOrStdout(), "Found %d items to reset for namespace '%s' on network '%s' (chain %d):\n\n",
-				del.Count(),
+			renderer.RenderItemsToReset(
 				app.Config.Namespace,
 				app.Config.Network.Name,
 				app.Config.Network.ChainID,
+				len(del.Deployments),
+				len(del.Transactions),
+				len(del.SafeTransactions),
 			)
-
-			if len(del.Deployments) > 0 {
-				fmt.Fprintf(cmd.OutOrStdout(), "  Deployments:        %d\n", len(del.Deployments))
-			}
-			if len(del.Transactions) > 0 {
-				fmt.Fprintf(cmd.OutOrStdout(), "  Transactions:       %d\n", len(del.Transactions))
-			}
-			if len(del.SafeTransactions) > 0 {
-				fmt.Fprintf(cmd.OutOrStdout(), "  Safe Transactions:  %d\n", len(del.SafeTransactions))
-			}
-			fmt.Fprintln(cmd.OutOrStdout())
 
 			// Handle confirmation
 			if !app.Config.NonInteractive {
@@ -73,16 +67,16 @@ The namespace and network are determined from the current configuration context
 				)
 				var response string
 				if _, err := fmt.Scanln(&response); err != nil {
-					fmt.Fprintln(cmd.OutOrStdout(), "Reset cancelled.")
+					renderer.RenderCancelled()
 					return nil
 				}
 
 				if strings.ToLower(strings.TrimSpace(response)) != "y" {
-					fmt.Fprintln(cmd.OutOrStdout(), "Reset cancelled.")
+					renderer.RenderCancelled()
 					return nil
 				}
 			} else {
-				fmt.Fprintln(cmd.OutOrStdout(), "Running in non-interactive mode. Proceeding with reset...")
+				renderer.RenderNonInteractive()
 			}
 
 			// Execute the actual reset
@@ -93,7 +87,7 @@ The namespace and network are determined from the current configuration context
 				return err
 			}
 
-			fmt.Fprintf(cmd.OutOrStdout(), "Successfully reset %d items from the registry.\n", result.Changeset.Delete.Count())
+			renderer.RenderSuccess(result.Changeset.Delete.Count())
 
 			return nil
 		},

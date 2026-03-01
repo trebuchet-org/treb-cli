@@ -2,22 +2,22 @@ package render
 
 import (
 	"fmt"
+	"io"
 	"sort"
 
 	"github.com/fatih/color"
-	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
 // TagRenderer renders tag operation results
 type TagRenderer struct {
-	config *config.RuntimeConfig
+	out io.Writer
 }
 
 // NewTagRenderer creates a new tag renderer
-func NewTagRenderer(cfg *config.RuntimeConfig) *TagRenderer {
-	return &TagRenderer{config: cfg}
+func NewTagRenderer(out io.Writer) *TagRenderer {
+	return &TagRenderer{out: out}
 }
 
 // Render displays the tag operation result
@@ -52,15 +52,15 @@ func (r *TagRenderer) renderShowTags(deployment *models.Deployment, displayName 
 	addressStyle := color.New(color.FgGreen, color.Bold)
 	tagStyle := color.New(color.FgCyan)
 
-	fmt.Println()
-	titleStyle.Printf("Deployment: %s/%d/%s\n", deployment.Namespace, deployment.ChainID, displayName)
+	fmt.Fprintln(r.out)
+	titleStyle.Fprintf(r.out, "Deployment: %s/%d/%s\n", deployment.Namespace, deployment.ChainID, displayName)
 
-	labelStyle.Print("Address: ")
-	addressStyle.Println(deployment.Address)
+	labelStyle.Fprint(r.out, "Address: ")
+	addressStyle.Fprintln(r.out, deployment.Address)
 
-	labelStyle.Print("Tags:    ")
+	labelStyle.Fprint(r.out, "Tags:    ")
 	if len(deployment.Tags) == 0 {
-		color.New(color.Faint).Println("No tags")
+		color.New(color.Faint).Fprintln(r.out, "No tags")
 	} else {
 		// Sort tags for consistent display
 		sortedTags := make([]string, len(deployment.Tags))
@@ -69,13 +69,13 @@ func (r *TagRenderer) renderShowTags(deployment *models.Deployment, displayName 
 
 		for i, tag := range sortedTags {
 			if i > 0 {
-				fmt.Print(", ")
+				fmt.Fprint(r.out, ", ")
 			}
-			tagStyle.Print(tag)
+			tagStyle.Fprint(r.out, tag)
 		}
-		fmt.Println()
+		fmt.Fprintln(r.out)
 	}
-	fmt.Println()
+	fmt.Fprintln(r.out)
 
 	return nil
 }
@@ -84,7 +84,7 @@ func (r *TagRenderer) renderShowTags(deployment *models.Deployment, displayName 
 func (r *TagRenderer) renderAddTag(deployment *models.Deployment, displayName, tag string, currentTags []string) error {
 
 	// Show success
-	color.New(color.FgGreen).Printf("✅ Added tag '%s' to %s/%d/%s\n",
+	color.New(color.FgGreen).Fprintf(r.out, "✓ Added tag '%s' to %s/%d/%s\n",
 		tag,
 		deployment.Namespace,
 		deployment.ChainID,
@@ -92,7 +92,7 @@ func (r *TagRenderer) renderAddTag(deployment *models.Deployment, displayName, t
 	)
 
 	// Show all tags
-	fmt.Print("\nCurrent tags: ")
+	fmt.Fprint(r.out, "\nCurrent tags: ")
 	tagStyle := color.New(color.FgCyan)
 
 	allTags := make([]string, len(currentTags))
@@ -101,11 +101,11 @@ func (r *TagRenderer) renderAddTag(deployment *models.Deployment, displayName, t
 
 	for i, t := range allTags {
 		if i > 0 {
-			fmt.Print(", ")
+			fmt.Fprint(r.out, ", ")
 		}
-		tagStyle.Print(t)
+		tagStyle.Fprint(r.out, t)
 	}
-	fmt.Println()
+	fmt.Fprintln(r.out)
 
 	return nil
 }
@@ -114,7 +114,7 @@ func (r *TagRenderer) renderAddTag(deployment *models.Deployment, displayName, t
 func (r *TagRenderer) renderRemoveTag(deployment *models.Deployment, displayName, tag string, currentTags []string) error {
 
 	// Show success
-	color.New(color.FgGreen).Printf("✅ Removed tag '%s' from %s/%d/%s\n",
+	color.New(color.FgGreen).Fprintf(r.out, "✓ Removed tag '%s' from %s/%d/%s\n",
 		tag,
 		deployment.Namespace,
 		deployment.ChainID,
@@ -122,9 +122,9 @@ func (r *TagRenderer) renderRemoveTag(deployment *models.Deployment, displayName
 	)
 
 	// Show remaining tags
-	fmt.Print("\nRemaining tags: ")
+	fmt.Fprint(r.out, "\nRemaining tags: ")
 	if len(currentTags) == 0 {
-		color.New(color.Faint).Print("No tags")
+		color.New(color.Faint).Fprint(r.out, "No tags")
 	} else {
 		tagStyle := color.New(color.FgCyan)
 		sortedTags := make([]string, len(currentTags))
@@ -133,12 +133,12 @@ func (r *TagRenderer) renderRemoveTag(deployment *models.Deployment, displayName
 
 		for i, t := range sortedTags {
 			if i > 0 {
-				fmt.Print(", ")
+				fmt.Fprint(r.out, ", ")
 			}
-			tagStyle.Print(t)
+			tagStyle.Fprint(r.out, t)
 		}
 	}
-	fmt.Println()
+	fmt.Fprintln(r.out)
 
 	return nil
 }

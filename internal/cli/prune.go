@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/internal/cli/render"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
@@ -99,7 +100,7 @@ are preserved. Use --include-pending to also prune these items.`,
 				return err
 			}
 
-			fmt.Fprintf(cmd.OutOrStdout(), "✅ Successfully pruned %d items from the registry.\n", result.Changeset.Count())
+			color.New(color.FgGreen).Fprintf(cmd.OutOrStdout(), "✓ Successfully pruned %d items from the registry.\n", result.Changeset.Count())
 
 			return nil
 		},

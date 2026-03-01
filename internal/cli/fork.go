@@ -133,7 +133,7 @@ func runForkEnter(cmd *cobra.Command, args []string) error {
 	}
 
 	// Render result
-	renderer := render.NewForkRenderer()
+	renderer := render.NewForkRenderer(cmd.OutOrStdout())
 	return renderer.RenderEnter(result)
 }
 
@@ -186,7 +186,7 @@ func runForkExit(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	renderer := render.NewForkRenderer()
+	renderer := render.NewForkRenderer(cmd.OutOrStdout())
 	return renderer.RenderExit(result)
 }
 
@@ -239,7 +239,7 @@ func runForkRevert(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	renderer := render.NewForkRenderer()
+	renderer := render.NewForkRenderer(cmd.OutOrStdout())
 	return renderer.RenderRevert(result)
 }
 
@@ -291,7 +291,7 @@ func runForkRestart(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	renderer := render.NewForkRenderer()
+	renderer := render.NewForkRenderer(cmd.OutOrStdout())
 	return renderer.RenderRestart(result)
 }
 
@@ -323,7 +323,7 @@ func runForkStatus(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	renderer := render.NewForkRenderer()
+	renderer := render.NewForkRenderer(cmd.OutOrStdout())
 	return renderer.RenderStatus(result)
 }
 
@@ -365,7 +365,7 @@ func runForkHistory(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	renderer := render.NewForkRenderer()
+	renderer := render.NewForkRenderer(cmd.OutOrStdout())
 	return renderer.RenderHistory(result)
 }
 
@@ -415,19 +415,19 @@ func runForkDiff(cmd *cobra.Command, args []string, jsonOutput bool) error {
 	}
 
 	if jsonOutput {
-		return renderForkDiffJSON(result)
+		return renderForkDiffJSON(cmd, result)
 	}
 
-	renderer := render.NewForkRenderer()
+	renderer := render.NewForkRenderer(cmd.OutOrStdout())
 	return renderer.RenderDiff(result)
 }
 
 // renderForkDiffJSON outputs fork diff as JSON
-func renderForkDiffJSON(result *usecase.ForkDiffResult) error {
+func renderForkDiffJSON(cmd *cobra.Command, result *usecase.ForkDiffResult) error {
 	data, err := json.MarshalIndent(result, "", "  ")
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(data))
+	fmt.Fprintln(cmd.OutOrStdout(), string(data))
 	return nil
 }

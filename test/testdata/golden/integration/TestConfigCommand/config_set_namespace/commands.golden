@@ -1,5 +1,5 @@
 === cmd 0: [config set namespace production] ===
-✅ Set namespace to: production
+✓ Set namespace to: production
 📁 config saved to: .treb/config.local.json
 
 
@@ -7,4 +7,10 @@
 📋 Current config:
 Namespace: production
 Network:   (not set)
+
+📦 Config source: treb.toml
 📁 config file: .treb/config.local.json
+
+🔑 Senders:
+  anvil     private_key   (literal key)
+  governor  oz_governor   ${GOVERNOR_ADDRESS}

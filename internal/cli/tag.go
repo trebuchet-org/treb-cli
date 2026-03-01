@@ -93,6 +93,6 @@ func runTag(cmd *cobra.Command, identifier string, flags *tagFlags) error {
 	}
 
 	// Render the result
-	renderer := render.NewTagRenderer(app.Config)
+	renderer := render.NewTagRenderer(cmd.OutOrStdout())
 	return renderer.Render(result)
 }

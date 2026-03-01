@@ -34,12 +34,12 @@ func (r *AnvilRenderer) Render(result *usecase.ManageAnvilResult) error {
 // renderStart renders the start operation result
 func (r *AnvilRenderer) renderStart(result *usecase.ManageAnvilResult) error {
 	if result.Success {
-		color.New(color.FgGreen).Printf("✅ %s\n", result.Message)
+		color.New(color.FgGreen).Printf("✓ %s\n", result.Message)
 		color.New(color.FgYellow).Printf("📋 Logs: %s\n", result.Status.LogFile)
 		color.New(color.FgBlue).Printf("🌐 RPC URL: %s\n", result.Status.RPCURL)
 
 		if result.Status.CreateXDeployed {
-			color.New(color.FgGreen).Printf("✅ CreateX factory deployed at %s\n", result.Status.CreateXAddress)
+			color.New(color.FgGreen).Printf("✓ CreateX factory deployed at %s\n", result.Status.CreateXAddress)
 		} else {
 			color.New(color.FgRed).Printf("⚠️  Warning: Failed to deploy CreateX\n")
 			color.New(color.FgYellow).Println("Deployments may fail without CreateX factory")
@@ -51,7 +51,7 @@ func (r *AnvilRenderer) renderStart(result *usecase.ManageAnvilResult) error {
 // renderStop renders the stop operation result
 func (r *AnvilRenderer) renderStop(result *usecase.ManageAnvilResult) error {
 	if result.Success {
-		color.New(color.FgGreen).Printf("✅ %s\n", result.Message)
+		color.New(color.FgGreen).Printf("✓ %s\n", result.Message)
 	}
 	return nil
 }
@@ -71,15 +71,15 @@ func (r *AnvilRenderer) renderStatus(result *usecase.ManageAnvilResult) error {
 		color.New(color.FgYellow).Printf("Log file: %s\n", result.Status.LogFile)
 
 		if result.Status.RPCHealthy {
-			color.New(color.FgGreen).Println("RPC Health: ✅ Responding")
+			color.New(color.FgGreen).Println("RPC Health: ✓ Responding")
 		} else {
-			color.New(color.FgRed).Println("RPC Health: ❌ Not responding")
+			color.New(color.FgRed).Println("RPC Health: ✗ Not responding")
 		}
 
 		if result.Status.CreateXDeployed {
-			color.New(color.FgGreen).Printf("CreateX Status: ✅ Deployed at %s\n", result.Status.CreateXAddress)
+			color.New(color.FgGreen).Printf("CreateX Status: ✓ Deployed at %s\n", result.Status.CreateXAddress)
 		} else {
-			color.New(color.FgRed).Println("CreateX Status: ❌ Not deployed")
+			color.New(color.FgRed).Println("CreateX Status: ✗ Not deployed")
 		}
 	} else {
 		color.New(color.FgRed).Println("Status: 🔴 Not running")

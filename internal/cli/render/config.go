@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/fatih/color"
 	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -48,18 +49,21 @@ func (r *ConfigRenderer) RenderConfig(result *usecase.ShowConfigResult) error {
 	fmt.Fprintln(r.out, "📋 Current config:")
 
 	// Show namespace (always has a value)
-	fmt.Fprintf(r.out, "Namespace: %s\n", result.Config.Namespace)
+	fmt.Fprintf(r.out, "Namespace: ")
+	cyan.Fprintln(r.out, result.Config.Namespace)
 
 	// Show network (may be empty)
 	if result.Config.Network != "" {
-		fmt.Fprintf(r.out, "Network:   %s\n", result.Config.Network)
+		fmt.Fprintf(r.out, "Network:   ")
+		cyan.Fprintln(r.out, result.Config.Network)
 	} else {
-		fmt.Fprintf(r.out, "Network:   %s\n", "(not set)")
+		fmt.Fprintf(r.out, "Network:   ")
+		gray.Fprintln(r.out, "(not set)")
 	}
 
 	// Show config source
 	switch result.ConfigSource {
-	case "treb.toml":
+	case "treb.toml", "treb.toml (v2)":
 		fmt.Fprintf(r.out, "\n📦 Config source: treb.toml\n")
 	case "foundry.toml":
 		fmt.Fprintf(r.out, "\n📦 Config source: foundry.toml (legacy)\n")
@@ -67,12 +71,39 @@ func (r *ConfigRenderer) RenderConfig(result *usecase.ShowConfigResult) error {
 
 	fmt.Fprintf(r.out, "📁 config file: %s\n", getRelativePath(result.ConfigPath))
 
+	// Show senders
+	if len(result.Senders) > 0 {
+		fmt.Fprintln(r.out)
+		fmt.Fprintf(r.out, "🔑 Senders:\n")
+		// Calculate max name width for alignment
+		maxName := 0
+		for _, s := range result.Senders {
+			if len(s.Name) > maxName {
+				maxName = len(s.Name)
+			}
+		}
+		for _, s := range result.Senders {
+			fmt.Fprintf(r.out, "  ")
+			cyan.Fprintf(r.out, "%-*s", maxName, s.Name)
+			fmt.Fprintf(r.out, "  ")
+			gray.Fprintf(r.out, "%-12s", string(s.Type))
+			if s.Detail != "" {
+				fmt.Fprintf(r.out, "  ")
+				gray.Fprintf(r.out, "%s", s.Detail)
+			}
+			fmt.Fprintln(r.out)
+		}
+	} else if result.ConfigSource == "" {
+		fmt.Fprintln(r.out)
+		gray.Fprintln(r.out, "💡 Create a treb.toml to configure senders")
+	}
+
 	return nil
 }
 
 // RenderSet renders the result of setting a configuration value
 func (r *ConfigRenderer) RenderSet(result *usecase.SetConfigResult) error {
-	fmt.Fprintf(r.out, "✅ Set %s to: %s\n", result.Key, result.Value)
+	color.New(color.FgGreen).Fprintf(r.out, "✓ Set %s to: %s\n", result.Key, result.Value)
 	fmt.Fprintf(r.out, "📁 config saved to: %s\n", getRelativePath(result.ConfigPath))
 	return nil
 }
@@ -81,9 +112,9 @@ func (r *ConfigRenderer) RenderSet(result *usecase.SetConfigResult) error {
 func (r *ConfigRenderer) RenderRemove(result *usecase.RemoveConfigResult) error {
 	switch result.Key {
 	case config.ConfigKeyNamespace:
-		fmt.Fprintf(r.out, "✅ Reset namespace to: default\n")
+		color.New(color.FgGreen).Fprintf(r.out, "✓ Reset namespace to: default\n")
 	case config.ConfigKeyNetwork:
-		fmt.Fprintf(r.out, "✅ Removed network from config (will be required as flag)\n")
+		color.New(color.FgGreen).Fprintf(r.out, "✓ Removed network from config (will be required as flag)\n")
 	}
 
 	fmt.Fprintf(r.out, "📁 config saved to: %s\n", getRelativePath(result.ConfigPath))

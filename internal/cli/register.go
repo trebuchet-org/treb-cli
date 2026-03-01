@@ -7,6 +7,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
+	"github.com/trebuchet-org/treb-cli/internal/cli/render"
 	"github.com/trebuchet-org/treb-cli/internal/domain/models"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -366,35 +367,13 @@ Examples:
 				return fmt.Errorf("failed to register deployment: %w", err)
 			}
 
+			renderer := render.NewRegisterRenderer(cmd.OutOrStdout())
+
 			if app.Config.JSON {
-				// JSON output for multiple deployments
-				fmt.Printf("{\"deployments\":[")
-				for i := range result.DeploymentIDs {
-					if i > 0 {
-						fmt.Printf(",")
-					}
-					fmt.Printf("{\"deploymentId\":\"%s\",\"address\":\"%s\",\"contractName\":\"%s\",\"label\":\"%s\"}",
-						result.DeploymentIDs[i], result.Addresses[i], result.ContractNames[i], result.Labels[i])
-				}
-				fmt.Printf("]}\n")
-				return nil
+				return renderer.RenderJSON(result)
 			}
 
-			// Human-readable output
-			fmt.Print(color.New(color.FgGreen, color.Bold).Sprintf("✓ Successfully registered %d deployment(s)\n\n", len(result.DeploymentIDs)))
-			for i := range result.DeploymentIDs {
-				fmt.Printf("  Deployment %d:\n", i+1)
-				fmt.Printf("    Deployment ID: %s\n", result.DeploymentIDs[i])
-				fmt.Printf("    Address: %s\n", result.Addresses[i])
-				fmt.Printf("    Contract: %s\n", result.ContractNames[i])
-				if result.Labels[i] != "" {
-					fmt.Printf("    Label: %s\n", result.Labels[i])
-				}
-				if i < len(result.DeploymentIDs)-1 {
-					fmt.Println()
-				}
-			}
-
+			renderer.RenderSuccess(result)
 			return nil
 		},
 	}

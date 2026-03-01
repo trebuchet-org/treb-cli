@@ -1,6 +1,6 @@
 === cmd 0: [tag Counter --add v<VERSION>] ===
 Added tag 'v<VERSION>' to deployment default/31337/Counter
-✅ Added tag 'v<VERSION>' to default/31337/Counter
+✓ Added tag 'v<VERSION>' to default/31337/Counter
 
 Current tags: v<VERSION>
 

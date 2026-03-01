@@ -1,10 +1,10 @@
 === cmd 0: [config set namespace staging] ===
-✅ Set namespace to: staging
+✓ Set namespace to: staging
 📁 config saved to: .treb/config.local.json
 
 
 === cmd 1: [config set network polygon] ===
-✅ Set network to: polygon
+✓ Set network to: polygon
 📁 config saved to: .treb/config.local.json
 
 
@@ -12,4 +12,10 @@
 📋 Current config:
 Namespace: staging
 Network:   polygon
+
+📦 Config source: treb.toml
 📁 config file: .treb/config.local.json
+
+🔑 Senders:
+  anvil     private_key   (literal key)
+  governor  oz_governor   ${GOVERNOR_ADDRESS}

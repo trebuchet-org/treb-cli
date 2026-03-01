@@ -1,9 +1,9 @@
 === cmd 0: [networks] ===
 🌐 Available Networks:
 
-  ✅ anvil-31337 - Chain ID: 31337
-  ✅ anvil-31338 - Chain ID: 31338
-  ✅ base-sepolia - Chain ID: 84532
-  ✅ celo - Chain ID: 42220
+  ✅ anvil-31337  - Chain ID:    31337
+  ✅ anvil-31338  - Chain ID:    31338
+  ✅ base-sepolia - Chain ID:    84532
+  ✅ celo         - Chain ID:    42220
   ✅ celo-sepolia - Chain ID: 11142220
-  ✅ polygon - Chain ID: 137
+  ✅ polygon      - Chain ID:      137

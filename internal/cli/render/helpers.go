@@ -6,6 +6,14 @@ import (
 	"github.com/fatih/color"
 )
 
+// Icon conventions for CLI output:
+//
+//   ✓  (green)  — inline success: command completed, registry updated, etc.
+//   ✅ (emoji)  — major milestones: project init, script generation
+//   ✗  (red)    — inline errors: verification failed, health check failed
+//   ❌ (emoji)  — fatal/notable errors: missing config, operation cancelled
+//   ⚠️ (yellow) — warnings: collisions, deprecations, non-critical issues
+
 // FormatWarning formats a warning message with the warning icon
 func FormatWarning(message string) string {
 	// Extract just the error message part (after the last colon if it's an error chain)

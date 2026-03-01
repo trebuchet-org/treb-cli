@@ -6,12 +6,20 @@ import (
 	"github.com/trebuchet-org/treb-cli/internal/domain/config"
 )
 
+// SenderDisplayInfo represents a sender for display purposes
+type SenderDisplayInfo struct {
+	Name   string            // Role/sender name
+	Type   config.SenderType // Sender type
+	Detail string            // Key display detail (env var ref, address, path)
+}
+
 // ShowConfigResult contains the result of showing configuration
 type ShowConfigResult struct {
 	Config       *config.LocalConfig
 	ConfigPath   string
 	Exists       bool
 	ConfigSource string // "treb.toml" or "foundry.toml"
+	Senders      []SenderDisplayInfo
 }
 
 // ShowConfig is a use case for showing configuration

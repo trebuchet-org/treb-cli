@@ -1,8 +1,13 @@
 package cli
 
 import (
+	"sort"
+	"strings"
+
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/internal/cli/render"
+	trebconfig "github.com/trebuchet-org/treb-cli/internal/config"
+	domainconfig "github.com/trebuchet-org/treb-cli/internal/domain/config"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -126,7 +131,57 @@ func showConfig(cmd *cobra.Command) error {
 	// Enrich result with config source from runtime config
 	result.ConfigSource = app.Config.ConfigSource
 
+	// Enrich result with sender display info from raw trebfile
+	rawSenders, err := trebconfig.LoadRawSenders(
+		app.Config.ProjectRoot,
+		app.Config.Namespace,
+		app.Config.ConfigSource,
+	)
+	if err == nil && rawSenders != nil {
+		result.Senders = buildSenderDisplayInfo(rawSenders)
+	}
+
 	// Render result
 	renderer := render.NewConfigRenderer(cmd.OutOrStdout())
 	return renderer.RenderConfig(result)
+}
+
+// buildSenderDisplayInfo converts raw sender configs into display info.
+func buildSenderDisplayInfo(senders map[string]domainconfig.SenderConfig) []usecase.SenderDisplayInfo {
+	infos := make([]usecase.SenderDisplayInfo, 0, len(senders))
+	for name, sender := range senders {
+		infos = append(infos, usecase.SenderDisplayInfo{
+			Name:   name,
+			Type:   sender.Type,
+			Detail: senderDetail(sender),
+		})
+	}
+	sort.Slice(infos, func(i, j int) bool {
+		return infos[i].Name < infos[j].Name
+	})
+	return infos
+}
+
+// senderDetail returns the key display detail for a sender config.
+func senderDetail(s domainconfig.SenderConfig) string {
+	switch s.Type {
+	case domainconfig.SenderTypePrivateKey:
+		if isEnvVarRef(s.PrivateKey) {
+			return s.PrivateKey
+		}
+		return "(literal key)"
+	case domainconfig.SenderTypeSafe:
+		return s.Safe
+	case domainconfig.SenderTypeLedger, domainconfig.SenderTypeTrezor:
+		return s.DerivationPath
+	case domainconfig.SenderTypeOZGovernor:
+		return s.Governor
+	default:
+		return ""
+	}
+}
+
+// isEnvVarRef checks if a string looks like an environment variable reference.
+func isEnvVarRef(s string) bool {
+	return strings.Contains(s, "${") || (strings.HasPrefix(s, "$") && len(s) > 1)
 }

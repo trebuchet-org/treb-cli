@@ -1,0 +1,111 @@
+## Codebase Patterns
+- Color variables (bold, gray, cyan, yellow, green, red) are defined as package-level vars in internal/cli/render/script.go and available across all files in the render package
+- Success messages use green checkmark character (✓) with color.New(color.FgGreen), matching sync.go pattern — NOT emoji checkmark
+- Fork integration tests all use SkipGolden: true, so no golden file updates needed for fork renderer changes
+- The mise tool manager must be activated for Go tooling: `eval "$(/home/sol/.local/bin/mise activate bash)"`; also need `export PATH="$HOME/go/bin:$PATH"` for golangci-lint
+- make fmt/lint don't work directly due to PATH issues — use the mise activation + explicit PATH setup instead
+- To load raw (unexpanded) sender configs for display, use internal/config/display.go LoadRawSenders() — it re-parses the TOML without os.ExpandEnv
+- For env var detection in config values, check for `${` prefix or `$` prefix — literal private keys start with `0x`
+- Config command enrichment (adding data from RuntimeConfig) happens in the cobra handler showConfig() in internal/cli/config.go, not in the use case
+
+---
+
+## 2026-03-01 - US-004
+- Migrated TagRenderer to io.Writer pattern, removed unused config.RuntimeConfig dependency
+- Files changed: internal/cli/render/tag.go, internal/cli/tag.go
+- Added `out io.Writer` field to TagRenderer struct, updated NewTagRenderer() to accept io.Writer
+- Replaced all fmt.Println/Print/Printf and color.Printf/Print/Println with Fprintf/Fprint/Fprintln variants using r.out
+- Updated caller in internal/cli/tag.go to pass cmd.OutOrStdout()
+- Removed unused import of internal/domain/config from tag.go renderer
+- **Learnings for future iterations:**
+  - TagRenderer's config param was completely unused — worth checking if other renderer constructors have similarly unused params
+  - The caller pattern for io.Writer is always `cmd.OutOrStdout()` from the cobra command
+  - color.New(...).Fprintf(r.out, ...) is the pattern for colored output to an io.Writer
+---
+
+## 2026-03-01 - US-005
+- Expanded config command to show resolved sender information from treb.toml
+- Files changed: internal/usecase/show_config.go, internal/config/display.go (new), internal/cli/config.go, internal/cli/render/config.go, 10 golden files
+- Added SenderDisplayInfo type to ShowConfigResult with Name, Type, Detail fields
+- Created LoadRawSenders() in internal/config/display.go to parse trebfile without env var expansion (supports v1, v2, and foundry.toml formats)
+- Added sender detail logic: private_key shows env var ref or "(literal key)", safe shows address, ledger/trezor shows derivation path, oz_governor shows governor address
+- Added colors to namespace/network values (cyan) and senders (names cyan, types gray)
+- Config source "treb.toml (v2)" now displays as just "treb.toml" in output
+- Updated 10 golden files for config tests showing new sender section
+- **Learnings for future iterations:**
+  - The existing loadTrebConfig/loadTrebConfigV2 functions always expand env vars, so for raw display you must re-parse the TOML file separately
+  - ResolveNamespace() from internal/config/trebfile_v2.go works on raw (unexpanded) data — it only does map lookups
+  - trebFileV2Raw type is unexported but accessible within internal/config/ package
+  - Config enrichment pattern: result fields are populated in the cobra handler (showConfig function), similar to how ConfigSource is set from app.Config
+  - For the v2 format, senders are resolved through namespace roles → account mappings; the same buildNamespaceChain hierarchy applies
+---
+
+## 2026-03-01 - US-003
+- Implemented color output for all 7 ForkRenderer methods (RenderEnter, RenderExit, RenderStatus, RenderRevert, RenderRestart, RenderHistory, RenderDiff)
+- Files changed: internal/cli/render/fork.go
+- Color assignments: network names cyan, URLs/log paths/PIDs faint/gray, health status green/red based on healthy bool, success messages green checkmark, "Active Forks" header bold, history current marker arrow cyan, diff +/~ indicators green/yellow, contract names cyan, types gray
+- Added dynamic width calculation for fork diff contract names instead of fixed %-20s
+- Added colorizeHealth() helper function for health status coloring
+- **Learnings for future iterations:**
+  - The package-level color vars in script.go (bold, gray, cyan, green, red, yellow) are reusable across all render package files without re-declaring
+  - Fork tests all skip golden files, so color changes don't require golden file updates
+  - Use `color.New(color.FgGreen).Fprintln(r.out, ...)` for Fprintf to writer with color (not the package-level `green` var's Fprintf, which works too but the pattern in sync.go uses color.New directly)
+---
+
+## 2026-03-01 - US-006
+- Created dedicated ResetRenderer in internal/cli/render/reset.go with io.Writer pattern
+- Extracted all display logic from internal/cli/reset.go cobra command into renderer methods
+- Added colors: item counts bold, namespace/network colored cyan, success message uses green checkmark (✓)
+- Confirmation prompt stays in the cobra command (interactive concern, not in renderer)
+- Files changed: internal/cli/render/reset.go (new), internal/cli/reset.go
+- Methods: RenderNothing(), RenderItemsToReset(), RenderNonInteractive(), RenderCancelled(), RenderSuccess()
+- **Learnings for future iterations:**
+  - The prune.go/prune renderer pattern is the ideal reference for extracting command output to renderers — prune keeps prompts in the command, display in the renderer
+  - The reset command has no integration tests, so changes only need to pass lint + unit tests
+  - For success messages using inline checkmark (not emoji), use `color.New(color.FgGreen).Sprintf("✓ ...")` — consistent with the codebase pattern documented in Codebase Patterns
+---
+
+## 2026-03-01 - US-007
+- Created dedicated RegisterRenderer in internal/cli/render/register.go with io.Writer pattern
+- Extracted JSON and human-readable output from internal/cli/register.go into renderer
+- Replaced manual JSON string concatenation (fmt.Printf) with proper json.Marshal via structured types
+- Added colors: deployment IDs cyan, addresses green, contract names yellow
+- Interactive prompts and selection logic remain in the cobra command
+- Files changed: internal/cli/render/register.go (new), internal/cli/register.go
+- Methods: RenderJSON(), RenderSuccess()
+- **Learnings for future iterations:**
+  - The register command's JSON output was building JSON by hand with fmt.Printf string concatenation — always prefer json.Marshal with proper struct types
+  - The register result uses parallel slices (DeploymentIDs[], Addresses[], ContractNames[], Labels[]) rather than a slice of structs — the renderer bridges this to proper structs for JSON output
+  - All interactive prompts (promptui) stay in the cobra command; only final result display goes in the renderer
+---
+
+## 2026-03-01 - US-008
+- Added colors and alignment to networks command output
+- Files changed: internal/cli/render/networks.go, 1 golden file
+- Network names colored cyan using package-level `cyan` color var
+- Chain IDs right-aligned by calculating max width across all entries
+- Error messages colored red using package-level `red` color var
+- Kept existing emoji icons (✅ and ❌)
+- Added `strconv` import for chain ID width calculation
+- **Learnings for future iterations:**
+  - The networks renderer already had io.Writer and color bool fields, but wasn't using any colors — the `color` field is unused (colors always applied via fatih/color which respects NO_COLOR env)
+  - For right-aligning numeric columns, calculate max width with `len(strconv.FormatUint(...))` then use `%*d` format verb
+  - Golden file output strips ANSI colors, so alignment is visible but colors aren't in golden files
+---
+
+## 2026-03-01 - US-009
+- Documented icon convention as comment block in internal/cli/render/helpers.go
+- Audited all renderers and fixed outliers to use inline ✓/✗ instead of emoji ✅/❌
+- Files changed: internal/cli/render/helpers.go, anvil.go, tag.go, config.go, prune.go, internal/cli/prune.go, 24 golden files
+- **Outliers fixed:**
+  - anvil.go: ✅ → ✓ for start/stop/status success, ❌ → ✗ for RPC health and CreateX inline status errors
+  - tag.go: ✅ → ✓ for tag add/remove success
+  - config.go: ✅ → ✓ for config set/remove success (added fatih/color import)
+  - prune.go (render): ✅ → ✓ for "nothing to prune" (added fatih/color import)
+  - cli/prune.go: ✅ → ✓ for "successfully pruned" (added fatih/color import)
+- Left unchanged: init.go and generate.go (✅ emoji correct for milestones), run/show/list output per AC
+- **Learnings for future iterations:**
+  - The convention: ✓ green = inline, ✅ emoji = milestones (init, gen), ✗ red = inline errors, ❌ = fatal, ⚠️ = warnings
+  - Many renderers used ✅ for inline success because the FormatSuccess() helper in helpers.go uses ✅ — that helper is for milestone formatting; inline success should use color.New(color.FgGreen).Fprintf with ✓ directly
+  - config.go renderer already had package-level cyan/gray vars but didn't import fatih/color directly — needed import for color.New() calls
+---
