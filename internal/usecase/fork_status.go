@@ -1,9 +1,11 @@
 package usecase
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -45,6 +47,7 @@ type ForkStatusEntry struct {
 	ForkDeployments int    // number of deployments added during fork
 	IsCurrent       bool   // true if this is the currently configured network
 	LogFile         string // path to anvil log file
+	External        bool   // true if this is an external fork (not managed by treb)
 }
 
 // ForkStatusResult contains the result of the fork status command
@@ -92,24 +95,36 @@ func (uc *ForkStatus) buildStatusEntry(ctx context.Context, entry *domain.ForkEn
 		SnapshotCount: len(entry.Snapshots),
 		IsCurrent:     entry.Network == currentNetwork,
 		LogFile:       entry.LogFile,
+		External:      entry.External,
 	}
 
-	// Health check via anvil manager
-	instance := &domain.AnvilInstance{
-		Name:    fmt.Sprintf("fork-%s", entry.Network),
-		Port:    portFromURL(entry.ForkURL),
-		ChainID: fmt.Sprintf("%d", entry.ChainID),
-		PidFile: entry.PidFile,
-		LogFile: entry.LogFile,
-	}
-
-	status, err := uc.anvilManager.GetStatus(ctx, instance)
-	if err != nil || !status.Running || !status.RPCHealthy {
-		se.Healthy = false
-		se.HealthDetail = "dead"
+	if entry.External {
+		// External fork: direct RPC health check (AnvilManager requires PID file)
+		if _, err := rpcPing(entry.ForkURL); err != nil {
+			se.Healthy = false
+			se.HealthDetail = "dead"
+		} else {
+			se.Healthy = true
+			se.HealthDetail = "healthy"
+		}
 	} else {
-		se.Healthy = true
-		se.HealthDetail = "healthy"
+		// Local fork: use AnvilManager status check
+		instance := &domain.AnvilInstance{
+			Name:    fmt.Sprintf("fork-%s", entry.Network),
+			Port:    portFromURL(entry.ForkURL),
+			ChainID: fmt.Sprintf("%d", entry.ChainID),
+			PidFile: entry.PidFile,
+			LogFile: entry.LogFile,
+		}
+
+		status, err := uc.anvilManager.GetStatus(ctx, instance)
+		if err != nil || !status.Running || !status.RPCHealthy {
+			se.Healthy = false
+			se.HealthDetail = "dead"
+		} else {
+			se.Healthy = true
+			se.HealthDetail = "healthy"
+		}
 	}
 
 	// Count fork-added deployments
@@ -137,6 +152,31 @@ func (uc *ForkStatus) countForkDeployments(network string) int {
 		}
 	}
 	return count
+}
+
+// rpcPing sends an eth_blockNumber RPC call to check if an endpoint is reachable
+func rpcPing(rpcURL string) (string, error) {
+	reqBody, _ := json.Marshal(map[string]interface{}{
+		"jsonrpc": "2.0",
+		"method":  "eth_blockNumber",
+		"params":  []interface{}{},
+		"id":      1,
+	})
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Post(rpcURL, "application/json", bytes.NewBuffer(reqBody)) //nolint:gosec // user-provided URL for fork endpoint
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	var rpcResp struct {
+		Result string `json:"result"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&rpcResp); err != nil {
+		return "", err
+	}
+	return rpcResp.Result, nil
 }
 
 // loadDeploymentIDs reads a deployments.json file and returns the set of deployment IDs.
