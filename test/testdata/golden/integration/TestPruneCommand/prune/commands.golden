@@ -12,7 +12,7 @@ Transactions (1):
 ⚠️  Running in non-interactive mode. Proceeding with prune...
 
 🔧 Pruning registry entries...
-✅ Successfully pruned 2 items from the registry.
+✓ Successfully pruned 2 items from the registry.
 
 
 === cmd 1: [prune --network anvil-31338] ===
@@ -29,4 +29,4 @@ Transactions (1):
 ⚠️  Running in non-interactive mode. Proceeding with prune...
 
 🔧 Pruning registry entries...
-✅ Successfully pruned 2 items from the registry.
+✓ Successfully pruned 2 items from the registry.

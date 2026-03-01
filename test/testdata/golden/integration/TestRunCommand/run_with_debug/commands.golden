@@ -9,7 +9,7 @@
   Senders:   [anvil]
 ──────────────────────────────────────────────────
 [⠃] Compiling...
-[*] Solc finished[*] Solc finished
+[*] Solc finished
 Compiler run successful!
 Traces:
   [1359176] DeployCounter::run()
