@@ -67,6 +67,10 @@ func (uc *RestartFork) Execute(ctx context.Context, params RestartForkParams) (*
 		return nil, fmt.Errorf("no active fork for network '%s'", params.Network)
 	}
 
+	if entry.External {
+		return nil, fmt.Errorf("cannot restart external fork — treb does not manage this process")
+	}
+
 	// Stop existing anvil process (may already be dead)
 	instance := &domain.AnvilInstance{
 		Name:    fmt.Sprintf("fork-%s", entry.Network),
