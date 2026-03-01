@@ -64,6 +64,11 @@ func InitApp(v *viper.Viper, cmd *cobra.Command) (*App, error) {
 		usecase.NewForkHistory,
 		usecase.NewDiffFork,
 
+		// Addressbook use cases
+		usecase.NewSetAddressbook,
+		usecase.NewRemoveAddressbook,
+		usecase.NewListAddressbook,
+
 		// App
 		NewApp,
 	)

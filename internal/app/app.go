@@ -33,8 +33,13 @@ type App struct {
 	ManageAnvil              *usecase.ManageAnvil
 	InitProject              *usecase.InitProject
 
+	// Addressbook use cases
+	SetAddressbook    *usecase.SetAddressbook
+	RemoveAddressbook *usecase.RemoveAddressbook
+	ListAddressbook   *usecase.ListAddressbook
+
 	// Fork use cases
-	EnterFork   *usecase.EnterFork
+	EnterFork *usecase.EnterFork
 	ExitFork    *usecase.ExitFork
 	RevertFork  *usecase.RevertFork
 	RestartFork *usecase.RestartFork
@@ -74,6 +79,9 @@ func NewApp(
 	registerDeployment *usecase.RegisterDeployment,
 	manageAnvil *usecase.ManageAnvil,
 	initProject *usecase.InitProject,
+	setAddressbook *usecase.SetAddressbook,
+	removeAddressbook *usecase.RemoveAddressbook,
+	listAddressbook *usecase.ListAddressbook,
 	enterFork *usecase.EnterFork,
 	exitFork *usecase.ExitFork,
 	revertFork *usecase.RevertFork,
@@ -108,6 +116,9 @@ func NewApp(
 		RegisterDeployment:       registerDeployment,
 		ManageAnvil:              manageAnvil,
 		InitProject:              initProject,
+		SetAddressbook:           setAddressbook,
+		RemoveAddressbook:        removeAddressbook,
+		ListAddressbook:          listAddressbook,
 		EnterFork:                enterFork,
 		ExitFork:                 exitFork,
 		RevertFork:               revertFork,

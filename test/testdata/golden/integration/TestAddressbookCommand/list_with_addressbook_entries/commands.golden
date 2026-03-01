@@ -1,0 +1,10 @@
+=== cmd 0: [list] ===
+   ◎ namespace:   DEFAULT                       
+└─ ⛓ chain:       anvil-31337 (31337)           
+  
+  SINGLETONS
+  Counter     0x74148047D6bDf624C94eFc07F60cEE7b6052FB29   e[-] s[-] b[-]   <TIMESTAMP>   
+
+Total deployments: 1
+ADDRESSBOOK
+  WETH                      0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2

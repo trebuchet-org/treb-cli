@@ -67,6 +67,21 @@ func (m *mockForkState) Delete(_ context.Context) error {
 	return nil
 }
 
+// mockAddressbookRepo implements AddressbookRepository for testing (always returns empty)
+type mockAddressbookRepo struct{}
+
+func (m *mockAddressbookRepo) Load(_ context.Context) (domain.Addressbook, error) {
+	return make(domain.Addressbook), nil
+}
+
+func (m *mockAddressbookRepo) Save(_ context.Context, _ domain.Addressbook) error {
+	return nil
+}
+
+func (m *mockAddressbookRepo) GetPath() string {
+	return ""
+}
+
 func TestListDeployments_OtherNamespaces(t *testing.T) {
 	t.Run("empty namespace with others available", func(t *testing.T) {
 		repo := &mockDeploymentRepo{
@@ -87,7 +102,7 @@ func TestListDeployments_OtherNamespaces(t *testing.T) {
 			Network:   &config.Network{Name: "anvil-31337", ChainID: 31337},
 		}
 
-		uc := NewListDeployments(cfg, repo, &mockNetworkResolver{}, &mockForkState{})
+		uc := NewListDeployments(cfg, repo, &mockNetworkResolver{}, &mockForkState{}, &mockAddressbookRepo{})
 		result, err := uc.Run(context.Background(), ListDeploymentsParams{})
 
 		require.NoError(t, err)
@@ -115,7 +130,7 @@ func TestListDeployments_OtherNamespaces(t *testing.T) {
 			Network:   &config.Network{Name: "anvil-31337", ChainID: 31337},
 		}
 
-		uc := NewListDeployments(cfg, repo, &mockNetworkResolver{}, &mockForkState{})
+		uc := NewListDeployments(cfg, repo, &mockNetworkResolver{}, &mockForkState{}, &mockAddressbookRepo{})
 		result, err := uc.Run(context.Background(), ListDeploymentsParams{})
 
 		require.NoError(t, err)
@@ -138,7 +153,7 @@ func TestListDeployments_OtherNamespaces(t *testing.T) {
 			Network:   &config.Network{Name: "anvil-31337", ChainID: 31337},
 		}
 
-		uc := NewListDeployments(cfg, repo, &mockNetworkResolver{}, &mockForkState{})
+		uc := NewListDeployments(cfg, repo, &mockNetworkResolver{}, &mockForkState{}, &mockAddressbookRepo{})
 		result, err := uc.Run(context.Background(), ListDeploymentsParams{})
 
 		require.NoError(t, err)
@@ -165,7 +180,7 @@ func TestListDeployments_OtherNamespaces(t *testing.T) {
 			Network:   &config.Network{Name: "anvil-31337", ChainID: 31337},
 		}
 
-		uc := NewListDeployments(cfg, repo, &mockNetworkResolver{}, &mockForkState{})
+		uc := NewListDeployments(cfg, repo, &mockNetworkResolver{}, &mockForkState{}, &mockAddressbookRepo{})
 		result, err := uc.Run(context.Background(), ListDeploymentsParams{})
 
 		require.NoError(t, err)
@@ -195,7 +210,7 @@ func TestListDeployments_OtherNamespaces(t *testing.T) {
 			// Network is nil - no chain filter
 		}
 
-		uc := NewListDeployments(cfg, repo, &mockNetworkResolver{}, &mockForkState{})
+		uc := NewListDeployments(cfg, repo, &mockNetworkResolver{}, &mockForkState{}, &mockAddressbookRepo{})
 		result, err := uc.Run(context.Background(), ListDeploymentsParams{})
 
 		require.NoError(t, err)
@@ -226,7 +241,7 @@ func TestListDeployments_OtherNamespaces(t *testing.T) {
 			Network:   &config.Network{Name: "anvil-31337", ChainID: 31337},
 		}
 
-		uc := NewListDeployments(cfg, repo, &mockNetworkResolver{}, &mockForkState{})
+		uc := NewListDeployments(cfg, repo, &mockNetworkResolver{}, &mockForkState{}, &mockAddressbookRepo{})
 		result, err := uc.Run(context.Background(), ListDeploymentsParams{})
 
 		require.NoError(t, err)
