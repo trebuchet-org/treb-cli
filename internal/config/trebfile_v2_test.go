@@ -27,7 +27,7 @@ func TestDetectTrebConfigFormat(t *testing.T) {
 type = "private_key"
 private_key = "0x1234"
 `
-		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0644)
+		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0o644)
 		require.NoError(t, err)
 
 		format, err := DetectTrebConfigFormat(dir)
@@ -41,7 +41,7 @@ private_key = "0x1234"
 [namespace.default.senders]
 deployer = "deployer"
 `
-		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0644)
+		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0o644)
 		require.NoError(t, err)
 
 		format, err := DetectTrebConfigFormat(dir)
@@ -56,7 +56,7 @@ deployer = "deployer"
 type = "private_key"
 private_key = "0x1234"
 `
-		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0644)
+		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0o644)
 		require.NoError(t, err)
 
 		format, err := DetectTrebConfigFormat(dir)
@@ -70,7 +70,7 @@ private_key = "0x1234"
 [fork]
 setup = "script/ForkSetup.s.sol"
 `
-		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0644)
+		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0o644)
 		require.NoError(t, err)
 
 		format, err := DetectTrebConfigFormat(dir)
@@ -80,7 +80,7 @@ setup = "script/ForkSetup.s.sol"
 
 	t.Run("empty treb.toml returns None", func(t *testing.T) {
 		dir := t.TempDir()
-		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(""), 0644)
+		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(""), 0o644)
 		require.NoError(t, err)
 
 		format, err := DetectTrebConfigFormat(dir)
@@ -90,7 +90,7 @@ setup = "script/ForkSetup.s.sol"
 
 	t.Run("invalid TOML returns error", func(t *testing.T) {
 		dir := t.TempDir()
-		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte("invalid [[ toml"), 0644)
+		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte("invalid [[ toml"), 0o644)
 		require.NoError(t, err)
 
 		_, err = DetectTrebConfigFormat(dir)
@@ -121,7 +121,7 @@ profile = "mainnet"
 [namespace.production.senders]
 deployer = "safe0"
 `
-		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0644)
+		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0o644)
 		require.NoError(t, err)
 
 		cfg, err := loadTrebConfigV2(dir)
@@ -174,7 +174,7 @@ proposer = "hw"
 [namespace.default.senders]
 deployer = "deployer"
 `
-		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0644)
+		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0o644)
 		require.NoError(t, err)
 
 		t.Setenv("TEST_V2_PK", "0xdeadbeef")
@@ -212,7 +212,7 @@ profile = "production"
 [namespace."production.ntt".senders]
 deployer = "deployer"
 `
-		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0644)
+		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0o644)
 		require.NoError(t, err)
 
 		cfg, err := loadTrebConfigV2(dir)
@@ -241,7 +241,7 @@ deployer = "deployer"
 type = "private_key"
 private_key = "0x1234"
 `
-		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0644)
+		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0o644)
 		require.NoError(t, err)
 
 		cfg, err := loadTrebConfigV2(dir)
@@ -262,7 +262,7 @@ deployer = "deployer"
 [fork]
 setup = "script/ForkSetup.s.sol"
 `
-		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0644)
+		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0o644)
 		require.NoError(t, err)
 
 		cfg, err := loadTrebConfigV2(dir)
@@ -277,7 +277,7 @@ setup = "script/ForkSetup.s.sol"
 [fork]
 setup = "script/ForkSetup.s.sol"
 `
-		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0644)
+		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0o644)
 		require.NoError(t, err)
 
 		cfg, err := loadTrebConfigV2(dir)
@@ -290,7 +290,7 @@ setup = "script/ForkSetup.s.sol"
 
 	t.Run("invalid TOML returns error", func(t *testing.T) {
 		dir := t.TempDir()
-		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte("invalid [[ toml"), 0644)
+		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte("invalid [[ toml"), 0o644)
 		require.NoError(t, err)
 
 		cfg, err := loadTrebConfigV2(dir)
@@ -315,7 +315,7 @@ signer = "deployer"
 deployer = "deployer"
 admin = "safe0"
 `
-		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0644)
+		err := os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(content), 0o644)
 		require.NoError(t, err)
 
 		cfg, err := loadTrebConfigV2(dir)
@@ -338,7 +338,7 @@ func TestResolveNamespace(t *testing.T) {
 			Namespace: map[string]config.NamespaceRoles{
 				"default": {
 					Profile: "default",
-					Senders:   map[string]string{"deployer": "deployer"},
+					Senders: map[string]string{"deployer": "deployer"},
 				},
 			},
 		}
@@ -354,8 +354,8 @@ func TestResolveNamespace(t *testing.T) {
 	t.Run("multi-level inheritance", func(t *testing.T) {
 		cfg := &config.TrebFileConfigV2{
 			Accounts: map[string]config.AccountConfig{
-				"dev-wallet":  {Type: "private_key", PrivateKey: "0xdev"},
-				"prod-safe":   {Type: "safe", Safe: "0xsafe", Signer: "dev-wallet"},
+				"dev-wallet":   {Type: "private_key", PrivateKey: "0xdev"},
+				"prod-safe":    {Type: "safe", Safe: "0xsafe", Signer: "dev-wallet"},
 				"ntt-deployer": {Type: "private_key", PrivateKey: "0xntt"},
 			},
 			Namespace: map[string]config.NamespaceRoles{
@@ -364,7 +364,7 @@ func TestResolveNamespace(t *testing.T) {
 				},
 				"production": {
 					Profile: "mainnet",
-					Senders:   map[string]string{"deployer": "prod-safe"},
+					Senders: map[string]string{"deployer": "prod-safe"},
 				},
 				"production.ntt": {
 					Senders: map[string]string{"deployer": "ntt-deployer"},
@@ -394,7 +394,7 @@ func TestResolveNamespace(t *testing.T) {
 				},
 				"production": {
 					Profile: "mainnet",
-					Senders:   map[string]string{},
+					Senders: map[string]string{},
 				},
 				"production.ntt": {
 					// No profile set — should inherit "mainnet" from production
@@ -421,11 +421,11 @@ func TestResolveNamespace(t *testing.T) {
 				},
 				"production": {
 					Profile: "mainnet",
-					Senders:   map[string]string{},
+					Senders: map[string]string{},
 				},
 				"production.ntt": {
 					Profile: "ntt-mainnet",
-					Senders:   map[string]string{},
+					Senders: map[string]string{},
 				},
 			},
 		}
@@ -448,7 +448,7 @@ func TestResolveNamespace(t *testing.T) {
 				// "production" is NOT defined — should be skipped
 				"production.ntt": {
 					Profile: "mainnet",
-					Senders:   map[string]string{"deployer": "ntt-deployer"},
+					Senders: map[string]string{"deployer": "ntt-deployer"},
 				},
 			},
 		}
@@ -514,7 +514,7 @@ func TestResolveNamespace(t *testing.T) {
 				// No default namespace defined
 				"staging": {
 					Profile: "staging",
-					Senders:   map[string]string{"deployer": "deployer"},
+					Senders: map[string]string{"deployer": "deployer"},
 				},
 			},
 		}
@@ -539,7 +539,7 @@ func TestResolveNamespace(t *testing.T) {
 				},
 				"production": {
 					Profile: "mainnet",
-					Senders:   map[string]string{"deployer": "prod-safe", "admin": "admin"},
+					Senders: map[string]string{"deployer": "prod-safe", "admin": "admin"},
 				},
 			},
 		}
@@ -557,19 +557,19 @@ func TestResolveNamespace(t *testing.T) {
 	t.Run("three-level deep resolution", func(t *testing.T) {
 		cfg := &config.TrebFileConfigV2{
 			Accounts: map[string]config.AccountConfig{
-				"dev":   {Type: "private_key", PrivateKey: "0xdev"},
-				"prod":  {Type: "private_key", PrivateKey: "0xprod"},
-				"ntt":   {Type: "private_key", PrivateKey: "0xntt"},
-				"v2":    {Type: "private_key", PrivateKey: "0xv2"},
+				"dev":  {Type: "private_key", PrivateKey: "0xdev"},
+				"prod": {Type: "private_key", PrivateKey: "0xprod"},
+				"ntt":  {Type: "private_key", PrivateKey: "0xntt"},
+				"v2":   {Type: "private_key", PrivateKey: "0xv2"},
 			},
 			Namespace: map[string]config.NamespaceRoles{
 				"default": {
 					Profile: "default",
-					Senders:   map[string]string{"deployer": "dev", "monitor": "dev"},
+					Senders: map[string]string{"deployer": "dev", "monitor": "dev"},
 				},
 				"production": {
 					Profile: "mainnet",
-					Senders:   map[string]string{"deployer": "prod"},
+					Senders: map[string]string{"deployer": "prod"},
 				},
 				"production.ntt": {
 					Senders: map[string]string{"deployer": "ntt"},
@@ -582,7 +582,7 @@ func TestResolveNamespace(t *testing.T) {
 
 		resolved, err := ResolveNamespace(cfg, "production.ntt.v2")
 		require.NoError(t, err)
-		assert.Equal(t, "mainnet", resolved.Profile) // inherited from production
+		assert.Equal(t, "mainnet", resolved.Profile)                      // inherited from production
 		assert.Equal(t, "0xv2", resolved.Accounts["deployer"].PrivateKey) // overridden at deepest level
 		assert.Equal(t, "0xdev", resolved.Accounts["monitor"].PrivateKey) // inherited from default
 	})
@@ -627,7 +627,8 @@ func TestResolvedNamespaceToTrebConfig(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, trebCfg)
 
-		assert.Len(t, trebCfg.Senders, 2)
+		// 3 senders: deployer (safe), proposer (explicit role), dev-wallet (auto-resolved by account name)
+		assert.Len(t, trebCfg.Senders, 3)
 
 		// Safe sender should have signer set to the account name
 		safeSender := trebCfg.Senders["deployer"]
@@ -635,10 +636,15 @@ func TestResolvedNamespaceToTrebConfig(t *testing.T) {
 		assert.Equal(t, "0xSafeAddr", safeSender.Safe)
 		assert.Equal(t, "dev-wallet", safeSender.Signer)
 
-		// Signer account should be present as a sender
+		// Signer account present under its role name
 		signerSender := trebCfg.Senders["proposer"]
 		assert.Equal(t, config.SenderTypePrivateKey, signerSender.Type)
 		assert.Equal(t, "0xdev", signerSender.PrivateKey)
+
+		// Signer account also auto-resolved under its account name
+		autoResolved := trebCfg.Senders["dev-wallet"]
+		assert.Equal(t, config.SenderTypePrivateKey, autoResolved.Type)
+		assert.Equal(t, "0xdev", autoResolved.PrivateKey)
 	})
 
 	t.Run("oz_governor with proposer", func(t *testing.T) {
@@ -658,7 +664,8 @@ func TestResolvedNamespaceToTrebConfig(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, trebCfg)
 
-		assert.Len(t, trebCfg.Senders, 2)
+		// 3 senders: governor, proposer (explicit role), hw-wallet (auto-resolved by account name)
+		assert.Len(t, trebCfg.Senders, 3)
 
 		govSender := trebCfg.Senders["governor"]
 		assert.Equal(t, config.SenderTypeOZGovernor, govSender.Type)
@@ -669,6 +676,11 @@ func TestResolvedNamespaceToTrebConfig(t *testing.T) {
 		proposerSender := trebCfg.Senders["proposer"]
 		assert.Equal(t, config.SenderTypeLedger, proposerSender.Type)
 		assert.Equal(t, "m/44'/60'/0'/0/0", proposerSender.DerivationPath)
+
+		// Proposer also auto-resolved under its account name
+		autoResolved := trebCfg.Senders["hw-wallet"]
+		assert.Equal(t, config.SenderTypeLedger, autoResolved.Type)
+		assert.Equal(t, "m/44'/60'/0'/0/0", autoResolved.DerivationPath)
 	})
 
 	t.Run("missing signer account is skipped with warning", func(t *testing.T) {
@@ -754,6 +766,173 @@ func TestResolvedNamespaceToTrebConfig(t *testing.T) {
 		assert.Equal(t, "m/44'/60'/0'/0/0", sender.DerivationPath)
 	})
 
+	t.Run("safe with unmapped signer auto-resolves signer into senders", func(t *testing.T) {
+		accounts := map[string]config.AccountConfig{
+			"dev-wallet": {Type: config.SenderTypePrivateKey, PrivateKey: "0xdev"},
+			"safe0":      {Type: config.SenderTypeSafe, Safe: "0xSafeAddr", Signer: "dev-wallet"},
+		}
+		resolved := &config.ResolvedNamespace{
+			Profile: "production",
+			Accounts: map[string]config.AccountConfig{
+				// Only the Safe is mapped as a namespace role — signer is NOT mapped
+				"deployer": accounts["safe0"],
+			},
+		}
+
+		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
+		require.NoError(t, err)
+		require.NotNil(t, trebCfg)
+
+		// Safe sender is present under its role name
+		assert.Len(t, trebCfg.Senders, 2)
+		safeSender := trebCfg.Senders["deployer"]
+		assert.Equal(t, config.SenderTypeSafe, safeSender.Type)
+		assert.Equal(t, "0xSafeAddr", safeSender.Safe)
+		assert.Equal(t, "dev-wallet", safeSender.Signer)
+
+		// Signer account is auto-resolved and keyed by account name
+		signerSender := trebCfg.Senders["dev-wallet"]
+		assert.Equal(t, config.SenderTypePrivateKey, signerSender.Type)
+		assert.Equal(t, "0xdev", signerSender.PrivateKey)
+	})
+
+	t.Run("oz_governor with unmapped proposer auto-resolves proposer into senders", func(t *testing.T) {
+		accounts := map[string]config.AccountConfig{
+			"hw-wallet": {Type: config.SenderTypeLedger, DerivationPath: "m/44'/60'/0'/0/0"},
+			"gov":       {Type: config.SenderTypeOZGovernor, Governor: "0xGovAddr", Timelock: "0xTimelockAddr", Proposer: "hw-wallet"},
+		}
+		resolved := &config.ResolvedNamespace{
+			Profile: "production",
+			Accounts: map[string]config.AccountConfig{
+				// Only the Governor is mapped as a namespace role — proposer is NOT mapped
+				"governor": accounts["gov"],
+			},
+		}
+
+		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
+		require.NoError(t, err)
+		require.NotNil(t, trebCfg)
+
+		// Governor sender is present under its role name
+		assert.Len(t, trebCfg.Senders, 2)
+		govSender := trebCfg.Senders["governor"]
+		assert.Equal(t, config.SenderTypeOZGovernor, govSender.Type)
+		assert.Equal(t, "0xGovAddr", govSender.Governor)
+		assert.Equal(t, "hw-wallet", govSender.Proposer)
+
+		// Proposer account is auto-resolved and keyed by account name
+		proposerSender := trebCfg.Senders["hw-wallet"]
+		assert.Equal(t, config.SenderTypeLedger, proposerSender.Type)
+		assert.Equal(t, "m/44'/60'/0'/0/0", proposerSender.DerivationPath)
+	})
+
+	t.Run("oz_governor with already-mapped proposer does not duplicate", func(t *testing.T) {
+		accounts := map[string]config.AccountConfig{
+			"hw-wallet": {Type: config.SenderTypeLedger, DerivationPath: "m/44'/60'/0'/0/0"},
+			"gov":       {Type: config.SenderTypeOZGovernor, Governor: "0xGovAddr", Timelock: "0xTimelockAddr", Proposer: "hw-wallet"},
+		}
+		resolved := &config.ResolvedNamespace{
+			Profile: "production",
+			Accounts: map[string]config.AccountConfig{
+				"governor":  accounts["gov"],
+				"hw-wallet": accounts["hw-wallet"], // proposer explicitly mapped
+			},
+		}
+
+		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
+		require.NoError(t, err)
+		require.NotNil(t, trebCfg)
+
+		// Should have exactly 2 senders, not 3
+		assert.Len(t, trebCfg.Senders, 2)
+		assert.Equal(t, config.SenderTypeOZGovernor, trebCfg.Senders["governor"].Type)
+		assert.Equal(t, config.SenderTypeLedger, trebCfg.Senders["hw-wallet"].Type)
+	})
+
+	t.Run("safe with already-mapped signer does not duplicate", func(t *testing.T) {
+		accounts := map[string]config.AccountConfig{
+			"dev-wallet": {Type: config.SenderTypePrivateKey, PrivateKey: "0xdev"},
+			"safe0":      {Type: config.SenderTypeSafe, Safe: "0xSafeAddr", Signer: "dev-wallet"},
+		}
+		resolved := &config.ResolvedNamespace{
+			Profile: "production",
+			Accounts: map[string]config.AccountConfig{
+				"deployer":   accounts["safe0"],
+				"dev-wallet": accounts["dev-wallet"], // signer explicitly mapped with same key as account name
+			},
+		}
+
+		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
+		require.NoError(t, err)
+		require.NotNil(t, trebCfg)
+
+		// Should have exactly 2 senders, not 3
+		assert.Len(t, trebCfg.Senders, 2)
+		assert.Equal(t, config.SenderTypeSafe, trebCfg.Senders["deployer"].Type)
+		assert.Equal(t, config.SenderTypePrivateKey, trebCfg.Senders["dev-wallet"].Type)
+	})
+
+	t.Run("transitive chain: governor -> safe proposer -> pk signer", func(t *testing.T) {
+		accounts := map[string]config.AccountConfig{
+			"dev-pk":   {Type: config.SenderTypePrivateKey, PrivateKey: "0xdev"},
+			"dev-safe": {Type: config.SenderTypeSafe, Safe: "0xSafeAddr", Signer: "dev-pk"},
+			"gov":      {Type: config.SenderTypeOZGovernor, Governor: "0xGovAddr", Timelock: "0xTimelockAddr", Proposer: "dev-safe"},
+		}
+		resolved := &config.ResolvedNamespace{
+			Profile: "production",
+			Accounts: map[string]config.AccountConfig{
+				// Only the Governor is a namespace role — Safe and PK are NOT mapped
+				"governor": accounts["gov"],
+			},
+		}
+
+		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
+		require.NoError(t, err)
+		require.NotNil(t, trebCfg)
+
+		// All three accounts should be present
+		assert.Len(t, trebCfg.Senders, 3)
+		assert.Equal(t, config.SenderTypeOZGovernor, trebCfg.Senders["governor"].Type)
+		assert.Equal(t, config.SenderTypeSafe, trebCfg.Senders["dev-safe"].Type)
+		assert.Equal(t, config.SenderTypePrivateKey, trebCfg.Senders["dev-pk"].Type)
+	})
+
+	t.Run("circular reference produces error", func(t *testing.T) {
+		accounts := map[string]config.AccountConfig{
+			"safe-a": {Type: config.SenderTypeSafe, Safe: "0xA", Signer: "safe-b"},
+			"safe-b": {Type: config.SenderTypeSafe, Safe: "0xB", Signer: "safe-a"},
+		}
+		resolved := &config.ResolvedNamespace{
+			Profile: "default",
+			Accounts: map[string]config.AccountConfig{
+				"deployer": accounts["safe-a"],
+			},
+		}
+
+		_, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "circular account reference")
+		assert.Contains(t, err.Error(), "safe-a")
+		assert.Contains(t, err.Error(), "safe-b")
+	})
+
+	t.Run("self-reference produces error", func(t *testing.T) {
+		accounts := map[string]config.AccountConfig{
+			"self-ref": {Type: config.SenderTypeSafe, Safe: "0xSelf", Signer: "self-ref"},
+		}
+		resolved := &config.ResolvedNamespace{
+			Profile: "default",
+			Accounts: map[string]config.AccountConfig{
+				"deployer": accounts["self-ref"],
+			},
+		}
+
+		_, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "circular account reference")
+		assert.Contains(t, err.Error(), "self-ref")
+	})
+
 	t.Run("empty resolved namespace produces empty senders", func(t *testing.T) {
 		accounts := map[string]config.AccountConfig{
 			"deployer": {Type: config.SenderTypePrivateKey, PrivateKey: "0x1234"},
@@ -785,11 +964,14 @@ func TestResolvedNamespaceToTrebConfig(t *testing.T) {
 
 		trebCfg, err := ResolvedNamespaceToTrebConfig(resolved, accounts)
 		require.NoError(t, err)
-		assert.Len(t, trebCfg.Senders, 3)
+		// 4 senders: deployer, admin, multisig, plus ledger auto-resolved by account name
+		assert.Len(t, trebCfg.Senders, 4)
 		assert.Equal(t, config.SenderTypePrivateKey, trebCfg.Senders["deployer"].Type)
 		assert.Equal(t, config.SenderTypeLedger, trebCfg.Senders["admin"].Type)
 		assert.Equal(t, config.SenderTypeSafe, trebCfg.Senders["multisig"].Type)
 		assert.Equal(t, "ledger", trebCfg.Senders["multisig"].Signer)
+		// Signer auto-resolved under its account name so BuildSenderScriptConfig can find it
+		assert.Equal(t, config.SenderTypeLedger, trebCfg.Senders["ledger"].Type)
 	})
 }
 

@@ -1,0 +1,64 @@
+# Ralph Progress Log
+Started: Sun Mar  1 05:09:25 PM CET 2026
+
+## Codebase Patterns
+- Auto-resolution logic lives in `ResolvedNamespaceToTrebConfig()` in `internal/config/trebfile_v2.go`
+- The `accounts` parameter (global accounts map) is passed separately from `resolved.Accounts` (role→AccountConfig)
+- When checking for duplicate senders, compare both: (1) key name collision and (2) struct equality via `==` on `SenderConfig`
+- SenderConfig has only value-type fields (strings), so `==` comparison works for dedup
+- Existing tests in `internal/config/provider_test.go` exercise the full Provider pipeline including ResolvedNamespaceToTrebConfig — changes here must not break those
+- Integration tests need `make setup-integration-test` to install forge dependencies (forge-std, openzeppelin) and create treb-sol symlink in `test/testdata/project/lib/`
+- The `TestRunCommand/run_with_debug` test is flaky due to non-deterministic Solc compiler output lines — unrelated to auto-resolution
+- When adding a namespace to the test fixture treb.toml, namespace inheritance means a new namespace inherits senders from `default` if it defines no senders section; to test specific sender configs, define the senders explicitly
+
+---
+
+## 2026-03-01 - US-001
+- Implemented auto-resolution of Safe signer references in `ResolvedNamespaceToTrebConfig()`
+- After building the initial senders map from role→account mappings, iterates Safe senders and auto-adds their signer accounts keyed by account name
+- Deduplication: skips if (1) the account name already exists as a key in senders, or (2) the same SenderConfig is already present under any key
+- Files changed: `internal/config/trebfile_v2.go`, `internal/config/trebfile_v2_test.go`
+- **Learnings for future iterations:**
+  - The signer account name can conflict with existing role names (e.g., namespace maps `deployer = "safe-wallet"` where safe-wallet's signer is also named "deployer"). Must check key existence before auto-adding to avoid overwriting role-based mappings.
+  - The `TestProviderConfigSource` test in `provider_test.go` exercises the full config resolution pipeline and catches integration-level bugs.
+  - Auto-resolved entries are collected in a separate map before merging to avoid modifying the senders map during iteration.
+---
+
+## 2026-03-01 - US-002
+- Verified OZ Governor proposer auto-resolution was already implemented as part of the unified resolution approach in US-001/US-003
+- The `senderRefName()` helper already handles both Safe (Signer) and OZ Governor (Proposer) types
+- Tests already present: "oz_governor with unmapped proposer auto-resolves proposer into senders", "oz_governor with already-mapped proposer does not duplicate"
+- All tests pass, lint clean, `go vet` clean
+- Files changed: none (implementation was already complete in prior commits)
+- **Learnings for future iterations:**
+  - The iterative resolution approach (`resolveAccountReferences` → `resolveAccountChain` → `senderRefName`) handles both Safe and OZ Governor types in a single unified code path, so both US-001 and US-002 were effectively solved together
+  - When verifying a story that may already be implemented, check git log commits before writing new code
+---
+
+## 2026-03-01 - US-003
+- Verified transitive chain resolution and circular reference detection was already implemented
+- `resolveAccountChain` uses recursive descent with a visited slice for cycle detection
+- Tests already present: "transitive chain: governor -> safe proposer -> pk signer", "circular reference produces error", "self-reference produces error"
+- All tests pass, lint clean
+- Files changed: none (implementation was already complete in prior commits)
+- **Learnings for future iterations:**
+  - The recursive `resolveAccountChain` with visited-slice approach is cleaner than queue-based iteration for this use case
+  - Cycle detection uses ordered slice (not set) to produce a readable error path like "safe-a → safe-b → safe-a"
+---
+
+## 2026-03-01 - US-004
+- Added integration tests for auto-resolution of signer references
+- Created `test/integration/auto_resolve_test.go` with two test cases:
+  1. `auto_resolve_safe_signer`: Deploys using `--namespace auto-resolve` where `safe0`'s signer (`signer0`) is NOT in namespace senders — verifies auto-resolution works end-to-end
+  2. `explicit_signer_mapping_regression`: Deploys using default namespace with all explicit mappings — verifies no regression
+- Added `auto-resolve` namespace to `test/testdata/project/treb.toml` that maps `anvil` and `safe0` but NOT `signer0`
+- Golden files generated for both test cases
+- Files changed: `test/integration/auto_resolve_test.go` (new), `test/testdata/project/treb.toml`, `test/testdata/golden/integration/TestAutoResolveSenders/` (new golden files)
+- All 206 tests pass (1 skipped: verify, 1 flaky: run_with_debug — unrelated)
+- Lint clean
+- **Learnings for future iterations:**
+  - Integration tests prove auto-resolution end-to-end: a namespace with a Safe sender whose signer isn't explicitly mapped still resolves correctly during `treb run`
+  - The `PostTest` function with `TrebParser` is useful for programmatic validation beyond golden file comparison
+  - Adding new namespaces to the test fixture is safe — existing tests using other namespaces are unaffected
+  - Worktrees need `git submodule update --init --recursive` and `make setup-integration-test` before running integration tests
+---

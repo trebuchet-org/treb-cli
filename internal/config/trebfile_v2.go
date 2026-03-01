@@ -188,7 +188,92 @@ func ResolvedNamespaceToTrebConfig(resolved *config.ResolvedNamespace, accounts 
 		senders[roleName] = sender
 	}
 
+	// Auto-resolve signer/proposer references transitively: when a Safe or
+	// OZ Governor sender references a signer/proposer account, include it in
+	// senders (keyed by account name). If that referenced account itself has
+	// references (e.g., Governor → Safe proposer → PK signer), resolve those
+	// too. Detect circular references and return a clear error.
+	if err := resolveAccountReferences(senders, accounts); err != nil {
+		return nil, err
+	}
+
 	return &config.TrebConfig{Senders: senders}, nil
+}
+
+// resolveAccountReferences walks all senders and recursively resolves signer/proposer
+// references from the global accounts map. Newly resolved accounts are added to senders
+// keyed by their account name. Circular references produce an error with the full cycle path.
+func resolveAccountReferences(senders map[string]config.SenderConfig, accounts map[string]config.AccountConfig) error {
+	// Collect account names to resolve from the initial senders.
+	// We snapshot the keys so we can safely mutate senders during iteration.
+	var toResolve []string
+	for _, sender := range senders {
+		if ref := senderRefName(sender); ref != "" {
+			toResolve = append(toResolve, ref)
+		}
+	}
+
+	for _, name := range toResolve {
+		if err := resolveAccountChain(name, senders, accounts, nil); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// resolveAccountChain recursively resolves a single account reference chain.
+// visited tracks the path for circular reference detection (ordered slice).
+func resolveAccountChain(name string, senders map[string]config.SenderConfig, accounts map[string]config.AccountConfig, visited []string) error {
+	// Check for circular reference
+	for _, v := range visited {
+		if v == name {
+			cycle := append(visited, name) //nolint:gocritic // intentional append to copy
+			return fmt.Errorf("circular account reference: %s", strings.Join(cycle, " → "))
+		}
+	}
+
+	// Look up in global accounts
+	acct, ok := accounts[name]
+	if !ok {
+		return nil // unknown account — already warned upstream
+	}
+
+	// If a key with this name already exists in senders, check whether it
+	// represents the same account or a role-name collision.
+	if existing, exists := senders[name]; exists {
+		if existing != config.SenderConfig(acct) {
+			// Role-name collision: a role happens to have the same name as this
+			// account but maps to a different account config. The explicit role
+			// mapping takes priority; skip this chain (FR-3).
+			return nil
+		}
+		// Same account — follow its references to ensure the full chain is resolved.
+		if ref := senderRefName(existing); ref != "" {
+			return resolveAccountChain(ref, senders, accounts, append(visited, name))
+		}
+		return nil
+	}
+
+	senders[name] = config.SenderConfig(acct)
+
+	// Recurse if this account itself references another
+	if ref := senderRefName(config.SenderConfig(acct)); ref != "" {
+		return resolveAccountChain(ref, senders, accounts, append(visited, name))
+	}
+	return nil
+}
+
+// senderRefName returns the referenced account name for a sender that has a
+// signer (Safe) or proposer (OZGovernor) field, or "" if none.
+func senderRefName(sender config.SenderConfig) string {
+	switch {
+	case sender.Type == config.SenderTypeSafe && sender.Signer != "":
+		return sender.Signer
+	case sender.Type == config.SenderTypeOZGovernor && sender.Proposer != "":
+		return sender.Proposer
+	default:
+		return ""
+	}
 }
 
 // resolveWarnWriter returns the first writer from the variadic args, or os.Stderr if none provided.
