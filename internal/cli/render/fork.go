@@ -5,6 +5,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
 
@@ -22,22 +23,22 @@ func NewForkRenderer(out io.Writer) *ForkRenderer {
 func (r *ForkRenderer) RenderEnter(result *usecase.EnterForkResult) error {
 	entry := result.ForkEntry
 
-	fmt.Fprintln(r.out, result.Message)
+	color.New(color.FgGreen).Fprintln(r.out, "✓ "+result.Message)
 	fmt.Fprintln(r.out)
-	fmt.Fprintf(r.out, "  Network:      %s\n", entry.Network)
+	fmt.Fprintf(r.out, "  Network:      %s\n", cyan.Sprint(entry.Network))
 	fmt.Fprintf(r.out, "  Chain ID:     %d\n", entry.ChainID)
-	fmt.Fprintf(r.out, "  Fork URL:     %s\n", entry.ForkURL)
+	fmt.Fprintf(r.out, "  Fork URL:     %s\n", gray.Sprint(entry.ForkURL))
 	if entry.External {
 		fmt.Fprintf(r.out, "  Mode:         external\n")
 	} else {
-		fmt.Fprintf(r.out, "  Anvil PID:    %d\n", entry.AnvilPID)
+		fmt.Fprintf(r.out, "  Anvil PID:    %s\n", gray.Sprintf("%d", entry.AnvilPID))
 	}
-	fmt.Fprintf(r.out, "  Env Override: %s=%s\n", entry.EnvVarName, entry.ForkURL)
+	fmt.Fprintf(r.out, "  Env Override: %s=%s\n", entry.EnvVarName, gray.Sprint(entry.ForkURL))
 	if entry.LogFile != "" {
-		fmt.Fprintf(r.out, "  Logs:         %s\n", entry.LogFile)
+		fmt.Fprintf(r.out, "  Logs:         %s\n", gray.Sprint(entry.LogFile))
 	}
 	if result.SetupScriptRan {
-		fmt.Fprintf(r.out, "  Setup:        executed successfully\n")
+		fmt.Fprintf(r.out, "  Setup:        %s\n", green.Sprint("executed successfully"))
 	}
 	fmt.Fprintln(r.out)
 	fmt.Fprintln(r.out, "Run 'treb fork status' to check fork state")
@@ -48,10 +49,10 @@ func (r *ForkRenderer) RenderEnter(result *usecase.EnterForkResult) error {
 
 // RenderExit renders the result of fork exit
 func (r *ForkRenderer) RenderExit(result *usecase.ExitForkResult) error {
-	fmt.Fprintln(r.out, result.Message)
+	color.New(color.FgGreen).Fprintln(r.out, "✓ "+result.Message)
 	fmt.Fprintln(r.out)
 	for _, network := range result.ExitedNetworks {
-		fmt.Fprintf(r.out, "  - %s: registry restored, fork cleaned up\n", network)
+		fmt.Fprintf(r.out, "  - %s: registry restored, fork cleaned up\n", cyan.Sprint(network))
 	}
 	return nil
 }
@@ -63,7 +64,7 @@ func (r *ForkRenderer) RenderStatus(result *usecase.ForkStatusResult) error {
 		return nil
 	}
 
-	fmt.Fprintln(r.out, "Active Forks")
+	bold.Fprintln(r.out, "Active Forks")
 	fmt.Fprintln(r.out)
 
 	for _, e := range result.Entries {
@@ -77,25 +78,33 @@ func (r *ForkRenderer) RenderStatus(result *usecase.ForkStatusResult) error {
 			externalLabel = " [external]"
 		}
 
-		fmt.Fprintf(r.out, "  %s%s%s\n", e.Network, currentMarker, externalLabel)
+		fmt.Fprintf(r.out, "  %s%s%s\n", cyan.Sprint(e.Network), currentMarker, externalLabel)
 		fmt.Fprintf(r.out, "    Chain ID:     %d\n", e.ChainID)
-		fmt.Fprintf(r.out, "    Fork URL:     %s\n", e.ForkURL)
+		fmt.Fprintf(r.out, "    Fork URL:     %s\n", gray.Sprint(e.ForkURL))
 		if !e.External {
-			fmt.Fprintf(r.out, "    Anvil PID:    %d\n", e.AnvilPID)
+			fmt.Fprintf(r.out, "    Anvil PID:    %s\n", gray.Sprintf("%d", e.AnvilPID))
 		}
-		fmt.Fprintf(r.out, "    Status:       %s\n", e.HealthDetail)
+		fmt.Fprintf(r.out, "    Status:       %s\n", colorizeHealth(e.HealthDetail, e.Healthy))
 		if !e.External {
 			fmt.Fprintf(r.out, "    Uptime:       %s\n", formatDuration(e.Uptime))
 		}
 		fmt.Fprintf(r.out, "    Snapshots:    %d\n", e.SnapshotCount)
 		fmt.Fprintf(r.out, "    Fork Deploys: %d\n", e.ForkDeployments)
 		if e.LogFile != "" {
-			fmt.Fprintf(r.out, "    Logs:         %s\n", e.LogFile)
+			fmt.Fprintf(r.out, "    Logs:         %s\n", gray.Sprint(e.LogFile))
 		}
 		fmt.Fprintln(r.out)
 	}
 
 	return nil
+}
+
+// colorizeHealth returns the health detail string colored based on health status
+func colorizeHealth(detail string, healthy bool) string {
+	if healthy {
+		return green.Sprint(detail)
+	}
+	return red.Sprint(detail)
 }
 
 // formatDuration formats a duration in a human-readable way
@@ -111,7 +120,7 @@ func formatDuration(d time.Duration) string {
 
 // RenderRevert renders the result of fork revert
 func (r *ForkRenderer) RenderRevert(result *usecase.RevertForkResult) error {
-	fmt.Fprintln(r.out, result.Message)
+	color.New(color.FgGreen).Fprintln(r.out, "✓ "+result.Message)
 	fmt.Fprintln(r.out)
 	if result.RevertedCommand != "" {
 		fmt.Fprintf(r.out, "  Reverted:   %s\n", result.RevertedCommand)
@@ -125,16 +134,16 @@ func (r *ForkRenderer) RenderRevert(result *usecase.RevertForkResult) error {
 func (r *ForkRenderer) RenderRestart(result *usecase.RestartForkResult) error {
 	entry := result.ForkEntry
 
-	fmt.Fprintln(r.out, result.Message)
+	color.New(color.FgGreen).Fprintln(r.out, "✓ "+result.Message)
 	fmt.Fprintln(r.out)
-	fmt.Fprintf(r.out, "  Network:      %s\n", entry.Network)
+	fmt.Fprintf(r.out, "  Network:      %s\n", cyan.Sprint(entry.Network))
 	fmt.Fprintf(r.out, "  Chain ID:     %d\n", entry.ChainID)
-	fmt.Fprintf(r.out, "  Fork URL:     %s\n", entry.ForkURL)
-	fmt.Fprintf(r.out, "  Anvil PID:    %d\n", entry.AnvilPID)
-	fmt.Fprintf(r.out, "  Env Override: %s=%s\n", entry.EnvVarName, entry.ForkURL)
-	fmt.Fprintf(r.out, "  Logs:         %s\n", entry.LogFile)
+	fmt.Fprintf(r.out, "  Fork URL:     %s\n", gray.Sprint(entry.ForkURL))
+	fmt.Fprintf(r.out, "  Anvil PID:    %s\n", gray.Sprintf("%d", entry.AnvilPID))
+	fmt.Fprintf(r.out, "  Env Override: %s=%s\n", entry.EnvVarName, gray.Sprint(entry.ForkURL))
+	fmt.Fprintf(r.out, "  Logs:         %s\n", gray.Sprint(entry.LogFile))
 	if result.SetupScriptRan {
-		fmt.Fprintf(r.out, "  Setup:        executed successfully\n")
+		fmt.Fprintf(r.out, "  Setup:        %s\n", green.Sprint("executed successfully"))
 	}
 	fmt.Fprintln(r.out)
 	fmt.Fprintln(r.out, "Registry restored to initial fork state. All previous snapshots cleared.")
@@ -144,13 +153,13 @@ func (r *ForkRenderer) RenderRestart(result *usecase.RestartForkResult) error {
 
 // RenderHistory renders the result of fork history
 func (r *ForkRenderer) RenderHistory(result *usecase.ForkHistoryResult) error {
-	fmt.Fprintf(r.out, "Fork History: %s\n", result.Network)
+	fmt.Fprintf(r.out, "Fork History: %s\n", cyan.Sprint(result.Network))
 	fmt.Fprintln(r.out)
 
 	for _, e := range result.Entries {
 		marker := "  "
 		if e.IsCurrent {
-			marker = "→ "
+			marker = cyan.Sprint("→ ")
 		}
 
 		label := ""
@@ -160,7 +169,7 @@ func (r *ForkRenderer) RenderHistory(result *usecase.ForkHistoryResult) error {
 			label = e.Command
 		}
 
-		fmt.Fprintf(r.out, "  %s[%d] %s  (%s)\n", marker, e.Index, label, e.Timestamp)
+		fmt.Fprintf(r.out, "  %s[%d] %s  (%s)\n", marker, e.Index, label, gray.Sprint(e.Timestamp))
 	}
 
 	fmt.Fprintln(r.out)
@@ -169,7 +178,7 @@ func (r *ForkRenderer) RenderHistory(result *usecase.ForkHistoryResult) error {
 
 // RenderDiff renders the result of fork diff
 func (r *ForkRenderer) RenderDiff(result *usecase.ForkDiffResult) error {
-	fmt.Fprintf(r.out, "Fork Diff: %s\n", result.Network)
+	fmt.Fprintf(r.out, "Fork Diff: %s\n", cyan.Sprint(result.Network))
 	fmt.Fprintln(r.out)
 
 	if !result.HasChanges {
@@ -177,10 +186,32 @@ func (r *ForkRenderer) RenderDiff(result *usecase.ForkDiffResult) error {
 		return nil
 	}
 
+	// Calculate max contract name width across all entries
+	maxWidth := 0
+	for _, dep := range result.NewDeployments {
+		if len(dep.ContractName) > maxWidth {
+			maxWidth = len(dep.ContractName)
+		}
+	}
+	for _, dep := range result.ModifiedDeployments {
+		if len(dep.ContractName) > maxWidth {
+			maxWidth = len(dep.ContractName)
+		}
+	}
+	if maxWidth < 10 {
+		maxWidth = 10
+	}
+
+	nameFmt := fmt.Sprintf("%%-%ds", maxWidth)
+
 	if len(result.NewDeployments) > 0 {
 		fmt.Fprintf(r.out, "New Deployments (%d):\n", len(result.NewDeployments))
 		for _, dep := range result.NewDeployments {
-			fmt.Fprintf(r.out, "  + %-20s %s  %s\n", dep.ContractName, dep.Address, dep.Type)
+			fmt.Fprintf(r.out, "  %s %s %s  %s\n",
+				green.Sprint("+"),
+				cyan.Sprintf(nameFmt, dep.ContractName),
+				dep.Address,
+				gray.Sprint(dep.Type))
 		}
 		fmt.Fprintln(r.out)
 	}
@@ -188,7 +219,11 @@ func (r *ForkRenderer) RenderDiff(result *usecase.ForkDiffResult) error {
 	if len(result.ModifiedDeployments) > 0 {
 		fmt.Fprintf(r.out, "Modified Deployments (%d):\n", len(result.ModifiedDeployments))
 		for _, dep := range result.ModifiedDeployments {
-			fmt.Fprintf(r.out, "  ~ %-20s %s  %s\n", dep.ContractName, dep.Address, dep.Type)
+			fmt.Fprintf(r.out, "  %s %s %s  %s\n",
+				yellow.Sprint("~"),
+				cyan.Sprintf(nameFmt, dep.ContractName),
+				dep.Address,
+				gray.Sprint(dep.Type))
 		}
 		fmt.Fprintln(r.out)
 	}
