@@ -1,0 +1,72 @@
+{
+  "project": "treb-cli",
+  "branchName": "ralph/auto-resolve-signers",
+  "description": "Auto-resolve signer and proposer account references - When a namespace sender maps to a Safe or OZ Governor account, automatically include the referenced signer/proposer accounts in TrebConfig.Senders without requiring explicit namespace role mappings",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Auto-resolve signer references for Safe accounts",
+      "description": "As a developer, I want namespace senders that reference Safe accounts to automatically include the Safe's signer account in the resolved config, so I don't have to map it as a namespace sender.",
+      "acceptanceCriteria": [
+        "In ResolvedNamespaceToTrebConfig() in internal/config/trebfile_v2.go, after building the initial role→sender map, walk all senders and resolve signer references from the global accounts map",
+        "A namespace sender mapping like `deployer = \"dev-safe\"` where dev-safe is a Safe with `signer = \"dev-pk\"` automatically includes dev-pk in TrebConfig.Senders keyed by its account name",
+        "Existing configs that DO explicitly map signers as namespace senders continue to work without conflict",
+        "When the same account is both explicitly mapped (as a role) and auto-resolved, no duplication or error",
+        "Add unit tests in internal/config/trebfile_v2_test.go covering: Safe with unmapped signer resolves correctly, Safe with already-mapped signer doesn't duplicate",
+        "Lint passes",
+        "Unit tests pass"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "The fix is in ResolvedNamespaceToTrebConfig() in internal/config/trebfile_v2.go. The global accounts map (TrebFileConfigV2.Accounts) is available there. After building the senders map from namespace roles, iterate senders, check for Safe type with Signer field, look up the referenced account in the global accounts map, and add it to TrebConfig.Senders if not already present."
+    },
+    {
+      "id": "US-002",
+      "title": "Auto-resolve proposer references for OZ Governor accounts",
+      "description": "As a developer, I want namespace senders that reference OZ Governor accounts to automatically include the Governor's proposer account.",
+      "acceptanceCriteria": [
+        "A namespace sender mapping like `governor = \"mento-gov\"` where mento-gov has `proposer = \"dev-pk\"` automatically includes dev-pk in TrebConfig.Senders",
+        "Works identically to Safe signer auto-resolution (same code path, just checks Proposer field in addition to Signer)",
+        "Add unit tests covering: Governor with unmapped proposer resolves correctly",
+        "Lint passes",
+        "Unit tests pass"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Extend the resolution loop from US-001 to also check for OZGovernor type with Proposer field. Same pattern: look up referenced account in global accounts, add to TrebConfig.Senders if not present."
+    },
+    {
+      "id": "US-003",
+      "title": "Handle transitive and circular references",
+      "description": "As a developer, I want the resolution to handle chains like Governor → proposer (Safe) → signer (PK), and detect circular references with a clear error.",
+      "acceptanceCriteria": [
+        "Transitive chains are fully resolved: if a Governor's proposer is a Safe, the Safe's signer is also included in TrebConfig.Senders",
+        "Use an iterative approach: loop through senders, resolve references, add new accounts, repeat until no new accounts are added",
+        "Use a visited set for circular reference detection",
+        "Circular references (e.g., account A signer=B, account B signer=A) produce error: \"circular account reference: A → B → A\"",
+        "Self-references (account signer=itself) produce a clear error",
+        "Add unit tests covering: transitive chain resolves fully, circular reference returns error, self-reference returns error",
+        "Lint passes",
+        "Unit tests pass"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "The iterative approach: keep a queue of accounts to process. For each, check if it has signer/proposer fields. If so, look up the referenced account, add to senders if not present, and add to queue. Track visited accounts to detect cycles."
+    },
+    {
+      "id": "US-004",
+      "title": "Integration tests for auto-resolution",
+      "description": "As a developer, I want integration tests confirming that deployments work with auto-resolved signers without explicit namespace role mappings.",
+      "acceptanceCriteria": [
+        "Test: treb.toml with Safe account whose signer is NOT in namespace senders → treb run succeeds and deployment is registered",
+        "Test: existing configs with explicit signer mappings still work (no regression)",
+        "Update test fixture treb.toml in test/testdata/project/ if needed to cover auto-resolution",
+        "Golden files updated",
+        "Lint passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "Add tests in test/integration/ that use a treb.toml where a Safe's signer is defined as an account but NOT listed in namespace senders. The existing integration test infrastructure should work — just update the test project's treb.toml fixture."
+    }
+  ]
+}
