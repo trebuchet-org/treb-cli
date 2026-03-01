@@ -202,6 +202,10 @@ func (n SpinnerNormalizer) Normalize(output string) string {
 	finishedPattern := regexp.MustCompile(`\[[^\]]+\] Solc [^\n\r]* finished in [0-9.]+s`)
 	output = finishedPattern.ReplaceAllString(output, "[*] Solc finished")
 
+	// Collapse repeated "[*] Solc finished" (forge sometimes prints it twice due to spinner race)
+	solcDupPattern := regexp.MustCompile(`(\[?\*\] Solc finished){2,}`)
+	output = solcDupPattern.ReplaceAllString(output, "[*] Solc finished")
+
 	// Collapse consecutive "Compiling" spinner frames into a single normalized line
 	compilingPattern := regexp.MustCompile(`((?:\r)*\[[^\]]+\] Compiling[^\n\r]*\s*(?:\r?\n|\r))+`)
 	output = compilingPattern.ReplaceAllString(output, "\r[⠃] Compiling...\n")
