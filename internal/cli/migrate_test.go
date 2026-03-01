@@ -534,6 +534,166 @@ func TestFormatAccountSummary(t *testing.T) {
 	}
 }
 
+func TestCountDeploymentsPerNamespace(t *testing.T) {
+	t.Run("returns nil when file does not exist", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		counts, err := countDeploymentsPerNamespace(tmpDir)
+		require.NoError(t, err)
+		assert.Nil(t, counts)
+	})
+
+	t.Run("returns empty map for empty deployments", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		trebDir := filepath.Join(tmpDir, ".treb")
+		require.NoError(t, os.MkdirAll(trebDir, 0755))
+		require.NoError(t, os.WriteFile(filepath.Join(trebDir, "deployments.json"), []byte(`{}`), 0644))
+
+		counts, err := countDeploymentsPerNamespace(tmpDir)
+		require.NoError(t, err)
+		assert.Equal(t, map[string]int{}, counts)
+	})
+
+	t.Run("counts deployments per namespace", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		trebDir := filepath.Join(tmpDir, ".treb")
+		require.NoError(t, os.MkdirAll(trebDir, 0755))
+
+		deploymentsJSON := `{
+			"default/31337/Counter": {"namespace": "default"},
+			"default/31337/Token": {"namespace": "default"},
+			"production/1/Counter": {"namespace": "production"},
+			"staging/11155111/Counter": {"namespace": "staging"}
+		}`
+		require.NoError(t, os.WriteFile(filepath.Join(trebDir, "deployments.json"), []byte(deploymentsJSON), 0644))
+
+		counts, err := countDeploymentsPerNamespace(tmpDir)
+		require.NoError(t, err)
+		assert.Equal(t, 2, counts["default"])
+		assert.Equal(t, 1, counts["production"])
+		assert.Equal(t, 1, counts["staging"])
+	})
+
+	t.Run("returns error on invalid JSON", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		trebDir := filepath.Join(tmpDir, ".treb")
+		require.NoError(t, os.MkdirAll(trebDir, 0755))
+		require.NoError(t, os.WriteFile(filepath.Join(trebDir, "deployments.json"), []byte(`not json`), 0644))
+
+		_, err := countDeploymentsPerNamespace(tmpDir)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to parse deployments.json")
+	})
+}
+
+func TestRunMigrateNamespacePruning(t *testing.T) {
+	t.Run("non-interactive keeps all namespaces even with no deployments", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		// Create .treb/deployments.json with only default namespace having deployments
+		trebDir := filepath.Join(tmpDir, ".treb")
+		require.NoError(t, os.MkdirAll(trebDir, 0755))
+		deploymentsJSON := `{
+			"default/31337/Counter": {"namespace": "default"}
+		}`
+		require.NoError(t, os.WriteFile(filepath.Join(trebDir, "deployments.json"), []byte(deploymentsJSON), 0644))
+
+		cfg := &config.RuntimeConfig{
+			ProjectRoot: tmpDir,
+			FoundryConfig: &config.FoundryConfig{
+				Profile: map[string]config.ProfileConfig{
+					"default": {
+						Treb: &config.TrebConfig{
+							Senders: map[string]config.SenderConfig{
+								"deployer": {Type: config.SenderTypePrivateKey, PrivateKey: "${PK}"},
+							},
+						},
+					},
+					"staging": {
+						Treb: &config.TrebConfig{
+							Senders: map[string]config.SenderConfig{
+								"deployer": {Type: config.SenderTypePrivateKey, PrivateKey: "${PK}"},
+							},
+						},
+					},
+				},
+			},
+			NonInteractive: true,
+		}
+
+		err := runMigrate(cfg)
+		require.NoError(t, err)
+
+		data, err := os.ReadFile(filepath.Join(tmpDir, "treb.toml"))
+		require.NoError(t, err)
+		content := string(data)
+
+		// Non-interactive: both namespaces should be kept
+		assert.Contains(t, content, "[namespace.default]")
+		assert.Contains(t, content, "[namespace.staging]")
+	})
+
+	t.Run("non-interactive works when no deployments file exists", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		cfg := &config.RuntimeConfig{
+			ProjectRoot: tmpDir,
+			FoundryConfig: &config.FoundryConfig{
+				Profile: map[string]config.ProfileConfig{
+					"default": {
+						Treb: &config.TrebConfig{
+							Senders: map[string]config.SenderConfig{
+								"deployer": {Type: config.SenderTypePrivateKey, PrivateKey: "${PK}"},
+							},
+						},
+					},
+				},
+			},
+			NonInteractive: true,
+		}
+
+		err := runMigrate(cfg)
+		require.NoError(t, err)
+
+		data, err := os.ReadFile(filepath.Join(tmpDir, "treb.toml"))
+		require.NoError(t, err)
+		content := string(data)
+
+		assert.Contains(t, content, "[namespace.default]")
+	})
+}
+
+func TestPruneEmptyNamespaces(t *testing.T) {
+	t.Run("keeps namespaces with deployments", func(t *testing.T) {
+		namespaces := map[string]nsInfo{
+			"default":    {profile: "default", roles: map[string]string{"deployer": "key"}},
+			"production": {profile: "production", roles: map[string]string{"deployer": "key"}},
+		}
+		counts := map[string]int{
+			"default":    3,
+			"production": 1,
+		}
+
+		// No prompts should be triggered since all namespaces have deployments
+		err := pruneEmptyNamespaces(namespaces, counts)
+		require.NoError(t, err)
+		assert.Len(t, namespaces, 2)
+		assert.Contains(t, namespaces, "default")
+		assert.Contains(t, namespaces, "production")
+	})
+
+	t.Run("does not prompt when all namespaces have deployments", func(t *testing.T) {
+		namespaces := map[string]nsInfo{
+			"default": {profile: "default", roles: map[string]string{"deployer": "key"}},
+		}
+		counts := map[string]int{
+			"default": 5,
+		}
+
+		err := pruneEmptyNamespaces(namespaces, counts)
+		require.NoError(t, err)
+		assert.Len(t, namespaces, 1)
+	})
+}
+
 // indexOfSubstring returns the index of the first occurrence of substr in s, or -1 if not found.
 func indexOfSubstring(s, substr string) int {
 	for i := 0; i+len(substr) <= len(s); i++ {

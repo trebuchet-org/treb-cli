@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -96,6 +97,19 @@ func runMigrate(cfg *domainconfig.RuntimeConfig) error {
 		namespaces[p.Name] = nsInfo{
 			profile: p.Name,
 			roles:   namespaceMappings[p.Name],
+		}
+	}
+
+	// Namespace pruning: offer to remove namespaces with zero deployments
+	if !cfg.NonInteractive {
+		deploymentCounts, err := countDeploymentsPerNamespace(cfg.ProjectRoot)
+		if err != nil {
+			return err
+		}
+		if deploymentCounts != nil {
+			if err := pruneEmptyNamespaces(namespaces, deploymentCounts); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -316,6 +330,63 @@ func formatAccountSummary(acct domainconfig.AccountConfig) string {
 	default:
 		return string(acct.Type)
 	}
+}
+
+// countDeploymentsPerNamespace reads .treb/deployments.json and returns a map
+// of namespace → deployment count. Returns (nil, nil) if the file doesn't exist.
+func countDeploymentsPerNamespace(projectRoot string) (map[string]int, error) {
+	deploymentsPath := filepath.Join(projectRoot, ".treb", "deployments.json")
+	data, err := os.ReadFile(deploymentsPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to read deployments.json: %w", err)
+	}
+
+	// Parse just enough to extract namespace from each deployment entry.
+	var deployments map[string]struct {
+		Namespace string `json:"namespace"`
+	}
+	if err := json.Unmarshal(data, &deployments); err != nil {
+		return nil, fmt.Errorf("failed to parse deployments.json: %w", err)
+	}
+
+	counts := make(map[string]int)
+	for _, d := range deployments {
+		counts[d.Namespace]++
+	}
+	return counts, nil
+}
+
+// pruneEmptyNamespaces prompts the user to remove namespaces with zero deployments.
+// It modifies the namespaces map in place, removing declined namespaces.
+// Returns an error only if the user cancels (Ctrl+C).
+func pruneEmptyNamespaces(
+	namespaces map[string]nsInfo,
+	deploymentCounts map[string]int,
+) error {
+	nsNames := sortedKeys(namespaces)
+	for _, name := range nsNames {
+		count := deploymentCounts[name]
+		if count > 0 {
+			continue
+		}
+		label := fmt.Sprintf("Namespace %q has no deployments. Keep it?", name)
+		prompt := promptui.Prompt{
+			Label:     label,
+			IsConfirm: true,
+		}
+		_, err := prompt.Run()
+		if err != nil {
+			if err == promptui.ErrInterrupt {
+				return fmt.Errorf("migration cancelled")
+			}
+			// User declined (entered "n" or just pressed Enter for default N)
+			delete(namespaces, name)
+		}
+	}
+	return nil
 }
 
 // interactiveAccountNaming prompts the user to name each deduplicated account.
