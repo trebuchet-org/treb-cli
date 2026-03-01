@@ -3,6 +3,7 @@ package render
 import (
 	"fmt"
 	"io"
+	"strconv"
 
 	"github.com/trebuchet-org/treb-cli/internal/usecase"
 )
@@ -31,12 +32,31 @@ func (r *NetworksRenderer) RenderNetworksList(result *usecase.ListNetworksResult
 	fmt.Fprintln(r.out, "🌐 Available Networks:")
 	fmt.Fprintln(r.out)
 
+	// Calculate max widths for alignment
+	maxNameWidth := 0
+	maxChainIDWidth := 0
+	for _, network := range result.Networks {
+		if len(network.Name) > maxNameWidth {
+			maxNameWidth = len(network.Name)
+		}
+		if network.Error == nil {
+			w := len(strconv.FormatUint(network.ChainID, 10))
+			if w > maxChainIDWidth {
+				maxChainIDWidth = w
+			}
+		}
+	}
+
 	// Render each network
 	for _, network := range result.Networks {
 		if network.Error != nil {
-			fmt.Fprintf(r.out, "  ❌ %s - Error: %v\n", network.Name, network.Error)
+			fmt.Fprintf(r.out, "  ❌ %-*s - ", maxNameWidth, network.Name)
+			red.Fprintf(r.out, "Error: %v", network.Error)
+			fmt.Fprintln(r.out)
 		} else {
-			fmt.Fprintf(r.out, "  ✅ %s - Chain ID: %d\n", network.Name, network.ChainID)
+			fmt.Fprintf(r.out, "  ✅ ")
+			cyan.Fprintf(r.out, "%-*s", maxNameWidth, network.Name)
+			fmt.Fprintf(r.out, " - Chain ID: %*d\n", maxChainIDWidth, network.ChainID)
 		}
 	}
 
