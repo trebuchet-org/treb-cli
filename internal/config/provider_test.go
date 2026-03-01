@@ -312,7 +312,7 @@ src = "src"
 type = "private_key"
 private_key = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 
-[namespace.default]
+[namespace.default.senders]
 deployer = "deployer"
 `
 		err = os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(trebToml), 0644)
@@ -352,11 +352,13 @@ private_key = "0x1234"
 type = "ledger"
 derivation_path = "m/44'/60'/0'/0/0"
 
-[namespace.default]
+[namespace.default.senders]
 deployer = "deployer"
 
 [namespace.production]
 profile = "mainnet"
+
+[namespace.production.senders]
 deployer = "prod-deployer"
 `
 		err = os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(trebToml), 0644)
@@ -388,7 +390,7 @@ src = "src"
 type = "private_key"
 private_key = "0x1234"
 
-[namespace.default]
+[namespace.default.senders]
 deployer = "deployer"
 
 [fork]
@@ -422,10 +424,10 @@ src = "src"
 type = "private_key"
 private_key = "0x1234"
 
-[namespace.default]
+[namespace.default.senders]
 deployer = "deployer"
 
-[namespace.staging]
+[namespace.staging.senders]
 deployer = "deployer"
 `
 		err = os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(trebToml), 0644)
@@ -541,13 +543,13 @@ type = "safe"
 safe = "0xDEAD"
 signer = "deployer"
 
-[namespace.default]
+[namespace.default.senders]
 deployer = "deployer"
 
 [namespace.production]
 profile = "mainnet"
 
-[namespace."production.ntt"]
+[namespace."production.ntt".senders]
 deployer = "safe-wallet"
 `
 		err = os.WriteFile(filepath.Join(dir, "treb.toml"), []byte(trebToml), 0644)

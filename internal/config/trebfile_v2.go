@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -55,11 +56,11 @@ func DetectTrebConfigFormat(projectRoot string) (TrebConfigFormat, error) {
 }
 
 // trebFileV2Raw is a helper for initial TOML parsing of v2 format.
-// Namespace uses map[string]string because all values (profile + roles) are flat strings.
+// Namespace sections decode directly into NamespaceRoles structs with profile and senders sub-table.
 type trebFileV2Raw struct {
-	Accounts  map[string]config.AccountConfig `toml:"accounts"`
-	Namespace map[string]map[string]string    `toml:"namespace"`
-	Fork      config.ForkConfig               `toml:"fork"`
+	Accounts  map[string]config.AccountConfig  `toml:"accounts"`
+	Namespace map[string]config.NamespaceRoles `toml:"namespace"`
+	Fork      config.ForkConfig                `toml:"fork"`
 }
 
 // loadTrebConfigV2 loads and parses treb.toml in the v2 format with [accounts.*] and [namespace.*] sections.
@@ -83,7 +84,7 @@ func loadTrebConfigV2(projectRoot string) (*config.TrebFileConfigV2, error) {
 
 	cfg := &config.TrebFileConfigV2{
 		Accounts:  raw.Accounts,
-		Namespace: make(map[string]config.NamespaceRoles),
+		Namespace: raw.Namespace,
 		Fork:      raw.Fork,
 	}
 
@@ -91,19 +92,8 @@ func loadTrebConfigV2(projectRoot string) (*config.TrebFileConfigV2, error) {
 		cfg.Accounts = make(map[string]config.AccountConfig)
 	}
 
-	// Parse namespace sections: "profile" is a reserved key, all others become role→account mappings
-	for nsName, nsMap := range raw.Namespace {
-		ns := config.NamespaceRoles{
-			Roles: make(map[string]string),
-		}
-		for k, v := range nsMap {
-			if k == "profile" {
-				ns.Profile = v
-			} else {
-				ns.Roles[k] = v
-			}
-		}
-		cfg.Namespace[nsName] = ns
+	if cfg.Namespace == nil {
+		cfg.Namespace = make(map[string]config.NamespaceRoles)
 	}
 
 	// Expand environment variables in all account config string fields
@@ -126,7 +116,11 @@ func loadTrebConfigV2(projectRoot string) (*config.TrebFileConfigV2, error) {
 // dot-separated hierarchy and overlaying roles and profile at each level.
 // For example, resolving "production.ntt" walks: default → production → production.ntt.
 // At each level, explicitly set values override inherited ones.
-func ResolveNamespace(cfg *config.TrebFileConfigV2, namespaceName string) (*config.ResolvedNamespace, error) {
+// Roles that reference unknown accounts are skipped with a warning to warnWriter.
+// Pass nil for warnWriter to use os.Stderr.
+func ResolveNamespace(cfg *config.TrebFileConfigV2, namespaceName string, warnWriter ...io.Writer) (*config.ResolvedNamespace, error) {
+	w := resolveWarnWriter(warnWriter)
+
 	// Build the ancestry chain: always start with "default", then each prefix segment
 	chain := buildNamespaceChain(namespaceName)
 
@@ -142,21 +136,18 @@ func ResolveNamespace(cfg *config.TrebFileConfigV2, namespaceName string) (*conf
 		if ns.Profile != "" {
 			profile = ns.Profile
 		}
-		for role, account := range ns.Roles {
+		for role, account := range ns.Senders {
 			roles[role] = account
 		}
 	}
 
-	// Validate that all role values reference existing account names
-	for role, accountName := range roles {
-		if _, exists := cfg.Accounts[accountName]; !exists {
-			return nil, fmt.Errorf("namespace %q role %q references unknown account %q", namespaceName, role, accountName)
-		}
-	}
-
-	// Build resolved accounts map: role name → AccountConfig
+	// Build resolved accounts map, skipping roles that reference unknown accounts
 	accounts := make(map[string]config.AccountConfig, len(roles))
 	for role, accountName := range roles {
+		if _, exists := cfg.Accounts[accountName]; !exists {
+			fmt.Fprintf(w, "Warning: namespace %q role %q references unknown account %q — skipping\n", namespaceName, role, accountName)
+			continue
+		}
 		accounts[role] = cfg.Accounts[accountName]
 	}
 
@@ -169,24 +160,28 @@ func ResolveNamespace(cfg *config.TrebFileConfigV2, namespaceName string) (*conf
 // ResolvedNamespaceToTrebConfig converts a ResolvedNamespace (accounts + role mappings)
 // into the existing TrebConfig with Senders map that the rest of the codebase expects.
 // Each role in the resolved namespace becomes a SenderConfig entry keyed by role name.
-// Cross-references (Safe signer, OzGovernor proposer) are validated against the accounts map.
-func ResolvedNamespaceToTrebConfig(resolved *config.ResolvedNamespace, accounts map[string]config.AccountConfig) (*config.TrebConfig, error) {
+// Cross-references (Safe signer, OzGovernor proposer) that reference unknown accounts
+// are skipped with a warning to warnWriter. Pass nil for warnWriter to use os.Stderr.
+func ResolvedNamespaceToTrebConfig(resolved *config.ResolvedNamespace, accounts map[string]config.AccountConfig, warnWriter ...io.Writer) (*config.TrebConfig, error) {
+	w := resolveWarnWriter(warnWriter)
 	senders := make(map[string]config.SenderConfig, len(resolved.Accounts))
 
 	for roleName, acct := range resolved.Accounts {
 		sender := config.SenderConfig(acct)
 
-		// Validate Safe signer cross-reference
+		// Check Safe signer cross-reference
 		if acct.Type == config.SenderTypeSafe && acct.Signer != "" {
 			if _, exists := accounts[acct.Signer]; !exists {
-				return nil, fmt.Errorf("role %q: safe account references unknown signer account %q", roleName, acct.Signer)
+				fmt.Fprintf(w, "Warning: role %q references safe with unknown signer account %q — skipping\n", roleName, acct.Signer)
+				continue
 			}
 		}
 
-		// Validate OzGovernor proposer cross-reference
+		// Check OzGovernor proposer cross-reference
 		if acct.Type == config.SenderTypeOZGovernor && acct.Proposer != "" {
 			if _, exists := accounts[acct.Proposer]; !exists {
-				return nil, fmt.Errorf("role %q: oz_governor account references unknown proposer account %q", roleName, acct.Proposer)
+				fmt.Fprintf(w, "Warning: role %q references oz_governor with unknown proposer account %q — skipping\n", roleName, acct.Proposer)
+				continue
 			}
 		}
 
@@ -194,6 +189,14 @@ func ResolvedNamespaceToTrebConfig(resolved *config.ResolvedNamespace, accounts 
 	}
 
 	return &config.TrebConfig{Senders: senders}, nil
+}
+
+// resolveWarnWriter returns the first writer from the variadic args, or os.Stderr if none provided.
+func resolveWarnWriter(writers []io.Writer) io.Writer {
+	if len(writers) > 0 && writers[0] != nil {
+		return writers[0]
+	}
+	return os.Stderr
 }
 
 // buildNamespaceChain returns the ordered list of namespace names to resolve,

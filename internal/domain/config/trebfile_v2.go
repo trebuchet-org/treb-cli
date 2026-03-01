@@ -16,10 +16,10 @@ type AccountConfig struct {
 }
 
 // NamespaceRoles represents a [namespace.*] section in treb.toml v2.
-// Profile maps to a foundry.toml profile, and Roles maps role names to account names.
+// Profile maps to a foundry.toml profile, and Senders maps role names to account names.
 type NamespaceRoles struct {
 	Profile string            `toml:"profile,omitempty"`
-	Roles   map[string]string `toml:"-"` // Populated manually from remaining TOML keys
+	Senders map[string]string `toml:"senders"`
 }
 
 // TrebFileConfigV2 represents the new treb.toml format with separate accounts and namespaces.

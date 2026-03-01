@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -88,12 +89,34 @@ func runMigrate(cfg *domainconfig.RuntimeConfig) error {
 	// Deduplicate senders across profiles
 	accounts, namespaceMappings := internalconfig.DeduplicateSenders(namespaceSenders)
 
+	// Interactive account naming: prompt user to name each deduplicated account
+	if !cfg.NonInteractive {
+		renamed, err := interactiveAccountNaming(accounts, namespaceMappings)
+		if err != nil {
+			return err
+		}
+		accounts = renamed
+	}
+
 	// Build namespace info (profile name for each namespace)
 	namespaces := make(map[string]nsInfo, len(profiles))
 	for _, p := range profiles {
 		namespaces[p.Name] = nsInfo{
 			profile: p.Name,
 			roles:   namespaceMappings[p.Name],
+		}
+	}
+
+	// Namespace pruning: offer to remove namespaces with zero deployments
+	if !cfg.NonInteractive {
+		deploymentCounts, err := countDeploymentsPerNamespace(cfg.ProjectRoot)
+		if err != nil {
+			return err
+		}
+		if deploymentCounts != nil {
+			if err := pruneEmptyNamespaces(namespaces, deploymentCounts); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -211,10 +234,14 @@ func generateTrebTomlV2(
 		fmt.Fprintf(&b, "[namespace.%s]\n", tomlKey(nsName))
 		fmt.Fprintf(&b, "profile = %q\n", ns.profile)
 
-		// Write role mappings sorted by name
-		roleNames := sortedKeys(ns.roles)
-		for _, role := range roleNames {
-			fmt.Fprintf(&b, "%s = %q\n", role, ns.roles[role])
+		// Write role mappings under [namespace.<name>.senders] sub-table
+		if len(ns.roles) > 0 {
+			b.WriteString("\n")
+			fmt.Fprintf(&b, "[namespace.%s.senders]\n", tomlKey(nsName))
+			roleNames := sortedKeys(ns.roles)
+			for _, role := range roleNames {
+				fmt.Fprintf(&b, "%s = %q\n", role, ns.roles[role])
+			}
 		}
 	}
 
@@ -369,4 +396,195 @@ func confirmPrompt(label string) bool {
 
 	_, err := prompt.Run()
 	return err == nil
+}
+
+// validAccountNameRe matches valid TOML bare keys: alphanumeric, hyphens, and underscores.
+var validAccountNameRe = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
+
+// validateAccountName checks whether a proposed account name is valid.
+// Returns an error message string if invalid, or empty string if valid.
+func validateAccountName(name string, usedNames map[string]bool) string {
+	if name == "" {
+		return "name cannot be empty"
+	}
+	if !validAccountNameRe.MatchString(name) {
+		return "name must contain only letters, digits, hyphens, and underscores"
+	}
+	if usedNames[name] {
+		return fmt.Sprintf("name %q is already taken", name)
+	}
+	return ""
+}
+
+// formatAccountSummary returns a short human-readable description of an account.
+func formatAccountSummary(acct domainconfig.AccountConfig) string {
+	switch acct.Type {
+	case domainconfig.SenderTypePrivateKey:
+		return fmt.Sprintf("private_key (%s)", acct.PrivateKey)
+	case domainconfig.SenderTypeSafe:
+		return fmt.Sprintf("safe (%s)", acct.Safe)
+	case domainconfig.SenderTypeLedger:
+		if acct.Address != "" {
+			return fmt.Sprintf("ledger (%s)", acct.Address)
+		}
+		return fmt.Sprintf("ledger (path: %s)", acct.DerivationPath)
+	case domainconfig.SenderTypeTrezor:
+		if acct.Address != "" {
+			return fmt.Sprintf("trezor (%s)", acct.Address)
+		}
+		return fmt.Sprintf("trezor (path: %s)", acct.DerivationPath)
+	case domainconfig.SenderTypeOZGovernor:
+		return fmt.Sprintf("oz_governor (%s)", acct.Governor)
+	default:
+		return string(acct.Type)
+	}
+}
+
+// countDeploymentsPerNamespace reads .treb/deployments.json and returns a map
+// of namespace → deployment count. Returns (nil, nil) if the file doesn't exist.
+func countDeploymentsPerNamespace(projectRoot string) (map[string]int, error) {
+	deploymentsPath := filepath.Join(projectRoot, ".treb", "deployments.json")
+	data, err := os.ReadFile(deploymentsPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to read deployments.json: %w", err)
+	}
+
+	// Parse just enough to extract namespace from each deployment entry.
+	var deployments map[string]struct {
+		Namespace string `json:"namespace"`
+	}
+	if err := json.Unmarshal(data, &deployments); err != nil {
+		return nil, fmt.Errorf("failed to parse deployments.json: %w", err)
+	}
+
+	counts := make(map[string]int)
+	for _, d := range deployments {
+		counts[d.Namespace]++
+	}
+	return counts, nil
+}
+
+// pruneEmptyNamespaces prompts the user to remove namespaces with zero deployments.
+// It modifies the namespaces map in place, removing declined namespaces.
+// Returns an error only if the user cancels (Ctrl+C).
+func pruneEmptyNamespaces(
+	namespaces map[string]nsInfo,
+	deploymentCounts map[string]int,
+) error {
+	nsNames := sortedKeys(namespaces)
+	for _, name := range nsNames {
+		count := deploymentCounts[name]
+		if count > 0 {
+			continue
+		}
+		label := fmt.Sprintf("Namespace %q has no deployments. Keep it?", name)
+		prompt := promptui.Prompt{
+			Label:     label,
+			IsConfirm: true,
+		}
+		_, err := prompt.Run()
+		if err != nil {
+			if err == promptui.ErrInterrupt {
+				return fmt.Errorf("migration cancelled")
+			}
+			// User declined (entered "n" or just pressed Enter for default N)
+			delete(namespaces, name)
+		}
+	}
+	return nil
+}
+
+// interactiveAccountNaming prompts the user to name each deduplicated account.
+// It returns the renamed accounts map. The namespaceMappings are updated in-place
+// to reference the new names.
+func interactiveAccountNaming(
+	accounts map[string]domainconfig.AccountConfig,
+	namespaceMappings map[string]map[string]string,
+) (map[string]domainconfig.AccountConfig, error) {
+	names := sortedKeys(accounts)
+	if len(names) == 0 {
+		return accounts, nil
+	}
+
+	fmt.Println()
+	fmt.Printf("Found %d deduplicated account(s). Name each one (press Enter to keep default):\n", len(names))
+	fmt.Println()
+
+	usedNames := make(map[string]bool)
+	// Map old name → new name for renaming
+	renames := make(map[string]string, len(names))
+
+	for _, oldName := range names {
+		acct := accounts[oldName]
+		summary := formatAccountSummary(acct)
+
+		var newName string
+		for {
+			prompt := promptui.Prompt{
+				Label:   fmt.Sprintf("  %s — name", summary),
+				Default: oldName,
+				Validate: func(input string) error {
+					if msg := validateAccountName(input, usedNames); msg != "" {
+						return fmt.Errorf("%s", msg)
+					}
+					return nil
+				},
+			}
+
+			result, err := prompt.Run()
+			if err != nil {
+				if err == promptui.ErrInterrupt {
+					return nil, fmt.Errorf("migration cancelled")
+				}
+				// Validation error — promptui re-prompts automatically,
+				// but if Run() returns an unexpected error, retry.
+				continue
+			}
+			newName = result
+			break
+		}
+
+		usedNames[newName] = true
+		renames[oldName] = newName
+	}
+
+	// Build renamed accounts map
+	renamed := make(map[string]domainconfig.AccountConfig, len(accounts))
+	for oldName, acct := range accounts {
+		renamed[renames[oldName]] = acct
+	}
+
+	// Update signer/proposer cross-references in accounts
+	for name, acct := range renamed {
+		updated := false
+		if acct.Signer != "" {
+			if newName, ok := renames[acct.Signer]; ok {
+				acct.Signer = newName
+				updated = true
+			}
+		}
+		if acct.Proposer != "" {
+			if newName, ok := renames[acct.Proposer]; ok {
+				acct.Proposer = newName
+				updated = true
+			}
+		}
+		if updated {
+			renamed[name] = acct
+		}
+	}
+
+	// Update namespace mappings to use new names
+	for _, roles := range namespaceMappings {
+		for role, oldName := range roles {
+			if newName, ok := renames[oldName]; ok {
+				roles[role] = newName
+			}
+		}
+	}
+
+	return renamed, nil
 }
