@@ -207,6 +207,9 @@ func buildAnvilArgs(instance *domain.AnvilInstance) []string {
 	if instance.ForkURL != "" {
 		args = append(args, "--fork-url", instance.ForkURL)
 	}
+	if instance.ForkBlockNumber > 0 {
+		args = append(args, "--fork-block-number", strconv.FormatUint(instance.ForkBlockNumber, 10))
+	}
 	return args
 }
 

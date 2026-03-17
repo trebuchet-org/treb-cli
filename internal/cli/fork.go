@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 
+	"github.com/fatih/color"
+	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 	"github.com/trebuchet-org/treb-cli/internal/cli/render"
 	cfg "github.com/trebuchet-org/treb-cli/internal/config"
@@ -48,6 +51,7 @@ Use --url to connect to an already-running Anvil fork instead of starting one lo
 	}
 
 	cmd.Flags().String("url", "", "Connect to an external Anvil endpoint instead of starting a local fork")
+	cmd.Flags().Uint64("fork-block-number", 0, "Fork at a specific block number (default: latest)")
 
 	return cmd
 }
@@ -118,13 +122,16 @@ func runForkEnter(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to resolve network '%s': %w", network, err)
 	}
 
+	forkBlockNumber, _ := cmd.Flags().GetUint64("fork-block-number")
+
 	// Execute the use case
 	params := usecase.EnterForkParams{
-		Network:     network,
-		RPCURL:      resolvedNetwork.RPCURL,
-		ChainID:     resolvedNetwork.ChainID,
-		EnvVarName:  envVarName,
-		ExternalURL: externalURL,
+		Network:         network,
+		RPCURL:          resolvedNetwork.RPCURL,
+		ChainID:         resolvedNetwork.ChainID,
+		EnvVarName:      envVarName,
+		ExternalURL:     externalURL,
+		ForkBlockNumber: forkBlockNumber,
 	}
 
 	result, err := app.EnterFork.Execute(ctx, params)
@@ -170,9 +177,31 @@ func runForkExit(cmd *cobra.Command, args []string) error {
 	if len(args) > 0 {
 		network = args[0]
 	} else if !allFlag {
-		// Use current configured network
-		if app.Config.Network != nil {
-			network = app.Config.Network.Name
+		// No network specified and not --all: check if multiple forks are active
+		state, err := app.ForkStateStore.Load(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to load fork state: %w", err)
+		}
+
+		switch len(state.Forks) {
+		case 0:
+			return fmt.Errorf("no active forks")
+		case 1:
+			// Only one fork — use it directly
+			for name := range state.Forks {
+				network = name
+			}
+		default:
+			// Multiple forks — prompt user to select
+			if app.Config.NonInteractive {
+				return fmt.Errorf("multiple active forks. Specify a network or use --all")
+			}
+
+			selected, err := selectForkNetwork(state.ActiveNetworks())
+			if err != nil {
+				return err
+			}
+			network = selected
 		}
 	}
 
@@ -188,6 +217,33 @@ func runForkExit(cmd *cobra.Command, args []string) error {
 
 	renderer := render.NewForkRenderer(cmd.OutOrStdout())
 	return renderer.RenderExit(result)
+}
+
+// selectForkNetwork prompts the user to select a fork network from a list
+func selectForkNetwork(networks []string) (string, error) {
+	sort.Strings(networks)
+
+	templates := &promptui.SelectTemplates{
+		Label:    "{{ . }}",
+		Active:   "▸ {{ . | cyan }}",
+		Inactive: "  {{ . | faint }}",
+		Selected: "✓ {{ . | green }}",
+		Help:     color.New(color.FgYellow).Sprint("Use arrow keys to navigate, Enter to select"),
+	}
+
+	prompt := promptui.Select{
+		Label:     "Multiple active forks. Which one do you want to exit?",
+		Items:     networks,
+		Templates: templates,
+		Size:      10,
+	}
+
+	_, selected, err := prompt.Run()
+	if err != nil {
+		return "", fmt.Errorf("selection cancelled: %w", err)
+	}
+
+	return selected, nil
 }
 
 // newForkRevertCmd creates the fork revert subcommand

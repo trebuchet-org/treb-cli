@@ -1685,6 +1685,181 @@ func TestForkExternalExit(t *testing.T) {
 	RunIntegrationTests(t, tests)
 }
 
+func TestForkEnterBlockNumber(t *testing.T) {
+	tests := []IntegrationTest{
+		{
+			Name: "fork_enter_with_block_number",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+			},
+			TestCmds:   [][]string{},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, _ string) {
+				// First, mine a few blocks on the test anvil so we have a known block to fork at
+				node := ctx.AnvilNodes["anvil-31337"]
+				require.NotNil(t, node)
+				mineBlocks(t, node.URL, 10)
+
+				// Record block number before fork
+				baseBlock := ethBlockNumber(t, node.URL)
+				require.GreaterOrEqual(t, baseBlock, uint64(10))
+
+				// Fork at a specific block
+				forkBlock := baseBlock - 5
+				output, err := ctx.TrebContext.Treb("fork", "enter", "anvil-31337",
+					"--fork-block-number", strconv.FormatUint(forkBlock, 10))
+				require.NoError(t, err, "fork enter with --fork-block-number should succeed")
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+
+				assert.Contains(t, output, "Fork mode entered")
+
+				// Verify fork state exists and anvil is running
+				state := readForkState(t, ctx)
+				fork := state.Forks["anvil-31337"]
+				require.NotNil(t, fork, "fork entry should exist")
+				assert.True(t, isProcessAlive(fork.AnvilPID), "fork anvil should be running")
+
+				// Verify the fork anvil's block number matches the fork block
+				blockNum := ethBlockNumber(t, fork.ForkURL)
+				assert.Equal(t, forkBlock, blockNum,
+					"fork anvil should be at the specified fork-block-number")
+			},
+		},
+	}
+
+	RunIntegrationTests(t, tests)
+}
+
+// mineBlocks mines n empty blocks on an anvil instance via the evm_mine RPC
+func mineBlocks(t *testing.T, rpcURL string, n int) {
+	t.Helper()
+	for range n {
+		reqBody, err := json.Marshal(map[string]interface{}{
+			"jsonrpc": "2.0",
+			"method":  "evm_mine",
+			"params":  []interface{}{},
+			"id":      1,
+		})
+		require.NoError(t, err)
+
+		resp, err := http.Post(rpcURL, "application/json", bytes.NewBuffer(reqBody)) //nolint:gosec
+		require.NoError(t, err)
+		resp.Body.Close()
+	}
+}
+
+func TestForkExitMultipleForks(t *testing.T) {
+	tests := []IntegrationTest{
+		{
+			Name: "fork_exit_no_network_single_fork_exits_it",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"fork", "enter", "anvil-31337"},
+			},
+			TestCmds: [][]string{
+				// No network argument — should auto-select the only active fork
+				{"fork", "exit"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				assert.Contains(t, output, "Fork mode exited")
+				assert.Contains(t, output, "anvil-31337")
+
+				// Verify fork state file is gone
+				workDir := ctx.TrebContext.GetWorkDir()
+				statePath := filepath.Join(workDir, ".treb", "priv", "fork-state.json")
+				_, err := os.Stat(statePath)
+				assert.True(t, os.IsNotExist(err), "fork-state.json should be deleted")
+			},
+		},
+		{
+			Name: "fork_exit_no_network_multiple_forks_errors_non_interactive",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"fork", "enter", "anvil-31337"},
+				{"fork", "enter", "anvil-31338"},
+			},
+			TestCmds: [][]string{
+				// No network argument, multiple forks, non-interactive — should error
+				{"fork", "exit"},
+			},
+			ExpectErr:  true,
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				defer cleanupForkAnvil(t, ctx, "anvil-31337")
+				defer cleanupForkAnvil(t, ctx, "anvil-31338")
+
+				assert.Contains(t, output, "multiple active forks")
+			},
+		},
+		{
+			Name: "fork_exit_all_exits_multiple_forks",
+			PreSetup: func(t *testing.T, ctx *helpers.TestContext) {
+				setupForkEnvVars(t, ctx)
+			},
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"fork", "enter", "anvil-31337"},
+				{"fork", "enter", "anvil-31338"},
+			},
+			TestCmds: [][]string{
+				{"fork", "exit", "--all"},
+			},
+			SkipGolden: true,
+			PostTest: func(t *testing.T, ctx *helpers.TestContext, output string) {
+				assert.Contains(t, output, "2 fork(s) exited")
+
+				// Verify fork state file is gone
+				workDir := ctx.TrebContext.GetWorkDir()
+				statePath := filepath.Join(workDir, ".treb", "priv", "fork-state.json")
+				_, err := os.Stat(statePath)
+				assert.True(t, os.IsNotExist(err), "fork-state.json should be deleted")
+			},
+		},
+	}
+
+	RunIntegrationTests(t, tests)
+}
+
+// ethBlockNumber makes an eth_blockNumber RPC call and returns the block number
+func ethBlockNumber(t *testing.T, rpcURL string) uint64 {
+	t.Helper()
+
+	reqBody, err := json.Marshal(map[string]interface{}{
+		"jsonrpc": "2.0",
+		"method":  "eth_blockNumber",
+		"params":  []interface{}{},
+		"id":      1,
+	})
+	require.NoError(t, err)
+
+	resp, err := http.Post(rpcURL, "application/json", bytes.NewBuffer(reqBody)) //nolint:gosec
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	var rpcResp struct {
+		Result string `json:"result"`
+	}
+	require.NoError(t, json.Unmarshal(body, &rpcResp))
+
+	blockNum, err := strconv.ParseUint(strings.TrimPrefix(rpcResp.Result, "0x"), 16, 64)
+	require.NoError(t, err)
+
+	return blockNum
+}
+
 func TestForkExternalStatus(t *testing.T) {
 	tests := []IntegrationTest{
 		{
