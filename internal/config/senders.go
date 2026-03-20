@@ -64,15 +64,25 @@ func (m *SendersManager) BuildSenderScriptConfig(
 		return nil, fmt.Errorf("can not use ledger and trezor senders in the same script, configure @custom:senders")
 	}
 
-	var safeSigners []string
+	// Collect transitive sender dependencies: senders not in @custom:senders but
+	// referenced by declared senders (e.g. a safe's signer or a governor's proposer).
+	// These must be included in SENDER_CONFIGS so the Solidity registry can look them up.
+	var transitiveSenders []string
 	if m.config != nil && m.config.Senders != nil {
 		for _, senderKey := range senders {
-			if sender, exists := m.config.Senders[senderKey]; exists && sender.Type == "safe" {
-				safeSigners = append(safeSigners, sender.Signer)
+			sender, exists := m.config.Senders[senderKey]
+			if !exists {
+				continue
+			}
+			switch sender.Type {
+			case "safe":
+				transitiveSenders = append(transitiveSenders, sender.Signer)
+			case "oz_governor":
+				transitiveSenders = append(transitiveSenders, sender.Proposer)
 			}
 		}
 	}
-	signersHWConfig := m.getSendersHWConfig(safeSigners)
+	signersHWConfig := m.getSendersHWConfig(transitiveSenders)
 
 	if signersHWConfig.UseLedger && executionHWConfig.UseLedger {
 		return nil, fmt.Errorf("can not use ledger in both main sender and safe signer, configure @custom:senders")
@@ -82,9 +92,9 @@ func (m *SendersManager) BuildSenderScriptConfig(
 		return nil, fmt.Errorf("can not use ledger in both main sender and safe signer, configure @custom:senders")
 	}
 
-	sort.Strings(safeSigners)
+	sort.Strings(transitiveSenders)
 	sort.Strings(senders)
-	allSenders := append(slices.Clone(safeSigners), senders...)
+	allSenders := append(slices.Clone(transitiveSenders), senders...)
 
 	var senderInitConfigs []config.SenderInitConfig
 	if senderInitConfigs, err = m.buildSenderInitConfigs(allSenders); err != nil {
