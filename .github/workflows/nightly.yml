@@ -1,10 +1,11 @@
-name: Nightly Build
+name: Nightly Build (disabled — Go CLI frozen at v1.0.0)
 
-on:
-  schedule:
-    # Run at 2 AM UTC every day
-    - cron: '0 2 * * *'
-  workflow_dispatch:
+# Disabled: Go CLI development frozen. Use treb-cli-rs (Rust) for nightly builds.
+# on:
+#   schedule:
+#     - cron: '0 2 * * *'
+#   workflow_dispatch:
+on: workflow_dispatch
 
 permissions:
   contents: write
