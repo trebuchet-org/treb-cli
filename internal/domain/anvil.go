@@ -2,13 +2,14 @@ package domain
 
 // AnvilInstance represents a local anvil node instance
 type AnvilInstance struct {
-	Name    string `json:"name"`
-	Port    string `json:"port"`
-	ChainID string `json:"chainId,omitempty"`
-	ForkURL string `json:"forkUrl,omitempty"`
-	RPCURL  string `json:"rpcUrl,omitempty"` // Full RPC endpoint URL (used for external forks)
-	PidFile string `json:"pidFile"`
-	LogFile string `json:"logFile"`
+	Name           string `json:"name"`
+	Port           string `json:"port"`
+	ChainID        string `json:"chainId,omitempty"`
+	ForkURL        string `json:"forkUrl,omitempty"`
+	ForkBlockNumber uint64 `json:"forkBlockNumber,omitempty"` // Fork at a specific block number (0 = latest)
+	RPCURL         string `json:"rpcUrl,omitempty"`           // Full RPC endpoint URL (used for external forks)
+	PidFile        string `json:"pidFile"`
+	LogFile        string `json:"logFile"`
 }
 
 // AnvilStatus represents the status of an anvil instance

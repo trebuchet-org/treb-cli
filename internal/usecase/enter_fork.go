@@ -46,11 +46,12 @@ func NewEnterFork(
 
 // EnterForkParams contains parameters for entering fork mode
 type EnterForkParams struct {
-	Network     string // network name from foundry.toml
-	RPCURL      string // resolved RPC URL (after env var expansion)
-	ChainID     uint64 // chain ID
-	EnvVarName  string // env var name that foundry.toml uses for the RPC endpoint
-	ExternalURL string // optional external Anvil endpoint URL (skips local Anvil startup)
+	Network         string // network name from foundry.toml
+	RPCURL          string // resolved RPC URL (after env var expansion)
+	ChainID         uint64 // chain ID
+	EnvVarName      string // env var name that foundry.toml uses for the RPC endpoint
+	ExternalURL     string // optional external Anvil endpoint URL (skips local Anvil startup)
+	ForkBlockNumber uint64 // optional block number to fork at (0 = latest)
 }
 
 // EnterForkResult contains the result of entering fork mode
@@ -144,12 +145,13 @@ func (uc *EnterFork) executeLocal(ctx context.Context, state *domain.ForkState, 
 	}
 
 	instance := &domain.AnvilInstance{
-		Name:    fmt.Sprintf("fork-%s", params.Network),
-		Port:    fmt.Sprintf("%d", port),
-		ChainID: fmt.Sprintf("%d", params.ChainID),
-		ForkURL: params.RPCURL,
-		PidFile: filepath.Join(privDir, fmt.Sprintf("fork-%s.pid", params.Network)),
-		LogFile: filepath.Join(privDir, fmt.Sprintf("fork-%s.log", params.Network)),
+		Name:            fmt.Sprintf("fork-%s", params.Network),
+		Port:            fmt.Sprintf("%d", port),
+		ChainID:         fmt.Sprintf("%d", params.ChainID),
+		ForkURL:         params.RPCURL,
+		ForkBlockNumber: params.ForkBlockNumber,
+		PidFile:         filepath.Join(privDir, fmt.Sprintf("fork-%s.pid", params.Network)),
+		LogFile:         filepath.Join(privDir, fmt.Sprintf("fork-%s.log", params.Network)),
 	}
 
 	// Start anvil (includes CreateX deployment)

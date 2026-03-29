@@ -57,6 +57,18 @@ func (s *ForkState) GetActiveFork(network string) *ForkEntry {
 	return s.Forks[network]
 }
 
+// ActiveNetworks returns a list of all active fork network names
+func (s *ForkState) ActiveNetworks() []string {
+	if s == nil || s.Forks == nil {
+		return nil
+	}
+	networks := make([]string, 0, len(s.Forks))
+	for name := range s.Forks {
+		networks = append(networks, name)
+	}
+	return networks
+}
+
 // AnvilInstance returns an AnvilInstance for this fork entry.
 // For external forks, RPCURL is set to the full fork URL so RPC calls
 // go to the correct endpoint instead of constructing http://localhost:<port>.
