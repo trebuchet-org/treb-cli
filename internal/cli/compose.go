@@ -59,9 +59,26 @@ This will execute: Broker → Tokens → Reserve → SortedOracles`,
   treb compose deploy.yaml --network sepolia --dry-run
 
   # Execute with debug output
-  treb compose deploy.yaml --debug --verbose`,
+  treb compose deploy.yaml --debug --verbose
+
+  # Pass extra flags to every forge script the compose runs (after --)
+  treb compose deploy.yaml -- --gas-estimate-multiplier 200`,
 		SilenceUsage: true,
-		Args:         cobra.ExactArgs(1),
+		Args: func(cmd *cobra.Command, args []string) error {
+			// Require at least 1 arg (compose file). Additional args after -- are passthrough.
+			dashIdx := cmd.ArgsLenAtDash()
+			if dashIdx == 0 {
+				return fmt.Errorf("requires a compose file argument before --")
+			}
+			positional := args
+			if dashIdx > 0 {
+				positional = args[:dashIdx]
+			}
+			if len(positional) != 1 {
+				return fmt.Errorf("accepts 1 arg(s), received %d", len(positional))
+			}
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app, err := getApp(cmd)
 			if err != nil {
@@ -69,6 +86,12 @@ This will execute: Broker → Tokens → Reserve → SortedOracles`,
 			}
 
 			orchestrationFile := args[0]
+
+			// Split passthrough args (after --) from positional args
+			var passthroughArgs []string
+			if dashIdx := cmd.ArgsLenAtDash(); dashIdx >= 0 {
+				passthroughArgs = args[dashIdx:]
+			}
 
 			// Default network and namespace resolution
 			if network == "" {
@@ -85,16 +108,17 @@ This will execute: Broker → Tokens → Reserve → SortedOracles`,
 
 			// Create compose parameters
 			params := usecase.ComposeParams{
-				ConfigPath:     orchestrationFile,
-				Network:        network,
-				Namespace:      namespace,
-				Profile:        profile,
-				DryRun:         dryRun,
-				Debug:          debug,
-				DebugJSON:      debugJSON,
-				Verbose:        verbose,
-				NonInteractive: true, // Orchestration should always be non-interactive
-				Resume:         resume,
+				ConfigPath:      orchestrationFile,
+				Network:         network,
+				Namespace:       namespace,
+				Profile:         profile,
+				DryRun:          dryRun,
+				Debug:           debug,
+				DebugJSON:       debugJSON,
+				Verbose:         verbose,
+				NonInteractive:  true, // Orchestration should always be non-interactive
+				Resume:          resume,
+				PassthroughArgs: passthroughArgs,
 			}
 
 			ctx := cmd.Context()

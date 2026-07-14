@@ -38,9 +38,10 @@ type ComposeParams struct {
 	DryRun         bool
 	Debug          bool
 	DebugJSON      bool
-	Verbose        bool
-	NonInteractive bool
-	Resume         bool // Resume from previous execution
+	Verbose         bool
+	NonInteractive  bool
+	Resume          bool     // Resume from previous execution
+	PassthroughArgs []string // Additional args passed through to every forge script (after --)
 }
 
 // ComposeResult contains the result of orchestration
@@ -393,13 +394,14 @@ func (o *ComposeDeployment) createExecutionPlan(config *ComposeConfig) (*Executi
 func (o *ComposeDeployment) executeStep(ctx context.Context, step *ExecutionStep, params ComposeParams) *StepResult {
 	// Prepare parameters for run script
 	scriptParams := RunScriptParams{
-		ScriptRef:      step.Script,
-		Parameters:     step.Env,
-		DryRun:         params.DryRun,
-		Debug:          params.Debug,
-		DebugJSON:      params.DebugJSON,
-		Verbose:        params.Verbose,
-		NonInteractive: true, // Always non-interactive for orchestration
+		ScriptRef:       step.Script,
+		Parameters:      step.Env,
+		DryRun:          params.DryRun,
+		Debug:           params.Debug,
+		DebugJSON:       params.DebugJSON,
+		Verbose:         params.Verbose,
+		NonInteractive:  true, // Always non-interactive for orchestration
+		PassthroughArgs: params.PassthroughArgs,
 	}
 
 	// Execute the script
