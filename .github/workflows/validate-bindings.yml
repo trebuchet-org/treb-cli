@@ -5,8 +5,7 @@ on:
     branches: [ main ]
     paths:
       - 'treb-sol/**'
-      - 'internal/domain/bindings/**'
-      - 'go.mod'
+      - 'cli/pkg/abi/**'
       - 'Makefile'
 
 permissions:
@@ -36,8 +35,6 @@ jobs:
       
       - name: Install abigen
         run: |
-          # Must match the go-ethereum version in go.mod, or the generated code
-          # references bind symbols the pinned library does not have.
           go install github.com/ethereum/go-ethereum/cmd/abigen@$(go list -m -f '{{.Version}}' github.com/ethereum/go-ethereum)
       
       - name: Install jq
@@ -55,15 +52,15 @@ jobs:
       
       - name: Check for uncommitted changes
         run: |
-          if [[ -n $(git status --porcelain internal/domain/bindings/) ]]; then
+          if [[ -n $(git status --porcelain cli/pkg/abi/) ]]; then
             echo "❌ ABI bindings are not up to date with treb-sol changes"
             echo "🔧 Please run 'make bindings' and commit the updated bindings"
             echo ""
             echo "Changed files:"
-            git status --porcelain internal/domain/bindings/
+            git status --porcelain cli/pkg/abi/
             echo ""
             echo "Diff:"
-            git diff internal/domain/bindings/
+            git diff cli/pkg/abi/
             exit 1
           else
             echo "✅ ABI bindings are up to date"

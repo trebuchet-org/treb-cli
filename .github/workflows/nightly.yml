@@ -64,7 +64,7 @@ jobs:
       
       - name: Install abigen
         run: |
-          go install github.com/ethereum/go-ethereum/cmd/abigen@latest
+          go install github.com/ethereum/go-ethereum/cmd/abigen@$(go list -m -f '{{.Version}}' github.com/ethereum/go-ethereum)
       
       - name: Install jq (Linux)
         if: matrix.goos == 'linux'
