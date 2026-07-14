@@ -12,15 +12,16 @@ import (
 // NewComposeCmd creates the orchestrate command using the new architecture
 func NewComposeCmd() *cobra.Command {
 	var (
-		network        string
-		namespace      string
-		profile        string
-		dryRun         bool
-		debug          bool
-		debugJSON      bool
-		verbose        bool
-		nonInteractive bool
-		resume         bool
+		network               string
+		namespace             string
+		profile               string
+		dryRun                bool
+		debug                 bool
+		debugJSON             bool
+		verbose               bool
+		nonInteractive        bool
+		resume                bool
+		gasEstimateMultiplier uint64
 	)
 
 	cmd := &cobra.Command{
@@ -97,6 +98,15 @@ This will execute: Broker → Tokens → Reserve → SortedOracles`,
 				Resume:         resume,
 			}
 
+			// Only forward the multiplier if explicitly set, so forge keeps
+			// applying its own default when the flag is omitted.
+			if cmd.Flags().Changed("gas-estimate-multiplier") {
+				if gasEstimateMultiplier == 0 {
+					return fmt.Errorf("--gas-estimate-multiplier must be a positive integer (percentage, e.g. 200 for 2x)")
+				}
+				params.GasEstimateMultiplier = &gasEstimateMultiplier
+			}
+
 			ctx := cmd.Context()
 
 			// Execute orchestration
@@ -135,6 +145,7 @@ This will execute: Broker → Tokens → Reserve → SortedOracles`,
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Show extra detailed information for events and transactions")
 	cmd.Flags().BoolVar(&nonInteractive, "non-interactive", false, "Disable interactive prompts (always non-interactive for orchestration)")
 	cmd.Flags().BoolVar(&resume, "resume", false, "Resume from a previous failed or interrupted compose run")
+	cmd.Flags().Uint64Var(&gasEstimateMultiplier, "gas-estimate-multiplier", 130, "Percentage to multiply gas estimates by, applied to every script (forge default: 130)")
 
 	return cmd
 }

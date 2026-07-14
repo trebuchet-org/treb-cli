@@ -1,0 +1,2 @@
+=== cmd 0: [run script/deploy/DeployCounter.s.sol --dump-command --gas-estimate-multiplier 200] ===
+DRYRUN=false FOUNDRY_PROFILE=default NAMESPACE=default NETWORK=anvil-31337 SENDER_CONFIGS=<SENDER_CONFIGS> forge script script/deploy/DeployCounter.s.sol --ffi --rpc-url anvil-31337 --broadcast --json --slow --gas-estimate-multiplier 200 -vvvv

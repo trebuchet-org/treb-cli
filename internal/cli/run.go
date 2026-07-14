@@ -11,11 +11,12 @@ import (
 // NewRunCmd creates the run command using the new architecture
 func NewRunCmd() *cobra.Command {
 	var (
-		envVars   []string
-		dryRun    bool
-		debug     bool
-		debugJSON bool
-		dumpCmd   bool
+		envVars               []string
+		dryRun                bool
+		debug                 bool
+		debugJSON             bool
+		dumpCmd               bool
+		gasEstimateMultiplier uint64
 	)
 
 	cmd := &cobra.Command{
@@ -59,6 +60,9 @@ Examples:
   # Run with debug output
   treb run script/deploy/DeployCounter.s.sol --debug
 
+  # Raise forge's gas estimate multiplier when a call under-estimates and reverts OOG
+  treb run script/deploy/DeployCounter.s.sol --gas-estimate-multiplier 200
+
   # Run with specific network and profile
   treb run script/deploy/DeployCounter.s.sol --network sepolia --profile production`,
 		Args:         cobra.ExactArgs(1),
@@ -93,6 +97,16 @@ Examples:
 				DebugJSON:   debugJSON,
 				DumpCommand: dumpCmd,
 			}
+
+			// Only forward the multiplier if explicitly set, so forge keeps
+			// applying its own default when the flag is omitted.
+			if cmd.Flags().Changed("gas-estimate-multiplier") {
+				if gasEstimateMultiplier == 0 {
+					return fmt.Errorf("--gas-estimate-multiplier must be a positive integer (percentage, e.g. 200 for 2x)")
+				}
+				params.GasEstimateMultiplier = &gasEstimateMultiplier
+			}
+
 			result, err := app.RunScript.Run(cmd.Context(), params)
 			if err != nil {
 				return err
@@ -127,6 +141,7 @@ Examples:
 	cmd.Flags().BoolVar(&debugJSON, "debug-json", false, "Enable JSON debug mode (shows raw JSON output)")
 	cmd.Flags().BoolVar(&dumpCmd, "dump-command", false, "Print the underlying forge command (with injected env vars) without executing")
 	cmd.Flags().BoolP("verbose", "v", false, "Show extra detailed information for events and transactions")
+	cmd.Flags().Uint64Var(&gasEstimateMultiplier, "gas-estimate-multiplier", 130, "Percentage to multiply gas estimates by (forge default: 130)")
 
 	return cmd
 }

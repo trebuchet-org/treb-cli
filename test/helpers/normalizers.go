@@ -56,6 +56,17 @@ func (n HashNormalizer) Normalize(output string) string {
 	return output
 }
 
+// SenderConfigsNormalizer replaces the ABI-encoded SENDER_CONFIGS blob that
+// treb injects into the forge command dumped by --dump-command.
+type SenderConfigsNormalizer struct{}
+
+// Matches everything up to the next space rather than just hex, because the
+// default AddressNormalizer may already have rewritten addresses embedded in
+// the blob into non-hex placeholder text.
+func (n SenderConfigsNormalizer) Normalize(output string) string {
+	return regexp.MustCompile(`SENDER_CONFIGS=\S*`).ReplaceAllString(output, "SENDER_CONFIGS=<SENDER_CONFIGS>")
+}
+
 // ColorNormalizer removes ANSI color codes and other control sequences
 type ColorNormalizer struct{}
 

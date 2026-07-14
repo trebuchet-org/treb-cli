@@ -201,6 +201,47 @@ func TestRunCommand(t *testing.T) {
 				{"show", "TestWithNewLib"},
 			},
 		},
+		{
+			// Guards the invariant that omitting --gas-estimate-multiplier leaves
+			// the forge command unchanged, so forge keeps applying its own default.
+			Name: "dump_command_without_gas_estimate_multiplier",
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+			},
+			TestCmds: [][]string{
+				{"run", "script/deploy/DeployCounter.s.sol", "--dump-command"},
+			},
+			Normalizers: append(
+				helpers.GetDefaultNormalizers(),
+				helpers.SenderConfigsNormalizer{},
+			),
+		},
+		{
+			Name: "dump_command_with_gas_estimate_multiplier",
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+			},
+			TestCmds: [][]string{
+				{"run", "script/deploy/DeployCounter.s.sol", "--dump-command", "--gas-estimate-multiplier", "200"},
+			},
+			Normalizers: append(
+				helpers.GetDefaultNormalizers(),
+				helpers.SenderConfigsNormalizer{},
+			),
+		},
+		{
+			Name: "run_rejects_zero_gas_estimate_multiplier",
+			SetupCmds: [][]string{
+				s("config set network anvil-31337"),
+				{"gen", "deploy", "src/Counter.sol:Counter"},
+			},
+			TestCmds: [][]string{
+				{"run", "script/deploy/DeployCounter.s.sol", "--gas-estimate-multiplier", "0"},
+			},
+			ExpectErr: true,
+		},
 	}
 
 	RunIntegrationTests(t, tests)

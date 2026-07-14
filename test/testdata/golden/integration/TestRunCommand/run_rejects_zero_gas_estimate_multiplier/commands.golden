@@ -1,0 +1,2 @@
+=== cmd 0: [run script/deploy/DeployCounter.s.sol --gas-estimate-multiplier 0] ===
+Error: --gas-estimate-multiplier must be a positive integer (percentage, e.g. 200 for 2x)
