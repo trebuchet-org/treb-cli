@@ -294,6 +294,11 @@ func (f *ForgeAdapter) buildArgs(config usecase.RunScriptConfig) []string {
 	if config.Slow || len(config.ForkEnvOverrides) > 0 {
 		args = append(args, "--slow")
 	}
+
+	if config.GasEstimateMultiplier != nil {
+		args = append(args, "--gas-estimate-multiplier", strconv.FormatUint(*config.GasEstimateMultiplier, 10))
+	}
+
 	args = append(args, "-vvvv")
 
 	return args

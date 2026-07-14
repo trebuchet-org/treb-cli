@@ -259,10 +259,13 @@ type RunScriptConfig struct {
 	Debug              bool
 	DebugJSON          bool
 	Slow               bool
-	Libraries          []string
-	SenderScriptConfig config.SenderScriptConfig
-	Progress           ProgressSink
-	ForkEnvOverrides   map[string]string // env var overrides for fork mode (e.g. NETWORK_RPC_URL=http://localhost:PORT)
+	// GasEstimateMultiplier is the percentage forge multiplies gas estimates by.
+	// nil means the flag is not passed at all, leaving forge to apply its own default.
+	GasEstimateMultiplier *uint64
+	Libraries             []string
+	SenderScriptConfig    config.SenderScriptConfig
+	Progress              ProgressSink
+	ForkEnvOverrides      map[string]string // env var overrides for fork mode (e.g. NETWORK_RPC_URL=http://localhost:PORT)
 }
 
 // RunResultHydrator hydrated RunResults with domain models.

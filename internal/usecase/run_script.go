@@ -21,6 +21,9 @@ type RunScriptParams struct {
 	Verbose        bool
 	NonInteractive bool
 	DumpCommand    bool
+	// GasEstimateMultiplier is the percentage forge multiplies gas estimates by.
+	// nil means the flag is not passed at all, leaving forge to apply its own default.
+	GasEstimateMultiplier *uint64
 }
 
 // RunScriptResult contains the result of running a script
@@ -172,19 +175,20 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 	}
 
 	runScriptConfig := RunScriptConfig{
-		Network:            uc.config.Network,
-		Namespace:          uc.config.Namespace,
-		FoundryProfile:     uc.config.FoundryProfile,
-		Script:             script,
-		Parameters:         resolvedParams,
-		Libraries:          libraryStrings,
-		DryRun:             params.DryRun,
-		Debug:              params.Debug,
-		DebugJSON:          params.DebugJSON,
-		Progress:           uc.progress,
-		SenderScriptConfig: *senderScriptConfig,
-		Slow:               uc.config.Slow,
-		ForkEnvOverrides:   forkEnvOverrides,
+		Network:               uc.config.Network,
+		Namespace:             uc.config.Namespace,
+		FoundryProfile:        uc.config.FoundryProfile,
+		Script:                script,
+		Parameters:            resolvedParams,
+		Libraries:             libraryStrings,
+		DryRun:                params.DryRun,
+		Debug:                 params.Debug,
+		DebugJSON:             params.DebugJSON,
+		Progress:              uc.progress,
+		SenderScriptConfig:    *senderScriptConfig,
+		Slow:                  uc.config.Slow,
+		ForkEnvOverrides:      forkEnvOverrides,
+		GasEstimateMultiplier: params.GasEstimateMultiplier,
 	}
 
 	// Fork mode pre-run checks: health check + snapshot

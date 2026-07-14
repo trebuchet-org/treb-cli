@@ -41,6 +41,9 @@ type ComposeParams struct {
 	Verbose        bool
 	NonInteractive bool
 	Resume         bool // Resume from previous execution
+	// GasEstimateMultiplier is forwarded to every script the compose runs.
+	// nil means the flag is not passed at all, leaving forge to apply its own default.
+	GasEstimateMultiplier *uint64
 }
 
 // ComposeResult contains the result of orchestration
@@ -393,13 +396,14 @@ func (o *ComposeDeployment) createExecutionPlan(config *ComposeConfig) (*Executi
 func (o *ComposeDeployment) executeStep(ctx context.Context, step *ExecutionStep, params ComposeParams) *StepResult {
 	// Prepare parameters for run script
 	scriptParams := RunScriptParams{
-		ScriptRef:      step.Script,
-		Parameters:     step.Env,
-		DryRun:         params.DryRun,
-		Debug:          params.Debug,
-		DebugJSON:      params.DebugJSON,
-		Verbose:        params.Verbose,
-		NonInteractive: true, // Always non-interactive for orchestration
+		ScriptRef:             step.Script,
+		Parameters:            step.Env,
+		DryRun:                params.DryRun,
+		Debug:                 params.Debug,
+		DebugJSON:             params.DebugJSON,
+		Verbose:               params.Verbose,
+		NonInteractive:        true, // Always non-interactive for orchestration
+		GasEstimateMultiplier: params.GasEstimateMultiplier,
 	}
 
 	// Execute the script
