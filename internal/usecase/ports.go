@@ -263,6 +263,7 @@ type RunScriptConfig struct {
 	SenderScriptConfig config.SenderScriptConfig
 	Progress           ProgressSink
 	ForkEnvOverrides   map[string]string // env var overrides for fork mode (e.g. NETWORK_RPC_URL=http://localhost:PORT)
+	PassthroughArgs    []string          // Additional args passed through to forge script (after --)
 }
 
 // RunResultHydrator hydrated RunResults with domain models.

@@ -13,14 +13,15 @@ import (
 
 // RunScriptParams contains parameters for running a script
 type RunScriptParams struct {
-	ScriptRef      string
-	Parameters     map[string]string
-	DryRun         bool
-	Debug          bool
-	DebugJSON      bool
-	Verbose        bool
-	NonInteractive bool
-	DumpCommand    bool
+	ScriptRef       string
+	Parameters      map[string]string
+	DryRun          bool
+	Debug           bool
+	DebugJSON       bool
+	Verbose         bool
+	NonInteractive  bool
+	DumpCommand     bool
+	PassthroughArgs []string // Additional args passed through to forge script (after --)
 }
 
 // RunScriptResult contains the result of running a script
@@ -185,6 +186,7 @@ func (uc *RunScript) Run(ctx context.Context, params RunScriptParams) (*RunScrip
 		SenderScriptConfig: *senderScriptConfig,
 		Slow:               uc.config.Slow,
 		ForkEnvOverrides:   forkEnvOverrides,
+		PassthroughArgs:    params.PassthroughArgs,
 	}
 
 	// Fork mode pre-run checks: health check + snapshot

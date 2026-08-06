@@ -38,7 +38,7 @@ jobs:
     - name: Install dependencies
       run: |
         # Install abigen for ABI bindings
-        go install github.com/ethereum/go-ethereum/cmd/abigen@latest
+        go install github.com/ethereum/go-ethereum/cmd/abigen@$(go list -m -f '{{.Version}}' github.com/ethereum/go-ethereum)
         # Install jq for JSON processing
         sudo apt-get update && sudo apt-get install -y jq
         
@@ -75,7 +75,7 @@ jobs:
     - name: Install dependencies
       run: |
         # Install abigen for ABI bindings
-        go install github.com/ethereum/go-ethereum/cmd/abigen@latest
+        go install github.com/ethereum/go-ethereum/cmd/abigen@$(go list -m -f '{{.Version}}' github.com/ethereum/go-ethereum)
         # Install jq (macOS has it by default via Xcode Command Line Tools)
         if ! command -v jq &> /dev/null; then
           brew install jq

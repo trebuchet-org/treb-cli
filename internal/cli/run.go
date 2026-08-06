@@ -60,12 +60,36 @@ Examples:
   treb run script/deploy/DeployCounter.s.sol --debug
 
   # Run with specific network and profile
-  treb run script/deploy/DeployCounter.s.sol --network sepolia --profile production`,
-		Args:         cobra.ExactArgs(1),
+  treb run script/deploy/DeployCounter.s.sol --network sepolia --profile production
+
+  # Pass extra flags to forge script (after --)
+  treb run script/deploy/DeployCounter.s.sol -- --skip-simulation
+  treb run script/deploy/DeployCounter.s.sol -- --gas-estimate-multiplier 200`,
+		Args: func(cmd *cobra.Command, args []string) error {
+			// Require at least 1 arg (script ref). Additional args after -- are passthrough.
+			dashIdx := cmd.ArgsLenAtDash()
+			if dashIdx == 0 {
+				return fmt.Errorf("requires a script reference argument before --")
+			}
+			positional := args
+			if dashIdx > 0 {
+				positional = args[:dashIdx]
+			}
+			if len(positional) != 1 {
+				return fmt.Errorf("accepts 1 arg(s), received %d", len(positional))
+			}
+			return nil
+		},
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Get app from context (v2 usecase wiring)
+			// Split positional args from passthrough args (after --)
 			deploymentScriptRef := args[0]
+			var passthroughArgs []string
+			if dashIdx := cmd.ArgsLenAtDash(); dashIdx >= 0 {
+				passthroughArgs = args[dashIdx:]
+			}
+
+			// Get app from context (v2 usecase wiring)
 			app, err := getApp(cmd)
 			if err != nil {
 				return err
@@ -86,12 +110,13 @@ Examples:
 			}
 
 			params := usecase.RunScriptParams{
-				ScriptRef:   deploymentScriptRef,
-				Parameters:  parsedEnvVars,
-				DryRun:      dryRun,
-				Debug:       debug,
-				DebugJSON:   debugJSON,
-				DumpCommand: dumpCmd,
+				ScriptRef:       deploymentScriptRef,
+				Parameters:      parsedEnvVars,
+				DryRun:          dryRun,
+				Debug:           debug,
+				DebugJSON:       debugJSON,
+				DumpCommand:     dumpCmd,
+				PassthroughArgs: passthroughArgs,
 			}
 			result, err := app.RunScript.Run(cmd.Context(), params)
 			if err != nil {

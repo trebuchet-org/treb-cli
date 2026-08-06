@@ -296,6 +296,9 @@ func (f *ForgeAdapter) buildArgs(config usecase.RunScriptConfig) []string {
 	}
 	args = append(args, "-vvvv")
 
+	// Passthrough args from CLI (after --)
+	args = append(args, config.PassthroughArgs...)
+
 	return args
 }
 

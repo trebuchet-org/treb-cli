@@ -5,6 +5,12 @@ VERSION ?= $(shell git describe --tags --always --dirty)
 COMMIT ?= $(shell git rev-parse HEAD)
 DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 TREB_SOL_COMMIT ?= $(shell cd treb-sol 2>/dev/null && git rev-parse HEAD || echo "unknown")
+
+# abigen must match the go-ethereum version in go.mod: it generates code against
+# the bind package, and a newer abigen emits symbols an older library lacks.
+# Derived from go.mod so the two cannot drift apart.
+GETH_VERSION ?= $(shell go list -m -f '{{.Version}}' github.com/ethereum/go-ethereum)
+
 LDFLAGS = -X main.version=$(VERSION) \
 					-X main.commit=$(COMMIT) \
 					-X main.date=$(DATE) \
@@ -16,8 +22,8 @@ setup:
 	@git submodule update
 	@echo "🔨 Installing forge deps"
 	@cd treb-sol && forge install
-	@echo "🔨 Installing abigen"
-	@go install github.com/ethereum/go-ethereum/cmd/abigen@latest
+	@echo "🔨 Installing abigen ($(GETH_VERSION))"
+	@go install github.com/ethereum/go-ethereum/cmd/abigen@$(GETH_VERSION)
 
 # Full setup for git worktrees (one-shot: setup + integration test deps)
 setup-worktree: setup setup-integration-test
