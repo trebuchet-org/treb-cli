@@ -64,15 +64,19 @@ func (m *SendersManager) BuildSenderScriptConfig(
 		return nil, fmt.Errorf("can not use ledger and trezor senders in the same script, configure @custom:senders")
 	}
 
-	var safeSigners []string
-	if m.config != nil && m.config.Senders != nil {
-		for _, senderKey := range senders {
-			if sender, exists := m.config.Senders[senderKey]; exists && sender.Type == "safe" {
-				safeSigners = append(safeSigners, sender.Signer)
-			}
+	// Safe signers and OZ Governor proposers must be shipped to the script alongside
+	// the declared senders: treb-sol resolves them by sender name from the same registry.
+	safeSigners := m.collectSenderRefs(senders, config.SenderTypeSafe)
+	proposers := m.collectSenderRefs(senders, config.SenderTypeOZGovernor)
+
+	referencedSenders := slices.Clone(safeSigners)
+	for _, proposer := range proposers {
+		if !slices.Contains(referencedSenders, proposer) {
+			referencedSenders = append(referencedSenders, proposer)
 		}
 	}
-	signersHWConfig := m.getSendersHWConfig(safeSigners)
+
+	signersHWConfig := m.getSendersHWConfig(referencedSenders)
 
 	if signersHWConfig.UseLedger && executionHWConfig.UseLedger {
 		return nil, fmt.Errorf("can not use ledger in both main sender and safe signer, configure @custom:senders")
@@ -82,9 +86,9 @@ func (m *SendersManager) BuildSenderScriptConfig(
 		return nil, fmt.Errorf("can not use ledger in both main sender and safe signer, configure @custom:senders")
 	}
 
-	sort.Strings(safeSigners)
+	sort.Strings(referencedSenders)
 	sort.Strings(senders)
-	allSenders := append(slices.Clone(safeSigners), senders...)
+	allSenders := append(slices.Clone(referencedSenders), senders...)
 
 	var senderInitConfigs []config.SenderInitConfig
 	if senderInitConfigs, err = m.buildSenderInitConfigs(allSenders); err != nil {
@@ -103,6 +107,32 @@ func (m *SendersManager) BuildSenderScriptConfig(
 		SenderInitConfigs: senderInitConfigs,
 		Senders:           senders,
 	}, nil
+}
+
+// collectSenderRefs returns the sender names referenced by the given senders of the
+// given type — Safe signers for "safe", proposers for "oz_governor" — excluding names
+// already present in senders.
+func (m *SendersManager) collectSenderRefs(senders []string, senderType config.SenderType) []string {
+	var refs []string
+	if m.config == nil || m.config.Senders == nil {
+		return refs
+	}
+
+	for _, senderKey := range senders {
+		sender, exists := m.config.Senders[senderKey]
+		if !exists || sender.Type != senderType {
+			continue
+		}
+
+		ref := sender.Signer
+		if senderType == config.SenderTypeOZGovernor {
+			ref = sender.Proposer
+		}
+		if ref != "" && !slices.Contains(senders, ref) && !slices.Contains(refs, ref) {
+			refs = append(refs, ref)
+		}
+	}
+	return refs
 }
 
 func (m *SendersManager) getSendersFromScript(script *models.Artifact) ([]string, error) {
